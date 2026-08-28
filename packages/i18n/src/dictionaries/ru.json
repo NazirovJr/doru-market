@@ -1,0 +1,15 @@
+{
+  "brand.name": "DoruTJ",
+  "auth.login.phone_title": "Введите номер телефона",
+  "auth.login.phone_hint": "Мы отправим код подтверждения по SMS",
+  "auth.login.phone_placeholder": "+992 XX XXX XX XX",
+  "auth.login.code_title": "Введите код из SMS",
+  "auth.login.code_sent_to": "Код отправлен на {phone}",
+  "auth.login.resend_code": "Отправить код повторно",
+  "auth.login.resend_countdown": "Повторно через {seconds} с",
+  "ux.error.otp_expired": "Код устарел. Запросите новый.",
+  "ux.error.otp_locked": "Слишком много неверных попыток. Запросите новый код через SMS/Telegram.",
+  "ux.error.otp_mismatch": "Неверный код. Осталось попыток: {attemptsLeft}",
+  "ux.error.network_offline": "Нет подключения к интернету. Показаны последние сохранённые данные.",
+  "ux.error.generic_500": "Что-то пошло не так. Попробуйте ещё раз через минуту."
+}

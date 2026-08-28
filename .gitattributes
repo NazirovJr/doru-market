@@ -1,0 +1,25 @@
+# Нормализация переводов строк. Причина: разработка идёт на Windows (core.autocrlf), а код
+# исполняется в Linux-контейнерах. Без этого файла shell-скрипты (docker-entrypoint.sh) попадают
+# в образ с CRLF и падают с «bad interpreter: no such file or directory», а любой чужой чекаут
+# даёт шум в diff на всём репозитории.
+* text=auto eol=lf
+
+# Исполняемые в контейнере — строго LF, без исключений.
+*.sh            text eol=lf
+Dockerfile*     text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+.env*           text eol=lf
+
+# Бинарные — не трогать.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+
+# Лок-файл не участвует в diff-ревью и статистике языков.
+pnpm-lock.yaml -diff linguist-generated=true

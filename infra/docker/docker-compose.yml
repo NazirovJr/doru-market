@@ -1,0 +1,191 @@
+# DoruTJ — базовый Docker Compose стек (профиль dev/staging).
+# DTJ-412, SRS-NFR-047. BARREL-файл (D-27, tickets/00-EPICS.md §«Порядок владения файлами») —
+# правится ТОЛЬКО добавлением строк/сервисов, перечитать перед правкой, слияние конфликтов —
+# за архитектором EP-19. Создан этим тикетом (первое касание infra/docker/**), поэтому
+# начальное наполнение — не «добавление строки» к существующему файлу.
+#
+# `docker-compose.prod.yml` — override поверх этого файла (реплики/лимиты ресурсов/публикация
+# портов). `docker-compose.test.yml` (SRS-NFR-048, эфемерный стек для test:integration/test:e2e)
+# и `docker-compose.onprem.yml` (R3) — вне объёма этого тикета (DTJ-413 и далее).
+#
+# ВНИМАНИЕ (см. тикет, «Риски и подводные камни»): apps/api содержит пока только заглушку
+# (`export {}`), apps/admin/pharmacy/courier ещё не созданы. Сервисы api/worker/migrate/seed
+# написаны ПО КОНТРАКТУ — синтаксически корректны (`docker compose config`), но НЕ переходят в
+# `healthy` реальным прогоном до появления кода EP-01. Это ожидаемый, зафиксированный follow-up,
+# не блокер приёмки самого тикета.
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+
+x-api-env: &api-env
+  NODE_ENV: ${NODE_ENV:-development}
+  PORT: ${PORT:-3000}
+  WORKER_HEALTH_PORT: ${WORKER_HEALTH_PORT:-3001}
+  DATABASE_URL: postgres://dorutj_migrator:${POSTGRES_PASSWORD:-dorutj_dev_only_password}@postgres:5432/dorutj
+  REDIS_URL: redis://:${REDIS_PASSWORD:-dorutj_dev_redis_password}@redis:6379/0
+  CORS_STATIC_ORIGINS: ${CORS_STATIC_ORIGINS:-http://localhost}
+  STORAGE_DRIVER: ${STORAGE_DRIVER:-s3}
+  S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+  S3_ACCESS_KEY: ${MINIO_ROOT_USER:-dorutj_minio_admin}
+  S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-dorutj_dev_minio_password}
+  # JWT_PRIVATE_KEY/JWT_PUBLIC_KEY — БЕЗ дефолта намеренно (SRS-NFR-053: секреты, fail-fast без
+  # них). Полный реестр ENV — docs/spec/31-nfr-security-testing-devops.md §«Реестр переменных
+  # окружения» (SRS-NFR-053), `.env.example` — вне files_owned этого тикета.
+  JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:-}
+  JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:-}
+  LOG_LEVEL: ${LOG_LEVEL:-debug}
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: dorutj
+      POSTGRES_USER: dorutj_migrator # роль с DDL-правами для миграций
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U dorutj_migrator -d dorutj']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports: ['5432:5432'] # dev-профиль (локальная отладка через psql/DBeaver) — БЕЗ этого в prod
+
+  redis:
+    image: redis:7
+    command:
+      ['redis-server', '--appendonly', 'yes', '--requirepass', '${REDIS_PASSWORD:-dorutj_dev_redis_password}']
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:-dorutj_dev_redis_password}', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports: ['6379:6379'] # dev-профиль — БЕЗ этого в prod
+
+  minio:
+    # Пиновка (01-TECH-BASELINE.md, DoD «ни одного :latest»): официальные Docker-образы
+    # minio/minio сняты с публикации в Docker Hub (объявление minio, октябрь 2025 — репозиторий
+    # заархивирован); RELEASE.2025-09-07T16-13-09Z — последний реально опубликованный официальный
+    # тег на момент реализации тикета (проверено). Новых security-патчей для этой ветки больше не
+    # будет — follow-up для EP-19: оценить самосборку из исходников или проверенный форк до GA.
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: ['server', '/data', '--console-address', ':9001']
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-dorutj_minio_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-dorutj_dev_minio_password}
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports: ['9000:9000', '9001:9001'] # dev-профиль (S3 API + консоль) — БЕЗ этого в prod
+
+  migrate:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+      target: migrator
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment: *api-env
+    restart: 'no' # одноразовый init-контейнер, не демон
+
+  seed:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+      target: migrator
+    entrypoint: ['node', 'apps/api/dist/scripts/seed-entrypoint.js']
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    environment: *api-env
+    restart: 'no'
+    profiles: ['dev', 'e2e'] # НЕ запускается в prod-профиле автоматически
+
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+      target: runtime
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    environment: *api-env
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://localhost:3000/ready', r => process.exit(r.statusCode===200?0:1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+      target: runtime-worker
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    environment: *api-env
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://localhost:3001/health', r => process.exit(r.statusCode===200?0:1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.web
+      args: { APP: web }
+    depends_on: [api]
+
+  admin:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.web
+      args: { APP: admin }
+    depends_on: [api]
+
+  nginx:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+      - certbot-webroot:/var/www/certbot:ro
+    ports: ['80:80', '443:443']
+    depends_on: [api, web, admin]
+
+  certbot:
+    image: certbot/certbot:v3.3.0
+    volumes:
+      - certbot-webroot:/var/www/certbot
+      - ./nginx/certs:/etc/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h; done;'"
+    profiles: ['prod'] # не нужен в dev/e2e — публичного домена/сертификатов нет
+
+volumes:
+  pgdata: {}
+  redisdata: {}
+  miniodata: {}
+  certbot-webroot: {}

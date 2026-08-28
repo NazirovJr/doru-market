@@ -1,0 +1,15 @@
+{
+  "brand.name": "DoruTJ",
+  "auth.login.phone_title": "Enter your phone number",
+  "auth.login.phone_hint": "We'll send a confirmation code by SMS",
+  "auth.login.phone_placeholder": "+992 XX XXX XX XX",
+  "auth.login.code_title": "Enter the code from SMS",
+  "auth.login.code_sent_to": "Code sent to {phone}",
+  "auth.login.resend_code": "Resend code",
+  "auth.login.resend_countdown": "Resend in {seconds}s",
+  "ux.error.otp_expired": "Code expired. Request a new one.",
+  "ux.error.otp_locked": "Too many wrong attempts. Request a new code.",
+  "ux.error.otp_mismatch": "Wrong code. Attempts left: {attemptsLeft}",
+  "ux.error.network_offline": "No internet connection. Showing last saved data.",
+  "ux.error.generic_500": "Something went wrong. Please try again in a minute."
+}

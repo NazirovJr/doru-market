@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#0ea5e9}
+a:hover{color:#0369a1}
+input,button{font-family:'Inter',system-ui,sans-serif}
+@keyframes shimmer{0%{background-position:-300px 0}100%{background-position:300px 0}}
+@keyframes shakeX{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-8px)}40%,60%{transform:translateX(8px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulseAlert{0%,100%{opacity:1}50%{opacity:.4}}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#eef1f5;display:flex;flex-direction:column;font-family:'Inter',system-ui,sans-serif">
+
+<div style="position:sticky;top:0;z-index:50;background:#ffffff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;flex-wrap:wrap;gap:16px;padding:12px 24px;min-height:60px">
+  <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+    <div style="width:32px;height:32px;border-radius:8px;background:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2v20M2 12h20" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="#ffffff" stroke-width="1.6"/></svg>
+    </div>
+    <div>
+      <div style="font-size:14px;font-weight:700;color:#0f172a;line-height:1.2">[ Бренд сети ]</div>
+      <div style="font-size:12px;color:#94a3b8;line-height:1.2">лого и цвет — переменные</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:2px;background:#f1f5f9;padding:3px;border-radius:10px;flex-shrink:0">
+    <sc-for list="{{ roleTabs }}" as="r" hint-placeholder-count="5">
+      <button onClick="{{ r.onClick }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="padding:8px 14px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;background:{{ r.bg }};color:{{ r.fg }};white-space:nowrap">{{ r.label }}</button>
+    </sc-for>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0">
+    <button onClick="{{ toggleOffline }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;border:1px solid {{ offlineBorder }};background:{{ offlineBg }};color:{{ offlineFg }};font-size:13px;font-weight:600;cursor:pointer">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M2 2l20 20M8.5 16.5a5 5 0 017 0M5 12.5a10 10 0 013.5-2.3M19 12.5a10 10 0 00-2-1.8M12 20h.01" stroke="{{ offlineFg }}" stroke-width="2" stroke-linecap="round"/></svg>
+      Офлайн
+    </button>
+    <button onClick="{{ toggleStale }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;border:1px solid {{ staleBorder }};background:{{ staleBg }};color:{{ staleFg }};font-size:13px;font-weight:600;cursor:pointer">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="{{ staleFg }}" stroke-width="2"/><path d="M12 7v5l3 3" stroke="{{ staleFg }}" stroke-width="2" stroke-linecap="round"/></svg>
+      Устарело
+    </button>
+  </div>
+</div>
+
+<div style="flex:1;overflow:auto;padding:40px 24px 80px;display:flex;justify-content:center;align-items:flex-start">
+
+<div style="display:{{ opsDisplay }}">
+
+<div style="display:{{ courierDisplay }}">
+<div style="width:360px;height:780px;margin:0 auto;border-radius:32px;border:8px solid #cbd5e1;box-shadow:0 30px 80px rgba(0,0,0,.25);overflow:hidden;display:flex;flex-direction:column;background:#f8fafc">
+<div style="display:flex;flex-direction:column;height:100%;position:relative">
+  <div style="padding:16px 16px 12px;flex-shrink:0"><div style="font-size:18px;font-weight:700;color:#0f172a">Доставка №4821</div></div>
+
+  <sc-if value="{{ courierDelivering }}" hint-placeholder-val="{{ true }}">
+  <div style="flex:1;overflow:auto;display:flex;flex-direction:column;gap:14px;padding:0 16px 16px">
+    <div style="height:190px;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;flex-shrink:0">
+      <iframe src="./map-view.html?mode=route" style="width:100%;height:100%;border:none" title="Маршрут"></iframe>
+    </div>
+    <div style="border:1px solid #e2e8f0;border-radius:12px;padding:14px;display:flex;gap:12px;align-items:center">
+      <div style="width:52px;height:52px;border-radius:9px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z" stroke="#94a3b8" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="14" r="3.5" stroke="#94a3b8" stroke-width="2"/></svg></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:700;color:#0f172a">Ориентир</div>
+        <div style="font-size:14px;color:#64748b;line-height:1.4">Четырёхэтажный дом рядом с мечетью, синяя дверь, 2 этаж</div>
+      </div>
+      <button style="flex-shrink:0;width:44px;height:44px;border-radius:50%;border:none;background:#16a34a;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6.6 10.8c1.4 2.8 3.8 5.2 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.4c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.4 0 .8-.2 1l-2.2 2.2z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div style="font-size:14px;color:#64748b;text-align:center">Аптека №7 → клиент · 98 смн наличными</div>
+  </div>
+  <div style="flex-shrink:0;padding:16px">
+    <button onClick="{{ courierTap }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="width:100%;padding:18px;border-radius:10px;border:none;background:#059669;color:#fff;font-size:18px;font-weight:700;cursor:pointer">{{ courierLabel }}</button>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ courierPhaseCash }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:16px">
+    <div style="font-size:20px;font-weight:700;color:#0f172a">Приём наличных</div>
+    <div style="border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;justify-content:space-between"><span style="font-size:15px;color:#64748b">К оплате</span><span style="font-size:20px;font-weight:800;color:#0f172a">98 смн</span></div>
+    <div>
+      <label style="font-size:14px;font-weight:600;color:#0f172a;display:block;margin-bottom:6px">Сколько дал клиент</label>
+      <input value="{{ cashReceived }}" onChange="{{ onCashChange }}" inputmode="numeric" placeholder="100" style-focus="border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,0.25)" style="width:100%;padding:14px;font-size:20px;font-weight:700;border-radius:8px;border:1.5px solid #e2e8f0;color:#0f172a"/>
+    </div>
+    <div style="border-radius:12px;background:#f0fdf4;border:1px solid #bbf7d0;padding:16px;display:flex;justify-content:space-between"><span style="font-size:15px;color:#166534;font-weight:600">Сдача</span><span style="font-size:24px;font-weight:800;color:#15803d">{{ changeAmount }} смн</span></div>
+    <button onClick="{{ goCourierCode }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="padding:16px;border-radius:10px;border:none;background:#059669;color:#fff;font-size:17px;font-weight:700;cursor:pointer">Продолжить</button>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ courierPhaseCode }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:18px;align-items:center;text-align:center">
+    <div style="font-size:20px;font-weight:700;color:#0f172a;margin-top:20px">Код вручения</div>
+    <div style="font-size:15px;color:#64748b">Попросите клиента назвать код из СМС</div>
+    <div style="display:flex;gap:12px">
+      <sc-for list="{{ courierCodeCells }}" as="cc" hint-placeholder-count="4">
+        <input value="{{ cc.value }}" onChange="{{ cc.onChange }}" onKeyDown="{{ cc.onKeyDown }}" ref="{{ cc.setRef }}" maxlength="1" inputmode="numeric" style-focus="border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,0.25)" style="width:56px;height:64px;text-align:center;border-radius:10px;border:1.5px solid #e2e8f0;font-size:26px;font-weight:700;color:#0f172a"/>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ courierPhaseDone }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;text-align:center">
+    <div style="width:64px;height:64px;border-radius:50%;background:#f0fdf4;display:flex;align-items:center;justify-content:center"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#16a34a" stroke-width="2"/><path d="M8 12l3 3 5-6" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div style="font-size:20px;font-weight:700;color:#0f172a">Доставлено</div>
+    <button onClick="{{ courierReset }}" style="margin-top:10px;padding:10px 16px;border-radius:8px;border:1.5px dashed #cbd5e1;background:#fff;color:#94a3b8;font-size:13px;font-weight:600;font-family:ui-monospace,monospace">Демо: новый заказ →</button>
+  </div>
+  </sc-if>
+</div>
+</div>
+</div>
+
+<div style="display:{{ pharmacistDisplay }}">
+<div style="width:1280px;margin:0 auto;border-radius:12px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.35);background:#fff">
+<div style="height:44px;display:flex;align-items:center;gap:8px;padding:0 14px;background:#202124"><div style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></div><div style="width:12px;height:12px;border-radius:50%;background:#febc2e"></div><div style="width:12px;height:12px;border-radius:50%;background:#28c840"></div><div style="flex:1;height:26px;border-radius:13px;background:#282a2d;margin-left:12px;display:flex;align-items:center;padding:0 14px"><span style="color:#9aa0a6;font-size:12px;font-family:system-ui,sans-serif">admin.dorutj.tj/order-queue/482</span></div></div>
+<div style="padding:28px 36px;display:flex;flex-direction:column;gap:20px;min-height:700px">
+
+  <sc-if value="{{ pharmShowBanner }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-radius:10px;background:#0f172a;color:#fff;font-size:15px;font-weight:600;animation:pulseAlert 1s infinite">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3a5 5 0 015 5v3.5l1.5 3H5.5L7 11.5V8a5 5 0 015-5z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M9.5 19a2.5 2.5 0 005 0" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      Новый заказ №4821 — начните сборку
+    </div>
+  </sc-if>
+
+  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div>
+      <div style="font-size:26px;font-weight:700;color:#0f172a">Заказ №4821</div>
+      <div style="font-size:16px;color:#64748b;margin-top:4px">Аптека №7 · 4 позиции</div>
+    </div>
+    <div style="text-align:center;padding:14px 24px;border-radius:12px;background:{{ pharmTimerBg }};border:2px solid {{ pharmTimerBorder }}">
+      <div style="font-size:13px;font-weight:600;color:{{ pharmTimerFg }}">{{ pharmTimerCaption }}</div>
+      <div style="font-size:32px;font-weight:800;color:{{ pharmTimerFg }};font-family:ui-monospace,monospace">{{ pharmTimerLabel }}</div>
+    </div>
+  </div>
+
+  <sc-if value="{{ pharmHasUnavailable }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-radius:10px;background:#fffbeb;border:1.5px solid #fde68a;color:#92400e;font-size:15px;font-weight:600">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3L2 21h20L12 3z" stroke="#b45309" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4M12 17.5h.01" stroke="#b45309" stroke-width="2" stroke-linecap="round"/></svg>
+      Ждём подтверждения клиента: часть позиций недоступна
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ pharmNotDone }}" hint-placeholder-val="{{ true }}">
+  <div style="display:flex;gap:10px;align-items:center">
+    <input value="{{ pharmBarcodeInput }}" onChange="{{ onBarcodeChange }}" onKeyDown="{{ onBarcodeKeyDown }}" placeholder="Отсканируйте штрихкод…" style-focus="border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,0.25)" style="flex:1;padding:16px 18px;font-size:18px;border-radius:10px;border:1.5px solid #e2e8f0;color:#0f172a"/>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><path d="M3 4v16M7 4v16M10 4v16M14 4v16M16 4v16M20 4v16" stroke="#94a3b8" stroke-width="1.6"/></svg>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <sc-for list="{{ pharmItems }}" as="it" hint-placeholder-count="4">
+      <div style="border:1.5px solid {{ it.borderColor }};border-radius:12px;padding:18px 20px;display:flex;align-items:center;gap:16px;background:{{ it.bg }}">
+        <button onClick="{{ it.onToggle }}" style="flex-shrink:0;width:32px;height:32px;border-radius:8px;border:2px solid {{ it.checkBorder }};background:{{ it.checkBg }};display:flex;align-items:center;justify-content:center;cursor:pointer">
+          <sc-if value="{{ it.checked }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 13l5 5L20 6" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></sc-if>
+        </button>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:19px;font-weight:700;color:#0f172a;text-decoration:{{ it.strike }}">{{ it.name }}</div>
+          <div style="font-size:15px;color:#64748b">{{ it.dose }} · {{ it.qty }}</div>
+          <sc-if value="{{ it.unavailable }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#b45309;font-weight:600;margin-top:2px">Недоступно: {{ it.reason }}</div></sc-if>
+        </div>
+        <sc-if value="{{ it.showReasons }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;max-width:280px">
+            <sc-for list="{{ it.reasonOpts }}" as="ro" hint-placeholder-count="4">
+              <button onClick="{{ ro.onPick }}" style="padding:8px 12px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;font-size:13px;font-weight:600;color:#334155;cursor:pointer">{{ ro.label }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ it.showUnavailBtn }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ it.onUnavailClick }}" style="flex-shrink:0;padding:12px 16px;border-radius:8px;border:1.5px solid #fecaca;background:#fff;color:#dc2626;font-size:14px;font-weight:600;cursor:pointer">Товар недоступен</button>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ pharmCanFinish }}" hint-placeholder-val="{{ false }}">
+    <button onClick="{{ pharmFinish }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="padding:18px;border-radius:10px;border:none;background:#16a34a;color:#fff;font-size:18px;font-weight:700;cursor:pointer">Завершить сборку</button>
+  </sc-if>
+
+  <sc-if value="{{ pharmDone }}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;padding:60px 0">
+    <div style="font-size:18px;color:#64748b;font-weight:600">Готово к передаче курьеру</div>
+    <div style="font-size:72px;font-weight:800;color:#0f172a;letter-spacing:.1em;font-family:ui-monospace,monospace">4821</div>
+    <button onClick="{{ pharmReset }}" style="margin-top:10px;padding:10px 18px;border-radius:8px;border:1.5px dashed #cbd5e1;background:#fff;color:#94a3b8;font-size:13px;font-weight:600;font-family:ui-monospace,monospace">Демо: новый заказ →</button>
+  </div>
+  </sc-if>
+</div>
+</div>
+</div>
+
+<div style="display:{{ analyticsDisplay }}">
+<div style="width:1280px;margin:0 auto;border-radius:12px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.35);background:#fff">
+<div style="height:44px;display:flex;align-items:center;gap:8px;padding:0 14px;background:#202124"><div style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></div><div style="width:12px;height:12px;border-radius:50%;background:#febc2e"></div><div style="width:12px;height:12px;border-radius:50%;background:#28c840"></div><div style="flex:1;height:26px;border-radius:13px;background:#282a2d;margin-left:12px;display:flex;align-items:center;padding:0 14px"><span style="color:#9aa0a6;font-size:12px;font-family:system-ui,sans-serif">admin.dorutj.tj/analytics/funnel</span></div></div>
+<div style="padding:28px 36px;display:flex;flex-direction:column;gap:24px;min-height:700px">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div style="font-size:26px;font-weight:700;color:#0f172a">Воронка экономии</div>
+    <div style="display:flex;gap:2px;background:#f1f5f9;padding:3px;border-radius:8px">
+      <sc-for list="{{ periodTabs }}" as="p" hint-placeholder-count="2">
+        <button onClick="{{ p.onClick }}" style="padding:8px 16px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;background:{{ p.bg }};color:{{ p.fg }}">{{ p.label }}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div style="border:1.5px solid #e2e8f0;border-radius:14px;padding:24px">
+      <div style="font-size:14px;font-weight:600;color:#64748b;margin-bottom:8px">Показано экономии всего</div>
+      <div style="font-size:36px;font-weight:800;color:#0f172a">{{ totalShown }} смн</div>
+    </div>
+    <div style="border:1.5px solid #bbf7d0;border-radius:14px;padding:24px;background:#f0fdf4">
+      <div style="font-size:14px;font-weight:600;color:#166534;margin-bottom:8px">Реализовано экономии</div>
+      <div style="font-size:36px;font-weight:800;color:#15803d">{{ totalRealized }} смн</div>
+      <div style="font-size:13px;color:#166534;margin-top:4px">{{ realizedPercent }}% от показанного</div>
+    </div>
+  </div>
+
+  <div style="border:1.5px solid #e2e8f0;border-radius:14px;padding:28px">
+    <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:20px">Показ экономии → клик → корзина → заказ</div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <sc-for list="{{ funnelSteps }}" as="fs" hint-placeholder-count="4">
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:15px;font-weight:600;color:#0f172a">{{ fs.label }}</span>
+            <span style="font-size:15px;color:#64748b">{{ fs.value }} <sc-if value="{{ fs.showConv }}" hint-placeholder-val="{{ false }}">· {{ fs.conv }}% от предыдущего</sc-if></span>
+          </div>
+          <div style="height:14px;border-radius:999px;background:#f1f5f9;overflow:hidden"><div style="height:100%;border-radius:999px;background:#64748b;width:{{ fs.widthPct }}%"></div></div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="border:1.5px solid #e2e8f0;border-radius:14px;padding:28px">
+    <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:20px">Тренд реализованной экономии</div>
+    <div style="display:flex;align-items:flex-end;gap:14px;height:120px">
+      <sc-for list="{{ trendBars }}" as="tb" hint-placeholder-count="7">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end">
+          <div style="width:100%;max-width:36px;border-radius:6px 6px 0 0;background:#64748b;height:{{ tb.heightPct }}%"></div>
+          <span style="font-size:12px;color:#94a3b8">{{ tb.label }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+</div>
+
+<sc-if value="{{ isDesignSystemRole }}" hint-placeholder-val="{{ false }}">
+<div style="width:100%;max-width:1040px;display:flex;flex-direction:column;gap:32px">
+
+  <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:28px 32px">
+    <div style="font-size:13px;font-weight:700;color:#0ea5e9;letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px">Артборд 0 · Дизайн-система</div>
+    <div style="font-size:28px;font-weight:700;color:#0f172a;line-height:1.25;margin-bottom:12px">DoruTJ — токены и компоненты</div>
+    <div style="font-size:16px;line-height:1.6;color:#334155;max-width:760px">Платформа работает как white-label: сети аптек подключают её под своим брендом. Поэтому ниже — не фирменный стиль, а система переменных. Три исключения — success, danger, warning — сеть переопределить не может: их смысл (успех/ошибка/предупреждение) должен быть одинаковым во всех инсталляциях.</div>
+  </div>
+
+  <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:28px 32px">
+    <div style="font-size:18px;font-weight:700;color:#0f172a;margin-bottom:4px">Цветовые токены</div>
+    <div style="font-size:14px;color:#64748b;margin-bottom:20px">Переопределяются брендом сети</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+      <sc-for list="{{ colorTokens }}" as="tok" hint-placeholder-count="9">
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid #f1f5f9;border-radius:10px">
+          <div style="width:44px;height:44px;border-radius:8px;border:1px solid #e2e8f0;flex-shrink:0;background:{{ tok.hex }}"></div>
+          <div style="min-width:0">
+            <div style="font-family:ui-monospace,Menlo,monospace;font-size:13px;font-weight:600;color:#0f172a;word-break:break-all">{{ tok.name }}</div>
+            <div style="font-family:ui-monospace,Menlo,monospace;font-size:13px;color:#94a3b8;margin:2px 0">{{ tok.hex }}</div>
+            <div style="font-size:14px;color:#475569;line-height:1.4">{{ tok.usage }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="font-size:14px;font-weight:700;color:#0f172a;margin:24px 0 4px">Семантика — зафиксирована, не меняется брендом</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:12px">
+      <sc-for list="{{ lockedTokens }}" as="tok" hint-placeholder-count="3">
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid #f1f5f9;border-radius:10px;position:relative">
+          <div style="width:44px;height:44px;border-radius:8px;border:1px solid #e2e8f0;flex-shrink:0;background:{{ tok.hex }}"></div>
+          <div style="min-width:0">
+            <div style="font-family:ui-monospace,Menlo,monospace;font-size:13px;font-weight:600;color:#0f172a">{{ tok.name }}</div>
+            <div style="font-family:ui-monospace,Menlo,monospace;font-size:13px;color:#94a3b8;margin:2px 0">{{ tok.hex }}</div>
+            <div style="font-size:14px;color:#475569;line-height:1.4">{{ tok.usage }}</div>
+          </div>
+          <div style="position:absolute;top:8px;right:8px;font-size:11px;font-weight:700;color:#94a3b8;background:#f8fafc;border:1px solid #e2e8f0;border-radius:5px;padding:2px 6px">FIX</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;gap:32px;margin-top:24px;flex-wrap:wrap">
+      <div><div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px">--brand-radius</div><div style="width:64px;height:64px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px"></div><div style="font-family:ui-monospace,monospace;font-size:13px;color:#94a3b8;margin-top:6px">8px</div></div>
+      <div><div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px">--brand-font-family</div><div style="font-size:28px;font-weight:700;color:#0f172a">Aa Ӣӯҳқғҷ</div><div style="font-family:ui-monospace,monospace;font-size:13px;color:#94a3b8;margin-top:6px">Inter, system-ui</div></div>
+    </div>
+  </div>
+
+  <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:28px 32px">
+    <div style="font-size:18px;font-weight:700;color:#0f172a;margin-bottom:20px">Типографическая шкала</div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <sc-for list="{{ typeScale }}" as="ts" hint-placeholder-count="6">
+        <div style="display:flex;align-items:baseline;gap:24px;padding-bottom:16px;border-bottom:1px solid #f1f5f9">
+          <div style="width:110px;flex-shrink:0;font-size:14px;font-weight:600;color:#64748b">{{ ts.label }}</div>
+          <div style="flex:1;min-width:0;color:#0f172a;font-size:{{ ts.size }}px;line-height:{{ ts.lh }}px;font-weight:{{ ts.weight }}">{{ ts.sample }}</div>
+          <div style="width:170px;flex-shrink:0;text-align:right;font-family:ui-monospace,monospace;font-size:13px;color:#94a3b8">{{ ts.size }}/{{ ts.lh }} · {{ ts.weight }}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="font-size:14px;font-weight:700;color:#0f172a;margin:24px 0 12px">Отступы (8px-сетка)</div>
+    <div style="display:flex;align-items:flex-end;gap:10px">
+      <sc-for list="{{ spacingScale }}" as="sp" hint-placeholder-count="8">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="width:{{ sp }}px;height:{{ sp }}px;background:#94a3b8;border-radius:3px"></div>
+          <div style="font-family:ui-monospace,monospace;font-size:12px;color:#94a3b8">{{ sp }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:28px 32px">
+    <div style="font-size:18px;font-weight:700;color:#0f172a;margin-bottom:4px">Кнопки</div>
+    <div style="font-size:14px;color:#64748b;margin-bottom:20px">Все состояния: обычное, наведение, нажатие, фокус, заблокировано, загрузка</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:2px">Основная</div>
+        <button style="padding:13px 20px;border-radius:8px;border:none;background:#059669;color:#fff;font-size:16px;font-weight:600">Обычное</button>
+        <button style="padding:13px 20px;border-radius:8px;border:none;background:#047857;color:#fff;font-size:16px;font-weight:600">Наведение</button>
+        <button style="padding:13px 20px;border-radius:8px;border:none;background:#065f46;color:#fff;font-size:16px;font-weight:600">Нажатие</button>
+        <button style="padding:13px 20px;border-radius:8px;border:none;background:#059669;color:#fff;font-size:16px;font-weight:600;box-shadow:0 0 0 3px rgba(14,165,233,0.4)">Фокус</button>
+        <button style="padding:13px 20px;border-radius:8px;border:none;background:#cbd5e1;color:#f1f5f9;font-size:16px;font-weight:600;cursor:not-allowed">Заблокировано</button>
+        <button style="padding:13px 20px;border-radius:8px;border:none;background:#059669;color:#fff;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px"><span style="width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;animation:spin .7s linear infinite;display:inline-block"></span>Загрузка</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:2px">Второстепенная</div>
+        <button style="padding:12px 20px;border-radius:8px;border:1.5px solid #cbd5e1;background:#fff;color:#334155;font-size:16px;font-weight:600">Обычное</button>
+        <button style="padding:12px 20px;border-radius:8px;border:1.5px solid #94a3b8;background:#f8fafc;color:#0f172a;font-size:16px;font-weight:600">Наведение</button>
+        <button style="padding:12px 20px;border-radius:8px;border:1.5px solid #94a3b8;background:#f1f5f9;color:#0f172a;font-size:16px;font-weight:600">Нажатие</button>
+        <button style="padding:12px 20px;border-radius:8px;border:1.5px solid #cbd5e1;background:#fff;color:#334155;font-size:16px;font-weight:600;box-shadow:0 0 0 3px rgba(14,165,233,0.4)">Фокус</button>
+        <button style="padding:12px 20px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;color:#cbd5e1;font-size:16px;font-weight:600;cursor:not-allowed">Заблокировано</button>
+        <button style="padding:12px 20px;border-radius:8px;border:1.5px solid #cbd5e1;background:#fff;color:#334155;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px"><span style="width:15px;height:15px;border-radius:50%;border:2px solid #cbd5e1;border-top-color:#64748b;animation:spin .7s linear infinite;display:inline-block"></span>Загрузка</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:2px">Текстовая</div>
+        <button style="padding:12px 8px;border-radius:8px;border:none;background:transparent;color:#64748b;font-size:16px;font-weight:600;text-align:left">Обычное</button>
+        <button style="padding:12px 8px;border-radius:8px;border:none;background:#f1f5f9;color:#475569;font-size:16px;font-weight:600;text-align:left">Наведение</button>
+        <button style="padding:12px 8px;border-radius:8px;border:none;background:#e2e8f0;color:#334155;font-size:16px;font-weight:600;text-align:left">Нажатие</button>
+        <button style="padding:12px 8px;border-radius:8px;border:none;background:transparent;color:#64748b;font-size:16px;font-weight:600;text-align:left;box-shadow:0 0 0 3px rgba(14,165,233,0.4)">Фокус</button>
+        <button style="padding:12px 8px;border-radius:8px;border:none;background:transparent;color:#cbd5e1;font-size:16px;font-weight:600;text-align:left;cursor:not-allowed">Заблокировано</button>
+        <button style="padding:12px 8px;border-radius:8px;border:none;background:transparent;color:#94a3b8;font-size:16px;font-weight:600;text-align:left">Загрузка…</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:28px 32px">
+    <div style="font-size:18px;font-weight:700;color:#0f172a;margin-bottom:20px">Поля ввода</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:20px">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:6px">Обычное</div>
+        <input placeholder="Название лекарства" style="width:100%;padding:13px 16px;font-size:16px;border-radius:8px;border:1.5px solid #e2e8f0;color:#0f172a;background:#fff"/>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:6px">Фокус</div>
+        <input placeholder="Название лекарства" style="width:100%;padding:13px 16px;font-size:16px;border-radius:8px;border:1.5px solid #0ea5e9;color:#0f172a;background:#fff;box-shadow:0 0 0 3px rgba(14,165,233,0.25)"/>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:6px">Заполнено</div>
+        <input value="Цитрамон" readonly="" style="width:100%;padding:13px 16px;font-size:16px;border-radius:8px;border:1.5px solid #e2e8f0;color:#0f172a;background:#fff"/>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:6px">Ошибка</div>
+        <input value="99" readonly="" style="width:100%;padding:13px 16px;font-size:16px;border-radius:8px;border:1.5px solid #dc2626;color:#0f172a;background:#fef2f2"/>
+        <div style="font-size:14px;color:#dc2626;margin-top:6px;display:flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#dc2626" stroke-width="2"/><path d="M12 8v5M12 16h.01" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/></svg>Введите корректный номер</div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:6px">Заблокировано</div>
+        <input value="Недоступно" readonly="" style="width:100%;padding:13px 16px;font-size:16px;border-radius:8px;border:1.5px solid #e2e8f0;color:#94a3b8;background:#f8fafc"/>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:6px">Поиск</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 16px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#64748b" stroke-width="2"/><path d="M21 21l-4.3-4.3" stroke="#64748b" stroke-width="2" stroke-linecap="round"/></svg>
+          <span style="font-size:16px;color:#94a3b8">Введите название лекарства</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:40px;margin-top:24px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:8px">Выпадающий список — закрыт</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:13px 16px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;width:220px">
+          <span style="font-size:16px;color:#0f172a">По цене</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:8px">Выпадающий список — открыт</div>
+        <div style="width:220px;border-radius:8px;border:1.5px solid #0ea5e9;background:#fff;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:13px 16px"><span style="font-size:16px;color:#0f172a">По цене</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 15l-6-6-6 6" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div style="padding:10px 16px;font-size:16px;color:#fff;background:#64748b">По цене</div>
+          <div style="padding:10px 16px;font-size:16px;color:#0f172a;border-top:1px solid #f1f5f9">По расстоянию</div>
+          <div style="padding:10px 16px;font-size:16px;color:#0f172a;border-top:1px solid #f1f5f9">По релевантности</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:24px">
+      <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:8px">Чип-фильтр</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div style="padding:9px 16px;border-radius:999px;border:1.5px solid #e2e8f0;background:#fff;color:#334155;font-size:14px;font-weight:600">Не выбран</div>
+        <div style="padding:9px 16px;border-radius:999px;border:1.5px solid #0f172a;background:#0f172a;color:#fff;font-size:14px;font-weight:600">Выбран</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:28px 32px">
+    <div style="font-size:18px;font-weight:700;color:#0f172a;margin-bottom:20px">Бейджи</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px">
+      <sc-for list="{{ badgeDefs }}" as="b" hint-placeholder-count="4">
+        <div style="display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid {{ b.bd }};background:{{ b.bg }};color:{{ b.fg }};font-size:14px;font-weight:600">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3L2 21h20L12 3z" stroke="{{ b.fg }}" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4M12 17.5h.01" stroke="{{ b.fg }}" stroke-width="2" stroke-linecap="round"/></svg>
+          {{ b.label }}
+        </div>
+      </sc-for>
+    </div>
+    <div style="font-size:14px;font-weight:600;color:#64748b;margin-bottom:8px">Общая семантика (success / danger / warning)</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div style="padding:7px 12px;border-radius:999px;border:1px solid #bbf7d0;background:#f0fdf4;color:#15803d;font-size:14px;font-weight:600">Успех</div>
+      <div style="padding:7px 12px;border-radius:999px;border:1px solid #fecaca;background:#fef2f2;color:#dc2626;font-size:14px;font-weight:600">Ошибка</div>
+      <div style="padding:7px 12px;border-radius:999px;border:1px solid #fde68a;background:#fffbeb;color:#b45309;font-size:14px;font-weight:600">Предупреждение</div>
+    </div>
+  </div>
+
+  <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:28px 32px">
+    <div style="font-size:18px;font-weight:700;color:#0f172a;margin-bottom:20px">Карточка, модальное окно, уведомление</div>
+    <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:24px">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:8px">Карточка результата</div>
+        <div style="border:1px solid #e2e8f0;border-radius:12px;padding:16px;background:#fff">
+          <div style="font-size:16px;font-weight:700;color:#0f172a">Панкреатин-Тева</div>
+          <div style="font-size:14px;color:#64748b;margin:2px 0 8px">Панкреатин · капсулы 10 000 ЕД №20</div>
+          <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:18px;font-weight:700;color:#0f172a">от 18 сомони</span></div>
+          <div style="font-size:14px;color:#64748b;margin-top:4px">6 аптек · 0.4 км</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:8px">Модальное окно</div>
+        <div style="border:1px solid #e2e8f0;border-radius:14px;padding:20px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.08)">
+          <div style="font-size:18px;font-weight:700;color:#0f172a;margin-bottom:8px">Отменить заказ?</div>
+          <div style="font-size:15px;color:#475569;line-height:1.5;margin-bottom:16px">Это действие нельзя отменить.</div>
+          <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button style="padding:10px 16px;border-radius:8px;border:1.5px solid #cbd5e1;background:#fff;color:#334155;font-size:15px;font-weight:600">Назад</button>
+            <button style="padding:10px 16px;border-radius:8px;border:none;background:#dc2626;color:#fff;font-size:15px;font-weight:600">Отменить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:13px;font-weight:600;color:#64748b;margin:24px 0 8px">Всплывающее уведомление</div>
+    <div style="display:inline-flex;align-items:center;gap:10px;padding:14px 18px;border-radius:10px;background:#0f172a;color:#fff;font-size:15px;font-weight:500">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#4ade80" stroke-width="2"/><path d="M8 12l3 3 5-6" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Товар добавлен в корзину
+    </div>
+  </div>
+
+  <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:28px 32px">
+    <div style="font-size:18px;font-weight:700;color:#0f172a;margin-bottom:20px">Скелетон, пустое состояние, прогресс, код</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:8px">Скелетон загрузки</div>
+        <div style="border:1px solid #e2e8f0;border-radius:12px;padding:16px;background:#fff;display:flex;flex-direction:column;gap:10px">
+          <div style="height:16px;width:60%;border-radius:6px;background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 37%,#f1f5f9 63%);background-size:400px 100%;animation:shimmer 1.4s infinite linear"></div>
+          <div style="height:14px;width:85%;border-radius:6px;background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 37%,#f1f5f9 63%);background-size:400px 100%;animation:shimmer 1.4s infinite linear"></div>
+          <div style="height:14px;width:40%;border-radius:6px;background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 37%,#f1f5f9 63%);background-size:400px 100%;animation:shimmer 1.4s infinite linear"></div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:8px">Пустое состояние</div>
+        <div style="border:1px solid #e2e8f0;border-radius:12px;padding:24px 16px;background:#fff;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px">
+          <div style="width:44px;height:44px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#94a3b8" stroke-width="2"/><path d="M21 21l-4.3-4.3" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div style="font-size:15px;font-weight:700;color:#0f172a">Ничего не найдено</div>
+          <div style="font-size:14px;color:#64748b">Проверьте название и попробуйте снова</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:8px">Полоса прогресса</div>
+        <div style="height:10px;border-radius:999px;background:#f1f5f9;overflow:hidden"><div style="width:60%;height:100%;background:#64748b;border-radius:999px"></div></div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:8px">Код: 4 и 6 ячеек</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <sc-for list="{{ demoCells4 }}" as="c" hint-placeholder-count="4"><div style="width:44px;height:52px;border-radius:8px;border:1.5px solid #e2e8f0;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#0f172a">{{ c }}</div></sc-for>
+        </div>
+        <div style="display:flex;gap:6px">
+          <sc-for list="{{ demoCells6 }}" as="c" hint-placeholder-count="6"><div style="width:34px;height:44px;border-radius:8px;border:1.5px solid #e2e8f0;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#0f172a">{{ c }}</div></sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</sc-if>
+
+<sc-if value="{{ isPatientRole }}" hint-placeholder-val="{{ false }}">
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="360,780" width="360" height="780" style="margin:0 auto">
+<div style="display:flex;flex-direction:column;height:100%;background:#f8fafc">
+
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;height:100%">
+  <div style="padding:16px 20px 8px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:26px;height:26px;border-radius:7px;background:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 2v20M2 12h20" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.4"/></svg>
+      </div>
+      <span style="font-size:16px;font-weight:700;color:#0f172a">[Бренд]</span>
+    </div>
+    <div style="display:flex;gap:2px;background:#f1f5f9;padding:3px;border-radius:8px;flex-shrink:0">
+      <sc-for list="{{ langTabs }}" as="lng" hint-placeholder-count="3">
+        <button onClick="{{ lng.onClick }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="padding:6px 9px;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;background:{{ lng.bg }};color:{{ lng.fg }}">{{ lng.label }}</button>
+      </sc-for>
+    </div>
+  </div>
+  <div style="flex:1;overflow:auto;padding:8px 20px 20px;display:flex;flex-direction:column;gap:16px">
+
+    <sc-if value="{{ homeLoading }}" hint-placeholder-val="{{ true }}">
+      <div style="height:52px;border-radius:8px;background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 37%,#f1f5f9 63%);background-size:400px 100%;animation:shimmer 1.4s infinite linear"></div>
+      <div style="height:56px;border-radius:12px;background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 37%,#f1f5f9 63%);background-size:400px 100%;animation:shimmer 1.4s infinite linear"></div>
+      <div style="display:flex;gap:8px">
+        <div style="height:34px;width:110px;border-radius:999px;background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 37%,#f1f5f9 63%);background-size:400px 100%;animation:shimmer 1.4s infinite linear"></div>
+        <div style="height:34px;width:130px;border-radius:999px;background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 37%,#f1f5f9 63%);background-size:400px 100%;animation:shimmer 1.4s infinite linear"></div>
+        <div style="height:34px;width:90px;border-radius:999px;background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 37%,#f1f5f9 63%);background-size:400px 100%;animation:shimmer 1.4s infinite linear"></div>
+      </div>
+      <div style="height:150px;border-radius:14px;background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 37%,#f1f5f9 63%);background-size:400px 100%;animation:shimmer 1.4s infinite linear"></div>
+    </sc-if>
+
+    <sc-if value="{{ homeLoaded }}" hint-placeholder-val="{{ false }}">
+
+      <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:8px;padding:11px 14px;border-radius:10px;background:#f1f5f9;border:1px solid #e2e8f0;color:#475569;font-size:14px;font-weight:600">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><path d="M2 2l20 20M8.5 16.5a5 5 0 017 0M5 12.5a10 10 0 013.5-2.3M19 12.5a10 10 0 00-2-1.8M12 20h.01" stroke="#475569" stroke-width="2" stroke-linecap="round"/></svg>
+          Нет сети. Показаны сохранённые данные
+        </div>
+      </sc-if>
+
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff" style-focus-within="border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,0.25)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><circle cx="11" cy="11" r="7" stroke="#64748b" stroke-width="2"/><path d="M21 21l-4.3-4.3" stroke="#64748b" stroke-width="2" stroke-linecap="round"/></svg>
+        <input value="{{ searchQuery }}" onChange="{{ onSearchQueryChange }}" onKeyDown="{{ onSearchKeyDown }}" placeholder="{{ searchPlaceholder }}" style="border:none;outline:none;flex:1;font-size:16px;color:#0f172a;min-width:0;background:transparent"/>
+      </div>
+
+      <div style="border-radius:12px;background:#f0fdf4;border:1px solid #bbf7d0;padding:14px 16px;display:flex;align-items:center;gap:12px">
+        <div style="width:36px;height:36px;border-radius:9px;background:#dcfce7;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M3 17l6-6 4 4 8-8" stroke="#16a34a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h6v6" stroke="#16a34a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div style="font-size:15px;color:#166534;line-height:1.4">{{ savingsBanner }}</div>
+      </div>
+
+      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:2px">
+        <sc-for list="{{ categoryChips }}" as="chip" hint-placeholder-count="5">
+          <button onClick="{{ chip.onClick }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="flex-shrink:0;padding:9px 16px;border-radius:999px;border:1.5px solid #e2e8f0;background:#fff;color:#334155;font-size:14px;font-weight:600;white-space:nowrap">{{ chip.label }}</button>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ showLocationAsk }}" hint-placeholder-val="{{ false }}">
+        <div style="border-radius:12px;border:1px solid #e2e8f0;background:#fff;padding:16px">
+          <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:2px"><path d="M12 22s7-7.58 7-12.5A7 7 0 105 9.5C5 14.42 12 22 12 22z" stroke="#64748b" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.5" stroke="#64748b" stroke-width="2"/></svg>
+            <div style="font-size:15px;color:#334155;line-height:1.45">Разрешить доступ к геолокации, чтобы находить аптеки рядом с вами?</div>
+          </div>
+          <div style="display:flex;gap:10px">
+            <button onClick="{{ denyLocation }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="flex:1;padding:11px;border-radius:8px;border:1.5px solid #cbd5e1;background:#fff;color:#334155;font-size:15px;font-weight:600">Не сейчас</button>
+            <button onClick="{{ grantLocation }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="flex:1;padding:11px;border-radius:8px;border:none;background:#059669;color:#fff;font-size:15px;font-weight:600">Разрешить</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showLocationDenied }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:8px;padding:11px 14px;border-radius:10px;background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:14px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><path d="M12 3L2 21h20L12 3z" stroke="#b45309" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4M12 17.5h.01" stroke="#b45309" stroke-width="2" stroke-linecap="round"/></svg>
+          <span style="flex:1">Геолокация выключена — аптеки показаны по городу</span>
+          <button onClick="{{ reAskLocation }}" style="background:none;border:none;color:#b45309;font-weight:700;font-size:14px;text-decoration:underline;cursor:pointer;padding:0">Включить</button>
+        </div>
+      </sc-if>
+
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:8px">Аптеки рядом</div>
+        <div onClick="{{ goMap }}" style="position:relative;height:150px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;cursor:pointer">
+          <iframe src="./map-view.html?mode=home" style="width:100%;height:100%;border:none;pointer-events:none" title="Аптеки на карте"></iframe>
+          <div style="position:absolute;bottom:10px;right:10px;background:#0f172a;color:#fff;font-size:13px;font-weight:600;padding:7px 12px;border-radius:999px">Открыть карту</div>
+        </div>
+      </div>
+
+    </sc-if>
+  </div>
+  <div style="flex-shrink:0;display:flex;border-top:1px solid #f1f5f9;background:#fff">
+    <button onClick="{{ navHome }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 10px;border:none;background:transparent;cursor:pointer;min-height:48px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M4 11.5L12 4l8 7.5V20a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1v-8.5z" stroke="{{ tabHomeColor }}" stroke-width="2" stroke-linejoin="round"/></svg>
+      <span style="font-size:12px;font-weight:600;color:{{ tabHomeColor }}">Главная</span>
+    </button>
+    <button onClick="{{ navCart }}" style="flex:1;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 10px;border:none;background:transparent;cursor:pointer;min-height:48px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M3 4h2l2.4 12.2a2 2 0 002 1.8h7.2a2 2 0 002-1.7L20 8H6" stroke="{{ tabCartColor }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="21" r="1.5" fill="{{ tabCartColor }}"/><circle cx="17" cy="21" r="1.5" fill="{{ tabCartColor }}"/></svg>
+      <sc-if value="{{ hasCartItems }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:4px;right:22%;background:#dc2626;color:#fff;font-size:11px;font-weight:700;border-radius:999px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px">{{ cartCount }}</span></sc-if>
+      <span style="font-size:12px;font-weight:600;color:{{ tabCartColor }}">Корзина</span>
+    </button>
+    <button onClick="{{ navOrder }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 10px;border:none;background:transparent;cursor:pointer;min-height:48px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2z" stroke="{{ tabOrderColor }}" stroke-width="2" stroke-linejoin="round"/><path d="M9 8h6M9 12h6" stroke="{{ tabOrderColor }}" stroke-width="2" stroke-linecap="round"/></svg>
+      <span style="font-size:12px;font-weight:600;color:{{ tabOrderColor }}">Заказы</span>
+    </button>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSearch }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;height:100%">
+  <div style="padding:14px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;border-bottom:1px solid #f1f5f9">
+    <button onClick="{{ goBack }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="width:40px;height:40px;border-radius:8px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;background:#f1f5f9">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><circle cx="11" cy="11" r="7" stroke="#64748b" stroke-width="2"/><path d="M21 21l-4.3-4.3" stroke="#64748b" stroke-width="2" stroke-linecap="round"/></svg>
+      <input value="{{ searchQuery }}" onChange="{{ onSearchQueryChange }}" style="border:none;outline:none;flex:1;font-size:16px;color:#0f172a;min-width:0;background:transparent"/>
+    </div>
+  </div>
+
+  <div style="flex:1;overflow:auto;padding:14px 16px 20px;display:flex;flex-direction:column;gap:12px">
+
+    <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:48px 16px">
+        <div style="width:52px;height:52px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M2 2l20 20M8.5 16.5a5 5 0 017 0M5 12.5a10 10 0 013.5-2.3M19 12.5a10 10 0 00-2-1.8M12 20h.01" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/></svg></div>
+        <div style="font-size:16px;font-weight:700;color:#0f172a">Нет соединения</div>
+        <div style="font-size:15px;color:#64748b;max-width:240px;line-height:1.4">Проверьте интернет и повторите попытку</div>
+        <button onClick="{{ retrySearch }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="margin-top:6px;padding:11px 20px;border-radius:8px;border:none;background:#059669;color:#fff;font-size:15px;font-weight:600">Повторить</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ searchLoading }}" hint-placeholder-val="{{ false }}">
+      <sc-for list="{{ skeletonRows }}" as="s" hint-placeholder-count="3">
+        <div style="border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px">
+          <div style="height:16px;width:55%;border-radius:6px;background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 37%,#f1f5f9 63%);background-size:400px 100%;animation:shimmer 1.4s infinite linear"></div>
+          <div style="height:14px;width:80%;border-radius:6px;background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 37%,#f1f5f9 63%);background-size:400px 100%;animation:shimmer 1.4s infinite linear"></div>
+          <div style="height:14px;width:35%;border-radius:6px;background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 37%,#f1f5f9 63%);background-size:400px 100%;animation:shimmer 1.4s infinite linear"></div>
+        </div>
+      </sc-for>
+    </sc-if>
+
+    <sc-if value="{{ searchReady }}" hint-placeholder-val="{{ false }}">
+
+      <sc-if value="{{ hasTypoFix }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:8px;padding:11px 14px;border-radius:10px;background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1;font-size:14px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><circle cx="12" cy="12" r="9" stroke="#0ea5e9" stroke-width="2"/><path d="M12 11v5M12 8h.01" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>Показаны результаты по «{{ correctedTo }}» — вы искали «{{ correctedFrom }}»</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ stale }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:14px;font-weight:600">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3L2 21h20L12 3z" stroke="#b45309" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4M12 17.5h.01" stroke="#b45309" stroke-width="2" stroke-linecap="round"/></svg>
+          Остаток и цены могли измениться
+        </div>
+      </sc-if>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onClick="{{ toggleInStock }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="padding:8px 14px;border-radius:999px;border:1.5px solid {{ inStockBd }};background:{{ inStockBg }};color:{{ inStockFg }};font-size:14px;font-weight:600">Только в наличии</button>
+        <button onClick="{{ toggleOpenNow }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="padding:8px 14px;border-radius:999px;border:1.5px solid {{ openNowBd }};background:{{ openNowBg }};color:{{ openNowFg }};font-size:14px;font-weight:600">Открыто сейчас</button>
+        <button onClick="{{ toggleOpen24 }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="padding:8px 14px;border-radius:999px;border:1.5px solid {{ open24Bd }};background:{{ open24Bg }};color:{{ open24Fg }};font-size:14px;font-weight:600">Круглосуточно</button>
+        <button onClick="{{ cycleRadius }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="padding:8px 14px;border-radius:999px;border:1.5px solid #e2e8f0;background:#fff;color:#334155;font-size:14px;font-weight:600">Радиус: {{ searchFilters.radiusKm }} км</button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:14px;color:#64748b;flex-shrink:0">Сортировка:</span>
+        <sc-for list="{{ sortTabs }}" as="st" hint-placeholder-count="3">
+          <button onClick="{{ st.onClick }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="padding:6px 12px;border-radius:999px;border:none;background:{{ st.bg }};color:{{ st.fg }};font-size:14px;font-weight:600">{{ st.label }}</button>
+        </sc-for>
+      </div>
+
+      <div style="font-size:14px;color:#64748b">{{ resultsHeader }}</div>
+
+      <sc-if value="{{ searchEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:40px 16px">
+          <div style="width:52px;height:52px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#94a3b8" stroke-width="2"/><path d="M21 21l-4.3-4.3" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div style="font-size:16px;font-weight:700;color:#0f172a">По запросу «{{ searchQuery }}» ничего не найдено</div>
+          <div style="font-size:15px;color:#64748b;max-width:260px;line-height:1.4">Проверьте написание или попробуйте название действующего вещества</div>
+          <button onClick="{{ resetSearch }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="margin-top:6px;padding:11px 20px;border-radius:8px;border:1.5px solid #cbd5e1;background:#fff;color:#334155;font-size:15px;font-weight:600">На главную</button>
+        </div>
+      </sc-if>
+
+      <sc-for list="{{ searchResults }}" as="m" hint-placeholder-count="3">
+        <div onClick="{{ m.onClick }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" tabindex="0" style="border:1px solid #e2e8f0;border-radius:12px;padding:16px;background:#fff;cursor:pointer;display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+            <div style="font-size:16px;font-weight:700;color:#0f172a;line-height:1.3">{{ m.name }}</div>
+            <sc-if value="{{ m.rx }}" hint-placeholder-val="{{ false }}">
+              <div style="flex-shrink:0;font-size:12px;font-weight:700;padding:3px 8px;border-radius:999px;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1">Рецептурный</div>
+            </sc-if>
+          </div>
+          <div style="font-size:14px;color:#64748b">{{ m.inn }} · {{ m.form }}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+            <div style="font-size:18px;font-weight:700;color:#0f172a">от {{ m.minPrice }} сомони</div>
+            <div style="font-size:14px;color:#64748b">{{ m.count }} аптек · {{ m.nearest }} км</div>
+          </div>
+        </div>
+      </sc-for>
+    </sc-if>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isMedicine }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;height:100%;position:relative">
+  <div style="padding:14px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;border-bottom:1px solid #f1f5f9">
+    <button onClick="{{ goBack }}" style="width:40px;height:40px;border-radius:8px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div style="font-size:16px;font-weight:700;color:#0f172a">Карточка лекарства</div>
+  </div>
+  <div style="flex:1;overflow:auto;padding:16px 16px 24px;display:flex;flex-direction:column;gap:16px">
+
+    <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:8px;padding:11px 14px;border-radius:10px;background:#f1f5f9;border:1px solid #e2e8f0;color:#475569;font-size:14px;font-weight:600">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M2 2l20 20M8.5 16.5a5 5 0 017 0M5 12.5a10 10 0 013.5-2.3M19 12.5a10 10 0 00-2-1.8M12 20h.01" stroke="#475569" stroke-width="2" stroke-linecap="round"/></svg>
+        Офлайн — сохранённые данные, только просмотр
+      </div>
+    </sc-if>
+    <sc-if value="{{ stale }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:14px;font-weight:600">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3L2 21h20L12 3z" stroke="#b45309" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4M12 17.5h.01" stroke="#b45309" stroke-width="2" stroke-linecap="round"/></svg>
+        Данные могут быть неактуальны
+      </div>
+    </sc-if>
+
+    <div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px">
+        <div style="font-size:22px;font-weight:700;color:#0f172a;line-height:1.25">{{ med.name }}</div>
+        <sc-if value="{{ med.rx }}" hint-placeholder-val="{{ false }}">
+          <div style="flex-shrink:0;font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1">Рецептурный</div>
+        </sc-if>
+      </div>
+      <div style="font-size:15px;color:#64748b;line-height:1.4">{{ med.inn }} · {{ med.form }}</div>
+      <div style="font-size:14px;color:#94a3b8;margin-top:2px">{{ med.manufacturer }}</div>
+    </div>
+
+    <sc-if value="{{ hasAnalog }}" hint-placeholder-val="{{ false }}">
+      <div style="border-radius:14px;background:#f0fdf4;border:1.5px solid #86efac;padding:18px">
+        <div style="font-size:24px;font-weight:800;color:#15803d;line-height:1.2;margin-bottom:6px">Сэкономьте {{ analogSavings }} сомони</div>
+        <div style="font-size:15px;color:#166534;line-height:1.5;margin-bottom:14px">Тот же действующий компонент — {{ analog.inn }} {{ analog.dose }} — за {{ analog.minPrice }} сомони вместо {{ med.minPriceAll }} сомони ({{ analogPercent }}% дешевле).</div>
+        <button onClick="{{ viewAnalog }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="padding:12px 18px;border-radius:8px;border:none;background:#16a34a;color:#fff;font-size:15px;font-weight:700;cursor:pointer">{{ analogButtonLabel }}</button>
+      </div>
+      <div style="font-size:14px;color:#64748b;line-height:1.5;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px">{{ disclaimerText }}</div>
+    </sc-if>
+
+    <div>
+      <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:10px">Предложения аптек</div>
+
+      <sc-if value="{{ noOffersInStock }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:32px 16px;border:1px solid #e2e8f0;border-radius:12px">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#94a3b8" stroke-width="2"/><path d="M9 9l6 6M15 9l-6 6" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/></svg>
+          <div style="font-size:15px;font-weight:700;color:#0f172a">Нет ни одного предложения в наличии</div>
+          <div style="font-size:14px;color:#64748b;max-width:240px">Загляните позже или поищите аналог с тем же действующим веществом</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hasOffersInStock }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <sc-for list="{{ offers }}" as="o" hint-placeholder-count="2">
+          <div style="border:1px solid #e2e8f0;border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:15px;font-weight:700;color:#0f172a">{{ o.pharmacy }}</div>
+              <div style="font-size:13px;color:#64748b;margin-top:2px">{{ o.hours }} · {{ o.distanceKm }} км · {{ o.stockLabel }}</div>
+            </div>
+            <div style="font-size:17px;font-weight:700;color:#0f172a;flex-shrink:0">{{ o.price }} смн</div>
+            <button onClick="{{ o.onAdd }}" disabled="{{ o.addDisabled }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="flex-shrink:0;padding:10px 14px;border-radius:8px;border:none;background:{{ o.addBg }};color:#fff;font-size:14px;font-weight:600;cursor:pointer">В корзину</button>
+          </div>
+        </sc-for>
+      </div>
+      </sc-if>
+    </div>
+
+    <button onClick="{{ goMap }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="padding:13px;border-radius:8px;border:1.5px solid #cbd5e1;background:#fff;color:#334155;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 22s7-7.58 7-12.5A7 7 0 105 9.5C5 14.42 12 22 12 22z" stroke="#334155" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.5" stroke="#334155" stroke-width="2"/></svg>
+      Показать на карте
+    </button>
+  </div>
+
+  <sc-if value="{{ showToastBar }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:16px;right:16px;bottom:16px;background:#0f172a;color:#fff;padding:13px 16px;border-radius:10px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;box-shadow:0 8px 20px rgba(15,23,42,.25)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#4ade80" stroke-width="2"/><path d="M8 12l3 3 5-6" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      {{ toastText }}
+    </div>
+  </sc-if>
+</div>
+</sc-if>
+<sc-if value="{{ isCart }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;height:100%">
+  <div style="padding:16px 16px 12px;flex-shrink:0"><div style="font-size:20px;font-weight:700;color:#0f172a">Корзина</div></div>
+  <div style="flex:1;overflow:auto;padding:0 16px 16px;display:flex;flex-direction:column;gap:14px">
+
+    <sc-if value="{{ cartEmpty }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:56px 16px">
+        <div style="width:52px;height:52px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M3 4h2l2.4 12.2a2 2 0 002 1.8h7.2a2 2 0 002-1.7L20 8H6" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div style="font-size:16px;font-weight:700;color:#0f172a">Корзина пуста</div>
+        <div style="font-size:15px;color:#64748b">Найдите нужное лекарство по низкой цене</div>
+        <button onClick="{{ goHomeSearch }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="margin-top:6px;padding:11px 20px;border-radius:8px;border:none;background:#059669;color:#fff;font-size:15px;font-weight:600">Найти дешевле</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ cartHasItems }}" hint-placeholder-val="{{ false }}">
+      <sc-if value="{{ multiPharmacy }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:flex-start;gap:8px;padding:11px 14px;border-radius:10px;background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1;font-size:14px;line-height:1.4">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="9" stroke="#0ea5e9" stroke-width="2"/><path d="M12 11v5M12 8h.01" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>Будет оформлено {{ pharmacyCount }} отдельных заказа — по одному в каждой аптеке</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hasDuplicateIngredient }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:flex-start;gap:8px;padding:11px 14px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;font-size:14px;line-height:1.45">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="9" stroke="#dc2626" stroke-width="2"/><path d="M12 8v5M12 16h.01" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/></svg>
+          <span><b>{{ duplicateIngredientName }}</b> есть в нескольких препаратах корзины — риск превышения дозы. Проверьте состав перед заказом.</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ stale }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:14px;font-weight:600">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3L2 21h20L12 3z" stroke="#b45309" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4M12 17.5h.01" stroke="#b45309" stroke-width="2" stroke-linecap="round"/></svg>
+          Цена или наличие одной из позиций могли измениться
+        </div>
+      </sc-if>
+
+      <sc-for list="{{ cartGroups }}" as="g" hint-placeholder-count="2">
+        <div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
+          <div style="padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:14px;font-weight:700;color:#0f172a">{{ g.pharmacy }}</span>
+            <span style="font-size:14px;color:#64748b">Подытог: {{ g.subtotal }} смн</span>
+          </div>
+          <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="1">
+            <div style="padding:12px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f1f5f9">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:15px;font-weight:600;color:#0f172a">{{ it.medName }}</div>
+                <div style="font-size:13px;color:#64748b">{{ it.form }}</div>
+              </div>
+              <div style="font-size:15px;font-weight:700;color:#0f172a;flex-shrink:0">{{ it.price }} смн</div>
+              <button onClick="{{ it.onRemove }}" style="flex-shrink:0;width:32px;height:32px;border-radius:7px;border:none;background:#f1f5f9;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#64748b" stroke-width="2" stroke-linecap="round"/></svg></button>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 4px">
+        <span style="font-size:16px;font-weight:700;color:#0f172a">Итого</span>
+        <span style="font-size:20px;font-weight:800;color:#0f172a">{{ cartTotal }} смн</span>
+      </div>
+      <button onClick="{{ goCheckoutFromCart }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="padding:14px;border-radius:8px;border:none;background:#059669;color:#fff;font-size:16px;font-weight:700;cursor:pointer">Перейти к оформлению</button>
+    </sc-if>
+  </div>
+  <div style="flex-shrink:0;display:flex;border-top:1px solid #f1f5f9;background:#fff">
+    <button onClick="{{ navHome }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 10px;border:none;background:transparent;cursor:pointer;min-height:48px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M4 11.5L12 4l8 7.5V20a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1v-8.5z" stroke="{{ tabHomeColor }}" stroke-width="2" stroke-linejoin="round"/></svg>
+      <span style="font-size:12px;font-weight:600;color:{{ tabHomeColor }}">Главная</span>
+    </button>
+    <button onClick="{{ navCart }}" style="flex:1;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 10px;border:none;background:transparent;cursor:pointer;min-height:48px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M3 4h2l2.4 12.2a2 2 0 002 1.8h7.2a2 2 0 002-1.7L20 8H6" stroke="{{ tabCartColor }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="21" r="1.5" fill="{{ tabCartColor }}"/><circle cx="17" cy="21" r="1.5" fill="{{ tabCartColor }}"/></svg>
+      <sc-if value="{{ hasCartItems }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:4px;right:22%;background:#dc2626;color:#fff;font-size:11px;font-weight:700;border-radius:999px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px">{{ cartCount }}</span></sc-if>
+      <span style="font-size:12px;font-weight:600;color:{{ tabCartColor }}">Корзина</span>
+    </button>
+    <button onClick="{{ navOrder }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 10px;border:none;background:transparent;cursor:pointer;min-height:48px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2z" stroke="{{ tabOrderColor }}" stroke-width="2" stroke-linejoin="round"/><path d="M9 8h6M9 12h6" stroke="{{ tabOrderColor }}" stroke-width="2" stroke-linecap="round"/></svg>
+      <span style="font-size:12px;font-weight:600;color:{{ tabOrderColor }}">Заказы</span>
+    </button>
+  </div>
+</div>
+</sc-if>
+<sc-if value="{{ isCheckout }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;height:100%">
+  <div style="padding:14px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;border-bottom:1px solid #f1f5f9">
+    <button onClick="{{ goBack }}" style="width:40px;height:40px;border-radius:8px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div style="font-size:16px;font-weight:700;color:#0f172a">Оформление заказа</div>
+  </div>
+  <div style="flex:1;overflow:auto;padding:16px 16px 24px;display:flex;flex-direction:column;gap:18px">
+
+    <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:8px;padding:11px 14px;border-radius:10px;background:#f1f5f9;border:1px solid #e2e8f0;color:#475569;font-size:14px;font-weight:600">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M2 2l20 20M8.5 16.5a5 5 0 017 0M5 12.5a10 10 0 013.5-2.3M19 12.5a10 10 0 00-2-1.8M12 20h.01" stroke="#475569" stroke-width="2" stroke-linecap="round"/></svg>
+        Нет сети — оформление недоступно
+      </div>
+    </sc-if>
+
+    <div>
+      <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:8px">Заказ по аптекам</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ cartGroups }}" as="g" hint-placeholder-count="2">
+          <div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+            <div><div style="font-size:14px;font-weight:700;color:#0f172a">{{ g.pharmacy }}</div><div style="font-size:13px;color:#64748b">{{ g.count }} товара · доставка 15 смн</div></div>
+            <div style="font-size:15px;font-weight:700;color:#0f172a">{{ g.subtotalWithDelivery }} смн</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:8px">Адрес доставки</div>
+      <div style="height:150px;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;margin-bottom:12px">
+        <iframe src="./map-view.html?mode=picker" style="width:100%;height:100%;border:none" title="Выбор адреса"></iframe>
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:14px;font-weight:600;color:#0f172a;display:block;margin-bottom:6px">Ориентир</label>
+        <input value="{{ checkoutForm.landmark }}" onChange="{{ onLandmarkChange }}" placeholder="например: четырёхэтажный дом рядом с мечетью" style-focus="border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,0.25)" style="width:100%;padding:13px 14px;font-size:16px;border-radius:8px;border:1.5px solid #e2e8f0;color:#0f172a;background:#fff"/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+        <input value="{{ checkoutForm.entrance }}" onChange="{{ onEntranceChange }}" placeholder="Подъезд" style="padding:12px 10px;font-size:15px;border-radius:8px;border:1.5px solid #e2e8f0;color:#0f172a;background:#fff;min-width:0"/>
+        <input value="{{ checkoutForm.floor }}" onChange="{{ onFloorChange }}" placeholder="Этаж" style="padding:12px 10px;font-size:15px;border-radius:8px;border:1.5px solid #e2e8f0;color:#0f172a;background:#fff;min-width:0"/>
+        <input value="{{ checkoutForm.apartment }}" onChange="{{ onApartmentChange }}" placeholder="Квартира" style="padding:12px 10px;font-size:15px;border-radius:8px;border:1.5px solid #e2e8f0;color:#0f172a;background:#fff;min-width:0"/>
+      </div>
+      <button onClick="{{ togglePhoto }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="width:100%;padding:12px;border-radius:8px;border:1.5px dashed #cbd5e1;background:{{ photoBg }};color:{{ photoFg }};font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z" stroke="{{ photoFg }}" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="14" r="3.5" stroke="{{ photoFg }}" stroke-width="2"/></svg>
+        {{ photoLabel }}
+      </button>
+    </div>
+
+    <div>
+      <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:8px">Способ оплаты</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 14px;border-radius:10px;border:1.5px solid #059669;background:#f8fafc">
+          <div style="width:18px;height:18px;border-radius:50%;border:2px solid #059669;display:flex;align-items:center;justify-content:center;flex-shrink:0"><div style="width:9px;height:9px;border-radius:50%;background:#059669"></div></div>
+          <span style="font-size:15px;font-weight:600;color:#0f172a;flex:1">Наличными курьеру</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 14px;border-radius:10px;border:1.5px solid #e2e8f0;opacity:.55">
+          <div style="width:18px;height:18px;border-radius:50%;border:2px solid #cbd5e1;flex-shrink:0"></div>
+          <span style="font-size:15px;font-weight:600;color:#64748b;flex:1">Банковская карта</span>
+          <span style="font-size:12px;font-weight:700;color:#94a3b8;background:#f1f5f9;padding:3px 8px;border-radius:999px">Скоро</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 14px;border-radius:10px;border:1.5px solid #e2e8f0;opacity:.55">
+          <div style="width:18px;height:18px;border-radius:50%;border:2px solid #cbd5e1;flex-shrink:0"></div>
+          <span style="font-size:15px;font-weight:600;color:#64748b;flex:1">Онлайн-кошелёк</span>
+          <span style="font-size:12px;font-weight:700;color:#94a3b8;background:#f1f5f9;padding:3px 8px;border-radius:999px">Скоро</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;padding:4px">
+      <span style="font-size:16px;font-weight:700;color:#0f172a">Итого к оплате</span>
+      <span style="font-size:20px;font-weight:800;color:#0f172a">{{ checkoutTotal }} смн</span>
+    </div>
+
+    <button onClick="{{ submitCheckout }}" disabled="{{ submitDisabled }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="padding:15px;border-radius:8px;border:none;background:{{ submitBg }};color:#fff;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">
+      <sc-if value="{{ checkoutSubmitting }}" hint-placeholder-val="{{ false }}"><span style="width:17px;height:17px;border-radius:50%;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;animation:spin .7s linear infinite;display:inline-block"></span></sc-if>
+      {{ submitLabel }}
+    </button>
+  </div>
+</div>
+</sc-if>
+<sc-if value="{{ isOrder }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;height:100%">
+  <div style="padding:16px 16px 12px;flex-shrink:0"><div style="font-size:20px;font-weight:700;color:#0f172a">Заказ</div></div>
+  <div style="flex:1;overflow:auto;padding:0 16px 16px;display:flex;flex-direction:column;gap:18px">
+
+    <sc-if value="{{ noOrderYet }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:56px 16px">
+        <div style="width:52px;height:52px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2z" stroke="#94a3b8" stroke-width="2" stroke-linejoin="round"/></svg></div>
+        <div style="font-size:16px;font-weight:700;color:#0f172a">Здесь появятся ваши заказы</div>
+        <button onClick="{{ goHomeSearch }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="margin-top:6px;padding:11px 20px;border-radius:8px;border:none;background:#059669;color:#fff;font-size:15px;font-weight:600">Найти лекарство</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hasOrderNow }}" hint-placeholder-val="{{ false }}">
+      <div style="font-size:14px;color:#64748b">Заказ №4821 · {{ orderPharmacyCount }} аптеки</div>
+
+      <div style="display:flex;flex-direction:column;gap:0">
+        <sc-for list="{{ timelineSteps }}" as="ts" hint-placeholder-count="4">
+          <div style="display:flex;gap:12px">
+            <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">
+              <div style="width:26px;height:26px;border-radius:50%;background:{{ ts.dotBg }};border:2px solid {{ ts.dotBorder }};display:flex;align-items:center;justify-content:center">
+                <sc-if value="{{ ts.done }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 13l5 5L20 6" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></sc-if>
+              </div>
+              <sc-if value="{{ ts.hasLine }}" hint-placeholder-val="{{ true }}"><div style="width:2px;flex:1;min-height:28px;background:{{ ts.lineBg }}"></div></sc-if>
+            </div>
+            <div style="padding-bottom:24px;flex:1">
+              <div style="font-size:16px;font-weight:700;color:{{ ts.textColor }}">{{ ts.label }}</div>
+              <sc-if value="{{ ts.showNote }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#64748b;margin-top:2px">{{ ts.note }}</div></sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ showCourierMap }}" hint-placeholder-val="{{ false }}">
+        <div style="height:170px;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0">
+          <iframe src="./map-view.html?mode=route" style="width:100%;height:100%;border:none" title="Курьер в пути"></iframe>
+        </div>
+      </sc-if>
+
+      <div style="border:1.5px solid #e2e8f0;border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:14px;color:#64748b;margin-bottom:6px">Назовите курьеру код при получении</div>
+        <div style="font-size:36px;font-weight:800;color:#0f172a;letter-spacing:.08em">{{ orderCode }}</div>
+      </div>
+
+      <sc-if value="{{ canCancelOrder }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ cancelOrder }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="padding:13px;border-radius:8px;border:1.5px solid #fecaca;background:#fff;color:#dc2626;font-size:15px;font-weight:600">Отменить заказ</button>
+      </sc-if>
+      <sc-if value="{{ orderCancelled }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align:center;font-size:14px;color:#dc2626;font-weight:600">Заказ отменён</div>
+      </sc-if>
+
+      <button onClick="{{ advanceOrderStatus }}" disabled="{{ orderFinishedOrCancelled }}" style="padding:10px;border-radius:8px;border:1.5px dashed #cbd5e1;background:#fff;color:#94a3b8;font-size:13px;font-weight:600;font-family:ui-monospace,monospace">Демо: следующий статус →</button>
+    </sc-if>
+  </div>
+  <div style="flex-shrink:0;display:flex;border-top:1px solid #f1f5f9;background:#fff">
+    <button onClick="{{ navHome }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 10px;border:none;background:transparent;cursor:pointer;min-height:48px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M4 11.5L12 4l8 7.5V20a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1v-8.5z" stroke="{{ tabHomeColor }}" stroke-width="2" stroke-linejoin="round"/></svg>
+      <span style="font-size:12px;font-weight:600;color:{{ tabHomeColor }}">Главная</span>
+    </button>
+    <button onClick="{{ navCart }}" style="flex:1;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 10px;border:none;background:transparent;cursor:pointer;min-height:48px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M3 4h2l2.4 12.2a2 2 0 002 1.8h7.2a2 2 0 002-1.7L20 8H6" stroke="{{ tabCartColor }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="21" r="1.5" fill="{{ tabCartColor }}"/><circle cx="17" cy="21" r="1.5" fill="{{ tabCartColor }}"/></svg>
+      <sc-if value="{{ hasCartItems }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:4px;right:22%;background:#dc2626;color:#fff;font-size:11px;font-weight:700;border-radius:999px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px">{{ cartCount }}</span></sc-if>
+      <span style="font-size:12px;font-weight:600;color:{{ tabCartColor }}">Корзина</span>
+    </button>
+    <button onClick="{{ navOrder }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 10px;border:none;background:transparent;cursor:pointer;min-height:48px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2z" stroke="{{ tabOrderColor }}" stroke-width="2" stroke-linejoin="round"/><path d="M9 8h6M9 12h6" stroke="{{ tabOrderColor }}" stroke-width="2" stroke-linecap="round"/></svg>
+      <span style="font-size:12px;font-weight:600;color:{{ tabOrderColor }}">Заказы</span>
+    </button>
+  </div>
+</div>
+</sc-if>
+<sc-if value="{{ isMap }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;height:100%">
+  <div style="padding:14px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;border-bottom:1px solid #f1f5f9">
+    <button onClick="{{ goBack }}" style="width:40px;height:40px;border-radius:8px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div style="font-size:16px;font-weight:700;color:#0f172a">Карта аптек</div>
+  </div>
+  <div style="flex:1;position:relative">
+    <iframe src="./map-view.html?mode=full" style="width:100%;height:100%;border:none;display:block" title="Карта аптек"></iframe>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;height:100%">
+  <div style="padding:14px 16px;flex-shrink:0">
+    <button onClick="{{ goBack }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="width:40px;height:40px;border-radius:8px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </div>
+  <div style="flex:1;overflow:auto;padding:8px 24px 24px;display:flex;flex-direction:column;gap:18px">
+
+    <sc-if value="{{ isLoginPhoneStep }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div style="font-size:24px;font-weight:700;color:#0f172a;margin-bottom:8px">Введите номер телефона</div>
+        <div style="font-size:15px;color:#64748b;line-height:1.5">Мы отправим код подтверждения по SMS</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff">
+        <span style="font-size:16px;font-weight:600;color:#0f172a;flex-shrink:0">+992</span>
+        <input value="{{ loginPhoneFormatted }}" onChange="{{ onPhoneChange }}" placeholder="XX XXX XX XX" inputmode="numeric" style="border:none;outline:none;flex:1;font-size:16px;color:#0f172a;min-width:0;background:transparent"/>
+      </div>
+      <button onClick="{{ submitPhone }}" disabled="{{ phoneInvalid }}" style-focus="box-shadow:0 0 0 3px rgba(14,165,233,0.4)" style="padding:14px;border-radius:8px;border:none;background:{{ phoneBtnBg }};color:#fff;font-size:16px;font-weight:600;cursor:pointer">Получить код</button>
+    </sc-if>
+
+    <sc-if value="{{ isLoginCodeStep }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="font-size:24px;font-weight:700;color:#0f172a;margin-bottom:8px">Введите код из СМС</div>
+        <div style="font-size:15px;color:#64748b;line-height:1.5">Отправили на +992 {{ loginPhoneFormatted }}</div>
+      </div>
+
+      <sc-if value="{{ loginLocked }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:24px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#dc2626" stroke-width="2"/><path d="M12 8v5M12 16h.01" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/></svg>
+          <div style="font-size:16px;font-weight:700;color:#7f1d1d">Слишком много попыток</div>
+          <div style="font-size:14px;color:#991b1b;line-height:1.4">Повторите попытку через 5 минут</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ loginNotLocked }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;gap:8px;justify-content:center;animation:{{ codeShakeAnim }}">
+          <sc-for list="{{ codeCells }}" as="cell" hint-placeholder-count="6">
+            <input value="{{ cell.value }}" onChange="{{ cell.onChange }}" onKeyDown="{{ cell.onKeyDown }}" ref="{{ cell.setRef }}" maxlength="1" inputmode="numeric" style-focus="border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,0.25)" style="width:44px;height:54px;text-align:center;border-radius:8px;border:1.5px solid {{ cell.borderColor }};font-size:22px;font-weight:700;color:#0f172a;background:#fff"/>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ loginError }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;font-size:14px;color:#dc2626;font-weight:600">Неверный код. Осталось попыток: {{ attemptsLeft }}</div>
+        </sc-if>
+
+        <div style="text-align:center">
+          <sc-if value="{{ canResend }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ resendCode }}" style="background:none;border:none;color:#0ea5e9;font-size:15px;font-weight:600;cursor:pointer">Отправить код повторно</button>
+          </sc-if>
+          <sc-if value="{{ cannotResendYet }}" hint-placeholder-val="{{ true }}">
+            <span style="font-size:15px;color:#94a3b8">Повторно через {{ resendLabel }}</span>
+          </sc-if>
+        </div>
+      </sc-if>
+    </sc-if>
+
+  </div>
+</div>
+</sc-if>
+
+</x-import>
+</sc-if>
+
+
+
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const COLOR_TOKENS = [
+  {name:'--brand-primary', hex:'#059669', usage:'CTA-кнопки, активные вкладки, ссылки'},
+  {name:'--brand-primary-hover', hex:'#047857', usage:'Наведение и нажатие'},
+  {name:'--brand-secondary', hex:'#94a3b8', usage:'Второстепенный акцент'},
+  {name:'--brand-accent', hex:'#0ea5e9', usage:'Бейджи, промо, кольцо фокуса'},
+  {name:'--brand-bg', hex:'#f8fafc', usage:'Фон страницы'},
+  {name:'--brand-surface', hex:'#ffffff', usage:'Карточки и панели'},
+  {name:'--brand-text', hex:'#0f172a', usage:'Основной текст'},
+  {name:'--brand-text-muted', hex:'#64748b', usage:'Подписи, метаданные'},
+  {name:'--brand-border', hex:'#e2e8f0', usage:'Границы полей и карточек'}
+];
+const LOCKED_TOKENS = [
+  {name:'--brand-success', hex:'#16a34a', usage:'Успех, положительная экономия'},
+  {name:'--brand-danger', hex:'#dc2626', usage:'Ошибка, отмена, просрочка'},
+  {name:'--brand-warning', hex:'#d97706', usage:'Предупреждение, устаревшие данные, низкий остаток'}
+];
+const TYPE_SCALE = [
+  {label:'H1', size:28, lh:36, weight:700, sample:'Сэкономьте 65 сомони'},
+  {label:'H2', size:22, lh:30, weight:700, sample:'Результаты поиска'},
+  {label:'H3', size:18, lh:26, weight:600, sample:'Панкреатин 10 000 ЕД'},
+  {label:'Body', size:16, lh:24, weight:400, sample:'Тот же действующий компонент, другая цена'},
+  {label:'Body strong', size:16, lh:24, weight:600, sample:'Саломат Фарм · 0.4 км'},
+  {label:'Caption', size:14, lh:20, weight:400, sample:'Данные обновлены 5 минут назад'}
+];
+const BADGE_DEFS = [
+  {label:'Рецептурный', bg:'#f1f5f9', fg:'#475569', bd:'#cbd5e1'},
+  {label:'Требует контроля', bg:'#fffbeb', fg:'#b45309', bd:'#fde68a'},
+  {label:'Мало осталось', bg:'#fffbeb', fg:'#b45309', bd:'#fde68a'},
+  {label:'Данные могут быть неактуальны', bg:'#fffbeb', fg:'#b45309', bd:'#fde68a'}
+];
+const CATEGORIES = ['Обезболивающие','Простуда и грипп','Давление','Витамины','ЖКТ и пищеварение'];
+const STRINGS = {
+  ru:{placeholder:'Введите название лекарства', banner:'Пользователи сэкономили 128 400 сомони за неделю', categories:['Обезболивающие','Простуда и грипп','Давление','Витамины','ЖКТ и пищеварение']},
+  tj:{placeholder:'Номи доруворӣ ё моддаи фаъоли онро ворид намоед', banner:'Корбарон дар як ҳафта 128 400 сомонӣ сарфа карданд', categories:['Дардкушоён','Зукому шамолхӯрӣ','Фишори хун','Витаминҳо','Меъдаю рӯдаҳо']},
+  en:{placeholder:'Enter medicine name', banner:'Users saved 128,400 somoni this week', categories:['Pain relief','Cold & flu','Blood pressure','Vitamins','Digestive health']}
+};
+const MEDICINES = [
+  {id:'citramon', name:'Цитрамон П', inn:'Ацетилсалициловая кислота + Парацетамол + Кофеин', form:'таблетки №10', manufacturer:'Ирбитский химфармзавод, Россия', rx:false, category:'Обезболивающие', activeKey:'aas_combo', dose:'',
+    offers:[
+      {pharmacy:'Саломат Фарм', price:6, stock:24, distanceKm:0.4, hours:'08:00–22:00', open:true, open24:false},
+      {pharmacy:'Шифо Плюс', price:7, stock:12, distanceKm:0.6, hours:'08:00–23:00', open:true, open24:false},
+      {pharmacy:'Сафед Дору', price:8, stock:5, distanceKm:0.9, hours:'Круглосуточно', open:true, open24:true}
+    ], analogId:null},
+  {id:'pancreatin_brand', name:'Креон 10000', inn:'Панкреатин', form:'капсулы 10 000 ЕД №20', manufacturer:'Abbott, Германия', rx:false, category:'ЖКТ и пищеварение', activeKey:'pancreatin_10000', dose:'10 000 ЕД',
+    offers:[
+      {pharmacy:'Аптека №7', price:83, stock:9, distanceKm:1.1, hours:'09:00–20:00', open:false, open24:false},
+      {pharmacy:'Ганҷи Тандурустӣ', price:86, stock:3, distanceKm:1.4, hours:'Круглосуточно', open:true, open24:true}
+    ], analogId:'pancreatin_generic'},
+  {id:'pancreatin_generic', name:'Панкреатин-Тева', inn:'Панкреатин', form:'капсулы 10 000 ЕД №20', manufacturer:'Teva, Венгрия', rx:false, category:'ЖКТ и пищеварение', activeKey:'pancreatin_10000', dose:'10 000 ЕД',
+    offers:[
+      {pharmacy:'Саломат Фарм', price:18, stock:31, distanceKm:0.4, hours:'08:00–22:00', open:true, open24:false},
+      {pharmacy:'Шифо Плюс', price:19, stock:14, distanceKm:0.6, hours:'08:00–23:00', open:true, open24:false}
+    ], analogId:null},
+  {id:'paracetamol_fastfarm', name:'Парацетамол-Фармленд', inn:'Парацетамол', form:'таблетки 500 мг №20', manufacturer:'Фармленд, Таджикистан', rx:false, category:'Жаропонижающие', activeKey:'paracetamol', dose:'500 мг',
+    offers:[
+      {pharmacy:'Саломат Фарм', price:4, stock:40, distanceKm:0.4, hours:'08:00–22:00', open:true, open24:false},
+      {pharmacy:'Сафед Дору', price:4.5, stock:22, distanceKm:0.9, hours:'Круглосуточно', open:true, open24:true},
+      {pharmacy:'Аптека №7', price:5, stock:0, distanceKm:1.1, hours:'09:00–20:00', open:false, open24:false}
+    ], analogId:null},
+  {id:'panadol', name:'Панадол Экстра', inn:'Парацетамол + Кофеин', form:'таблетки №12', manufacturer:'GSK, Великобритания', rx:false, category:'Жаропонижающие', activeKey:'paracetamol', dose:'',
+    offers:[
+      {pharmacy:'Шифо Плюс', price:12, stock:18, distanceKm:0.6, hours:'08:00–23:00', open:true, open24:false},
+      {pharmacy:'Ганҷи Тандурустӣ', price:13, stock:9, distanceKm:1.4, hours:'Круглосуточно', open:true, open24:true}
+    ], analogId:null},
+  {id:'enap', name:'Энап', inn:'Эналаприл', form:'таблетки 10 мг №20', manufacturer:'KRKA, Словения', rx:true, category:'Давление', activeKey:'enalapril', dose:'10 мг',
+    offers:[
+      {pharmacy:'Аптека №7', price:22, stock:0, distanceKm:1.1, hours:'09:00–20:00', open:false, open24:false},
+      {pharmacy:'Ганҷи Тандурустӣ', price:24, stock:0, distanceKm:1.4, hours:'Круглосуточно', open:true, open24:true}
+    ], analogId:null}
+];
+const TYPO_MAP = {'цытрамон':'цитрамон','нурофин':'нурофен'};
+
+function fmtNum(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+
+class Component extends DCLogic {
+  state = {
+    role: 'patient',
+    navStack: ['home'],
+    offline: false,
+    stale: false,
+    lang: 'ru',
+    authed: false,
+    pendingAfterLogin: null,
+    loginStep: 'phone',
+    loginPhoneDigits: '',
+    loginCode: ['','','','','',''],
+    loginError: false,
+    loginAttempts: 0,
+    loginLocked: false,
+    resendSeconds: 60,
+    locationPermission: null,
+    homeLoading: true,
+    searchQuery: '',
+    searchLoading: false,
+    searchFilters: { inStockOnly:false, openNow:false, open24:false, radiusKm:10 },
+    sortBy: 'relevance',
+    currentMedicineId: null,
+    cart: [],
+    cartToast: '',
+    checkoutForm: { landmark:'', entrance:'', floor:'', apartment:'', photoAttached:false },
+    checkoutSubmitting: false,
+    hasOrder: false,
+    orderStatus: 'confirmed',
+    orderCancelled: false,
+    courierStep: 0,
+    courierPhase: 'delivering',
+    cashReceived: '',
+    courierCode: ['','','',''],
+    pharmChecklistState: [false,false,false,false],
+    pharmUnavail: [null,null,null,null],
+    pharmShowReasonsFor: null,
+    pharmBarcodeInput: '',
+    pharmShowBanner: true,
+    pharmDone: false,
+    pharmTimerSec: 900,
+    analyticsPeriod: 'week'
+  };
+
+  codeRefs = [];
+  courierCodeRefs = [];
+
+  componentDidMount(){
+    setTimeout(()=>{ this.setState({homeLoading:false}); }, 900);
+    setTimeout(()=>{ this.setState({pharmShowBanner:false}); }, 4000);
+    this._pharmInt = setInterval(()=>{ this.setState(s=> s.pharmDone ? s : {pharmTimerSec:s.pharmTimerSec-1}); }, 1000);
+  }
+
+  get current(){ return this.state.navStack[this.state.navStack.length-1]; }
+
+  nav(screen){ this.setState(s=>({navStack:[...s.navStack, screen]})); }
+  navReset(screen){ this.setState({navStack:[screen]}); }
+  goBack(){ this.setState(s=> s.navStack.length>1 ? {navStack:s.navStack.slice(0,-1)} : s); }
+
+  setRole(role){ this.setState({role}); }
+  toggleOffline(){ this.setState(s=>({offline:!s.offline})); }
+  toggleStale(){ this.setState(s=>({stale:!s.stale})); }
+  setLang(lang){ this.setState({lang}); }
+
+  onSearchQueryChange(e){ this.setState({searchQuery:e.target.value}); }
+  onSearchKeyDown(e){ if(e.key==='Enter') this.submitSearch(this.state.searchQuery); }
+  submitSearch(q){
+    this.setState({searchQuery:q, searchLoading:true});
+    this.nav('search');
+    setTimeout(()=>{ this.setState({searchLoading:false}); }, 550);
+  }
+  selectCategory(cat){ this.submitSearch(cat); }
+  retrySearch(){ this.setState({searchLoading:true}); setTimeout(()=>this.setState({searchLoading:false}),550); }
+  resetSearch(){ this.setState({searchQuery:''}); this.navReset('home'); }
+
+  toggleInStock(){ this.setState(s=>({searchFilters:{...s.searchFilters, inStockOnly:!s.searchFilters.inStockOnly}})); }
+  toggleOpenNow(){ this.setState(s=>({searchFilters:{...s.searchFilters, openNow:!s.searchFilters.openNow}})); }
+  toggleOpen24(){ this.setState(s=>({searchFilters:{...s.searchFilters, open24:!s.searchFilters.open24}})); }
+  cycleRadius(){
+    const steps=[1,3,5,10,20];
+    this.setState(s=>{
+      const i = steps.indexOf(s.searchFilters.radiusKm);
+      const next = steps[(i+1)%steps.length];
+      return {searchFilters:{...s.searchFilters, radiusKm:next}};
+    });
+  }
+  setSort(key){ this.setState({sortBy:key}); }
+
+  selectMedicine(id){ this.setState({currentMedicineId:id}); this.nav('medicine'); }
+
+  grantLocation(){ this.setState({locationPermission:'granted'}); }
+  denyLocation(){ this.setState({locationPermission:'denied'}); }
+  reAskLocation(){ this.setState({locationPermission:null}); }
+  goMap(){ this.nav('map'); }
+
+  matchQuery(qRaw){
+    const q = (qRaw||'').trim().toLowerCase();
+    if(!q) return {meds:[], correctedFrom:null, correctedTo:null, categoryLabel:null};
+    if(TYPO_MAP[q]){
+      const corrected = TYPO_MAP[q];
+      return {meds: MEDICINES.filter(m=>m.name.toLowerCase().includes(corrected)), correctedFrom:qRaw.trim(), correctedTo:corrected, categoryLabel:null};
+    }
+    const catHit = CATEGORIES.find(c=>c.toLowerCase()===q);
+    if(catHit){
+      return {meds: MEDICINES.filter(m=>m.category===catHit), correctedFrom:null, correctedTo:null, categoryLabel:catHit};
+    }
+    return {meds: MEDICINES.filter(m=> m.name.toLowerCase().includes(q) || m.inn.toLowerCase().includes(q)), correctedFrom:null, correctedTo:null, categoryLabel:null};
+  }
+
+  getMedicineSummary(med, filters){
+    const offers = med.offers.filter(o=>{
+      if(filters.inStockOnly && o.stock<=0) return false;
+      if(filters.openNow && !o.open) return false;
+      if(filters.open24 && !o.open24) return false;
+      if(o.distanceKm>filters.radiusKm) return false;
+      return true;
+    });
+    if(offers.length===0) return null;
+    const minPrice = Math.min(...offers.map(o=>o.price));
+    const nearest = Math.min(...offers.map(o=>o.distanceKm));
+    return {count:offers.length, minPrice, nearest};
+  }
+
+  onPhoneChange(e){
+    const digits = e.target.value.replace(/\D/g,'').slice(0,9);
+    this.setState({loginPhoneDigits:digits});
+  }
+  submitPhone(){
+    if(this.state.loginPhoneDigits.length<9) return;
+    this.setState({loginStep:'code', resendSeconds:60, loginCode:['','','','','',''], loginError:false});
+    this.startResendTimer();
+  }
+  startResendTimer(){
+    clearInterval(this._resendInt);
+    this._resendInt = setInterval(()=>{
+      this.setState(s=>{
+        if(s.resendSeconds<=1){ clearInterval(this._resendInt); return {resendSeconds:0}; }
+        return {resendSeconds:s.resendSeconds-1};
+      });
+    },1000);
+  }
+  resendCode(){ this.setState({resendSeconds:60, loginError:false, loginCode:['','','','','','']}); this.startResendTimer(); }
+
+  onCodeChange(i,e){
+    const v = e.target.value.replace(/\D/g,'').slice(-1);
+    this.setState(s=>{
+      const arr=[...s.loginCode]; arr[i]=v;
+      return {loginCode:arr, loginError:false};
+    }, ()=>{
+      if(v && i<5 && this.codeRefs[i+1]) this.codeRefs[i+1].focus();
+      if(v && i===5) this.checkCode();
+    });
+  }
+  onCodeKeyDown(i,e){
+    if(e.key==='Backspace' && !this.state.loginCode[i] && i>0 && this.codeRefs[i-1]) this.codeRefs[i-1].focus();
+  }
+  checkCode(){
+    const code = this.state.loginCode.join('');
+    if(code==='123456'){
+      this.setState({authed:true});
+      const dest = this.state.pendingAfterLogin;
+      this.setState({pendingAfterLogin:null});
+      this.navReset(dest || 'home');
+    } else {
+      this.setState(s=>{
+        const attempts = s.loginAttempts+1;
+        return {loginAttempts:attempts, loginError:true, loginLocked: attempts>=3, loginCode:['','','','','','']};
+      }, ()=>{ if(this.codeRefs[0]) this.codeRefs[0].focus(); });
+    }
+  }
+
+  addToCart(med, offer){
+    const item = { cartId: Date.now()+'_'+Math.random().toString(36).slice(2,7), medId:med.id, medName:med.name, form:med.form, activeKey:med.activeKey, pharmacy:offer.pharmacy, price:offer.price };
+    this.setState(s=>({cart:[...s.cart, item], cartToast:'Добавлено в корзину'}));
+    clearTimeout(this._toastT);
+    this._toastT = setTimeout(()=>{ this.setState({cartToast:''}); }, 1800);
+  }
+  removeFromCart(cartId){ this.setState(s=>({cart:s.cart.filter(i=>i.cartId!==cartId)})); }
+  goHomeSearch(){ this.navReset('home'); }
+  goCheckoutFromCart(){
+    if(!this.state.authed){ this.setState({pendingAfterLogin:'checkout'}); this.nav('login'); }
+    else this.nav('checkout');
+  }
+  onLandmarkChange(e){ const v=e.target.value; this.setState(s=>({checkoutForm:{...s.checkoutForm, landmark:v}})); }
+  onEntranceChange(e){ const v=e.target.value; this.setState(s=>({checkoutForm:{...s.checkoutForm, entrance:v}})); }
+  onFloorChange(e){ const v=e.target.value; this.setState(s=>({checkoutForm:{...s.checkoutForm, floor:v}})); }
+  onApartmentChange(e){ const v=e.target.value; this.setState(s=>({checkoutForm:{...s.checkoutForm, apartment:v}})); }
+  togglePhoto(){ this.setState(s=>({checkoutForm:{...s.checkoutForm, photoAttached:!s.checkoutForm.photoAttached}})); }
+  submitCheckout(){
+    if(!this.state.checkoutForm.landmark.trim() || this.state.offline) return;
+    this.setState({checkoutSubmitting:true});
+    setTimeout(()=>{
+      this.setState({checkoutSubmitting:false, hasOrder:true, orderStatus:'confirmed', orderCancelled:false, cart:[]});
+      this.navReset('order');
+    }, 900);
+  }
+  advanceOrderStatus(){
+    const seq=['confirmed','assembling','courier','delivered'];
+    this.setState(s=>{
+      const i=seq.indexOf(s.orderStatus);
+      return i<seq.length-1 ? {orderStatus:seq[i+1]} : s;
+    });
+  }
+  cancelOrder(){ this.setState({orderCancelled:true}); }
+  navHome(){ this.navReset('home'); }
+  navCart(){ this.navReset('cart'); }
+  navOrder(){ this.navReset('order'); }
+  viewAnalog(analogId){ this.selectMedicine(analogId); }
+
+  courierTap(){
+    if(this.state.courierStep<2){ this.setState(s=>({courierStep:s.courierStep+1})); }
+    else { this.setState({courierPhase:'cash'}); }
+  }
+  onCashChange(e){ this.setState({cashReceived:e.target.value.replace(/\D/g,'')}); }
+  goCourierCode(){ this.setState({courierPhase:'code', courierCode:['','','','']}); }
+  onCourierCodeChange(i,e){
+    const v = e.target.value.replace(/\D/g,'').slice(-1);
+    this.setState(s=>{ const arr=[...s.courierCode]; arr[i]=v; return {courierCode:arr}; }, ()=>{
+      if(v && i<3 && this.courierCodeRefs[i+1]) this.courierCodeRefs[i+1].focus();
+      if(v && i===3) this.setState({courierPhase:'done'});
+    });
+  }
+  onCourierCodeKeyDown(i,e){ if(e.key==='Backspace' && !this.state.courierCode[i] && i>0 && this.courierCodeRefs[i-1]) this.courierCodeRefs[i-1].focus(); }
+  courierReset(){ this.setState({courierStep:0, courierPhase:'delivering', cashReceived:'', courierCode:['','','','']}); }
+
+  onBarcodeChange(e){ this.setState({pharmBarcodeInput:e.target.value}); }
+  onBarcodeKeyDown(e){
+    if(e.key==='Enter'){
+      this.setState(s=>{
+        const arr=[...s.pharmChecklistState];
+        const idx = arr.findIndex((v,i)=> !v && !s.pharmUnavail[i]);
+        if(idx>=0) arr[idx]=true;
+        return {pharmChecklistState:arr, pharmBarcodeInput:''};
+      });
+    }
+  }
+  togglePharmItem(i){ this.setState(s=>{ const arr=[...s.pharmChecklistState]; arr[i]=!arr[i]; return {pharmChecklistState:arr}; }); }
+  openPharmReasons(i){ this.setState({pharmShowReasonsFor:i}); }
+  pickPharmReason(i,label){ this.setState(s=>{ const arr=[...s.pharmUnavail]; arr[i]=label; return {pharmUnavail:arr, pharmShowReasonsFor:null}; }); }
+  pharmFinish(){ this.setState({pharmDone:true}); }
+  pharmReset(){ this.setState({pharmChecklistState:[false,false,false,false], pharmUnavail:[null,null,null,null], pharmShowReasonsFor:null, pharmBarcodeInput:'', pharmDone:false, pharmTimerSec:900, pharmShowBanner:true}); }
+
+  setAnalyticsPeriod(p){ this.setState({analyticsPeriod:p}); }
+
+  renderVals(){
+    const s = this.state;
+    const ROLES = [
+      {key:'patient', label:'Пациент'},
+      {key:'pharmacist', label:'Фармацевт'},
+      {key:'courier', label:'Курьер'},
+      {key:'analytics', label:'Аналитика'},
+      {key:'designSystem', label:'Дизайн-система'}
+    ];
+    const roleTabs = ROLES.map(r=>({
+      key:r.key, label:r.label,
+      bg: s.role===r.key ? '#0f172a' : 'transparent',
+      fg: s.role===r.key ? '#ffffff' : '#475569',
+      onClick: ()=>this.setRole(r.key)
+    }));
+
+    const offlineOn = s.offline;
+    const staleOn = s.stale;
+
+    const cur = this.current;
+    const strings = STRINGS[s.lang] || STRINGS.ru;
+    const langTabs = ['tj','ru','en'].map(l=>({
+      key:l, label:l.toUpperCase(),
+      bg: s.lang===l ? '#059669' : 'transparent',
+      fg: s.lang===l ? '#ffffff' : '#475569',
+      onClick: ()=>this.setLang(l)
+    }));
+
+    const categoryChips = strings.categories.map((label,idx)=>({
+      label, onClick: ()=>this.selectCategory(CATEGORIES[idx])
+    }));
+
+    const match = this.matchQuery(s.searchQuery);
+    const filters = s.searchFilters;
+    let searchResults = match.meds.map(m=>{
+      const sum = this.getMedicineSummary(m, filters);
+      return sum ? {...m, ...sum, onClick:()=>this.selectMedicine(m.id)} : null;
+    }).filter(Boolean);
+    if(s.sortBy==='price') searchResults.sort((a,b)=>a.minPrice-b.minPrice);
+    else if(s.sortBy==='distance') searchResults.sort((a,b)=>a.nearest-b.nearest);
+
+    const searchEmpty = s.searchQuery.trim()!=='' && !s.searchLoading && !s.offline && searchResults.length===0;
+    let resultsHeader = '';
+    if(match.categoryLabel) resultsHeader = 'Категория: ' + match.categoryLabel;
+    else if(match.correctedTo) resultsHeader = 'Найдено: ' + searchResults.length;
+    else if(s.searchQuery.trim()) resultsHeader = 'Результаты по запросу «' + s.searchQuery.trim() + '»';
+
+    const SORTS = [{key:'relevance',label:'Релевантность'},{key:'price',label:'Цена'},{key:'distance',label:'Расстояние'}];
+    const sortTabs = SORTS.map(so=>({
+      label:so.label, bg: s.sortBy===so.key?'#059669':'#f1f5f9', fg: s.sortBy===so.key?'#ffffff':'#334155',
+      onClick:()=>this.setSort(so.key)
+    }));
+
+    const codeCells = s.loginCode.map((v,i)=>({
+      value:v,
+      onChange:(e)=>this.onCodeChange(i,e),
+      onKeyDown:(e)=>this.onCodeKeyDown(i,e),
+      setRef:(el)=>{ this.codeRefs[i]=el; },
+      borderColor: s.loginError ? '#dc2626' : '#e2e8f0'
+    }));
+    const mm = String(Math.floor(s.resendSeconds/60)).padStart(2,'0');
+    const ss = String(s.resendSeconds%60).padStart(2,'0');
+
+    const med = MEDICINES.find(m=>m.id===s.currentMedicineId) || MEDICINES[0];
+    const analog = med.analogId ? MEDICINES.find(m=>m.id===med.analogId) : null;
+    const medMinPriceAll = Math.min(...med.offers.map(o=>o.price));
+    const analogMinPrice = analog ? Math.min(...analog.offers.map(o=>o.price)) : null;
+    const hasAnalog = !!analog && analogMinPrice < medMinPriceAll;
+    const analogSavingsN = hasAnalog ? (medMinPriceAll-analogMinPrice) : 0;
+    const analogPercentN = hasAnalog ? Math.round(analogSavingsN/medMinPriceAll*100) : 0;
+    const medStringsMap = { ru:{btn:'Посмотреть аналог', disc:'Аналог содержит то же действующее вещество. Перед заменой назначенного препарата проконсультируйтесь с врачом или фармацевтом.'}, tj:{btn:'Аналогро дидан', disc:'Аналог ҳамон моддаи фаъолро дорад. Пеш аз ивази доруи таъиншуда бо духтур ё фармасевт маслиҳат кунед.'}, en:{btn:'View cheaper alternative', disc:'This alternative contains the same active ingredient. Consult a doctor or pharmacist before switching from a prescribed medicine.'} };
+    const medStr = medStringsMap[s.lang] || medStringsMap.ru;
+    const offersComputed = med.offers.map(o=>({
+      ...o,
+      stockLabel: o.stock<=0 ? 'нет в наличии' : ('в наличии: '+o.stock),
+      addDisabled: o.stock<=0 || s.offline,
+      addBg: (o.stock<=0 || s.offline) ? '#cbd5e1' : '#059669',
+      onAdd: ()=>this.addToCart(med,o)
+    }));
+    const hasOffersInStockV = med.offers.some(o=>o.stock>0);
+
+    const groupsMap = {};
+    s.cart.forEach(it=>{
+      if(!groupsMap[it.pharmacy]) groupsMap[it.pharmacy]={pharmacy:it.pharmacy, items:[], subtotal:0};
+      groupsMap[it.pharmacy].items.push({...it, onRemove:()=>this.removeFromCart(it.cartId)});
+      groupsMap[it.pharmacy].subtotal += it.price;
+    });
+    const cartGroupsV = Object.values(groupsMap).map(g=>({...g, count:g.items.length, subtotalWithDelivery: g.subtotal+15}));
+    const cartTotalV = s.cart.reduce((sum,it)=>sum+it.price,0);
+    const ingredientCounts = {};
+    s.cart.forEach(it=>{
+      if(!ingredientCounts[it.activeKey]) ingredientCounts[it.activeKey] = new Set();
+      ingredientCounts[it.activeKey].add(it.medName);
+    });
+    let duplicateIngredientNameV = null;
+    Object.keys(ingredientCounts).forEach(k=>{ if(ingredientCounts[k].size>1 && !duplicateIngredientNameV){
+      const med2 = MEDICINES.find(m=>m.activeKey===k);
+      duplicateIngredientNameV = med2 ? med2.inn.split('+')[0].trim() : k;
+    }});
+    const checkoutTotalV = cartGroupsV.reduce((sum,g)=>sum+g.subtotalWithDelivery,0);
+
+    const STEP_DEFS = [
+      {key:'confirmed', label:'Подтверждён'},
+      {key:'assembling', label:'Собирается', note:'Обычно 15–20 минут'},
+      {key:'courier', label:'Передан курьеру'},
+      {key:'delivered', label:'Доставлен'}
+    ];
+    const curIdx = STEP_DEFS.map(x=>x.key).indexOf(s.orderStatus);
+    const timelineStepsV = STEP_DEFS.map((st,i)=>({
+      label: st.label, note: st.note, showNote: !!st.note && i===curIdx,
+      done: i<=curIdx, hasLine: i<STEP_DEFS.length-1,
+      dotBg: i<=curIdx ? '#64748b' : '#fff', dotBorder: i<=curIdx ? '#64748b' : '#cbd5e1',
+      lineBg: i<curIdx ? '#64748b' : '#e2e8f0', textColor: i<=curIdx ? '#0f172a' : '#94a3b8'
+    }));
+
+    const PHARM_ITEMS_BASE = [
+      {name:'Креон 10000', dose:'Панкреатин 10 000 ЕД', qty:'1 уп.'},
+      {name:'Цитрамон П', dose:'табл. №10', qty:'2 уп.'},
+      {name:'Парацетамол-Фармленд', dose:'табл. 500 мг №20', qty:'1 уп.'},
+      {name:'Энап', dose:'табл. 10 мг №20', qty:'1 уп.'}
+    ];
+    const REASONS = ['Нет в наличии','Истёк срок годности','Повреждена упаковка','Другое'];
+    const pharmItemsV = PHARM_ITEMS_BASE.map((base,i)=>{
+      const checked = s.pharmChecklistState[i];
+      const unavailable = !!s.pharmUnavail[i];
+      return {
+        ...base, checked, unavailable, reason: s.pharmUnavail[i],
+        borderColor: unavailable?'#fde68a':(checked?'#bbf7d0':'#e2e8f0'),
+        bg: unavailable?'#fffbeb':(checked?'#f0fdf4':'#fff'),
+        checkBorder: checked?'#16a34a':'#cbd5e1', checkBg: checked?'#16a34a':'#fff',
+        strike: unavailable?'line-through':'none',
+        onToggle: ()=>this.togglePharmItem(i),
+        showUnavailBtn: !checked && !unavailable && s.pharmShowReasonsFor!==i,
+        showReasons: s.pharmShowReasonsFor===i,
+        onUnavailClick: ()=>this.openPharmReasons(i),
+        reasonOpts: REASONS.map(r=>({label:r, onPick:()=>this.pickPharmReason(i,r)}))
+      };
+    });
+    const pharmAllResolvedV = pharmItemsV.every(it=>it.checked||it.unavailable);
+    const pharmTimerAbs = Math.abs(s.pharmTimerSec);
+    const pharmMM = String(Math.floor(pharmTimerAbs/60)).padStart(2,'0');
+    const pharmSS = String(pharmTimerAbs%60).padStart(2,'0');
+    const pharmOvertime = s.pharmTimerSec<0;
+
+    const FUNNEL_DATA = {
+      week: {shown:42300, clicked:18900, added:9700, ordered:6150, totalShown:612400, totalRealized:214800, trend:[38,42,45,41,48,52,55]},
+      month: {shown:178000, clicked:79000, added:41000, ordered:26000, totalShown:2480000, totalRealized:892000, trend:[180,205,190,214,230,221,246]}
+    };
+    const fd = FUNNEL_DATA[s.analyticsPeriod];
+    const funnelBase = [
+      {key:'shown', label:'Показ экономии', value:fd.shown},
+      {key:'clicked', label:'Клик на аналог', value:fd.clicked},
+      {key:'added', label:'Добавление в корзину', value:fd.added},
+      {key:'ordered', label:'Оформленный заказ', value:fd.ordered}
+    ];
+    const funnelStepsV = funnelBase.map((f,i)=>({
+      label:f.label, value: fmtNum(f.value), widthPct: Math.round(f.value/funnelBase[0].value*100),
+      showConv: i>0, conv: i>0 ? Math.round(f.value/funnelBase[i-1].value*100) : 0
+    }));
+    const trendMax = Math.max(...fd.trend);
+    const trendBarsV = fd.trend.map((v,i)=>({heightPct: Math.round(v/trendMax*100), label:'Н'+(i+1)}));
+
+    return {
+      roleTabs,
+      isPatientRole: s.role==='patient',
+      isCourierRole: s.role==='courier',
+      isPharmacistRole: s.role==='pharmacist',
+      isAnalyticsRole: s.role==='analytics',
+      isOpsRole: s.role==='courier' || s.role==='pharmacist' || s.role==='analytics',
+      opsDisplay: (s.role==='courier'||s.role==='pharmacist'||s.role==='analytics') ? 'contents' : 'none',
+      courierDisplay: s.role==='courier' ? 'contents' : 'none',
+      pharmacistDisplay: s.role==='pharmacist' ? 'contents' : 'none',
+      analyticsDisplay: s.role==='analytics' ? 'contents' : 'none',
+      isDesignSystemRole: s.role==='designSystem',
+
+      toggleOffline: ()=>this.toggleOffline(),
+      toggleStale: ()=>this.toggleStale(),
+      offlineBg: offlineOn?'#fef2f2':'transparent', offlineFg: offlineOn?'#dc2626':'#64748b', offlineBorder: offlineOn?'#fecaca':'#e2e8f0',
+      staleBg: staleOn?'#fffbeb':'transparent', staleFg: staleOn?'#b45309':'#64748b', staleBorder: staleOn?'#fde68a':'#e2e8f0',
+      offline: offlineOn, stale: staleOn,
+
+      colorTokens: COLOR_TOKENS, lockedTokens: LOCKED_TOKENS, typeScale: TYPE_SCALE,
+      spacingScale: [4,8,12,16,20,24,32,40],
+      badgeDefs: BADGE_DEFS,
+      demoCells4: ['4','8','2','1'], demoCells6: ['1','2','3','4','5','6'],
+
+      isHome: cur==='home', isSearch: cur==='search', isLogin: cur==='login',
+      isMedicine: cur==='medicine', isCart: cur==='cart', isCheckout: cur==='checkout',
+      isOrder: cur==='order', isMap: cur==='map',
+
+      homeLoading: s.homeLoading, homeLoaded: !s.homeLoading,
+      langTabs,
+      searchPlaceholder: strings.placeholder,
+      savingsBanner: strings.banner,
+      categoryChips,
+      showLocationAsk: s.locationPermission===null,
+      showLocationDenied: s.locationPermission==='denied',
+      goMap: ()=>this.goMap(),
+      grantLocation: ()=>this.grantLocation(),
+      denyLocation: ()=>this.denyLocation(),
+      reAskLocation: ()=>this.reAskLocation(),
+
+      searchQuery: s.searchQuery,
+      onSearchQueryChange: (e)=>this.onSearchQueryChange(e),
+      onSearchKeyDown: (e)=>this.onSearchKeyDown(e),
+      goBack: ()=>this.goBack(),
+      retrySearch: ()=>this.retrySearch(),
+      resetSearch: ()=>this.resetSearch(),
+      searchLoading: s.searchLoading,
+      searchReady: !s.searchLoading && !s.offline,
+      skeletonRows: [0,1,2],
+      hasTypoFix: !!match.correctedTo,
+      correctedFrom: match.correctedFrom, correctedTo: match.correctedTo,
+      searchFilters: filters,
+      toggleInStock: ()=>this.toggleInStock(), toggleOpenNow: ()=>this.toggleOpenNow(), toggleOpen24: ()=>this.toggleOpen24(), cycleRadius: ()=>this.cycleRadius(),
+      inStockBg: filters.inStockOnly?'#059669':'#fff', inStockFg: filters.inStockOnly?'#fff':'#334155', inStockBd: filters.inStockOnly?'#059669':'#e2e8f0',
+      openNowBg: filters.openNow?'#059669':'#fff', openNowFg: filters.openNow?'#fff':'#334155', openNowBd: filters.openNow?'#059669':'#e2e8f0',
+      open24Bg: filters.open24?'#059669':'#fff', open24Fg: filters.open24?'#fff':'#334155', open24Bd: filters.open24?'#059669':'#e2e8f0',
+      sortTabs,
+      resultsHeader, searchResults, searchEmpty,
+
+      isLoginPhoneStep: s.loginStep==='phone', isLoginCodeStep: s.loginStep==='code',
+      loginPhoneFormatted: s.loginPhoneDigits.replace(/(\d{2})(\d{0,3})(\d{0,2})(\d{0,2})/,(m,a,b,c,d)=>[a,b,c,d].filter(Boolean).join(' ')),
+      onPhoneChange: (e)=>this.onPhoneChange(e),
+      phoneInvalid: s.loginPhoneDigits.length<9,
+      phoneBtnBg: s.loginPhoneDigits.length<9 ? '#cbd5e1' : '#059669',
+      submitPhone: ()=>this.submitPhone(),
+      loginLocked: s.loginLocked, loginNotLocked: !s.loginLocked,
+      codeCells, loginError: s.loginError,
+      attemptsLeft: Math.max(0,3-s.loginAttempts),
+      codeShakeAnim: s.loginError ? 'shakeX .5s' : 'none',
+      canResend: s.resendSeconds<=0, cannotResendYet: s.resendSeconds>0,
+      resendLabel: mm+':'+ss,
+      resendCode: ()=>this.resendCode(),
+
+      med: {...med, minPriceAll: medMinPriceAll}, analog: analog ? {...analog, minPrice: analogMinPrice} : null, hasAnalog, analogSavings: analogSavingsN, analogPercent: analogPercentN,
+      analogButtonLabel: medStr.btn, disclaimerText: medStr.disc,
+      viewAnalog: ()=>this.viewAnalog(med.analogId),
+      offers: offersComputed, hasOffersInStock: hasOffersInStockV, noOffersInStock: !hasOffersInStockV,
+      showToastBar: !!s.cartToast, toastText: s.cartToast,
+
+      cartEmpty: s.cart.length===0, cartHasItems: s.cart.length>0,
+      cartGroups: cartGroupsV, cartTotal: cartTotalV, pharmacyCount: cartGroupsV.length, multiPharmacy: cartGroupsV.length>1,
+      hasDuplicateIngredient: !!duplicateIngredientNameV, duplicateIngredientName: duplicateIngredientNameV,
+      goHomeSearch: ()=>this.goHomeSearch(), goCheckoutFromCart: ()=>this.goCheckoutFromCart(),
+
+      checkoutForm: s.checkoutForm,
+      onLandmarkChange: (e)=>this.onLandmarkChange(e), onEntranceChange:(e)=>this.onEntranceChange(e), onFloorChange:(e)=>this.onFloorChange(e), onApartmentChange:(e)=>this.onApartmentChange(e),
+      togglePhoto: ()=>this.togglePhoto(), photoBg: s.checkoutForm.photoAttached?'#f0fdf4':'#fff', photoFg: s.checkoutForm.photoAttached?'#16a34a':'#64748b',
+      photoLabel: s.checkoutForm.photoAttached?'Фото добавлено':'Добавить фото дома',
+      checkoutTotal: checkoutTotalV,
+      submitDisabled: !s.checkoutForm.landmark.trim() || s.offline || s.checkoutSubmitting,
+      submitBg: (!s.checkoutForm.landmark.trim()||s.offline) ? '#cbd5e1' : '#059669',
+      checkoutSubmitting: s.checkoutSubmitting,
+      submitLabel: s.checkoutSubmitting ? 'Оформляем…' : 'Оформить заказ',
+      submitCheckout: ()=>this.submitCheckout(),
+
+      noOrderYet: !s.hasOrder, hasOrderNow: s.hasOrder,
+      orderPharmacyCount: Math.max(1,cartGroupsV.length),
+      timelineSteps: timelineStepsV, orderCode:'4821',
+      showCourierMap: s.orderStatus==='courier',
+      canCancelOrder: s.orderStatus==='confirmed' && !s.orderCancelled,
+      orderCancelled: s.orderCancelled,
+      orderFinishedOrCancelled: s.orderStatus==='delivered' || s.orderCancelled,
+      advanceOrderStatus: ()=>this.advanceOrderStatus(), cancelOrder: ()=>this.cancelOrder(),
+
+      navHome: ()=>this.navHome(), navCart: ()=>this.navCart(), navOrder: ()=>this.navOrder(),
+      hasCartItems: s.cart.length>0, cartCount: s.cart.length,
+      tabHomeColor: cur==='home' ? '#059669' : '#94a3b8',
+      tabCartColor: cur==='cart' ? '#059669' : '#94a3b8',
+      tabOrderColor: cur==='order' ? '#059669' : '#94a3b8',
+      courierLabel: ['Забрал','В пути','Доставил'][s.courierStep],
+      courierTap: ()=>this.courierTap(),
+      courierDelivering: s.courierPhase==='delivering',
+      courierPhaseCash: s.courierPhase==='cash',
+      courierPhaseCode: s.courierPhase==='code',
+      courierPhaseDone: s.courierPhase==='done',
+      cashReceived: s.cashReceived,
+      onCashChange: (e)=>this.onCashChange(e),
+      changeAmount: Math.max(0, (parseInt(s.cashReceived||'0',10)-98)),
+      goCourierCode: ()=>this.goCourierCode(),
+      courierCodeCells: s.courierCode.map((v,i)=>({
+        value:v, onChange:(e)=>this.onCourierCodeChange(i,e), onKeyDown:(e)=>this.onCourierCodeKeyDown(i,e),
+        setRef:(el)=>{ this.courierCodeRefs[i]=el; }
+      })),
+      courierReset: ()=>this.courierReset(),
+
+      pharmShowBanner: s.pharmShowBanner,
+      pharmTimerLabel: (pharmOvertime?'-':'')+pharmMM+':'+pharmSS,
+      pharmTimerCaption: pharmOvertime ? 'Просрочено' : 'Осталось на сборку',
+      pharmTimerBg: pharmOvertime?'#fef2f2':(s.pharmTimerSec<300?'#fffbeb':'#f8fafc'),
+      pharmTimerBorder: pharmOvertime?'#fecaca':(s.pharmTimerSec<300?'#fde68a':'#e2e8f0'),
+      pharmTimerFg: pharmOvertime?'#dc2626':(s.pharmTimerSec<300?'#b45309':'#0f172a'),
+      pharmHasUnavailable: s.pharmUnavail.some(Boolean) && !s.pharmDone,
+      pharmBarcodeInput: s.pharmBarcodeInput, onBarcodeChange: (e)=>this.onBarcodeChange(e), onBarcodeKeyDown: (e)=>this.onBarcodeKeyDown(e),
+      pharmItems: pharmItemsV, pharmNotDone: !s.pharmDone, pharmCanFinish: pharmAllResolvedV && !s.pharmDone,
+      pharmFinish: ()=>this.pharmFinish(), pharmDone: s.pharmDone, pharmReset: ()=>this.pharmReset(),
+
+      periodTabs: ['week','month'].map(p=>({
+        label: p==='week'?'Неделя':'Месяц', bg: s.analyticsPeriod===p?'#0f172a':'transparent', fg: s.analyticsPeriod===p?'#fff':'#475569',
+        onClick: ()=>this.setAnalyticsPeriod(p)
+      })),
+      totalShown: fmtNum(fd.totalShown), totalRealized: fmtNum(fd.totalRealized),
+      realizedPercent: Math.round(fd.totalRealized/fd.totalShown*100),
+      funnelSteps: funnelStepsV, trendBars: trendBarsV
+    };
+  }
+}
+
+</script>
+</body>
+</html>

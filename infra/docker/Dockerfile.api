@@ -1,0 +1,77 @@
+# syntax=docker/dockerfile:1
+#
+# DoruTJ — multi-stage образ для apps/api и apps/worker (DTJ-412, SRS-NFR-049).
+# ОДИН Dockerfile для двух рантайм-процессов (api HTTP + worker BullMQ) и одноразового
+# init-контейнера миграций — общий слой зависимостей строится один раз (кэшируется
+# Docker-слоями), НЕ дублирует `pnpm install` в трёх образах.
+#
+# Обоснование node:22.12-slim (НЕ alpine): нативные аддоны (в первую очередь `argon2`,
+# см. pnpm-workspace.yaml allowBuilds) исторически проблемны на musl libc alpine —
+# либо не собираются вовсе, либо требуют дополнительных build-зависимостей и дают
+# нестабильные бинарные артефакты между патч-версиями Node. `slim` (Debian-based) снимает
+# этот риск за разумную цену (~70 МБ против ~40 МБ alpine). НЕ переключать на alpine
+# «для экономии места» без повторной проверки совместимости argon2/pg на musl.
+#
+# ВНИМАНИЕ (контракт, не факт): на момент DTJ-412 (волна 1) apps/api содержит только
+# заглушку src/main.ts (`export {}`), apps/api/drizzle и apps/api/dist/scripts/*.js ещё
+# не существуют — это ожидаемо (см. тикет, раздел «Риски и подводные камни»). Пути ниже
+# зафиксированы ПО КОНТРАКТУ для DTJ-001 (домен/миграции) и последующих тикетов EP-01:
+#   - apps/api/drizzle/                       — папка миграций drizzle-kit
+#   - apps/api/src/scripts/migrate-entrypoint.js  (компилируется в dist/scripts/...)
+#   - apps/api/src/scripts/seed-entrypoint.js     (компилируется в dist/scripts/...)
+# До появления этих файлов образ `migrator`/`runtime` не соберётся реальной сборкой —
+# синтаксис Dockerfile при этом остаётся корректным (проверяется `docker build --check`/hadolint).
+
+FROM node:22.12-slim AS base
+RUN corepack enable && corepack prepare pnpm@11.23.0 --activate
+WORKDIR /app
+
+# ---- Полный набор зависимостей (вкл. devDependencies) — нужен для build и для migrator
+#      (drizzle-kit — devDependency apps/api, но требуется внутри контейнера миграций) ----
+FROM base AS deps
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/worker/package.json apps/worker/package.json
+COPY packages ./packages
+RUN pnpm install --frozen-lockfile --filter=@dorutj/api... --filter=@dorutj/worker...
+
+FROM deps AS build
+COPY . .
+RUN pnpm turbo run build --filter=@dorutj/api --filter=@dorutj/worker
+
+# ---- Только production-зависимости — отдельный пере-инсталл, чтобы в runtime не попадали
+#      devDependencies (drizzle-kit, vitest, tsx и т.д.) ----
+FROM base AS prod-deps
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/worker/package.json apps/worker/package.json
+COPY packages ./packages
+RUN pnpm install --frozen-lockfile --prod --filter=@dorutj/api... --filter=@dorutj/worker...
+
+# ---- Стадия для одноразовых init-контейнеров (migrate/seed в docker-compose.yml) ----
+# node_modules берётся из `deps` (полный, включая drizzle-kit) — этот образ никогда не
+# публикуется как продовый рантайм-процесс, поверхность атаки не критична так, как у `runtime`.
+FROM base AS migrator
+COPY --from=build /app/apps/api/dist ./apps/api/dist
+COPY --from=build /app/apps/api/drizzle ./apps/api/drizzle
+COPY --from=deps /app/node_modules ./node_modules
+ENTRYPOINT ["node", "apps/api/dist/scripts/migrate-entrypoint.js"]
+
+# ---- Продовый рантайм — БЕЗ dev-зависимостей, БЕЗ исходников TS, непривилегированный ----
+# Общий базовый слой для api и worker: оба процесса используют один и тот же
+# production node_modules (устанавливается один раз в `prod-deps`, переиспользуется через
+# Docker-кэш слоёв), различаются только точкой входа в CMD финальных стадий ниже.
+FROM node:22.12-slim AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build --chown=node:node /app/apps/api/dist ./apps/api/dist
+COPY --from=build --chown=node:node /app/apps/worker/dist ./apps/worker/dist
+COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules
+USER node
+EXPOSE 3000
+CMD ["node", "apps/api/dist/main.js"]
+
+# ---- Рантайм apps/worker — наследует runtime (тот же node_modules), другой CMD/порт ----
+FROM runtime AS runtime-worker
+EXPOSE 3001
+CMD ["node", "apps/worker/dist/main.js"]

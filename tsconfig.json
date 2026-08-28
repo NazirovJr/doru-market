@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@dorutj/contracts": ["packages/contracts/src/index.ts"],
+      "@dorutj/contracts/*": ["packages/contracts/src/*"],
+      "@dorutj/i18n": ["packages/i18n/src/index.ts"],
+      "@dorutj/i18n/*": ["packages/i18n/src/*"],
+      "@dorutj/ui": ["packages/ui/src/index.ts"],
+      "@dorutj/ui/*": ["packages/ui/src/*"]
+    }
+  },
+  "files": [],
+  "references": []
+}

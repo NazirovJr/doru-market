@@ -1,0 +1,50 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+  - 'tests/*'
+
+# Разрешённые build-скрипты. Список изначально содержал esbuild/unrs-resolver; при первом
+# `pnpm install` волны 1 (DTJ, установка зависимостей) pnpm сам дописал сюда ещё три пакета,
+# для которых он обнаружил postinstall-скрипты, и попросил явно решить true/false — решаем:
+#   esbuild            — трансформация для vitest / vite
+#   unrs-resolver       — резолвер импортов для eslint-plugin-import-x (правило import-x/no-cycle)
+#   argon2              — apps/api: нативный биндинг хеширования паролей (01-TECH-BASELINE.md
+#                         §Backend); без сборки биндинга пакет не работает в рантайме.
+#   msgpackr-extract    — транзитивная зависимость bullmq (msgpackr): нативное ускорение
+#                         сериализации джобов, опционально, но безопасно собрать.
+#   msw                 — apps/web (мок-сервер для теста http-client, DTJ-003): postinstall
+#                         генерирует mockServiceWorker.js, нужен воркеру в браузере.
+# Разрешаем осознанно: без них либо падают lint/тесты, либо нужный рантайм-код не собирается.
+allowBuilds:
+  argon2: true
+  esbuild: true
+  msgpackr-extract: true
+  msw: true
+  unrs-resolver: true
+
+minimumReleaseAgeExclude:
+  - '@testing-library/react@16.3.3'
+
+# Flutter-приложения (apps/pharmacy_mobile, apps/courier_mobile) не входят в pnpm-workspace —
+# они управляются pub/Dart. См. docs/01-TECH-BASELINE.md.
+
+# Единый резолв версий по всему workspace (docs/01-TECH-BASELINE.md §Правила, п.1).
+# ПРИМЕЧАНИЕ (DTJ — волна 1, установка зависимостей): в корневом package.json секция
+# "pnpm.overrides" уже присутствовала, но pnpm 11.x эту секцию не читает — она молча
+# игнорируется (см. предупреждение "pnpm.overrides ... no longer read"), из-за чего пиновка
+# версий из baseline фактически не применялась бы. Перенесено сюда как единственное реально
+# рабочее место для override в этой версии pnpm. Секцию "pnpm" в корневом package.json не
+# трогаем (не наш файл), но дублирование там теперь избыточно и может вводить в заблуждение —
+# см. отчёт по установке зависимостей.
+overrides:
+  typescript: ^5.9.3
+  zod: ^4.4.3
+  react: ^19.2.0
+  react-dom: ^19.2.0
+  # vite не входит в список D-01 baseline (react/typescript/zod), но без явного override
+  # `vitest@4.1.11` (peer "vite": "^6 || ^7 || ^8") резолвит СВОЙ внутренний vite@8.2.2 для
+  # каждого пакета, где vite не объявлен напрямую (apps/api, apps/worker, packages/contracts,
+  # packages/i18n, packages/testing-kit, tests/e2e) — при этом apps/web/packages/ui, где vite
+  # объявлен явно, получают ^7.3.6. Итог — два разных vite в одном workspace для одного и того
+  # же vitest. Форсируем единый ^7.3.6 baseline (01-TECH-BASELINE.md) во всех местах.
+  vite: ^7.3.6

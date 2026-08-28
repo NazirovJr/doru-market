@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Карта</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<style>
+  html,body{margin:0;height:100%;font-family:'Inter',system-ui,sans-serif;overflow:hidden;background:#e2e8f0}
+  #map{position:absolute;inset:0}
+  .price-pin{background:#ffffff;border:1.5px solid #64748b;border-radius:999px;padding:4px 10px;font-size:13px;font-weight:700;color:#0f172a;white-space:nowrap;box-shadow:0 2px 6px rgba(15,23,42,0.18)}
+  .price-pin.closed{border-color:#cbd5e1;color:#94a3b8;background:#f1f5f9}
+  .price-pin.best{border-color:#16a34a;color:#15803d}
+  .me-dot{width:16px;height:16px;border-radius:50%;background:#0ea5e9;border:3px solid #ffffff;box-shadow:0 0 0 2px #0ea5e9,0 2px 6px rgba(15,23,42,0.3)}
+  .leaflet-popup-content-wrapper{border-radius:10px}
+  .leaflet-popup-content{font-family:'Inter',system-ui,sans-serif;font-size:14px;color:#0f172a;margin:10px 12px}
+  .pop-title{font-weight:700;font-size:15px;margin-bottom:2px}
+  .pop-row{color:#64748b;font-size:13px;margin-top:2px}
+  .pop-price{color:#16a34a;font-weight:700;font-size:16px;margin-top:6px}
+  #chip{position:absolute;top:12px;left:12px;right:12px;display:flex;gap:8px;z-index:500;pointer-events:none}
+  .filter-chip{pointer-events:auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:999px;padding:9px 14px;font-size:14px;font-weight:600;color:#0f172a;box-shadow:0 2px 8px rgba(15,23,42,0.12);cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none}
+  .filter-chip.on{background:#0f172a;color:#fff;border-color:#0f172a}
+  .instr-chip{pointer-events:none;background:rgba(15,23,42,0.85);color:#fff;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;margin:0 auto}
+  #sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:16px 16px 0 0;box-shadow:0 -4px 20px rgba(15,23,42,0.18);z-index:500;transition:height .25s ease;height:132px;display:flex;flex-direction:column;overflow:hidden}
+  #sheet.expanded{height:72%}
+  #handle-row{padding:10px 0 6px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;flex-shrink:0}
+  #handle{width:36px;height:4px;border-radius:2px;background:#cbd5e1}
+  #sheet-title{font-size:14px;color:#64748b;font-weight:600}
+  #sheet-list{overflow-y:auto;padding:0 16px 16px}
+  .srow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid #f1f5f9;cursor:pointer}
+  .srow:last-child{border-bottom:none}
+  .srow .name{font-size:15px;font-weight:600;color:#0f172a}
+  .srow .meta{font-size:13px;color:#64748b;margin-top:2px}
+  .srow .price{font-size:16px;font-weight:700;color:#16a34a;white-space:nowrap}
+  .srow.closed .name,.srow.closed .price{color:#94a3b8}
+  #coord{position:absolute;bottom:14px;left:0;right:0;text-align:center;font-family:ui-monospace,monospace;font-size:12px;color:#475569;background:rgba(255,255,255,0.85);padding:4px 0;z-index:500;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="chip"></div>
+<div id="sheet" style="display:none">
+  <div id="handle-row"><div id="handle"></div><div id="sheet-title">Аптеки рядом</div></div>
+  <div id="sheet-list"></div>
+</div>
+<div id="coord" style="display:none"></div>
+<script>
+var params = new URLSearchParams(location.search);
+var mode = params.get('mode') || 'home';
+var CENTER = [38.5598, 68.7870];
+var PHARMACIES = [
+  {id:'salomat', name:'Саломат Фарм', lat:38.5612, lng:68.7801, price:6, open:true, hours:'08:00–22:00', dist:'0.4 км'},
+  {id:'safed', name:'Сафед Дору', lat:38.5578, lng:68.7912, price:7, open:true, hours:'Круглосуточно', dist:'0.9 км'},
+  {id:'ap7', name:'Аптека №7', lat:38.5650, lng:68.7845, price:9, open:false, hours:'09:00–20:00', dist:'1.1 км'},
+  {id:'shifo', name:'Шифо Плюс', lat:38.5560, lng:68.7790, price:6.5, open:true, hours:'08:00–23:00', dist:'0.6 км'},
+  {id:'ganj', name:'Ганҷи Тандурустӣ', lat:38.5530, lng:68.7870, price:8, open:true, hours:'Круглосуточно', dist:'1.4 км'}
+];
+
+var map = L.map('map', {zoomControl: mode !== 'home', dragging: mode !== 'home', scrollWheelZoom: mode !== 'home', doubleClickZoom: mode !== 'home', tap: mode !== 'home'}).setView(CENTER, 15);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors',
+  maxZoom: 19
+}).addTo(map);
+
+function priceIcon(p, extraClass){
+  return L.divIcon({className:'', html:'<div class="price-pin '+(extraClass||'')+'">'+ (p.open===false ? p.hours.split('–')[0]==='Круглосуточно'?p.price+' смн':'Закрыто' : p.price+' смн') +'</div>', iconSize:null, iconAnchor:[28,14]});
+}
+function meIcon(){
+  return L.divIcon({className:'', html:'<div class="me-dot"></div>', iconSize:[16,16], iconAnchor:[8,8]});
+}
+
+if (mode === 'home' || mode === 'full') {
+  var minPrice = Math.min.apply(null, PHARMACIES.filter(function(p){return p.open;}).map(function(p){return p.price;}));
+  var markers = {};
+  var filterOpen = false;
+
+  function render(){
+    Object.keys(markers).forEach(function(id){ map.removeLayer(markers[id]); });
+    markers = {};
+    var list = PHARMACIES.filter(function(p){ return filterOpen ? p.open : true; });
+    list.forEach(function(p){
+      var cls = !p.open ? 'closed' : (p.price===minPrice ? 'best' : '');
+      var m = L.marker([p.lat,p.lng], {icon: priceIcon({open:p.open,price:p.price,hours:p.hours}, cls)}).addTo(map);
+      if (mode==='full') {
+        m.bindPopup('<div class="pop-title">'+p.name+'</div><div class="pop-row">'+p.hours+' · '+p.dist+'</div><div class="pop-price">'+p.price+' смн</div>');
+      }
+      markers[p.id] = m;
+    });
+    L.marker(CENTER, {icon: meIcon(), interactive:false}).addTo(map);
+    if (mode === 'full') renderSheet(list);
+  }
+
+  function renderSheet(list){
+    var sorted = list.slice().sort(function(a,b){ return a.price-b.price; });
+    var html = sorted.map(function(p){
+      return '<div class="srow'+(p.open?'':' closed')+'" data-id="'+p.id+'">'+
+        '<div><div class="name">'+p.name+'</div><div class="meta">'+p.hours+' · '+p.dist+'</div></div>'+
+        '<div class="price">'+(p.open? p.price+' смн' : 'Закрыто')+'</div></div>';
+    }).join('');
+    document.getElementById('sheet-list').innerHTML = html;
+    document.getElementById('sheet-title').textContent = list.length + (list.length===1?' аптека рядом':' аптек рядом');
+    Array.prototype.forEach.call(document.querySelectorAll('.srow'), function(row){
+      row.addEventListener('click', function(){
+        var p = PHARMACIES.filter(function(x){return x.id===row.getAttribute('data-id');})[0];
+        if (!p) return;
+        map.flyTo([p.lat,p.lng], 16, {duration:0.5});
+        if (markers[p.id]) markers[p.id].openPopup();
+      });
+    });
+  }
+
+  if (mode === 'full') {
+    document.getElementById('sheet').style.display = 'flex';
+    document.getElementById('chip').innerHTML = '<div class="filter-chip" id="filterBtn"><span>🕒</span>Открыто сейчас</div>';
+    document.getElementById('filterBtn').addEventListener('click', function(){
+      filterOpen = !filterOpen;
+      this.classList.toggle('on', filterOpen);
+      render();
+    });
+    document.getElementById('handle-row').addEventListener('click', function(){
+      document.getElementById('sheet').classList.toggle('expanded');
+    });
+  }
+  render();
+  if (mode === 'home') map.setView(CENTER, 14);
+}
+
+if (mode === 'picker') {
+  var start = [38.5605, 68.7875];
+  var marker = L.marker(start, {icon: L.divIcon({className:'',html:'<div style="width:34px;height:34px;margin-left:-17px;margin-top:-34px;position:relative"><svg width="34" height="34" viewBox="0 0 34 34"><path d="M17 2C10.4 2 5 7.2 5 13.6 5 22 17 32 17 32s12-10 12-18.4C29 7.2 23.6 2 17 2z" fill="#64748b" stroke="#ffffff" stroke-width="2"/><circle cx="17" cy="13.5" r="4.5" fill="#ffffff"/></svg></div>', iconSize:[34,34], iconAnchor:[17,34]}), draggable:true}).addTo(map);
+  document.getElementById('chip').innerHTML = '<div class="instr-chip">Перетащите пин на точный вход</div>';
+  var coord = document.getElementById('coord');
+  coord.style.display = 'block';
+  function fmt(ll){ return 'Пин: ' + ll.lat.toFixed(4) + ', ' + ll.lng.toFixed(4); }
+  coord.textContent = fmt(marker.getLatLng());
+  marker.on('drag', function(e){ coord.textContent = fmt(e.target.getLatLng()); });
+}
+
+if (mode === 'route') {
+  var origin = [38.5612, 68.7801];
+  var dest = [38.5490, 68.7960];
+  var mid = [(origin[0]+dest[0])/2 + 0.003, (origin[1]+dest[1])/2 - 0.004];
+  var latlngs = [origin, mid, dest];
+  var line = L.polyline(latlngs, {color:'#0ea5e9', weight:4, opacity:0.85, dashArray:'1,10', lineCap:'round'}).addTo(map);
+  L.marker(origin, {icon: L.divIcon({className:'',html:'<div style="background:#0f172a;color:#fff;font-size:11px;font-weight:700;padding:5px 10px;border-radius:999px;white-space:nowrap;box-shadow:0 2px 6px rgba(15,23,42,.3)">Аптека</div>', iconAnchor:[10,10]})}).addTo(map);
+  L.marker(dest, {icon: L.divIcon({className:'',html:'<div style="background:#16a34a;color:#fff;font-size:11px;font-weight:700;padding:5px 10px;border-radius:999px;white-space:nowrap;box-shadow:0 2px 6px rgba(15,23,42,.3)">Клиент</div>', iconAnchor:[10,10]})}).addTo(map);
+  map.fitBounds(line.getBounds(), {padding:[40,40]});
+  var courier = L.marker(origin, {icon: L.divIcon({className:'',html:'<div style="width:26px;height:26px;border-radius:50%;background:#0ea5e9;border:3px solid #fff;box-shadow:0 2px 8px rgba(15,23,42,.4);display:flex;align-items:center;justify-content:center;font-size:13px">🛵</div>', iconAnchor:[13,13]})}).addTo(map);
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function pointAt(t){
+    if (t < 0.5) { var k=t/0.5; return [lerp(origin[0],mid[0],k), lerp(origin[1],mid[1],k)]; }
+    var k=(t-0.5)/0.5; return [lerp(mid[0],dest[0],k), lerp(mid[1],dest[1],k)];
+  }
+  var t0 = Date.now();
+  (function anim(){
+    var t = ((Date.now()-t0)/9000) % 1;
+    var p = pointAt(t);
+    courier.setLatLng(p);
+    requestAnimationFrame(anim);
+  })();
+}
+</script>
+</body>
+</html>

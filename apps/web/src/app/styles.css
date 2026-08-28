@@ -1,0 +1,14 @@
+@import 'tailwindcss';
+
+/*
+ * Временные токены дизайн-системы. Реальные значения (White-Label-перекраска, тёмная тема)
+ * заводит packages/ui (EP-18) — этот тикет (DTJ-003) только гарантирует, что компоненты уже
+ * используют @theme-токены (`bg-surface`, `text-ink`, ...), а не буквальный HEX/RGB.
+ * TODO(EP-18): заменить значения токенов на итоговую дизайн-систему packages/ui.
+ */
+@theme {
+  --color-surface: #ffffff;
+  --color-ink: #0f172a;
+  --color-ink-muted: #64748b;
+  --color-line: #e2e8f0;
+}

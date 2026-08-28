@@ -1,0 +1,60 @@
+# DoruTJ — production override поверх docker-compose.yml (DTJ-412, SRS-NFR-047 п.1).
+# BARREL-файл (D-27) — правится ТОЛЬКО добавлением строк, перечитать перед правкой, слияние
+# конфликтов — за архитектором EP-19. Применяется командой:
+#   docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.prod.yml up -d
+#
+# Namespace `!reset` — YAML-тег Compose Specification (Compose CLI v2.24+): по умолчанию
+# multi-value поля (`ports`, `volumes`, ...) при слиянии НЕ заменяются, а КОНКАТЕНИРУЮТСЯ со
+# значением из базового файла — просто не указать `ports` здесь НЕ убрало бы публикацию портов
+# БД из docker-compose.yml. `!reset []` явно обнуляет унаследованный список перед тем, как
+# (не) добавить новый — единственный корректный способ «снять» публикацию порта в override.
+#
+# `seed` намеренно ОТСУТСТВУЕТ в этом файле (DoD тикета: «seed-сервис отсутствует в
+# docker-compose.prod.yml ни при каком профиле») — его `profiles: ["dev", "e2e"]` в базовом
+# файле и так не даёт ему стартовать без явного `--profile dev`/`--profile e2e`, добавлять
+# сюда нечего и незачем.
+
+services:
+  postgres:
+    ports: !reset [] # БЕЗ публикации порта на хост в prod (в отличие от dev-профиля)
+    deploy:
+      resources:
+        limits: { cpus: '2', memory: 2g }
+
+  redis:
+    ports: !reset [] # БЕЗ публикации порта на хост в prod
+    deploy:
+      resources:
+        limits: { cpus: '1', memory: 512m }
+
+  minio:
+    ports: !reset [] # БЕЗ публикации портов на хост в prod (S3 API/консоль — только через Nginx/VPN)
+    deploy:
+      resources:
+        limits: { cpus: '1', memory: 1g }
+
+  api:
+    deploy:
+      replicas: 2 # горизонтальное масштабирование stateless API
+      resources:
+        limits: { cpus: '1', memory: 1g }
+
+  worker:
+    deploy:
+      resources:
+        limits: { cpus: '1', memory: 1g }
+
+  web:
+    deploy:
+      resources:
+        limits: { cpus: '0.5', memory: 256m }
+
+  admin:
+    deploy:
+      resources:
+        limits: { cpus: '0.5', memory: 256m }
+
+  nginx:
+    deploy:
+      resources:
+        limits: { cpus: '1', memory: 512m }

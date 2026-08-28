@@ -1,0 +1,63 @@
+{
+  "name": "dorutj",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DoruTJ — фармацевтический маркетплейс и White-Label платформа (Республика Таджикистан)",
+  "packageManager": "pnpm@11.23.0",
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml,css}\"",
+    "test": "turbo run test",
+    "test:watch": "turbo run test:watch",
+    "test:e2e": "pnpm --filter @dorutj/e2e test",
+    "arch:check": "depcruise --config .dependency-cruiser.cjs apps packages",
+    "arch:graph": "depcruise --config .dependency-cruiser.cjs --output-type dot apps packages > arch-graph.dot",
+    "test:arch": "vitest run tests/arch/run-fixture-check.spec.ts",
+    "typecheck:arch": "tsc --noEmit -p tests/arch/tsconfig.json",
+    "db:generate": "pnpm --filter @dorutj/api db:generate",
+    "db:migrate": "pnpm --filter @dorutj/api db:migrate",
+    "db:push": "pnpm --filter @dorutj/api db:push",
+    "db:seed": "pnpm --filter @dorutj/api db:seed",
+    "db:studio": "pnpm --filter @dorutj/api db:studio",
+    "verify": "pnpm typecheck && pnpm lint && pnpm arch:check && pnpm test:arch && pnpm test && pnpm build",
+    "docker:up": "docker compose -f infra/docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f infra/docker/docker-compose.yml down",
+    "docker:logs": "docker compose -f infra/docker/docker-compose.yml logs -f",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^24.13.3",
+    "dependency-cruiser": "^17.0.0",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import-x": "^4.16.1",
+    "globals": "^16.5.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.6",
+    "prettier": "^3.9.6",
+    "tsx": "^4.20.6",
+    "turbo": "^2.10.12",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.68.0",
+    "vitest": "^4.1.11"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix --max-warnings=0",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,css}": [
+      "prettier --write"
+    ]
+  }
+}

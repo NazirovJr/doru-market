@@ -1,0 +1,13 @@
+node_modules
+dist
+build
+coverage
+.turbo
+pnpm-lock.yaml
+docs/research
+docs/competition
+docs/spec
+tz.log
+*.md
+.serena
+Mobile app design planning

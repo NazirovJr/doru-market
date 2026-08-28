@@ -1,0 +1,372 @@
+ПОЛНОМАСШТАБНОЕ ИССЛЕДОВАНИЕ И СИСТЕМНОЕ ТЕХНИЧЕСКОЕ ЗАДАНИЕ (ТЗ)
+ПРОЕКТ: «DoruTJ» (Национальный фармацевтический маркетплейс и White-Label платформа)
+ЧАСТЬ I. СТРАТЕГИЧЕСКОЕ И МАРКЕТИНГОВОЕ ИССЛЕДОВАНИЕ РЫНКА
+1. Макроэкономический профиль фармрынка Республики Таджикистан (2024–2026)
+Объем рынка: ~$280M – $320M ежегодно с совокупным среднегодовым темпом роста (CAGR) +11.4%.
+Зависимость от импорта: 75–80% медикаментов ввозятся из Индии (20%), РФ (12%), Китая, стран ЕС и СНГ.
+Розничная инфраструктура:
+Более 2,800 лицензированных аптек и аптечных пунктов по стране.
+Концентрация: 42% выручки генерирует Душанбе, 28% — Согдийская область (Худжанд, Истаравшан, Канибадам), 18% — Хатлон (Бохтар, Куляб), 12% — РРП и ГБАО.
+Проникновение безналичных платежей: Превышает 80% в городах благодаря Указу Президента №586 и развитию экосистем Alif Mobi, DC Next (Dushanbe City), Humo Online.
+2. Анализ конкурентов и ключевых стейкхолдеров
+code
+Code
+ЛАНДШАФТ РЫНКА
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ МОНОБРЕНДОВЫЙ E-COMMERCE            ФАРМАЦЕВТИЧЕСКИЕ СЕТИ            АГРЕГАТОРЫ И ДОСТАВКА│
+│                                                                                        │
+│ ┌──────────────────────┐           ┌──────────────────────┐         ┌────────────────┐ │
+│ │     Salomat.tj       │           │     Sifat Pharma     │         │   Yalla Pharm  │ │
+│ │   (ООО «Дусти Фарм») │           │ (Парвина Рахмонова)  │         │   & Solim.tj   │ │
+│ └──────────┬───────────┘           └──────────┬───────────┘         └───────┬────────┘ │
+│            │                                  │                             │          │
+│ • 25+ своих аптек в Душанбе        • 20+ премиум-аптек              • Слабый UI/UX     │
+│ • Закрытый каталог                 • Мощный админресурс             • Нет синхронизации│
+│ • Дорогая доставка (30-40 TJS)     • Слабый IT-сегмент              • Срывы доставок   │
+└────────────┼──────────────────────────────────┼─────────────────────────────┼──────────┘
+             │                                  │                             │
+             └──────────────────────────────────┼─────────────────────────────┘
+                                                ▼
+                                    ┌───────────────────────┐
+                                    │    ВАКУУМ НА РЫНКЕ    │
+                                    │      (Gap Matrix)     │
+                                    └───────────┬───────────┘
+                                                ▼
+                    ┌───────────────────────────────────────────────────────┐
+                    │      DORUTJ: НЕЙТРАЛЬНЫЙ НАЦИОНАЛЬНЫЙ АГРЕГАТОР       │
+                    │   + WHITE-LABEL ДЛЯ СЕТЕЙ (Oson, Sifat, Madad, Tib)   │
+                    └───────────────────────────────────────────────────────┘
+3. Этнографические боли потребителей и фармацевтов
+code
+Code
+ЦИКЛ БОЛИ ПОЛЬЗОВАТЕЛЯ
+   [Врач выписал рецепт] ──> [Поиск по 4-6 аптекам пешком] ──> [Переплата в 3x за бренд]
+                                           │
+                                           ▼
+                                 [Отказ из-за дефицита]
+                                           │
+                                           ▼
+               [Просьба привезти из Москвы/Ташкента через таксистов]
+Хаос рецептурного почерка: Пациенты не могут прочитать назначение врача и отправляют неразборчивые фото в WhatsApp/Telegram аптекарям.
+Переплата за бренды: Отсутствие прозрачного подбора дешевых аналогов по МНН (международному непатентованному наименованию). Покупателю продают импорт за 180 TJS вместо аналога за 22 TJS.
+Логистика «по ориентирам»: Отсутствие точных адресов («Хонаи 4-ошёна пеши масҷид») приводит к часовым блужданиям курьеров.
+Проблема поддельных чеков: Мошенники присылают фотошоп-скриншоты об оплате в Alif Mobi/DC, обманывая дежурных провизоров.
+ЧАСТЬ II. ТЕХНИЧЕСКОЕ ЗАДАНИЕ (PRODUCT SPECIFICATION & ARCHITECTURE)
+1. Архитектурный стек и топология системы
+code
+Code
+СИСТЕМНАЯ АРХИТЕКТУРА
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                              КЛИЕНТСКИЙ СЛОЙ (CLIENTS)                                 │
+│ ┌────────────────────────┐  ┌─────────────────────────┐  ┌───────────────────────────┐ │
+│ │   Customer Web App     │  │   Telegram Mini App     │  │  Pharmacy & Courier Apps  │ │
+│ │ (React 18 + Tailwind)  │  │   (TWA SDK + React)     │  │ (Flutter iOS / Android)   │ │
+│ └───────────┬────────────┘  └────────────┬────────────┘  └─────────────┬─────────────┘ │
+└─────────────┼────────────────────────────┼─────────────────────────────┼───────────────┘
+              │                            │                             │
+              ▼                            ▼                             ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                              API GATEWAY (Nginx + Kong)                                │
+│                   SSL Termination | Rate Limiting | Auth Validation                    │
+└──────────────────────────────────────────┬─────────────────────────────────────────────┘
+                                           │
+                                           ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                               БЭКЕНД МИКРОСЕРВИСЫ (NestJS)                             │
+│ ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐ │
+│ │  Auth & RBAC    │  │ Catalog & Search│  │ Orders & Escrow │  │ 1C Sync & Ingestion │ │
+│ │  (JWT / OTP)    │  │ (Elasticsearch) │  │  (State Engine) │  │  (RabbitMQ Worker)  │ │
+│ └────────┬────────┘  └────────┬────────┘  └────────┬────────┘  └──────────┬──────────┘ │
+└──────────┼────────────────────┼────────────────────┼──────────────────────┼────────────┘
+           │                    │                    │                      │
+           ▼                    ▼                    ▼                      ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 ХРАНИЛИЩА ДАННЫХ                                       │
+│ ┌────────────────────────┐  ┌─────────────────────────┐  ┌───────────────────────────┐ │
+│ │ PostgreSQL 16 (Drizzle)│  │   Redis 7 (Cache/Queue) │  │ MinIO / S3 (Prescriptions)│ │
+│ └────────────────────────┘  └─────────────────────────┘  └───────────────────────────┘ │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+2. Схема базы данных (PostgreSQL / Drizzle Schema)
+code
+SQL
+-- Enums
+CREATE TYPE user_role AS ENUM ('customer', 'pharmacist', 'courier', 'pharmacy_admin', 'super_admin');
+CREATE TYPE order_status AS ENUM ('pending_payment', 'paid_escrow', 'processing', 'picked_up', 'delivered', 'cancelled', 'refunded');
+CREATE TYPE prescription_status AS ENUM ('uploaded', 'verified', 'rejected');
+
+-- 1. Таблица аптечных сетей (для White-Label мультитенантности)
+CREATE TABLE pharmacy_chains (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    legal_entity_name VARCHAR(255) NOT NULL,
+    tin_inn VARCHAR(20) NOT NULL UNIQUE,
+    logo_url TEXT,
+    is_whitelabel_active BOOLEAN DEFAULT false,
+    custom_domain VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 2. Таблица филиалов (конкретных аптек)
+CREATE TABLE pharmacies (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    chain_id UUID REFERENCES pharmacy_chains(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    address_text TEXT NOT NULL,
+    landmark_tj TEXT, -- Ориентир на таджикском (пеши масчид)
+    latitude NUMERIC(10, 8) NOT NULL,
+    longitude NUMERIC(11, 8) NOT NULL,
+    phone VARCHAR(30) NOT NULL,
+    is_24_7 BOOLEAN DEFAULT false,
+    opening_time TIME,
+    closing_time TIME,
+    one_c_endpoint TEXT,
+    is_active BOOLEAN DEFAULT true
+);
+
+-- 3. Базовый справочник медикаментов (МНН, аналоги)
+CREATE TABLE medicines (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    trade_name VARCHAR(255) NOT NULL,
+    inn_name VARCHAR(255) NOT NULL, -- Международное непатентованное название
+    barcode VARCHAR(64) UNIQUE,
+    category_id INT NOT NULL,
+    dosage_form VARCHAR(100) NOT NULL, -- таблетки, сироп, ампулы
+    dosage_strength VARCHAR(100) NOT NULL, -- 500 мг, 10 мг/мл
+    manufacturer_country VARCHAR(100) NOT NULL,
+    manufacturer_name VARCHAR(255) NOT NULL,
+    is_prescription_required BOOLEAN DEFAULT false,
+    storage_temperature VARCHAR(50),
+    description_tj TEXT,
+    description_ru TEXT,
+    image_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 4. Остатки и цены в конкретных аптеках (Синхронизация с 1С)
+CREATE TABLE pharmacy_inventory (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    pharmacy_id UUID REFERENCES pharmacies(id) ON DELETE CASCADE,
+    medicine_id UUID REFERENCES medicines(id) ON DELETE RESTRICT,
+    price_tjs NUMERIC(10, 2) NOT NULL,
+    stock_quantity INT NOT NULL DEFAULT 0,
+    batch_number VARCHAR(100),
+    expiry_date DATE NOT NULL,
+    last_synced_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT unique_pharmacy_medicine UNIQUE (pharmacy_id, medicine_id)
+);
+
+-- 5. Заказы и Escrow-статус
+CREATE TABLE orders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_number VARCHAR(20) UNIQUE NOT NULL,
+    customer_id UUID NOT NULL,
+    pharmacy_id UUID REFERENCES pharmacies(id),
+    status order_status DEFAULT 'pending_payment',
+    payment_method VARCHAR(50) NOT NULL, -- 'alif_mobi', 'dc_next', 'cash_courier'
+    payment_transaction_id VARCHAR(255),
+    items_total_tjs NUMERIC(10, 2) NOT NULL,
+    delivery_fee_tjs NUMERIC(10, 2) NOT NULL,
+    total_amount_tjs NUMERIC(10, 2) NOT NULL,
+    delivery_address TEXT NOT NULL,
+    delivery_landmark TEXT,
+    delivery_latitude NUMERIC(10, 8),
+    delivery_longitude NUMERIC(11, 8),
+    courier_id UUID,
+    courier_eta_minutes INT,
+    prescription_image_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 6. Детализация позиций заказа
+CREATE TABLE order_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
+    medicine_id UUID REFERENCES medicines(id),
+    unit_price_tjs NUMERIC(10, 2) NOT NULL,
+    quantity INT NOT NULL,
+    total_price_tjs NUMERIC(10, 2) NOT NULL
+);
+3. Детальная спецификация ключевых модулей
+МОДУЛЬ 1: Умный поиск медикаментов и подбор аналогов (Smart Search & MNN Engine)
+Проблема: Пользователь ищет "Мезим", которого нет в ближайшей аптеке, или хочет сэкономить.
+Логика работы сервиса:
+Поисковый запрос проходит через полнотекстовый поиск Elasticsearch с нечетким соответствием (Fuzzy match / расстояние Левенштейна 
+ для учета ошибок правописания: «цытрамон» 
+ «цитрамон»).
+Если препарат найден: выдается список аптек, отсортированный по:
+Блок аналогов по МНН: Сервис автоматически выполняет вторичный запрос:
+code
+SQL
+SELECT m.*, pi.price_tjs, p.name as pharmacy_name 
+FROM medicines m
+JOIN pharmacy_inventory pi ON m.id = pi.medicine_id
+JOIN pharmacies p ON pi.pharmacy_id = p.id
+WHERE m.inn_name = (SELECT inn_name FROM medicines WHERE id = :current_med_id)
+  AND m.id != :current_med_id
+  AND pi.stock_quantity > 0
+ORDER BY pi.price_tjs ASC;
+Пользователь видит плашку: «Сэкономьте до 65 сомони: найден дженерик с тем же действующим веществом (Панкреатин 10,000 ЕД) за 18 сомони вместо 83 сомони».
+МОДУЛЬ 2: OCR-распознавание рецептов и голосовых сообщений (AI Medical Input)
+Входные данные:
+Фотография рецепта врача, сделанная на камеру смартфона.
+Голосовое сообщение на таджикском/русском языке (например: «Салом алейкум, ба ман барои фишори баланд каптоприл ва аспирин кардио лозим»).
+Пайплайн обработки:
+Аудио: Запись передается в Whisper API (дообученный на фарм-глоссарии и таджикских диалектах) 
+ генерация текстового промпта.
+Фото: Изображение нормализуется, бинаризуется и отправляется в мультимодальную модель Gemini 2.5 Flash со строгим Structured Output:
+code
+JSON
+{
+  "type": "object",
+  "properties": {
+    "detected_medicines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "raw_name": { "type": "string" },
+          "matched_inn": { "type": "string" },
+          "dosage": { "type": "string" },
+          "confidence_score": { "type": "number" }
+        },
+        "required": ["raw_name", "matched_inn", "confidence_score"]
+      }
+    },
+    "is_official_stamp_present": { "type": "boolean" },
+    "doctor_name": { "type": "string" }
+  }
+}
+Бэкенд сопоставляет matched_inn с таблицей medicines и за 1.2 секунды формирует готовую корзину для покупателя с выбором аптек.
+МОДУЛЬ 3: Интеграция с локальными банками (Alif Mobi, DC Next) и Escrow-защита
+Защита от фейковых скриншотов: Полный запрет ручной отправки чеков в чат. Статус оплаты меняется исключительно по зашифрованному серверному Webhook от банка.
+code
+Code
+ESCROW ПЛАТЕЖНЫЙ ПРОТОКОЛ
+┌──────────┐            ┌─────────┐            ┌──────────────┐            ┌─────────┐
+│ Customer │            │ DoruTJ  │            │  Alif / DC   │            │ Courier │
+└────┬─────┘            └───┬─────┘            └──────┬───────┘            └────┬────┘
+     │ 1. Checkout (QR)     │                         │                         │
+     │─────────────────────>│ 2. Create Bill          │                         │
+     │                      │────────────────────────>│                         │
+     │                      │<────────────────────────│                         │
+     │ 3. Pay via DeepLink  │    (Hold Amount)        │                         │
+     │───────────────────────────────────────────────>│                         │
+     │                      │ 4. Webhook (PAID_HOLD)  │                         │
+     │                      │<────────────────────────│                         │
+     │                      │ 5. Push: Pack Order     │                         │
+     │                      │──────────────────────────────────────────────────>│
+     │                      │                         │ 6. Delivery & SMS Code  │
+     │<─────────────────────────────────────────────────────────────────────────│
+     │                      │ 7. Verify SMS Token     │                         │
+     │                      │────────────────────────>│                         │
+     │                      │ 8. Capture Escrow       │                         │
+     │                      │────────────────────────>│                         │
+     │                      │                         │ (Transfer to Pharmacy)  │
+МОДУЛЬ 4: Шлюз синхронизации с «1С:Аптека / 1С:Предприятие 8.3»
+Частота синхронизации: Дельта-обновление каждые 3 минуты (остатки и цены), полная ночная синхронизация базы в 03:00.
+Протокол: REST API / HTTPS с авторизацией по X-Pharmacy-API-Key и взаимному mTLS сертификату.
+Спецификация контракта API (1C 
+ DoruTJ):
+code
+Http
+POST /api/v1/inventory/batch-update
+Content-Type: application/json
+X-Pharmacy-API-Key: sec_live_9f83a2c8e17b...
+code
+JSON
+{
+  "pharmacy_guid": "a4d8c72e-1234-4567-89ab-cdef01234567",
+  "sync_timestamp": "2026-08-26T12:00:00Z",
+  "items": [
+    {
+      "barcode": "4601964000125",
+      "internal_sku": "SKU-00921",
+      "trade_name": "Каптоприл 25мг №20",
+      "price_tjs": 14.50,
+      "stock_quantity": 42,
+      "expiry_date": "2028-06-30"
+    },
+    {
+      "barcode": "8901117002311",
+      "internal_sku": "SKU-04812",
+      "trade_name": "Азитромицин 500мг капсулы №3",
+      "price_tjs": 32.00,
+      "stock_quantity": 0,
+      "expiry_date": "2027-11-30"
+    }
+  ]
+}
+Обработка очередей: Запросы от 500+ аптек принимаются асинхронно через RabbitMQ очередь inventory_sync_queue с пропускной способностью 5,000 событий/сек, исключая падение базы при массовых выгрузках в час пик.
+МОДУЛЬ 5: Мобильный модуль фармацевта (Pharmacy Tablet Terminal)
+Назначение: Планшетное приложение для сотрудников аптеки за кассой.
+Функционал:
+Громкое звуковое оповещение при поступлении онлайн-заказа.
+Таймер на сборку (SLA = 7 минут).
+Встроенный сканер штрихкодов через камеру планшета: фармацевт обязан отсканировать коробку перед упаковкой в сейф-пакет (валидация дозировки и срока годности).
+Нажатие кнопки «Передано курьеру» с генерацией одноразового 4-значного OTP-кода.
+ЧАСТЬ III. ФОРМАТ И СТРУКТУРА WHITE-LABEL ПЛАТФОРМЫ
+(Для продажи в Sifat Pharma / Oson Pharm / Madad Pharm)
+Для поставки решения в качестве приватного софта крупным сетям предусмотрена изолированная архитектура мультитенантности (Multi-Tenant Architecture):
+code
+Code
+АРХИТЕКТУРА WHITE-LABEL
+                         
+                           [ DNS Router / Traefik ]
+                                     │
+           ┌─────────────────────────┼─────────────────────────┐
+           ▼                         ▼                         ▼
+     app.sifat.tj              app.osonpharm.tj          app.dorutj.com
+   (Tenant: SIFAT)           (Tenant: OSON_PHARM)       (Neutral Public)
+           │                         │                         │
+           └─────────────────────────┼─────────────────────────┘
+                                     │
+                                     ▼
+                   [ Core Backend Platform (NestJS) ]
+                     Tenant Middleware: Config, Assets,
+                     Payment Credentials, Isolated DB
+Кастомизация за 48 часов:
+Замена палитры бренда, логотипов и иконок через админ-панель.
+Прямая привязка мерчант-аккаунта банка конкретной сети (деньги идут напрямую на счет сети без прохождения через DoruTJ).
+Выделенный Telegram-бот под брендом заказчика (@SifatPharmaBot или @OsonPharmBot).
+Полный комплект исходного кода с передачей неисключительных прав и развертыванием в закрытом контуре заказчика (On-Premise в ЦОД Таджиктелеком).
+ЧАСТЬ IV. СМЕТА РАЗРАБОТКИ, СТЕК И ROADMAP (90 ДНЕЙ)
+1. Технологический стек команды
+Frontend: React 18, Vite, TypeScript, Tailwind CSS, Lucide Icons, Motion (framer-motion).
+Mobile / Telegram: Telegram Mini Apps SDK, Flutter (для курьерского терминала).
+Backend: Node.js v20+, NestJS, Fastify, Drizzle ORM, PostgreSQL 16, Redis 7.
+Поиск и AI: Elasticsearch 8.x, Google Gemini API, OpenAI Whisper.
+DevOps: Docker, Docker Compose, Nginx, GitHub Actions CI/CD, Linux Ubuntu 24.04 LTS.
+2. Понедельный план реализации (Gantt Roadmap)
+code
+Code
+НЕДЕЛЯ:   1   2   3   4   5   6   7   8   9  10  11  12
+──────────────────────────────────────────────────────────
+Спринт 1: [DB & 1C Gateway] ────>
+Спринт 2:     [Catalog & Elastic Search] ────>
+Спринт 3:         [Customer Web / TWA App] ────>
+Спринт 4:             [Alif/DC QR & Escrow Engine] ────>
+Спринт 5:                 [Courier & Pharmacist Apps] ────>
+Спринт 6:                     [AI Рецепты & Beta Тест] ────>
+Спринт 7:                         [Запуск и интеграция] ──★
+Недели 1–2 (Архитектура и шлюз 1С):
+Развертывание PostgreSQL, Drizzle-миграций, Redis.
+Разработка шлюза пакетной синхронизации инвентаря с 1С (REST API + RabbitMQ).
+Недели 3–4 (Поисковый движок и каталог аналогов):
+Заполнение каталога 8,000+ лекарств с МНН и связями аналогов.
+Индексация в Elasticsearch, реализация нечеткого поиска и фильтрации по геолокации.
+Недели 5–6 (Клиентские интерфейсы):
+Разработка адаптивного Web-приложения и Telegram Mini App.
+Интерактивная карта аптек с пинами и отображением цен/остатков.
+Недели 7–8 (Финтех и платежи):
+Интеграция шлюзов Alif Mobi, DC Next (генерация динамических QR и DeepLinks).
+Реализация логики холдирования (Escrow) и Webhook-обработчиков.
+Недели 9–10 (Кабинеты фармацевта и курьера):
+Планшетный интерфейс сборщика заказов со сканером штрихкодов.
+Курьерский модуль с маршрутизацией по ориентирам.
+Недели 11–12 (AI-модули, безопасность, запуск):
+Подключение Gemini 2.5 Flash для распознавания рецептов.
+Нагрузочное тестирование (1,000 RPS), аудит безопасности и передача в эксплуатацию.
+ЧАСТЬ V. ИТОГОВОЕ РЕЗЮМЕ ДЛЯ ИНВЕСТОРОВ И ОСНОВАТЕЛЕЙ
+Защищенность проекта: Даже при 0% вирусного B2C-трафика разработка DoruTJ окупается в первую же B2B-сделку за счет продажи White-Label решения гигантам фармрынка (Sifat Pharma / Oson Pharm), которым необходимо конкурировать с Salomat.tj.
+Готовность ТЗ: Документ содержит полную техническую глубину (SQL-схемы, API-контракты, Escrow-протоколы, AI-пайплайны), позволяющую команде разработчиков немедленно приступить к созданию MVP без дополнительных аналитических итераций.

@@ -1,0 +1,20 @@
+node_modules/
+dist/
+build/
+.env
+!apps/web/.env
+.env.local
+*.log
+!tz.log
+coverage/
+.turbo/
+.vite/
+playwright-report/
+test-results/
+.pnpm-store/
+.serena/
+arch-graph.dot
+
+# Claude Code / Serena (локальное состояние, не коммитим)
+.claude/
+*.tsbuildinfo

@@ -1,0 +1,130 @@
+/**
+ * Каждый класс `domain-errors.ts` — `instanceof DomainError`, корректный `code` (DTJ-005 тест-план).
+ */
+import { describe, expect, it } from 'vitest'
+import { ErrorCode } from './errors'
+import {
+  AmbiguousDateFormatError,
+  AutomaticReactivationForbiddenError,
+  BusinessRuleViolationError,
+  CashAmountMismatchError,
+  CodForbiddenForRxError,
+  CodLimitExceededError,
+  ConflictError,
+  ConsentNotGivenError,
+  ControlledSubstanceMustBeDestroyedError,
+  ControlledSubstanceNotOrderableError,
+  CourierNotEligibleError,
+  CourierTenantMismatchError,
+  DisputeAfterPayoutRequiresAdjustmentError,
+  DisputeHoldViolationError,
+  DomainError,
+  DuplicateActiveReturnError,
+  DuplicateCustomDomainError,
+  DuplicateNonTerminalDisputeError,
+  DuplicateTenantSlugError,
+  ExpiredStockError,
+  ForbiddenTransitionError,
+  InsufficientStockError,
+  InvalidCoordinatesError,
+  InvalidOnboardingTransitionError,
+  InvalidOrderStatusTransitionError,
+  InvalidPhoneNumberFormatError,
+  InvalidPrescriptionTransitionError,
+  InvalidPriceError,
+  InvalidRestockQuantityError,
+  InvalidWebhookSignatureError,
+  LedgerImbalanceError,
+  MissingResolutionReasonError,
+  NotFoundError,
+  OcrProviderUnavailableError,
+  OrderTotalMismatchError,
+  OtpAttemptsExceededError,
+  OtpExpiredError,
+  OtpMismatchError,
+  ParentChainNotActiveError,
+  PaymentProviderUnavailableError,
+  PharmacySuspendedError,
+  PrescriptionNotVerifiedError,
+  RestockConditionsNotMetError,
+  SelfDealingResolutionError,
+  SmsProviderUnavailableError,
+  TenantConfirmationPendingError,
+  UnauthorizedAdjustmentError,
+  ValidationError,
+} from './domain-errors'
+
+/** [конструктор, ожидаемый ErrorCode] — 1:1 дерево `10-domain-model.md` §«Доменные ошибки». */
+const CASES: readonly (readonly [() => DomainError, ErrorCode])[] = [
+  [() => new ValidationError(), ErrorCode.VALIDATION_ERROR],
+  [() => new InvalidPhoneNumberFormatError(), ErrorCode.INVALID_PHONE_FORMAT],
+  [() => new InvalidCoordinatesError(), ErrorCode.INVALID_COORDINATES],
+  [() => new OrderTotalMismatchError(), ErrorCode.ORDER_TOTAL_MISMATCH],
+  [() => new InvalidRestockQuantityError(), ErrorCode.INVALID_RESTOCK_QUANTITY],
+  [() => new InvalidPriceError(), ErrorCode.INVALID_PRICE],
+  [() => new MissingResolutionReasonError(), ErrorCode.MISSING_RESOLUTION_REASON],
+  [() => new AmbiguousDateFormatError(), ErrorCode.AMBIGUOUS_DATE_FORMAT],
+  [() => new ConflictError(), ErrorCode.CONFLICT],
+  [() => new DuplicateTenantSlugError(), ErrorCode.TENANT_SLUG_TAKEN],
+  [() => new DuplicateCustomDomainError(), ErrorCode.DOMAIN_TAKEN],
+  [() => new DuplicateActiveReturnError(), ErrorCode.RETURN_ALREADY_ACTIVE],
+  [() => new DuplicateNonTerminalDisputeError(), ErrorCode.DISPUTE_ALREADY_ACTIVE],
+  [() => new LedgerImbalanceError(), ErrorCode.LEDGER_IMBALANCE],
+  [() => new NotFoundError(), ErrorCode.NOT_FOUND],
+  [() => new ForbiddenTransitionError(), ErrorCode.INVALID_STATE_TRANSITION],
+  [() => new InvalidOrderStatusTransitionError(), ErrorCode.INVALID_STATE_TRANSITION],
+  [() => new InvalidPrescriptionTransitionError(), ErrorCode.INVALID_STATE_TRANSITION],
+  [() => new InvalidOnboardingTransitionError(), ErrorCode.INVALID_STATE_TRANSITION],
+  [() => new AutomaticReactivationForbiddenError(), ErrorCode.INVALID_STATE_TRANSITION],
+  [() => new DisputeAfterPayoutRequiresAdjustmentError(), ErrorCode.INVALID_STATE_TRANSITION],
+  [() => new BusinessRuleViolationError(), ErrorCode.BUSINESS_RULE_VIOLATION],
+  [() => new PrescriptionNotVerifiedError(), ErrorCode.PRESCRIPTION_NOT_VERIFIED],
+  [() => new ControlledSubstanceNotOrderableError(), ErrorCode.CONTROLLED_SUBSTANCE_FORBIDDEN],
+  [() => new ExpiredStockError(), ErrorCode.EXPIRED_STOCK],
+  [() => new CodForbiddenForRxError(), ErrorCode.COD_FORBIDDEN_FOR_RX],
+  [() => new CodLimitExceededError(), ErrorCode.COD_LIMIT_EXCEEDED],
+  [() => new InsufficientStockError(), ErrorCode.INSUFFICIENT_STOCK],
+  [() => new RestockConditionsNotMetError(), ErrorCode.RESTOCK_CONDITIONS_NOT_MET],
+  [() => new ControlledSubstanceMustBeDestroyedError(), ErrorCode.CONTROLLED_SUBSTANCE_MUST_BE_DESTROYED],
+  [() => new ParentChainNotActiveError(), ErrorCode.PARENT_CHAIN_NOT_ACTIVE],
+  [() => new PharmacySuspendedError(), ErrorCode.PHARMACY_SUSPENDED],
+  [() => new CashAmountMismatchError(), ErrorCode.CASH_AMOUNT_MISMATCH],
+  [() => new CourierTenantMismatchError(), ErrorCode.COURIER_TENANT_MISMATCH],
+  [() => new CourierNotEligibleError(), ErrorCode.COURIER_NOT_ELIGIBLE],
+  [() => new SelfDealingResolutionError(), ErrorCode.SELF_DEALING_FORBIDDEN],
+  [() => new TenantConfirmationPendingError(), ErrorCode.TENANT_CONFIRMATION_PENDING],
+  [() => new DisputeHoldViolationError(), ErrorCode.PAYOUT_ON_HOLD],
+  [() => new InvalidWebhookSignatureError(), ErrorCode.INVALID_WEBHOOK_SIGNATURE],
+  [() => new ConsentNotGivenError(), ErrorCode.CONSENT_REQUIRED],
+  [() => new UnauthorizedAdjustmentError(), ErrorCode.UNAUTHORIZED_ADJUSTMENT],
+  [() => new OtpExpiredError(), ErrorCode.OTP_EXPIRED],
+  [() => new OtpMismatchError(), ErrorCode.OTP_MISMATCH],
+  [() => new OtpAttemptsExceededError(), ErrorCode.OTP_LOCKED],
+  [() => new PaymentProviderUnavailableError(), ErrorCode.PAYMENT_PROVIDER_UNAVAILABLE],
+  [() => new OcrProviderUnavailableError(), ErrorCode.OCR_PROVIDER_UNAVAILABLE],
+  [() => new SmsProviderUnavailableError(), ErrorCode.SMS_PROVIDER_UNAVAILABLE],
+]
+
+describe('domain-errors — иерархия 1:1 с 10-domain-model.md', () => {
+  it.each(CASES)('instance → instanceof DomainError с кодом %s', (createError, expectedCode) => {
+    const error = createError()
+    expect(error).toBeInstanceOf(DomainError)
+    expect(error).toBeInstanceOf(Error)
+    expect(error.code).toBe(expectedCode)
+  })
+
+  it('покрывает все 47 конкретных классов дерева (включая промежуточные конкретные базы)', () => {
+    expect(CASES).toHaveLength(47)
+  })
+
+  it('details прокидывается в конструктор и доступен на инстансе', () => {
+    const details = { field: 'phone' }
+    const error = new InvalidPhoneNumberFormatError(details)
+    expect(error.details).toEqual(details)
+  })
+
+  it('name инстанса совпадает с именем класса (для логов/трассировки)', () => {
+    const error = new InsufficientStockError()
+    expect(error.name).toBe('InsufficientStockError')
+  })
+})

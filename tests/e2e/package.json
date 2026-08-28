@@ -1,0 +1,16 @@
+{
+  "name": "@dorutj/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "DoruTJ — tests/e2e: заготовка E2E-инфраструктуры (Playwright). Наполняется тикетом DTJ-417.",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "playwright test --pass-with-no-tests"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^24.13.3",
+    "typescript": "^5.9.3"
+  }
+}

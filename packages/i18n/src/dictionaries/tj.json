@@ -1,0 +1,15 @@
+{
+  "brand.name": "DoruTJ",
+  "auth.login.phone_title": "Рақами телефони худро ворид кунед",
+  "auth.login.phone_hint": "Мо тавассути SMS рамзи тасдиқро мефиристем",
+  "auth.login.phone_placeholder": "+992 XX XXX XX XX",
+  "auth.login.code_title": "Рамзи аз SMS-ро ворид кунед",
+  "auth.login.code_sent_to": "Рамз ба {phone} фиристода шуд",
+  "auth.login.resend_code": "Рамзро дубора фиристонед",
+  "auth.login.resend_countdown": "Дубора пас аз {seconds} сония",
+  "ux.error.otp_expired": "Рамз кӯҳна шуд. Рамзи навро дархост кунед.",
+  "ux.error.otp_locked": "Кӯшишҳои зиёди нодуруст. Рамзи навро тавассути SMS/Telegram дархост кунед.",
+  "ux.error.otp_mismatch": "Рамзи нодуруст. Кӯшишҳои боқимонда: {attemptsLeft}",
+  "ux.error.network_offline": "Пайвастшавӣ ба интернет нест. Маълумоти охирин нишон дода мешавад.",
+  "ux.error.generic_500": "Хатое рух дод. Баъд аз як дақиқа бори дигар кӯшиш кунед."
+}
