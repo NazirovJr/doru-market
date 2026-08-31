@@ -225,7 +225,8 @@ grep -rn "ИмяКласса\|имяФункции" apps packages --include=*.ts
 | Документ | Когда открывать |
 |---|---|
 | [`CLAUDE-CTO.md`](CLAUDE-CTO.md) | **Кто здесь кто и кто что решает.** Если тебе выдали тикет — ты ИСПОЛНИТЕЛЬ, а не CTO: см. блок в начале файла. Там же эскалация и порядок разногласий |
-| [`docs/STATE-AND-RESUME-POINT.md`](docs/STATE-AND-RESUME-POINT.md) | **Где мы и что делать дальше.** Читать перед началом работы |
+| [`docs/07-WAVE4-HANDOFF.md`](docs/07-WAVE4-HANDOFF.md) | **ТЕКУЩЕЕ ЗАДАНИЕ.** Итог волны 4, 10 точечных задач по порядку, что дальше по плану |
+| [`docs/STATE-AND-RESUME-POINT.md`](docs/STATE-AND-RESUME-POINT.md) | **Где мы и что делать дальше.** История волн, §12 — блокеры уровня продукта |
 | [`docs/05-DEVELOPER-HANDBOOK.md`](docs/05-DEVELOPER-HANDBOOK.md) | Как работать: порядок, проверки, формат отчёта |
 | [`docs/04-SCOPE-DECISION-PIVOT.md`](docs/04-SCOPE-DECISION-PIVOT.md) | Что входит в релиз R1, что отложено |
 | [`docs/03-ARCHITECT-DECISIONS.md`](docs/03-ARCHITECT-DECISIONS.md) | Решения D-01..D-27. Переоткрывать нельзя |
