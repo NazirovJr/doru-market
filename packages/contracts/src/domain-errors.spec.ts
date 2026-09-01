@@ -24,9 +24,12 @@ import {
   DuplicateNonTerminalDisputeError,
   DuplicateTenantSlugError,
   ExpiredStockError,
+  ForbiddenError,
   ForbiddenTransitionError,
   InsufficientStockError,
   InvalidCoordinatesError,
+  InvalidCursorError,
+  InvalidTelegramInitDataError,
   InvalidOnboardingTransitionError,
   InvalidOrderStatusTransitionError,
   InvalidPhoneNumberFormatError,
@@ -42,17 +45,94 @@ import {
   OtpAttemptsExceededError,
   OtpExpiredError,
   OtpMismatchError,
+  OtpRequestRateLimitedError,
   ParentChainNotActiveError,
+  RefreshTokenInvalidError,
+  RefreshTokenReuseDetectedError,
   PaymentProviderUnavailableError,
+  PharmacyNotInChainScopeError,
   PharmacySuspendedError,
   PrescriptionNotVerifiedError,
   RestockConditionsNotMetError,
   SelfDealingResolutionError,
   SmsProviderUnavailableError,
+  TelegramAuthDateExpiredError,
+  TelegramBotNotConfiguredError,
   TenantConfirmationPendingError,
+  TokenInvalidatedError,
   UnauthorizedAdjustmentError,
   ValidationError,
 } from './domain-errors'
+
+/**
+ * Полный список concrete-классов из `./domain-errors.ts` (на момент фикса Блока 1.2 — 57 штук).
+ * Используется тестом ниже, чтобы гарантировать, что каждый concrete-класс покрыт
+ * ровно одним кейсом в {@link CASES}. При добавлении новой concrete-ошибки в
+ * `domain-errors.ts` — добавить её сюда и соответствующий кейс в CASES; иначе тест
+ * упадёт. Так закрывается рассинхрон «выросло дерево — вырос список тестов».
+ *
+ * Это замена прежнего магического `toHaveLength(53)`, который был зафиксирован
+ * архитектором до волн 2-3 и устарел с добавлением новых классов.
+ */
+const EXPECTED_CONCRETE_CLASSES: ReadonlySet<string> = new Set<string>([
+  'ValidationError',
+  'InvalidPhoneNumberFormatError',
+  'InvalidCoordinatesError',
+  'InvalidCursorError',
+  'OrderTotalMismatchError',
+  'InvalidRestockQuantityError',
+  'InvalidPriceError',
+  'MissingResolutionReasonError',
+  'AmbiguousDateFormatError',
+  'ConflictError',
+  'DuplicateTenantSlugError',
+  'DuplicateCustomDomainError',
+  'DuplicateActiveReturnError',
+  'DuplicateNonTerminalDisputeError',
+  'LedgerImbalanceError',
+  'NotFoundError',
+  'ForbiddenTransitionError',
+  'InvalidOrderStatusTransitionError',
+  'InvalidPrescriptionTransitionError',
+  'InvalidOnboardingTransitionError',
+  'AutomaticReactivationForbiddenError',
+  'DisputeAfterPayoutRequiresAdjustmentError',
+  'BusinessRuleViolationError',
+  'PrescriptionNotVerifiedError',
+  'ControlledSubstanceNotOrderableError',
+  'ExpiredStockError',
+  'CodForbiddenForRxError',
+  'CodLimitExceededError',
+  'InsufficientStockError',
+  'RestockConditionsNotMetError',
+  'ControlledSubstanceMustBeDestroyedError',
+  'ParentChainNotActiveError',
+  'PharmacySuspendedError',
+  'CashAmountMismatchError',
+  'CourierTenantMismatchError',
+  'CourierNotEligibleError',
+  'SelfDealingResolutionError',
+  'TenantConfirmationPendingError',
+  'DisputeHoldViolationError',
+  'InvalidWebhookSignatureError',
+  'ConsentNotGivenError',
+  'UnauthorizedAdjustmentError',
+  'PharmacyNotInChainScopeError',
+  'RefreshTokenInvalidError',
+  'RefreshTokenReuseDetectedError',
+  'TokenInvalidatedError',
+  'ForbiddenError',
+  'InvalidTelegramInitDataError',
+  'TelegramAuthDateExpiredError',
+  'TelegramBotNotConfiguredError',
+  'OtpExpiredError',
+  'OtpMismatchError',
+  'OtpAttemptsExceededError',
+  'OtpRequestRateLimitedError',
+  'PaymentProviderUnavailableError',
+  'OcrProviderUnavailableError',
+  'SmsProviderUnavailableError',
+])
 
 /** [конструктор, ожидаемый ErrorCode] — 1:1 дерево `10-domain-model.md` §«Доменные ошибки». */
 const CASES: readonly (readonly [() => DomainError, ErrorCode])[] = [
@@ -60,6 +140,7 @@ const CASES: readonly (readonly [() => DomainError, ErrorCode])[] = [
   [() => new InvalidPhoneNumberFormatError(), ErrorCode.INVALID_PHONE_FORMAT],
   [() => new InvalidCoordinatesError(), ErrorCode.INVALID_COORDINATES],
   [() => new OrderTotalMismatchError(), ErrorCode.ORDER_TOTAL_MISMATCH],
+  [() => new InvalidCursorError('cursor shape mismatch'), ErrorCode.INVALID_CURSOR],
   [() => new InvalidRestockQuantityError(), ErrorCode.INVALID_RESTOCK_QUANTITY],
   [() => new InvalidPriceError(), ErrorCode.INVALID_PRICE],
   [() => new MissingResolutionReasonError(), ErrorCode.MISSING_RESOLUTION_REASON],
@@ -97,9 +178,18 @@ const CASES: readonly (readonly [() => DomainError, ErrorCode])[] = [
   [() => new InvalidWebhookSignatureError(), ErrorCode.INVALID_WEBHOOK_SIGNATURE],
   [() => new ConsentNotGivenError(), ErrorCode.CONSENT_REQUIRED],
   [() => new UnauthorizedAdjustmentError(), ErrorCode.UNAUTHORIZED_ADJUSTMENT],
+  [() => new PharmacyNotInChainScopeError(), ErrorCode.PHARMACY_NOT_IN_CHAIN_SCOPE],
+  [() => new RefreshTokenInvalidError(), ErrorCode.REFRESH_TOKEN_INVALID],
+  [() => new RefreshTokenReuseDetectedError(), ErrorCode.REFRESH_TOKEN_REUSE_DETECTED],
+  [() => new TokenInvalidatedError(), ErrorCode.TOKEN_INVALID],
+  [() => new ForbiddenError(), ErrorCode.FORBIDDEN],
+  [() => new InvalidTelegramInitDataError(), ErrorCode.INVALID_TELEGRAM_INIT_DATA],
+  [() => new TelegramAuthDateExpiredError(), ErrorCode.TELEGRAM_AUTH_DATE_EXPIRED],
+  [() => new TelegramBotNotConfiguredError(), ErrorCode.SERVICE_UNAVAILABLE],
   [() => new OtpExpiredError(), ErrorCode.OTP_EXPIRED],
   [() => new OtpMismatchError(), ErrorCode.OTP_MISMATCH],
   [() => new OtpAttemptsExceededError(), ErrorCode.OTP_LOCKED],
+  [() => new OtpRequestRateLimitedError('phone_cooldown', 60), ErrorCode.OTP_REQUEST_RATE_LIMITED],
   [() => new PaymentProviderUnavailableError(), ErrorCode.PAYMENT_PROVIDER_UNAVAILABLE],
   [() => new OcrProviderUnavailableError(), ErrorCode.OCR_PROVIDER_UNAVAILABLE],
   [() => new SmsProviderUnavailableError(), ErrorCode.SMS_PROVIDER_UNAVAILABLE],
@@ -113,8 +203,24 @@ describe('domain-errors — иерархия 1:1 с 10-domain-model.md', () => {
     expect(error.code).toBe(expectedCode)
   })
 
-  it('покрывает все 47 конкретных классов дерева (включая промежуточные конкретные базы)', () => {
-    expect(CASES).toHaveLength(47)
+  it('покрывает все конкретные классы domain-errors.ts (включая промежуточные конкретные базы)', () => {
+    // Реестр concrete-классов должен расти вместе с domain-errors.ts:
+    // этот тест ловит рассинхрон между деревом ошибок и таблицей кейсов.
+    // Магическое число (раньше 53) заменено на прямую сверку с деревом классов:
+    // при добавлении новой concrete-ошибки в domain-errors.ts КЕЙС обязателен.
+    const caseConstructors = CASES.map(([createError]) => {
+      const sample = createError()
+      return sample.constructor.name
+    })
+    // Каждый кейс должен соответствовать какому-то concrete-классу
+    // (защита от опечаток в имени в CASES).
+    for (const ctor of caseConstructors) {
+      expect(EXPECTED_CONCRETE_CLASSES.has(ctor), `CASES ссылается на отсутствующий класс ${ctor}`).toBe(true)
+    }
+    // И наоборот: каждый concrete-класс покрыт кейсом.
+    for (const cls of EXPECTED_CONCRETE_CLASSES) {
+      expect(caseConstructors, `отсутствует кейс для ${cls}`).toContain(cls)
+    }
   })
 
   it('details прокидывается в конструктор и доступен на инстансе', () => {

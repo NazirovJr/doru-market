@@ -7,9 +7,20 @@
   "auth.login.code_sent_to": "Code sent to {phone}",
   "auth.login.resend_code": "Resend code",
   "auth.login.resend_countdown": "Resend in {seconds}s",
+  "auth.login.telegram_button": "Sign in with Telegram",
+  "auth.login.telegram_hint": "Quick sign-in without SMS — the bot sends the code automatically",
+  "auth.login.telegram_unavailable": "Telegram sign-in is unavailable. Open this page in the Telegram Mini App.",
+  "auth.login.telegram_auth_failed": "Telegram sign-in failed. Try again or use SMS.",
   "ux.error.otp_expired": "Code expired. Request a new one.",
   "ux.error.otp_locked": "Too many wrong attempts. Request a new code.",
   "ux.error.otp_mismatch": "Wrong code. Attempts left: {attemptsLeft}",
   "ux.error.network_offline": "No internet connection. Showing last saved data.",
-  "ux.error.generic_500": "Something went wrong. Please try again in a minute."
+  "ux.error.generic_500": "Something went wrong. Please try again in a minute.",
+  "map.unavailable": "Map is temporarily unavailable. Please try again later.",
+  "map.pin.open_24_7": "Open 24/7",
+  "map.pin.open_now": "Open now",
+  "map.pin.closed_now": "Closed now",
+  "map.pin.price": "{price} TJS",
+  "map.pin.stock": "In stock: {count}",
+  "map.pin.stale": "Price may be outdated"
 }

@@ -34,3 +34,13 @@ export function ok<T>(data: T, meta?: EnvelopeMeta): SuccessEnvelope<T> {
 export function fail(code: ErrorCode, message: string, details?: Record<string, unknown>): ErrorEnvelope {
   return details === undefined ? { error: { code, message } } : { error: { code, message, details } }
 }
+
+/** Type-guard для уже сформированного `SuccessEnvelope` (используется `ResponseInterceptor`). */
+export function isSuccessEnvelope(value: unknown): value is SuccessEnvelope<unknown> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'data' in value &&
+    !('error' in value)
+  )
+}

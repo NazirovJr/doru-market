@@ -2,9 +2,9 @@ import { Global, Module } from '@nestjs/common'
 // no-restricted-imports (C16): см. пояснение в common/health/health.module.ts — `@/` не
 // резолвится нативным Node ESM в выводе `tsc`/`nest build` без bundler-шага
 // (`assumptions` DTJ-001).
-// eslint-disable-next-line no-restricted-imports
+// eslint-disable-next-line no-restricted-imports -- `@/...` не резолвится нативным Node ESM в эмитированном tsc/nest build без bundler-шага (assumptions DTJ-001); относительный путь — единственный рабочий вариант без новых зависимостей.
 import { AppConfigModule } from '../../config/config.module.js'
-// eslint-disable-next-line no-restricted-imports
+// eslint-disable-next-line no-restricted-imports -- `@/...` не резолвится нативным Node ESM в эмитированном tsc/nest build без bundler-шага (assumptions DTJ-001); относительный путь — единственный рабочий вариант без новых зависимостей.
 import { AppConfigService } from '../../config/app-config.service.js'
 import { PINO_LOGGER } from './pino-logger.token.js'
 import { createRootLogger } from './root-logger.js'

@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router'
 import type { ReactElement } from 'react'
-import { useLocale, type Locale } from '@/app/providers/locale-provider'
+import { useLocale, type Locale } from '@/shared/config/locale-provider'
 
 // Плейсхолдеры до готовности packages/ui (EP-18): BrandLogo и LanguageSwitcher — реальные
 // компоненты подключит соответствующий тикет EP-18, здесь только зарезервировано место в layout

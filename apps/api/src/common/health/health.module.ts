@@ -4,7 +4,7 @@ import { TerminusModule } from '@nestjs/terminus'
 // оставляет `@/...` нерезолвленным для нативного Node ESM (нет bundler-шага в этом
 // тикете — см. `assumptions` DTJ-001); относительный путь — единственный рабочий вариант
 // без новых зависимостей (`tsc-alias` и т.п.), поэтому здесь допускается `../../`.
-// eslint-disable-next-line no-restricted-imports
+// eslint-disable-next-line no-restricted-imports -- `@/...` не резолвится нативным Node ESM в эмитированном tsc/nest build без bundler-шага (assumptions DTJ-001); относительный путь — единственный рабочий вариант без новых зависимостей.
 import { AppConfigModule } from '../../config/config.module.js'
 import { HealthController } from './health.controller.js'
 import { EventLoopLagIndicator } from './event-loop-lag.indicator.js'

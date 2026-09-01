@@ -9,6 +9,18 @@
  * нет намеренно (SRS-API-036).
  */
 
+/** Роли RBAC (SRS-API-014, единый enum в БД как `user_role`). */
+export const USER_ROLES = [
+  'customer',
+  'pharmacist',
+  'pharmacy_admin',
+  'courier',
+  'support_agent',
+  'super_admin',
+] as const
+
+export type UserRole = (typeof USER_ROLES)[number]
+
 export const PERMISSIONS = {
   CATALOG_SEARCH: 'catalog:search',
   CATALOG_READ: 'catalog:read',

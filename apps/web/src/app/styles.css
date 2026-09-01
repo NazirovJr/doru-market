@@ -11,4 +11,7 @@
   --color-ink: #0f172a;
   --color-ink-muted: #64748b;
   --color-line: #e2e8f0;
+  /* [DTJ-028, SRS-UX-018] Брендовый primary — расхождение №5: фокус-кольцо
+     и primary-CTA рисуются ИЗ ЭТОГО токена, не из фиксированного rgba(14,165,233,.4) дизайна. */
+  --color-brand-primary: #0ea5e9;
 }

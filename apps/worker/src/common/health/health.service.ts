@@ -3,7 +3,7 @@ import type { Redis } from 'ioredis'
 // @/ алиас НЕ резолвится в раннтайме: nest-cli.json использует дефолтный tsc-билдер без
 // webpack/tsconfig-paths (эмпирически проверено, DTJ-002) — `node dist/main.js` упал бы с
 // ERR_MODULE_NOT_FOUND на буквальном `@/...`. Относительный путь до правки nest-cli.json.
-// eslint-disable-next-line no-restricted-imports
+// eslint-disable-next-line no-restricted-imports -- `@/...` не резолвится в worker-рантайме: nest-cli.json использует дефолтный tsc-билдер без webpack/tsconfig-paths, `node dist/main.js` упал бы с ERR_MODULE_NOT_FOUND (см. DTJ-002). Относительный путь до правки nest-cli.json.
 import { REDIS_CONNECTION } from '../../config/redis-connection.provider.js'
 
 /** Сколько ждём ответа Redis, прежде чем считать его недоступным (SRS-NFR-037). */

@@ -3,7 +3,7 @@ import { HealthIndicatorService, type HealthIndicatorResult } from '@nestjs/term
 import { Pool } from 'pg'
 // no-restricted-imports (C16): см. пояснение в health.module.ts — `@/` не резолвится
 // нативным Node ESM в выводе `tsc`/`nest build` без bundler-шага (`assumptions` DTJ-001).
-// eslint-disable-next-line no-restricted-imports
+// eslint-disable-next-line no-restricted-imports -- `@/...` не резолвится нативным Node ESM в эмитированном tsc/nest build без bundler-шага (assumptions DTJ-001); относительный путь — единственный рабочий вариант без новых зависимостей.
 import { AppConfigService } from '../../config/app-config.service.js'
 import { toReadableMessage } from './error-message.util.js'
 

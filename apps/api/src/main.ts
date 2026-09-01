@@ -9,6 +9,7 @@
  */
 import 'reflect-metadata'
 import { NestFactory } from '@nestjs/core'
+import { VersioningType } from '@nestjs/common'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import helmet from '@fastify/helmet'
 import cors from '@fastify/cors'
@@ -16,6 +17,7 @@ import pino from 'pino'
 import { AppModule } from './app.module.js'
 import { AppConfigService } from './config/app-config.service.js'
 import { isAllowedCorsOrigin } from './config/cors-origin.policy.js'
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js'
 
 /**
  * `@fastify/helmet`/`@fastify/cors` резолвятся в свою (более новую) копию `fastify`,
@@ -35,6 +37,19 @@ const HSTS_MAX_AGE_SECONDS = 31_536_000
 const LISTEN_HOST = '0.0.0.0'
 /** Ненулевой код завершения при фатальной ошибке старта (критерий приёмки №4). */
 const STARTUP_FAILURE_EXIT_CODE = 1
+/**
+ * Глобальный префикс `api` + URI-версионирование (`enableVersioning`) — контроллеры
+ * бизнес-модулей объявлены как `@Controller({ path: '...', version: '1' })`
+ * (docstring каждого фиксирует маршрут как `/api/v1/...`, см. `docs/00-PROJECT-CHARTER.md`
+ * и §19 хендбука: `curl http://localhost:3000/api/v1/medicines`), но без этих двух вызовов
+ * NestJS ТИХО игнорирует опцию `version` и регистрирует маршрут без версии и без префикса
+ * (`/auth/telegram` вместо `/api/v1/auth/telegram`) — обнаружено при прогоне
+ * integration-тестов auth (все они бьют по `/api/v1/...` и получали 404). `health`/`ready`
+ * (DTJ-001 §6) намеренно исключены из префикса — они и раньше жили на `/health`/`/ready`,
+ * см. §8/§19 хендбука и `HealthController`.
+ */
+const GLOBAL_API_PREFIX = 'api'
+const UNPREFIXED_PATHS = ['health', 'ready']
 
 async function registerTransportSecurity(
   app: NestFastifyApplication,
@@ -59,6 +74,9 @@ async function bootstrap(): Promise<void> {
   )
   const config = app.get(AppConfigService)
 
+  app.setGlobalPrefix(GLOBAL_API_PREFIX, { exclude: UNPREFIXED_PATHS })
+  app.enableVersioning({ type: VersioningType.URI })
+
   // SRS-API-067 (`REQUEST_TIMEOUT_MS`): значение известно только ПОСЛЕ валидации ENV
   // внутри `NestFactory.create`, поэтому применяется к уже созданному Fastify-серверу —
   // эквивалентно опции `connectionTimeout` конструктора адаптера (та же настройка Node
@@ -66,6 +84,12 @@ async function bootstrap(): Promise<void> {
   app.getHttpAdapter().getInstance().server.setTimeout(config.requestTimeoutMs)
 
   await registerTransportSecurity(app, config)
+  // [DTJ-029] Глобальный фильтр: `DomainError` → `ErrorEnvelope` по `ERROR_HTTP_STATUS`.
+  // Без него контроллеры auth-зоны (которые делают `throw result.error`) возвращают
+  // 500 Internal Server Error вместо 4xx с машинным кодом ошибки. Регистрация
+  // через `useGlobalFilters` (не APP_FILTER provider) — фильтр stateless и не
+  // зависит от других провайдеров.
+  app.useGlobalFilters(new AllExceptionsFilter())
   app.enableShutdownHooks()
 
   await app.listen(config.port, LISTEN_HOST)

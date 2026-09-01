@@ -13,6 +13,7 @@
 // папку фикстуры.
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -40,19 +41,57 @@ interface ProcessResult {
   readonly output: string
 }
 
+/**
+ * Дочерние процессы пишем в временный файл, а не в stdio-пайп. Причина: в
+ * Windows-песочнице `stdio: 'pipe'` для spawn запрещён (EPERM на named pipes),
+ * и обход через `stdio: 'inherit'` невозможен — vitest сам читает пайп
+ * воркера. Файл — единственный переносимый канал, который не зависит от
+ * возможностей песочницы. Содержимое файла читается после `spawnSync` и
+ * прикладывается к результату теста.
+ */
+function withTempLog<T>(fn: (logPath: string) => T): T {
+  const logPath = path.join(
+    os.tmpdir(),
+    `dorutj-arch-test-${String(process.pid)}-${String(Date.now())}-${Math.random().toString(36).slice(2)}.log`,
+  )
+  try {
+    return fn(logPath)
+  } finally {
+    try {
+      fs.unlinkSync(logPath)
+    } catch {
+      // файл мог быть удалён, это нормально
+    }
+  }
+}
+
 function runEslint(targets: readonly string[]): ProcessResult {
-  const result = spawnSync(process.execPath, [ESLINT_BIN, '--no-ignore', ...targets], {
-    cwd: REPO_ROOT,
-    encoding: 'utf-8',
+  return withTempLog((logPath) => {
+    const out = fs.openSync(logPath, 'w')
+    try {
+      const result = spawnSync(process.execPath, [ESLINT_BIN, '--no-ignore', ...targets], {
+        cwd: REPO_ROOT,
+        stdio: ['ignore', out, out],
+      })
+      return { exitCode: result.status ?? 1, output: fs.readFileSync(logPath, 'utf-8') }
+    } finally {
+      fs.closeSync(out)
+    }
   })
-  return { exitCode: result.status ?? 1, output: `${result.stdout}\n${result.stderr}` }
 }
 
 /** severity=error у dependency-cruiser печатает полный `comment` из правила только в err-long. */
 function runDepcruise(cwd: string, targets: readonly string[]): ProcessResult {
-  const args = [DEPCRUISE_BIN, '--config', DEPENDENCY_CRUISER_CONFIG, '--output-type', 'err-long', ...targets]
-  const result = spawnSync(process.execPath, args, { cwd, encoding: 'utf-8' })
-  return { exitCode: result.status ?? 1, output: `${result.stdout}\n${result.stderr}` }
+  return withTempLog((logPath) => {
+    const out = fs.openSync(logPath, 'w')
+    try {
+      const args = [DEPCRUISE_BIN, '--config', DEPENDENCY_CRUISER_CONFIG, '--output-type', 'err-long', ...targets]
+      const result = spawnSync(process.execPath, args, { cwd, stdio: ['ignore', out, out] })
+      return { exitCode: result.status ?? 1, output: fs.readFileSync(logPath, 'utf-8') }
+    } finally {
+      fs.closeSync(out)
+    }
+  })
 }
 
 const FIXTURES_DIR = path.join(REPO_ROOT, 'tests/arch/fixtures')

@@ -1,0 +1,20 @@
+[
+  { "slug": "obezbolivayushchie", "nameTj": "Доруҳои рафъи дард", "nameRu": "Обезболивающие", "nameEn": "Analgesics", "commissionCategory": "otc", "parentSlug": null, "sortOrder": 10 },
+  { "slug": "nesteroidnye-protivovospalitelnye", "nameTj": "Зид илтиҳобии ғайристероидӣ", "nameRu": "НПВС", "nameEn": "NSAIDs", "commissionCategory": "otc", "parentSlug": "obezbolivayushchie", "sortOrder": 11 },
+  { "slug": "spazmolitiki", "nameTj": "Доруҳои зидди дарди кашишхӯрӣ", "nameRu": "Спазмолитики", "nameEn": "Antispasmodics", "commissionCategory": "otc", "parentSlug": "obezbolivayushchie", "sortOrder": 12 },
+  { "slug": "protivoprostudnye", "nameTj": "Доруҳои зидди шамолхӯрӣ", "nameRu": "Противопростудные", "nameEn": "Cold & Flu", "commissionCategory": "otc", "parentSlug": null, "sortOrder": 20 },
+  { "slug": "antigrippoznye", "nameTj": "Доруҳои зидди зуком", "nameRu": "Антигриппозные", "nameEn": "Antivirals", "commissionCategory": "rx", "parentSlug": "protivoprostudnye", "sortOrder": 21 },
+  { "slug": "kapli-i-sprei", "nameTj": "Доруҳои бинӣ", "nameRu": "Капли и спреи", "nameEn": "Nasal drops & sprays", "commissionCategory": "otc", "parentSlug": "protivoprostudnye", "sortOrder": 22 },
+  { "slug": "antibiotiki", "nameTj": "Антибиотикҳо", "nameRu": "Антибиотики", "nameEn": "Antibiotics", "commissionCategory": "rx", "parentSlug": null, "sortOrder": 30 },
+  { "slug": "penicilliny", "nameTj": "Пенисиллинҳо", "nameRu": "Пенициллины", "nameEn": "Penicillins", "commissionCategory": "rx", "parentSlug": "antibiotiki", "sortOrder": 31 },
+  { "slug": "cefalosporiny", "nameTj": "Сефалоспоринҳо", "nameRu": "Цефалоспорины", "nameEn": "Cephalosporins", "commissionCategory": "rx", "parentSlug": "antibiotiki", "sortOrder": 32 },
+  { "slug": "makrolidy", "nameTj": "Макролидҳо", "nameRu": "Макролиды", "nameEn": "Macrolides", "commissionCategory": "rx", "parentSlug": "antibiotiki", "sortOrder": 33 },
+  { "slug": "zheludochno-kishechnye", "nameTj": "Доруҳои меъдаю рӯда", "nameRu": "ЖКТ препараты", "nameEn": "Gastrointestinal", "commissionCategory": "otc", "parentSlug": null, "sortOrder": 40 },
+  { "slug": "antatsidy", "nameTj": "Антасидҳо", "nameRu": "Антациды", "nameEn": "Antacids", "commissionCategory": "otc", "parentSlug": "zheludochno-kishechnye", "sortOrder": 41 },
+  { "slug": "protivodiareynye", "nameTj": "Зидди исҳол", "nameRu": "Противодиарейные", "nameEn": "Antidiarrheals", "commissionCategory": "otc", "parentSlug": "zheludochno-kishechnye", "sortOrder": 42 },
+  { "slug": "serdechno-sosudistye", "nameTj": "Доруҳои дил ва рагҳо", "nameRu": "Сердечно-сосудистые", "nameEn": "Cardiovascular", "commissionCategory": "rx", "parentSlug": null, "sortOrder": 50 },
+  { "slug": "antigipertonicheskie", "nameTj": "Зидди фишорбаландӣ", "nameRu": "Антигипертензивные", "nameEn": "Antihypertensives", "commissionCategory": "rx", "parentSlug": "serdechno-sosudistye", "sortOrder": 51 },
+  { "slug": "diuretiki", "nameTj": "Доруҳои пешоброн", "nameRu": "Диуретики", "nameEn": "Diuretics", "commissionCategory": "rx", "parentSlug": "serdechno-sosudistye", "sortOrder": 52 },
+  { "slug": "parapharma", "nameTj": "Парафармасевтика", "nameRu": "Парафармацевтика", "nameEn": "Parapharmaceuticals", "commissionCategory": "parapharma", "parentSlug": null, "sortOrder": 60 },
+  { "slug": "vitaminy", "nameTj": "Витаминҳо", "nameRu": "Витамины", "nameEn": "Vitamins", "commissionCategory": "parapharma", "parentSlug": "parapharma", "sortOrder": 61 }
+]

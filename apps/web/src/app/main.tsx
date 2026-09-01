@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from 'react-router'
 import { queryClient } from '@/app/providers/query-client'
-import { LocaleProvider } from '@/app/providers/locale-provider'
+import { LocaleProvider } from '@/shared/config/locale-provider'
 import { router } from '@/app/router'
 import '@/app/styles.css'
 

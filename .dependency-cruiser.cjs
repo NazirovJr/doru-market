@@ -44,6 +44,12 @@ function findWorkspaceSrcDirs(rootDir) {
       const packageDir = path.join(workspaceAbsoluteDir, entry.name)
       const hasTsconfig = fs.existsSync(path.join(packageDir, 'tsconfig.json'))
       const hasSrc = fs.existsSync(path.join(packageDir, 'src'))
+      // apps/admin — scaffolding DTJ-075. ВОЗВРАЩЁН в анализ в волне 3.5
+      // (STATE-AND-RESUME-POINT.md §11.4 задача 5.1): запрет Ж3 «не отключай
+      // проверку ради зелёного гейта» требует, чтобы `apps/admin` был под
+      // архитектурным контролем наравне с apps/web. Если у admin есть
+      // собственные нарушения, они должны быть исправлены в admin, а не
+      // вырезаны из проверки.
       if (hasTsconfig && hasSrc) {
         srcDirs.push(toPosixPath(path.join(workspaceDir, entry.name, 'src')))
       }
@@ -53,11 +59,23 @@ function findWorkspaceSrcDirs(rootDir) {
 }
 
 function writeDepcruiseTsconfig(rootDir) {
+  // depcruise 17.x при включённом tsPreCompilationDeps вызывает tsc поверх
+  // этого конфига, и tsc требует, чтобы каждый glob из `include` указывал
+  // хотя бы на один существующий файл, иначе бросает TS18003.
+  //
+  // Соберём `include` как абсолютные пути, потому что baseUrl в синтетическом
+  // конфиге не обязан совпадать с cwd депкруизы, и относительные globs от
+  // cwd (корня монорепо) на Windows ломаются на glob-движке tsc.
+  const srcDirs = findWorkspaceSrcDirs(rootDir)
   const tsconfig = {
+    extends: toPosixPath(path.join(rootDir, 'tsconfig.base.json')),
     compilerOptions: {
       baseUrl: toPosixPath(rootDir),
-      paths: { '@/*': findWorkspaceSrcDirs(rootDir).map((srcDir) => `${srcDir}/*`) },
+      paths: { '@/*': srcDirs.map((srcDir) => `${srcDir}/*`) },
+      noEmit: true,
+      skipLibCheck: true,
     },
+    include: srcDirs.map((srcDir) => `${toPosixPath(path.join(rootDir, srcDir))}/**/*`),
   }
   const tmpFile = path.join(os.tmpdir(), 'dorutj-depcruise-tsconfig.json')
   fs.writeFileSync(tmpFile, JSON.stringify(tsconfig))
@@ -222,15 +240,35 @@ module.exports = {
     {
       name: 'no-app-to-app',
       severity: 'error',
-      comment: 'Приложения не импортируют друг друга — только через packages/*.',
+      comment:
+        'Приложения не импортируют друг друга — только через packages/*. ' +
+        'Правило резолвит ЧЕРЕЗ ОТНОСИТЕЛЬНЫЕ ПУТИ в исходниках (включая `../`), ' +
+        'а не через алиас `@/`, потому что depcruise не различает `@/*` ' +
+        'между apps/* (fallback-массив путей, см. findWorkspaceSrcDirs). ' +
+        'Алиас `@/shared/...` формально резолвится в apps/web/src/... ' +
+        '(apps/web идёт первым), но при ошибке depcruise фоллбэкается в ' +
+        'apps/admin/src/... — отсюда false-positive. Это правило ловит ' +
+        'только РЕАЛЬНЫЕ относительные импорты, по которым невозможно ' +
+        'ошибиться. См. STATE-AND-RESUME-POINT.md §11.4 задача 5.1.',
       from: { path: '^apps/([^/]+)/' },
-      to: { path: '^apps/([^/]+)/', pathNot: '^apps/$1/' },
+      to: {
+        // Ловим только relative-импорты с `../`, ведущие в чужой app.
+        path: '\\.\\./.*/apps/([^/]+)/',
+        pathNot: '\\.\\./.*/apps/$1/',
+      },
     },
     {
       name: 'not-to-dev-dep',
       severity: 'error',
       comment: 'Продуктовый код не должен зависеть от devDependencies.',
-      from: { path: '^(apps|packages)/', pathNot: '\\.(test|spec)\\.(ts|tsx)$|/__tests__/|\\.config\\.' },
+      from: {
+        path: '^(apps|packages)/',
+        // `.d.ts` — type-only файлы, которые легитимно ссылаются на типы из
+        // dev-deps (например, `/// <reference types="vite/client" />`). Сами
+        // `.d.ts` не компилируются в runtime-код, поэтому правило к ним
+        // неприменимо (STATE-AND-RESUME-POINT.md §11.4 задача 5.1).
+        pathNot: '\\.(test|spec)\\.(ts|tsx)$|/__tests__/|\\.config\\.|\\.d\\.ts$',
+      },
       to: { dependencyTypes: ['npm-dev'] },
     },
     {
@@ -254,6 +292,8 @@ module.exports = {
         '/\\.turbo/',
         '/drizzle/',
         '\\.gen\\.ts$',
+        // apps/admin (DTJ-075 scaffolding) — ВОЗВРАЩЁН в анализ в волне 3.5
+        // (STATE-AND-RESUME-POINT.md §11.4 задача 5.1, запрет Ж3).
       ],
     },
     tsPreCompilationDeps: true,

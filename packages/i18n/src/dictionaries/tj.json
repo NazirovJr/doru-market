@@ -7,9 +7,20 @@
   "auth.login.code_sent_to": "Рамз ба {phone} фиристода шуд",
   "auth.login.resend_code": "Рамзро дубора фиристонед",
   "auth.login.resend_countdown": "Дубора пас аз {seconds} сония",
+  "auth.login.telegram_button": "Тавассути Telegram ворид шавед",
+  "auth.login.telegram_hint": "Воридшавии зуд бидуни SMS — бот рамзро худкор мефирист",
+  "auth.login.telegram_unavailable": "Воридшавӣ тавассути Telegram дастнорас аст. Ин саҳифаро дар Telegram Mini App кушоед.",
+  "auth.login.telegram_auth_failed": "Тавассути Telegram ворид нашуд. Бори дигар кӯшиш кунед ё SMS-ро истифода баред.",
   "ux.error.otp_expired": "Рамз кӯҳна шуд. Рамзи навро дархост кунед.",
   "ux.error.otp_locked": "Кӯшишҳои зиёди нодуруст. Рамзи навро тавассути SMS/Telegram дархост кунед.",
   "ux.error.otp_mismatch": "Рамзи нодуруст. Кӯшишҳои боқимонда: {attemptsLeft}",
   "ux.error.network_offline": "Пайвастшавӣ ба интернет нест. Маълумоти охирин нишон дода мешавад.",
-  "ux.error.generic_500": "Хатое рух дод. Баъд аз як дақиқа бори дигар кӯшиш кунед."
+  "ux.error.generic_500": "Хатое рух дод. Баъд аз як дақиқа бори дигар кӯшиш кунед.",
+  "map.unavailable": "Харита муваққатан дастнорас аст. Баъдтар бори дигар кӯшиш кунед.",
+  "map.pin.open_24_7": "Шабонарӯзӣ кушода",
+  "map.pin.open_now": "Ҳоло кушода",
+  "map.pin.closed_now": "Ҳоло баста",
+  "map.pin.price": "{price} сомонӣ",
+  "map.pin.stock": "Дар анбор: {count}",
+  "map.pin.stale": "Нарх метавонад кӯҳна бошад"
 }

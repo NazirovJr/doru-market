@@ -17,6 +17,15 @@ import globals from 'globals'
 const ALLOWED_NUMBERS = [-1, 0, 1, 2, 10, 100, 1000]
 
 export default tseslint.config(
+  // Ж4 (AGENTS.md §4) — запрет подавлений без обоснования. Встроенная опция ESLint
+  // ловит подавления, которые ничего не подавляют (протухшие после рефакторинга),
+  // а машинная проверка обоснований — в tests/arch/suppression-justification.spec.ts
+  // (STATE-AND-RESUME-POINT.md §11.4 задача 5.4).
+  {
+    linterOptions: {
+      reportUnusedDisableDirectives: 'error',
+    },
+  },
   {
     name: 'dorutj/ignores',
     ignores: [
@@ -40,6 +49,11 @@ export default tseslint.config(
       // `--no-ignore`, так что само правило остаётся проверяемым. tests/arch/*.spec.ts и
       // tests/arch/README.md сюда не входят — линтятся как обычный код.
       'tests/arch/fixtures/**',
+      // Хелпер-скрипты разработчика (.cjs, не входят в build/test). Конфигурация
+      // самого eslint делает это через `dorutj/configs` (files glob), но для
+      // надёжности дублируем в ignores, чтобы случайная утилита в scripts/ не
+      // роняла `pnpm lint`.
+      'scripts/**',
     ],
   },
 
@@ -318,7 +332,7 @@ export default tseslint.config(
     files: [
       '**/*.config.{ts,mts,cts,js,mjs,cjs}',
       '**/*.{cjs,mjs}',
-      '**/scripts/**/*.{ts,js,mjs}',
+      '**/scripts/**/*.{ts,js,mjs,cjs}',
       '*.cjs',
       '*.mjs',
     ],

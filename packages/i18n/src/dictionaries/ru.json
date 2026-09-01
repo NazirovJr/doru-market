@@ -7,9 +7,20 @@
   "auth.login.code_sent_to": "Код отправлен на {phone}",
   "auth.login.resend_code": "Отправить код повторно",
   "auth.login.resend_countdown": "Повторно через {seconds} с",
+  "auth.login.telegram_button": "Войти через Telegram",
+  "auth.login.telegram_hint": "Быстрый вход без SMS — бот пришлёт код автоматически",
+  "auth.login.telegram_unavailable": "Telegram-вход недоступен. Откройте эту страницу в Telegram Mini App.",
+  "auth.login.telegram_auth_failed": "Не удалось войти через Telegram. Попробуйте ещё раз или используйте SMS.",
   "ux.error.otp_expired": "Код устарел. Запросите новый.",
   "ux.error.otp_locked": "Слишком много неверных попыток. Запросите новый код через SMS/Telegram.",
   "ux.error.otp_mismatch": "Неверный код. Осталось попыток: {attemptsLeft}",
   "ux.error.network_offline": "Нет подключения к интернету. Показаны последние сохранённые данные.",
-  "ux.error.generic_500": "Что-то пошло не так. Попробуйте ещё раз через минуту."
+  "ux.error.generic_500": "Что-то пошло не так. Попробуйте ещё раз через минуту.",
+  "map.unavailable": "Карта временно недоступна. Попробуйте позже.",
+  "map.pin.open_24_7": "Круглосуточно",
+  "map.pin.open_now": "Открыто сейчас",
+  "map.pin.closed_now": "Сейчас закрыто",
+  "map.pin.price": "{price} сомони",
+  "map.pin.stock": "В наличии: {count}",
+  "map.pin.stale": "Цена могла устареть"
 }

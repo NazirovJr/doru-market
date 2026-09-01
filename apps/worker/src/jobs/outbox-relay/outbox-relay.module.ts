@@ -3,9 +3,9 @@ import { Queue } from 'bullmq'
 import type { Redis } from 'ioredis'
 // @/ алиас не резолвится в раннтайме (см. обоснование в common/health/health.service.ts) —
 // относительный путь до правки nest-cli.json.
-// eslint-disable-next-line no-restricted-imports
+// eslint-disable-next-line no-restricted-imports -- `@/...` не резолвится в worker-рантайме (см. common/health/health.service.ts); относительный путь до правки nest-cli.json.
 import { REDIS_CONNECTION } from '../../config/redis-connection.provider.js'
-// eslint-disable-next-line no-restricted-imports
+// eslint-disable-next-line no-restricted-imports -- `@/...` не резолвится в worker-рантайме (см. common/health/health.service.ts); относительный путь до правки nest-cli.json.
 import { QUEUE_NAMES } from '../../queues/queue.constants.js'
 import { NoopOutboxReaderAdapter } from './noop-outbox-reader.adapter.js'
 import { DOMAIN_EVENTS_QUEUE, OUTBOX_RELAY_QUEUE, OUTBOX_RELAY_QUEUE_NAME } from './outbox-relay.constants.js'
