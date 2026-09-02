@@ -11,7 +11,7 @@ import {
   SearchResultItemSchema,
   SearchResultPageSchema,
   SuggestItemSchema,
-} from './search'
+} from './search.js'
 
 describe('SearchQuerySchema — дефолты (DTJ-180)', () => {
   it('пустой объект — все дефолты применяются (text/sort/filters/limit)', () => {

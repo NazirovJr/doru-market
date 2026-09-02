@@ -5,16 +5,71 @@
  *   2. `isActive=false` (admin отключил) → err(TokenInvalidatedError);
  *   3. User не найден (deleted/не существует) → err(TokenInvalidatedError).
  *
- * Использует `InMemoryUsersRepository` из production, чтобы не дублировать
- * state-машину (она уже покрыта `in-memory-users.repository.spec.ts` если
- * есть, или просто спецификацией контракта).
+ * Локальный `FakeUsersRepository` (Map-based, публичный `byId` для прямого
+ * посева в тестах) — не production-класс: application не импортирует
+ * infrastructure (§1.1).
  */
+import { randomUUID } from 'node:crypto'
 import { ErrorCode } from '@dorutj/contracts'
 import { isErr, isOk } from '@dorutj/domain-kernel'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { InMemoryUsersRepository } from '@/modules/auth/infrastructure/repositories/in-memory-users.repository.js'
+import {
+  type CreateUserInput,
+  type UpdateUserPatch,
+  type UsersRepository,
+} from '@/modules/auth/application/ports/users.repository.port.js'
 import { type User } from '@/modules/auth/domain/user.js'
 import { GetMeUseCase } from './get-me.use-case.js'
+
+class FakeUsersRepository implements UsersRepository {
+  public readonly byId = new Map<string, User>()
+  private readonly tenantPhoneIndex = new Map<string, string>()
+
+  findByTenantAndPhone(tenantId: string, phoneNumber: string): Promise<User | null> {
+    const id = this.tenantPhoneIndex.get(`${tenantId}|${phoneNumber}`)
+    return Promise.resolve(id === undefined ? null : (this.byId.get(id) ?? null))
+  }
+
+  findById(id: string): Promise<User | null> {
+    const user = this.byId.get(id)
+    return Promise.resolve(user?.deletedAt === null ? user : null)
+  }
+
+  create(input: CreateUserInput): Promise<User> {
+    const id = randomUUID()
+    const user: User = {
+      id,
+      tenantId: input.tenantId,
+      phoneNumber: input.phoneNumber,
+      role: input.role,
+      fullName: input.fullName,
+      pharmacyId: input.pharmacyId ?? null,
+      chainId: input.chainId ?? null,
+      telegramChatId: null,
+      preferredLocale: 'tj',
+      isActive: true,
+      createdAt: new Date(),
+      deletedAt: null,
+    }
+    this.byId.set(id, user)
+    if (input.phoneNumber !== null) {
+      this.tenantPhoneIndex.set(`${input.tenantId}|${input.phoneNumber}`, id)
+    }
+    return Promise.resolve(user)
+  }
+
+  findOrCreateByTenantAndPhone(_input: CreateUserInput): Promise<User> {
+    throw new Error('not used in get-me tests')
+  }
+
+  findActiveByPhone(_phoneNumber: string): Promise<User | null> {
+    throw new Error('not used in get-me tests')
+  }
+
+  update(_id: string, _patch: UpdateUserPatch): Promise<User> {
+    throw new Error('not used in get-me tests')
+  }
+}
 
 const TENANT_ID = '33333333-3333-3333-3333-333333333333'
 const USER_ID = '11111111-1111-1111-1111-111111111111'
@@ -38,11 +93,11 @@ function makeUser(overrides: Partial<User> = {}): User {
 }
 
 describe('GetMeUseCase (DTJ-028 follow-up, SRS-API-025)', () => {
-  let users: InMemoryUsersRepository
+  let users: FakeUsersRepository
   let useCase: GetMeUseCase
 
   beforeEach(() => {
-    users = new InMemoryUsersRepository()
+    users = new FakeUsersRepository()
     useCase = new GetMeUseCase(users)
   })
 
@@ -54,7 +109,7 @@ describe('GetMeUseCase (DTJ-028 follow-up, SRS-API-025)', () => {
       fullName: 'Тест',
     })
     // Достаём реальный id, сгенерированный в create (randomUUID).
-    const created = Array.from((users as unknown as { byId: Map<string, User> }).byId.values())[0]
+    const created = Array.from(users.byId.values())[0]
     expect(created).toBeDefined()
 
     const result = await useCase.execute({ userId: created?.id ?? '' })
@@ -67,7 +122,7 @@ describe('GetMeUseCase (DTJ-028 follow-up, SRS-API-025)', () => {
   it('2. user isActive=false → err(TokenInvalidatedError) с code=TOKEN_INVALID', async () => {
     const user = makeUser({ isActive: false })
     // Подкидываем напрямую в InMemory (минуя create, т.к. create не принимает isActive).
-    ;(users as unknown as { byId: Map<string, User> }).byId.set(user.id, user)
+    ;users.byId.set(user.id, user)
 
     const result = await useCase.execute({ userId: USER_ID })
     expect(isErr(result)).toBe(true)
@@ -80,7 +135,7 @@ describe('GetMeUseCase (DTJ-028 follow-up, SRS-API-025)', () => {
     // В InMemory findById уже фильтрует `deletedAt !== null`. Создадим
     // user с deletedAt = now (что эквивалентно soft-delete).
     const user = makeUser({ deletedAt: new Date() })
-    ;(users as unknown as { byId: Map<string, User> }).byId.set(user.id, user)
+    ;users.byId.set(user.id, user)
 
     const result = await useCase.execute({ userId: USER_ID })
     expect(isErr(result)).toBe(true)

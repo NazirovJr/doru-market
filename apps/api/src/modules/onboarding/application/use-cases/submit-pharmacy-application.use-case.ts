@@ -54,6 +54,9 @@ export class SubmitPharmacyApplicationUseCase {
   constructor(
     @Inject(PHARMACY_ACCOUNT_REPOSITORY)
     private readonly pharmacyAccountRepository: PharmacyAccountRepositoryPort,
+    // Явный @Inject: без него параметр не попадает в paramtypes и поле остаётся undefined
+    // молча — бут не падает, TypeError прилетает на первом вызове (DTJ-001).
+    @Inject(SubmitChainApplicationUseCase)
     private readonly submitChainApplication: SubmitChainApplicationUseCase,
   ) {}
 

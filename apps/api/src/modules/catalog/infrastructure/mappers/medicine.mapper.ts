@@ -25,15 +25,15 @@
  */
 import { Barcode, DosageForm, DosageUnit, ok, err } from '@dorutj/domain-kernel'
 import type { Result } from '@dorutj/domain-kernel'
-import { Medicine, type MedicineCreateCommand } from '../../domain/medicine.entity.js'
-import { ControlCategory, DosageFormClass } from '../../domain/medicine.enums.js'
-import type { MedicineRecord, MedicineSubstanceRecord } from '../../domain/medicine.types.js'
+import { Medicine, type MedicineCreateCommand } from '@/modules/catalog/domain/medicine.entity.js'
+import { ControlCategory, DosageFormClass } from '@/modules/catalog/domain/medicine.enums.js'
+import type { MedicineRecord, MedicineSubstanceRecord } from '@/modules/catalog/domain/medicine.types.js'
 
 /**
  * Тип-источник для маппинга: строка БД (Drizzle `$inferSelect`) или синтетическая
  * запись из теста. Все поля заданы явно — никаких `Partial<>`.
  */
-export type MedicineRowLike = {
+export interface MedicineRowLike {
   readonly id: string
   readonly tradeName: string
   readonly innName: string

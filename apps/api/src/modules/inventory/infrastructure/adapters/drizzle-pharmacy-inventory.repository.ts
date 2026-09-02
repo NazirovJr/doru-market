@@ -17,12 +17,25 @@
  */
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { pharmacyInventory } from '@/db/schema/pharmacy-inventory.js'
-import { PharmacyInventory } from '../../domain/pharmacy-inventory.entity.js'
+import { PharmacyInventory } from '@/modules/inventory/domain/pharmacy-inventory.entity.js'
 import {
   type PharmacyInventoryRepository,
   type UpsertResult,
-} from '../../application/ports/pharmacy-inventory.repository.port.js'
-import type { InventoryBatchUpsertRow } from '../../domain/value-objects/inventory-batch-upsert-row.vo.js'
+} from '@/modules/inventory/application/ports/pharmacy-inventory.repository.port.js'
+import type { InventoryBatchUpsertRow } from '@/modules/inventory/domain/value-objects/inventory-batch-upsert-row.vo.js'
+
+/** Строка `pharmacy_inventory` (одна запись = один лот, R1). */
+interface PharmacyInventoryRow {
+  id: string
+  pharmacyId: string
+  medicineId: string
+  batchNumber: string | null
+  price: number
+  quantity: number
+  expiresAt: string
+  createdAt: Date
+  updatedAt: Date
+}
 
 interface DrizzleLike {
   insert: (table: unknown) => {
@@ -100,7 +113,24 @@ export class DrizzlePharmacyInventoryRepository implements PharmacyInventoryRepo
     medicineIds: readonly string[]
   }): Promise<ReadonlyMap<string, PharmacyInventory>> {
     if (input.medicineIds.length === 0) return new Map()
-    const rows = (await this.db
+    const rows = await this.selectExistingRows(input.pharmacyId, input.medicineIds)
+    const result = new Map<string, PharmacyInventory>()
+    for (const row of rows) {
+      result.set(row.medicineId, this.restoreRow(row))
+    }
+    for (const medicineId of input.medicineIds) {
+      if (result.has(medicineId)) continue
+      result.set(medicineId, this.createEmpty(input.pharmacyId, medicineId))
+    }
+    return result
+  }
+
+  /** Строки БД для существующих `pharmacy_inventory` (ОДИН запрос, SRS-INV-052 п.4). */
+  private async selectExistingRows(
+    pharmacyId: string,
+    medicineIds: readonly string[],
+  ): Promise<readonly PharmacyInventoryRow[]> {
+    return (await this.db
       .select({
         id: pharmacyInventory.id,
         pharmacyId: pharmacyInventory.pharmacyId,
@@ -115,100 +145,93 @@ export class DrizzlePharmacyInventoryRepository implements PharmacyInventoryRepo
       .from(pharmacyInventory)
       .where(
         and(
-          eq(pharmacyInventory.pharmacyId, input.pharmacyId),
-          inArray(pharmacyInventory.medicineId, input.medicineIds as string[]),
+          eq(pharmacyInventory.pharmacyId, pharmacyId),
+          inArray(pharmacyInventory.medicineId, medicineIds as string[]),
         ),
-      )) as readonly {
-      id: string
-      pharmacyId: string
-      medicineId: string
-      batchNumber: string | null
-      price: number
-      quantity: number
-      expiresAt: string
-      createdAt: Date
-      updatedAt: Date
-    }[]
-    const result = new Map<string, PharmacyInventory>()
-    const foundMedicineIds = new Set<string>()
-    for (let i = 0; i < rows.length; i += 1) {
-      const row = rows[i] as {
-        id: string
-        pharmacyId: string
-        medicineId: string
-        batchNumber: string | null
-        price: number
-        quantity: number
-        expiresAt: string
-        createdAt: Date
-        updatedAt: Date
-      }
-      const aggregate = PharmacyInventory.restore({
-        id: row.id,
-        pharmacyId: row.pharmacyId,
-        medicineId: row.medicineId,
-        lots: [
-          {
-            batchNumber: row.batchNumber,
-            priceDiram: BigInt(row.price),
-            quantity: row.quantity,
-            expiryDateIso: row.expiresAt,
-            lastSyncedAt: row.updatedAt,
-          },
-        ],
-      })
-      if (!aggregate.ok) {
-        throw new Error(`failed to restore PharmacyInventory: ${aggregate.error.message}`)
-      }
-      result.set(row.medicineId, aggregate.value)
-      foundMedicineIds.add(row.medicineId)
+      )) as readonly PharmacyInventoryRow[]
+  }
+
+  /** Восстановление агрегата из строки БД (одна запись = один лот). */
+  private restoreRow(row: PharmacyInventoryRow): PharmacyInventory {
+    const aggregate = PharmacyInventory.restore({
+      id: row.id,
+      pharmacyId: row.pharmacyId,
+      medicineId: row.medicineId,
+      lots: [
+        {
+          batchNumber: row.batchNumber,
+          priceDiram: BigInt(row.price),
+          quantity: row.quantity,
+          expiryDateIso: row.expiresAt,
+          lastSyncedAt: row.updatedAt,
+        },
+      ],
+    })
+    if (!aggregate.ok) {
+      throw new Error(`failed to restore PharmacyInventory: ${aggregate.error.message}`)
     }
-    for (let i = 0; i < input.medicineIds.length; i += 1) {
-      const medicineId = input.medicineIds[i]!
-      if (foundMedicineIds.has(medicineId)) continue
-      const created = PharmacyInventory.create({
-        id: `${input.pharmacyId}::${medicineId}`,
-        pharmacyId: input.pharmacyId,
-        medicineId,
-      })
-      if (!created.ok) {
-        throw new Error(`failed to create PharmacyInventory: ${created.error.message}`)
-      }
-      result.set(medicineId, created.value)
+    return aggregate.value
+  }
+
+  /** Пустой агрегат (без лотов) для medicineId без существующей записи. */
+  private createEmpty(pharmacyId: string, medicineId: string): PharmacyInventory {
+    const created = PharmacyInventory.create({
+      id: `${pharmacyId}::${medicineId}`,
+      pharmacyId,
+      medicineId,
+    })
+    if (!created.ok) {
+      throw new Error(`failed to create PharmacyInventory: ${created.error.message}`)
     }
-    return result
+    return created.value
   }
 
   async saveMany(aggregates: readonly PharmacyInventory[]): Promise<void> {
-    // R1-упрощённый путь: один UPDATE на агрегат. R2 — `UPDATE FROM (VALUES ...)`.
-    for (let i = 0; i < aggregates.length; i += 1) {
-      const aggregate = aggregates[i]!
-      const lots = aggregate.getLots()
-      for (let j = 0; j < lots.length; j += 1) {
-        const lot = lots[j] as {
+    // R1-упрощённый путь: один UPDATE на лот. R2 — `UPDATE FROM (VALUES ...)`.
+    // Каждый лот адресует свою уникальную строку (pharmacyId, medicineId,
+    // batchNumber) — обновления между лотами/агрегатами независимы, поэтому
+    // выполняются параллельно, а не последовательно в цикле с await.
+    const updates = aggregates.flatMap((aggregate) =>
+      (
+        aggregate.getLots() as readonly {
           batchNumber: string | null
           price: { diram: bigint }
           quantity: number
           expiryDate: { isoDate: string }
           lastSyncedAt: Date
-        }
-        await this.db
-          .update(pharmacyInventory)
-          .set({
-            price: lot.price.diram,
-            quantity: lot.quantity,
-            updatedAt: lot.lastSyncedAt,
-          })
-          .where(
-            and(
-              eq(pharmacyInventory.pharmacyId, aggregate.pharmacyId),
-              eq(pharmacyInventory.medicineId, aggregate.medicineId),
-              lot.batchNumber === null
-                ? sql`${pharmacyInventory.batchNumber} IS NULL`
-                : eq(pharmacyInventory.batchNumber, lot.batchNumber),
-            )!,
-          )
-      }
+        }[]
+      ).map((lot) => ({ aggregate, lot })),
+    )
+    await Promise.all(updates.map(({ aggregate, lot }) => this.updateLot(aggregate, lot)))
+  }
+
+  /** Один `UPDATE` строки `pharmacy_inventory` для одного лота агрегата. */
+  private async updateLot(
+    aggregate: PharmacyInventory,
+    lot: {
+      batchNumber: string | null
+      price: { diram: bigint }
+      quantity: number
+      lastSyncedAt: Date
+    },
+  ): Promise<void> {
+    const conditions = and(
+      eq(pharmacyInventory.pharmacyId, aggregate.pharmacyId),
+      eq(pharmacyInventory.medicineId, aggregate.medicineId),
+      lot.batchNumber === null
+        ? sql`${pharmacyInventory.batchNumber} IS NULL`
+        : eq(pharmacyInventory.batchNumber, lot.batchNumber),
+    )
+    if (conditions === undefined) {
+      throw new Error('failed to build WHERE clause for pharmacyInventory update')
     }
+    await this.db
+      .update(pharmacyInventory)
+      .set({
+        price: lot.price.diram,
+        quantity: lot.quantity,
+        updatedAt: lot.lastSyncedAt,
+      })
+      .where(conditions)
   }
 }

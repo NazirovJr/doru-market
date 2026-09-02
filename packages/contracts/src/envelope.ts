@@ -3,8 +3,8 @@
  * DTJ-005. Успех — `{ data, meta? }`, ошибка — `{ error: { code, message, details? } }`.
  * `ok`/`fail` — хелперы для единообразной сборки ответа в контроллерах (используются DTJ-018).
  */
-import type { ErrorCode } from './errors'
-import type { PaginationMeta } from './pagination'
+import type { ErrorCode } from './errors.js'
+import type { PaginationMeta } from './pagination.js'
 
 /** Доп. поля `meta` (например `locale`) объявляются потребителем через индексную сигнатуру. */
 export interface EnvelopeMeta {

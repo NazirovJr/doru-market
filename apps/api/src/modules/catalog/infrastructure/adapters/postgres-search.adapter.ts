@@ -197,12 +197,20 @@ export class PostgresSearchProvider implements SearchProvider {
   private async executeWithTimeout(query: ReturnType<typeof sql>, ctx: SearchExecutionContext): Promise<readonly SearchQueryRow[]> {
     try {
       const rows = await this.db.transaction(async (tx) => {
-        await tx.execute(sql`SET LOCAL statement_timeout = ${this.config.searchQueryTimeoutMs}`)
+        // `SET LOCAL statement_timeout = ${...}` НЕ работает: drizzle подставляет
+        // bind-параметр, а Postgres не принимает `$1` в `SET` — 42601 syntax error
+        // at or near "$1" на КАЖДОМ поисковом запросе (`SEARCH_DRIVER='postgres'` —
+        // дефолт, см. search-provider.factory.ts, то есть это боевой путь).
+        // `set_config(name, value, is_local=true)` — обычная функция, bind-параметр
+        // в ней допустим, поэтому значение остаётся параметризованным.
+        await tx.execute(
+          sql`SELECT set_config('statement_timeout', ${String(this.config.searchQueryTimeoutMs)}, true)`,
+        )
         return tx.execute<SearchQueryRow & Record<string, unknown>>(query)
       })
       return extractRows(rows) as readonly SearchQueryRow[]
     } catch (error: unknown) {
-      if (isPostgresError(error) && error.code === POSTGRES_QUERY_CANCELED_CODE) {
+      if (extractPostgresErrorCode(error) === POSTGRES_QUERY_CANCELED_CODE) {
         this.logger.error(
           { query: ctx.searchDescriptor, radiusMeters: ctx.radiusMeters, tenantId: ctx.tenantId },
           'search_query_timeout',
@@ -350,8 +358,24 @@ function toCheapestOffer(row: SearchQueryRow, now: Date): PharmacyOffer | null {
 
 const EMPTY_FILTERS: SearchFilters = { inStockOnly: false, openNowOnly: false, is24x7Only: false }
 
-function isPostgresError(error: unknown): error is { readonly code: string } {
-  return typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
+/**
+ * Drizzle оборачивает реальную ошибку `pg` в `DrizzleQueryError` — код Postgres (`57014` и
+ * т.п.) лежит в `error.cause.code`, а НЕ в `error.code` самого drizzle-исключения (проверено
+ * эмпирически: `db.transaction()` с `statement_timeout` даёт `DrizzleQueryError { cause:
+ * DatabaseError { code: '57014', ... } }`). Рекурсивно разворачивает `cause`-цепочку до первого
+ * `code`, чтобы `executeWithTimeout` ловил именно `57014` независимо от глубины обёртки.
+ */
+function extractPostgresErrorCode(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null) {
+    return undefined
+  }
+  if ('code' in error && typeof error.code === 'string') {
+    return error.code
+  }
+  if ('cause' in error) {
+    return extractPostgresErrorCode((error as { readonly cause?: unknown }).cause)
+  }
+  return undefined
 }
 
 /**

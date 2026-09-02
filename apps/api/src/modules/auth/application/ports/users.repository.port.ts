@@ -54,5 +54,20 @@ export interface UsersRepository {
   findById(id: string): Promise<User | null>
   create(input: CreateUserInput): Promise<User>
   findOrCreateByTenantAndPhone(input: CreateUserInput): Promise<User>
+  /**
+   * [Task 5, handoff §6] Глобальный поиск пользователя по `phoneNumber`.
+   * Используется ТОЛЬКО в `VerifyOtpUseCase` для логина — после verify OTP
+   * пользователь «предъявляет» телефон + одноразовый код; в этой точке
+   * tenant-isolation уже снята через факт владения кодом. Если один и тот
+   * же `phoneNumber` встречается в нескольких тенантах (multi-tenant
+   * White-Label), возвращаем ПЕРВОГО активного (детерминированный порядок
+   * по `created_at`); в R1 такая ситуация невозможна по `create_staff_account`
+   * политике (admin не может создать двух пользователей с одним phone в
+   * своём тенанте), но всё равно обрабатывается явно.
+   *
+   * НЕ использовать вне `VerifyOtpUseCase` — этот порт нарушает
+   * tenant-isolation и обязан быть оправдан identity-claim'ом (OTP-код).
+   */
+  findActiveByPhone(phoneNumber: string): Promise<User | null>
   update(id: string, patch: UpdateUserPatch): Promise<User>
 }

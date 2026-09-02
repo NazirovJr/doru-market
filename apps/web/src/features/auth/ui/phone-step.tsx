@@ -1,4 +1,4 @@
-import { useState, useId, type ReactElement, type FormEvent } from 'react'
+import { useState, useId, type ReactElement, type SubmitEvent } from 'react'
 import { useT } from '@dorutj/i18n'
 import { useLocale } from '@/shared/config/locale-provider'
 import { useRequestOtp } from '@/features/auth/api/use-request-otp'
@@ -23,34 +23,33 @@ import { HttpError } from '@/shared/api/http-client'
 
 const PHONE_PREFIX = '+992'
 const PHONE_DIGITS_REQUIRED = 9
+const PHONE_MASK_FULL = 9
+const PHONE_MASK_FIRST_END = 2
+const PHONE_MASK_SECOND_END = 5
+const PHONE_MASK_THIRD_END = 7
+const PHONE_MASK_FOURTH_END = 9
+const PHONE_MASK_BOUNDARIES = [
+  PHONE_MASK_FIRST_END,
+  PHONE_MASK_SECOND_END,
+  PHONE_MASK_THIRD_END,
+  PHONE_MASK_FOURTH_END,
+]
 const MIN_TAP_ZONE_PX = 48
 
 function formatPhone(digitsOnly: string): string {
   // `XX XXX XX XX`. Не используем intl-tel-input — намеренно минимальный
   // контрол; маска применяется ТОЛЬКО на display, в API уходит E.164.
-  const cleaned = digitsOnly.replace(/\D/g, '').slice(0, PHONE_DIGITS_REQUIRED)
-  const parts: string[] = []
-  if (cleaned.length >= 2) {
-    parts.push(cleaned.slice(0, 2))
-    if (cleaned.length >= 5) {
-      parts.push(` ${cleaned.slice(2, 5)}`)
-      if (cleaned.length >= 7) {
-        parts.push(` ${cleaned.slice(5, 7)}`)
-        if (cleaned.length >= 9) {
-          parts.push(` ${cleaned.slice(7, 9)}`)
-        } else if (cleaned.length > 7) {
-          parts.push(` ${cleaned.slice(7)}`)
-        }
-      } else if (cleaned.length > 5) {
-        parts.push(` ${cleaned.slice(5)}`)
-      }
-    } else if (cleaned.length > 2) {
-      parts.push(` ${cleaned.slice(2)}`)
+  const cleaned = digitsOnly.replace(/\D/g, '').slice(0, PHONE_MASK_FULL)
+  const groups: string[] = []
+  let start = 0
+  for (const end of PHONE_MASK_BOUNDARIES) {
+    if (start >= cleaned.length) {
+      break
     }
-  } else {
-    parts.push(cleaned)
+    groups.push(cleaned.slice(start, end))
+    start = end
   }
-  return parts.join('')
+  return groups.join(' ')
 }
 
 function toE164(digitsOnly: string): string {
@@ -62,7 +61,7 @@ export interface PhoneStepProps {
   readonly defaultPhone?: string
 }
 
-export function PhoneStep({ onSuccess, defaultPhone = '' }: PhoneStepProps): ReactElement {
+export const PhoneStep = ({ onSuccess, defaultPhone = '' }: PhoneStepProps): ReactElement => {
   const { t } = useT(useLocale().locale)
   const inputId = useId()
   const [digits, setDigits] = useState<string>(
@@ -76,7 +75,7 @@ export function PhoneStep({ onSuccess, defaultPhone = '' }: PhoneStepProps): Rea
   const isSubmitting = mutation.isPending
   const isValid = digits.replace(/\D/g, '').length === PHONE_DIGITS_REQUIRED
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
+  const handleSubmit = (event: SubmitEvent<HTMLFormElement>): void => {
     event.preventDefault()
     if (!isValid || isSubmitting) {
       return

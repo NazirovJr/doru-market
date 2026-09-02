@@ -31,6 +31,7 @@ import { CLOCK, type Clock } from '@/shared-kernel/application/ports/clock.port.
 // не блокером: фасад уже соблюдает границу контекста.
 import { UNIT_OF_WORK, type UnitOfWorkPort } from '@/modules/auth/index.js'
 import { InventorySyncBatch } from '../../domain/inventory-sync-batch.entity.js'
+import type { PharmacyInventory } from '../../domain/pharmacy-inventory.entity.js'
 import {
   PHARMACY_INVENTORY_REPOSITORY,
   type PharmacyInventoryRepository,
@@ -80,11 +81,15 @@ export interface IngestInventoryBatchResult {
 
 @Injectable()
 export class IngestInventoryBatchWithMatchingUseCase {
+  // eslint-disable-next-line max-params -- 6 DI-инъекций, NestJS constructor injection резолвит по позиции; единый options-объект не идиоматичен для Nest DI
   constructor(
     @Inject(PHARMACY_INVENTORY_REPOSITORY)
     private readonly inventoryRepository: PharmacyInventoryRepository,
     @Inject(INVENTORY_SYNC_BATCH_REPOSITORY)
     private readonly syncBatchRepository: InventorySyncBatchRepository,
+    // Явный @Inject(класс): esbuild (vitest) не эмитит `design:paramtypes` — без него Nest
+    // падает на компиляции модуля (DTJ-001, тот же паттерн, что в `SearchCacheService` и др.).
+    @Inject(CompositeInventoryMatcherService)
     private readonly matcher: CompositeInventoryMatcherService,
     @Inject(FULL_SYNC_COMPLETION)
     private readonly fullSyncCompletion: FullSyncCompletionPort,
@@ -98,20 +103,20 @@ export class IngestInventoryBatchWithMatchingUseCase {
       batch.markProcessing()
       const errors: InventorySyncRowError[] = []
       const { resolvedRows, fuzzyRows } = this.splitRows(cmd.rows)
-      const matchedFuzzyRows = await this.matchUnresolvedRows(
-        cmd.batchId,
-        cmd.pharmacyId,
-        cmd.rows,
+      const matchedFuzzyRows = await this.matchUnresolvedRows({
+        batchId: cmd.batchId,
+        pharmacyId: cmd.pharmacyId,
+        allRows: cmd.rows,
         fuzzyRows,
         errors,
-      )
+      })
       const allResolved = [...resolvedRows, ...matchedFuzzyRows]
-      const acceptedRows = await this.applyResolvedRows(
-        cmd.batchId,
-        cmd.pharmacyId,
-        allResolved,
+      const acceptedRows = await this.applyResolvedRows({
+        batchId: cmd.batchId,
+        pharmacyId: cmd.pharmacyId,
+        rows: allResolved,
         errors,
-      )
+      })
       const rejectedRows = errors.length
       await this.recordRowErrors(errors)
       await this.handleFullSyncCompletion(batch, cmd)
@@ -140,8 +145,7 @@ export class IngestInventoryBatchWithMatchingUseCase {
   } {
     const resolvedRows: IngestRowInput[] = []
     const fuzzyRows: NeedsFuzzyRow[] = []
-    for (let i = 0; i < rows.length; i += 1) {
-      const row = rows[i]!
+    for (const row of rows) {
       if (row.resolved && row.resolvedMedicineId !== null) {
         resolvedRows.push(row)
       } else {
@@ -151,14 +155,26 @@ export class IngestInventoryBatchWithMatchingUseCase {
     return { resolvedRows, fuzzyRows }
   }
 
-  private async matchUnresolvedRows(
-    batchId: string,
-    pharmacyId: string,
-    allRows: readonly IngestRowInput[],
-    fuzzyRows: readonly NeedsFuzzyRow[],
-    errors: InventorySyncRowError[],
-  ): Promise<IngestRowInput[]> {
+  private async matchUnresolvedRows(input: {
+    batchId: string
+    pharmacyId: string
+    allRows: readonly IngestRowInput[]
+    fuzzyRows: readonly NeedsFuzzyRow[]
+    errors: InventorySyncRowError[]
+  }): Promise<IngestRowInput[]> {
+    const { batchId, pharmacyId, allRows, fuzzyRows, errors } = input
     if (fuzzyRows.length === 0) return []
+    const exactByIndex = await this.resolveExactMatches(pharmacyId, fuzzyRows)
+    const stillFuzzy = fuzzyRows.filter((row) => !exactByIndex.has(row.rowIndex))
+    const fuzzyByIndex = await this.resolveFuzzyMatches({ batchId, pharmacyId, stillFuzzy, errors })
+    return this.mergeMatchResults({ allRows, fuzzyRows, exactByIndex, fuzzyByIndex })
+  }
+
+  /** ШАГ 2 (DTJ-146): точное совпадение по кэшу/штрихкоду — батчево через matcher. */
+  private async resolveExactMatches(
+    pharmacyId: string,
+    fuzzyRows: readonly NeedsFuzzyRow[],
+  ): Promise<ReadonlyMap<number, { medicineId: string }>> {
     const initial: UnresolvedRowInput[] = fuzzyRows.map((row) => ({
       rowIndex: row.rowIndex,
       internalSku: row.internalSku,
@@ -166,24 +182,34 @@ export class IngestInventoryBatchWithMatchingUseCase {
     }))
     const exactResults = await this.matcher.matchBatch(pharmacyId, initial)
     const exactByIndex = new Map<number, { medicineId: string }>()
-    for (let i = 0; i < exactResults.length; i += 1) {
-      const r = exactResults[i] as
-        | { row: UnresolvedRowInput; outcome: 'cached' | 'exact_barcode'; medicineId: string }
-        | { row: UnresolvedRowInput; outcome: 'needs_fuzzy' }
+    for (const r of exactResults as readonly (
+      | { row: UnresolvedRowInput; outcome: 'cached' | 'exact_barcode'; medicineId: string }
+      | { row: UnresolvedRowInput; outcome: 'needs_fuzzy' }
+    )[]) {
       if (r.outcome !== 'needs_fuzzy') {
         exactByIndex.set(r.row.rowIndex, { medicineId: r.medicineId })
       }
     }
-    const stillFuzzy = fuzzyRows.filter((row) => !exactByIndex.has(row.rowIndex))
+    return exactByIndex
+  }
+
+  /** ШАГИ 3-4 (DTJ-147): fuzzy-резолюция оставшихся строк + построчные ошибки для unmatched. */
+  private async resolveFuzzyMatches(input: {
+    batchId: string
+    pharmacyId: string
+    stillFuzzy: readonly NeedsFuzzyRow[]
+    errors: InventorySyncRowError[]
+  }): Promise<ReadonlyMap<number, { medicineId: string } | { reason: 'no_candidate' | 'ambiguous' }>> {
+    const { batchId, pharmacyId, stillFuzzy, errors } = input
     const fuzzyResults = await this.matcher.resolveFuzzyCandidates(pharmacyId, stillFuzzy)
     const fuzzyByIndex = new Map<
       number,
       { medicineId: string } | { reason: 'no_candidate' | 'ambiguous' }
     >()
-    for (let i = 0; i < fuzzyResults.length; i += 1) {
-      const r = fuzzyResults[i] as
-        | { row: NeedsFuzzyRow; outcome: 'matched'; medicineId: string }
-        | { row: NeedsFuzzyRow; outcome: 'unmatched'; reason: 'no_candidate' | 'ambiguous' }
+    for (const r of fuzzyResults as readonly (
+      | { row: NeedsFuzzyRow; outcome: 'matched'; medicineId: string }
+      | { row: NeedsFuzzyRow; outcome: 'unmatched'; reason: 'no_candidate' | 'ambiguous' }
+    )[]) {
       if (r.outcome === 'matched') {
         fuzzyByIndex.set(r.row.rowIndex, { medicineId: r.medicineId })
       } else {
@@ -196,9 +222,19 @@ export class IngestInventoryBatchWithMatchingUseCase {
         fuzzyByIndex.set(r.row.rowIndex, { reason: r.reason })
       }
     }
+    return fuzzyByIndex
+  }
+
+  /** Слияние exact/fuzzy результатов обратно в `IngestRowInput` с `resolvedMedicineId`. */
+  private mergeMatchResults(input: {
+    allRows: readonly IngestRowInput[]
+    fuzzyRows: readonly NeedsFuzzyRow[]
+    exactByIndex: ReadonlyMap<number, { medicineId: string }>
+    fuzzyByIndex: ReadonlyMap<number, { medicineId: string } | { reason: 'no_candidate' | 'ambiguous' }>
+  }): IngestRowInput[] {
+    const { allRows, fuzzyRows, exactByIndex, fuzzyByIndex } = input
     const resolved: IngestRowInput[] = []
-    for (let i = 0; i < fuzzyRows.length; i += 1) {
-      const row = fuzzyRows[i]!
+    for (const row of fuzzyRows) {
       const sourceRow = allRows.find((r) => r.rowIndex === row.rowIndex)
       if (sourceRow === undefined) continue
       const exactHit = exactByIndex.get(row.rowIndex)
@@ -213,56 +249,68 @@ export class IngestInventoryBatchWithMatchingUseCase {
     return resolved
   }
 
-  private async applyResolvedRows(
-    batchId: string,
-    pharmacyId: string,
-    rows: readonly IngestRowInput[],
-    errors: InventorySyncRowError[],
-  ): Promise<number> {
+  private async applyResolvedRows(input: {
+    batchId: string
+    pharmacyId: string
+    rows: readonly IngestRowInput[]
+    errors: InventorySyncRowError[]
+  }): Promise<number> {
+    const { batchId, pharmacyId, rows, errors } = input
     if (rows.length === 0) return 0
     const medicineIds = Array.from(
-      new Set(
-        rows
-          .map((row) => row.resolvedMedicineId)
-          .filter((id): id is string => id !== null),
-      ),
+      new Set(rows.map((row) => row.resolvedMedicineId).filter((id): id is string => id !== null)),
     )
     const aggregatesByMedicineId = await this.inventoryRepository.findOrCreateManyByMedicineIds({
       pharmacyId,
       medicineIds,
     })
-    let accepted = 0
     const now = this.clock.now()
-    for (let i = 0; i < rows.length; i += 1) {
-      const row = rows[i]!
-      if (row.resolvedMedicineId === null) continue
-      const aggregate = aggregatesByMedicineId.get(row.resolvedMedicineId)
-      if (aggregate === undefined) {
-        errors.push(buildRowError(batchId, row.rowIndex, 'medicine_not_found', 'aggregate not found'))
-        continue
-      }
-      const validation = validateRowForDelta(row)
-      if (validation !== null) {
-        errors.push(buildRowError(batchId, row.rowIndex, validation.code, validation.reason))
-        continue
-      }
-      const applyResult = aggregate.applyDelta({
-        batchNumber: row.batchNumber,
-        priceDiram: row.priceDiram,
-        quantity: row.quantity,
-        expiryDateIso: row.expiresAtIso,
-        lastSyncedAt: now,
-      })
-      if (applyResult.applied) {
+    let accepted = 0
+    for (const row of rows) {
+      if (this.applyRowDelta({ batchId, row, aggregatesByMedicineId, now, errors })) {
         accepted += 1
-      } else {
-        errors.push(
-          buildRowError(batchId, row.rowIndex, 'duplicate_in_batch', 'stale delta (race with newer batch)'),
-        )
       }
     }
     await this.inventoryRepository.saveMany(Array.from(aggregatesByMedicineId.values()))
     return accepted
+  }
+
+  /** Один ряд `applyResolvedRows`: aggregate lookup → validation → `applyDelta`. */
+  private applyRowDelta(input: {
+    batchId: string
+    row: IngestRowInput
+    aggregatesByMedicineId: ReadonlyMap<string, PharmacyInventory>
+    now: Date
+    errors: InventorySyncRowError[]
+  }): boolean {
+    const { batchId, row, aggregatesByMedicineId, now, errors } = input
+    if (row.resolvedMedicineId === null) return false
+    const aggregate = aggregatesByMedicineId.get(row.resolvedMedicineId)
+    if (aggregate === undefined) {
+      errors.push(
+        buildRowError({ batchId, rowIndex: row.rowIndex, errorCode: 'medicine_not_found', reason: 'aggregate not found' }),
+      )
+      return false
+    }
+    const validation = validateRowForDelta(row)
+    if (validation !== null) {
+      errors.push(buildRowError({ batchId, rowIndex: row.rowIndex, errorCode: validation.code, reason: validation.reason }))
+      return false
+    }
+    const applyResult = aggregate.applyDelta({
+      batchNumber: row.batchNumber,
+      priceDiram: row.priceDiram,
+      quantity: row.quantity,
+      expiryDateIso: row.expiresAtIso,
+      lastSyncedAt: now,
+    })
+    if (applyResult.applied) {
+      return true
+    }
+    errors.push(
+      buildRowError({ batchId, rowIndex: row.rowIndex, errorCode: 'duplicate_in_batch', reason: 'stale delta (race with newer batch)' }),
+    )
+    return false
   }
 
   private async recordRowErrors(errors: readonly InventorySyncRowError[]): Promise<void> {

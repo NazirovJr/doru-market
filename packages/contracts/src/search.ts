@@ -32,7 +32,7 @@
  * @see tickets/ep05-search-map/DTJ-180.md
  */
 import { z } from 'zod'
-import { cursorQuerySchema } from './pagination'
+import { cursorQuerySchema } from './pagination.js'
 
 const LAT_MIN = -90
 const LAT_MAX = 90

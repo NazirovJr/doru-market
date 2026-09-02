@@ -25,9 +25,12 @@ export interface CursorQuerySchema {
   filter: Record<string, unknown>
 }
 
+const DEFAULT_PAGE_LIMIT = 20
+const MAX_PAGE_LIMIT = 100
+
 const baseQuerySchema = z.object({
   cursor: z.string().optional(),
-  limit: z.coerce.number().int().positive().max(100).optional().default(20),
+  limit: z.coerce.number().int().positive().max(MAX_PAGE_LIMIT).optional().default(DEFAULT_PAGE_LIMIT),
   sort: z.string().min(1).optional().default('created_at'),
   filter: z.record(z.string(), z.unknown()).optional().default({}),
 })

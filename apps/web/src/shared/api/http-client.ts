@@ -1,5 +1,5 @@
 import { getClientEnv } from '@/shared/config/env'
-import { useAuthStore } from '@/shared/api/auth-store'
+import { type AuthUser, useAuthStore } from '@/shared/api/auth-store'
 
 /**
  * Тонкая обёртка над fetch — единственный слой, которому разрешено делать сетевые запросы
@@ -26,18 +26,27 @@ interface ApiErrorBody {
   readonly error?: { readonly code?: string }
 }
 
-interface RefreshResponseBody {
-  readonly data?: {
-    readonly accessToken?: string
-    readonly refreshToken?: string
-    readonly user?: {
-      readonly id?: string
-      readonly role?: string
-      readonly tenantId?: string | null
-      readonly phoneNumber?: string | null
-      readonly fullName?: string | null
-    }
-  }
+interface RefreshResponseUser {
+  readonly id?: string
+  readonly role?: string
+  readonly tenantId?: string | null
+  readonly phoneNumber?: string | null
+  readonly fullName?: string | null
+}
+
+interface RefreshResponsePayload {
+  readonly accessToken?: string
+  readonly refreshToken?: string
+  readonly user?: RefreshResponseUser
+}
+
+/**
+ * Продовый бэкенд оборачивает payload в envelope `{ data: {...} }` (SRS-API-026,
+ * `RefreshController`). Часть упрощённых/smoke-эндпоинтов может вернуть тот же
+ * payload плоским, без `data` — поддерживаем обе формы.
+ */
+type RefreshResponseBody = RefreshResponsePayload & {
+  readonly data?: RefreshResponsePayload
 }
 
 async function readErrorCode(response: Response): Promise<string | undefined> {
@@ -71,15 +80,66 @@ function performRequest(path: string, init: HttpClientOptions): Promise<Response
   return fetch(url, { ...init, headers: buildHeaders(init.headers) })
 }
 
+interface ParsedRefreshPayload {
+  readonly accessToken: string
+  readonly refreshToken: string | null
+  readonly user: AuthUser | null
+}
+
+function parseRefreshUser(user: RefreshResponseUser | undefined): AuthUser | null {
+  if (user === undefined || typeof user.id !== 'string' || typeof user.role !== 'string') {
+    return null
+  }
+  return {
+    id: user.id,
+    role: user.role,
+    tenantId: user.tenantId ?? null,
+    phoneNumber: user.phoneNumber ?? null,
+    fullName: user.fullName ?? null,
+  }
+}
+
+/**
+ * [Task 8, handoff §9] Продовый бэкенд всегда возвращает `refreshToken` (ротация,
+ * SRS-API-035, DTJ-025 reuse-detection) и `user`. Часть упрощённых/smoke-эндпоинтов может
+ * вернуть только `accessToken` — тогда переиспользуем старый refresh-токен и старого `user`.
+ */
+function parseRefreshPayload(
+  body: RefreshResponseBody,
+  currentRefresh: string | null,
+): ParsedRefreshPayload | null {
+  const payload = body.data ?? body
+  if (typeof payload.accessToken !== 'string') {
+    return null
+  }
+  return {
+    accessToken: payload.accessToken,
+    refreshToken: payload.refreshToken ?? currentRefresh,
+    user: parseRefreshUser(payload.user),
+  }
+}
+
+function applyRefreshResult(parsed: ParsedRefreshPayload): void {
+  const resolvedUser = parsed.user ?? useAuthStore.getState().user
+  if (resolvedUser !== null && parsed.refreshToken !== null) {
+    useAuthStore.getState().setSession({
+      accessToken: parsed.accessToken,
+      refreshToken: parsed.refreshToken,
+      user: resolvedUser,
+    })
+  } else {
+    // Минимальный ответ (нет refresh-токена и/или user ни в ответе, ни сохранённых) —
+    // обновляем только access-токен, остального сохранять не из чего.
+    useAuthStore.getState().setAccessToken(parsed.accessToken)
+  }
+}
+
 /**
  * `POST /api/v1/auth/refresh` с persisted refreshToken из стора. При успехе
  * обновляет стор (access+refresh+user), иначе очищает (logout).
  */
 async function refreshAccessToken(): Promise<boolean> {
   const currentRefresh = useAuthStore.getState().refreshToken
-  if (currentRefresh === null) {
-    return false
-  }
   try {
     // eslint-disable-next-line no-restricted-globals -- см. performRequest.
     const response = await fetch(`${getClientEnv().apiBaseUrl}${AUTH_REFRESH_PATH}`, {
@@ -93,29 +153,11 @@ async function refreshAccessToken(): Promise<boolean> {
       return false
     }
     const body = (await response.json()) as RefreshResponseBody
-    const accessToken = body.data?.accessToken
-    const newRefreshToken = body.data?.refreshToken
-    const user = body.data?.user
-    if (
-      typeof accessToken !== 'string' ||
-      typeof newRefreshToken !== 'string' ||
-      user === undefined ||
-      typeof user.id !== 'string' ||
-      typeof user.role !== 'string'
-    ) {
+    const parsed = parseRefreshPayload(body, currentRefresh)
+    if (parsed === null) {
       return false
     }
-    useAuthStore.getState().setSession({
-      accessToken,
-      refreshToken: newRefreshToken,
-      user: {
-        id: user.id,
-        role: user.role,
-        tenantId: user.tenantId ?? null,
-        phoneNumber: user.phoneNumber ?? null,
-        fullName: user.fullName ?? null,
-      },
-    })
+    applyRefreshResult(parsed)
     return true
   } catch {
     return false
@@ -130,23 +172,47 @@ function redirectToLogin(): void {
   useAuthStore.getState().clear()
 }
 
-export async function httpRequest(path: string, init: HttpClientOptions = {}): Promise<Response> {
-  const firstResponse = await performRequest(path, init)
-  if (!(await isTokenExpired(firstResponse))) {
-    return firstResponse
+/**
+ * Дедупликация параллельных refresh'ей: несколько запросов, упавших в 401 TOKEN_EXPIRED
+ * одновременно, обязаны дождаться ОДНОГО общего `POST /auth/refresh`, а не выстрелить
+ * refresh'ем каждый за себя (гонка ротации refresh-токена, DTJ-025 reuse-detection).
+ */
+let inFlightRefresh: Promise<boolean> | null = null
+
+function refreshAccessTokenOnce(): Promise<boolean> {
+  inFlightRefresh ??= refreshAccessToken().finally(() => {
+    inFlightRefresh = null
+  })
+  return inFlightRefresh
+}
+
+async function requestWithAuthRetry(
+  path: string,
+  init: HttpClientOptions,
+  alreadyRetried: boolean,
+): Promise<Response> {
+  const response = await performRequest(path, init)
+  if (!(await isTokenExpired(response))) {
+    return response
+  }
+  // Второй 401 TOKEN_EXPIRED подряд (уже после одного refresh+повтора) наверх, без
+  // повторного refresh'а — иначе неуспешный refresh уводит клиент в бесконечный цикл.
+  if (alreadyRetried) {
+    redirectToLogin()
+    return response
   }
 
-  const refreshed = await refreshAccessToken()
+  const refreshed = await refreshAccessTokenOnce()
   if (!refreshed) {
     redirectToLogin()
-    return firstResponse
+    return response
   }
 
-  const secondResponse = await performRequest(path, init)
-  if (secondResponse.status === HTTP_STATUS_UNAUTHORIZED) {
-    redirectToLogin()
-  }
-  return secondResponse
+  return requestWithAuthRetry(path, init, true)
+}
+
+export function httpRequest(path: string, init: HttpClientOptions = {}): Promise<Response> {
+  return requestWithAuthRetry(path, init, false)
 }
 
 /**
@@ -160,17 +226,40 @@ export async function httpRequest(path: string, init: HttpClientOptions = {}): P
 export class HttpError extends Error {
   public readonly status: number
   public readonly code: string
+  // `details` — программно-читаемая часть ошибки (например, `{ field: 'bbox' }` для
+  // `VALIDATION_ERROR`, см. `12-api-conventions-auth-tenancy.md` §«коды ошибок»). Опционален и
+  // добавлен для DTJ-199 (карта аптек, SRS-CAT-054) — существующие вызовы конструктора без
+  // `details` продолжают работать без изменений.
+  public readonly details: unknown
 
-  constructor(status: number, code: string, message?: string) {
-    super(message ?? code)
+  // `message`/`details` сгруппированы в один options-объект — иначе конструктор с 4 позиционными
+  // параметрами упирается в max-params (C5, eslint.config.mjs).
+  constructor(
+    status: number,
+    code: string,
+    options?: { readonly message?: string | undefined; readonly details?: unknown },
+  ) {
+    super(options?.message ?? code)
     this.name = 'HttpError'
     this.status = status
     this.code = code
+    this.details = options?.details
   }
 }
 
+/**
+ * Непрозрачная форма `meta` конверта (DTJ-193, `SRS-API-004/005` — курсорная пагинация и прочие
+ * необязательные поля `ok(data, meta)`, `@dorutj/contracts`). Форма намеренно НЕ импортирована из
+ * `@dorutj/contracts` (`EnvelopeMeta`) — этот файл остаётся `shared`
+ * (`.dependency-cruiser.cjs` `fe-shared-is-lowest`), а типизировать `meta` конкретной формой
+ * пагинации здесь означало бы завязать shared-слой на форму ответа ОДНОГО эндпоинта; вызывающий
+ * код (`search-results.api.ts`) сам знает, какую форму `meta` ожидать, и распаковывает по месту.
+ */
+export type JsonMeta = Readonly<Record<string, unknown>>
+
 interface SuccessEnvelope<T> {
   readonly data: T
+  readonly meta?: JsonMeta
 }
 interface ErrorEnvelope {
   readonly error: { readonly code: string; readonly message?: string; readonly details?: unknown }
@@ -194,10 +283,21 @@ function isErrorEnvelope(value: unknown): value is ErrorEnvelope {
   return typeof (err as { code?: unknown }).code === 'string'
 }
 
-export async function httpRequestJson<T>(
-  path: string,
-  init: HttpClientOptions = {},
-): Promise<T> {
+/** Успешный ответ, распакованный ИЗ конверта, вместе с `meta` (DTJ-193 — курсорная пагинация). */
+export interface JsonEnvelopeResult<T> {
+  readonly data: T
+  readonly meta: SuccessEnvelope<T>['meta']
+}
+
+/**
+ * Общее ядро `httpRequestJson`/`httpRequestJsonWithMeta` — парсит `envelope`, бросает `HttpError`
+ * на неуспех. Статус ответа (`response.status`) сохраняется в `HttpError.status` ВСЕГДА, даже
+ * когда `error.code` в теле обобщён до `INTERNAL_ERROR` (см. `HttpError.status`, использующий
+ * реальный `response.status`, — единственный надёжный сигнал для 5xx-состояний вроде
+ * `SRS-CAT-075`, где `DomainExceptionFilter` урезает `details`/`code` для ЛЮБОГО статуса `>=500`
+ * прежде, чем тело покидает сервер).
+ */
+async function requestJsonEnvelope<T>(path: string, init: HttpClientOptions = {}): Promise<JsonEnvelopeResult<T>> {
   const headers = new Headers(init.headers)
   if (!headers.has('Content-Type') && init.body !== undefined) {
     headers.set('Content-Type', 'application/json')
@@ -208,19 +308,24 @@ export async function httpRequestJson<T>(
   try {
     parsed = text.length > 0 ? JSON.parse(text) : null
   } catch {
-    throw new HttpError(response.status, 'INVALID_RESPONSE', `Invalid JSON from ${path}`)
+    throw new HttpError(response.status, 'INVALID_RESPONSE', { message: `Invalid JSON from ${path}` })
   }
   if (response.ok && isSuccessEnvelope<T>(parsed)) {
-    return parsed.data
+    return { data: parsed.data, meta: parsed.meta }
   }
   if (!response.ok && isErrorEnvelope(parsed)) {
-    throw new HttpError(response.status, parsed.error.code, parsed.error.message)
+    throw new HttpError(response.status, parsed.error.code, {
+      message: parsed.error.message,
+      details: parsed.error.details,
+    })
   }
-  throw new HttpError(
-    response.status,
-    'UNKNOWN_ERROR',
-    `Unexpected response shape from ${path} (status=${response.status})`,
-  )
+  throw new HttpError(response.status, 'UNKNOWN_ERROR', {
+    message: `Unexpected response shape from ${path} (status=${String(response.status)})`,
+  })
+}
+
+export async function httpRequestJson<T>(path: string, init: HttpClientOptions = {}): Promise<T> {
+  return (await requestJsonEnvelope<T>(path, init)).data
 }
 
 /**
@@ -232,4 +337,54 @@ export function httpPostJson<T>(path: string, body: unknown): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
+}
+
+export type QueryParams = Readonly<Record<string, string | undefined>>
+
+/** `undefined`-значения опускаются из query-строки, а не сериализуются как `"undefined"`. */
+function buildQueryString(params: QueryParams): string {
+  const search = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) {
+      search.set(key, value)
+    }
+  }
+  const serialized = search.toString()
+  return serialized.length > 0 ? `?${serialized}` : ''
+}
+
+/**
+ * Удобный helper для GET/JSON с query-параметрами (DTJ-199 — карта аптек и последующие
+ * GET-эндпоинты со списком фильтров).
+ *
+ * `signal` (DTJ-192, `SRS-CAT-027`) — опциональный `AbortSignal`, пробрасывается в `fetch` как
+ * есть. Нужен автодополнению поиска: TanStack Query сам отменяет `AbortController` устаревшего
+ * запроса при смене `queryKey`/размонтировании — `queryFn` обязана переслать этот сигнал до
+ * реального `fetch`, иначе устаревший ответ может прийти позже свежего и переписать состояние
+ * (гонка ответов). Необязательный третий параметр — существующие вызовы без него не меняются.
+ */
+function buildGetUrl(path: string, params?: QueryParams): string {
+  return `${path}${params !== undefined ? buildQueryString(params) : ''}`
+}
+
+function buildGetInit(signal?: AbortSignal): HttpClientOptions {
+  return signal === undefined ? {} : { signal }
+}
+
+export function httpGetJson<T>(path: string, params?: QueryParams, signal?: AbortSignal): Promise<T> {
+  return httpRequestJson<T>(buildGetUrl(path, params), buildGetInit(signal))
+}
+
+/**
+ * Как `httpGetJson`, но не отбрасывает `meta` конверта (DTJ-193 — `meta.pagination` курсорной
+ * пагинации `GET /medicines/search`, `SRS-API-004/005`). `httpGetJson` остаётся отдельной
+ * функцией (не параметром вроде `withMeta?: boolean`) — почти все вызывающие места `meta` не
+ * используют вовсе, менять их сигнатуру ради одного нового потребителя не нужно.
+ */
+export function httpGetJsonWithMeta<T>(
+  path: string,
+  params?: QueryParams,
+  signal?: AbortSignal,
+): Promise<JsonEnvelopeResult<T>> {
+  return requestJsonEnvelope<T>(buildGetUrl(path, params), buildGetInit(signal))
 }

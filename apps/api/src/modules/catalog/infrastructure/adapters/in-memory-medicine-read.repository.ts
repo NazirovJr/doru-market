@@ -18,7 +18,7 @@
  * @see docs/STATE-AND-RESUME-POINT.md §11.6 (Волна 4)
  * @see docs/tickets/00-INDEX.md DTJ-092
  */
-import { Injectable } from '@nestjs/common'
+import { Injectable, Optional } from '@nestjs/common'
 import { CONTROL_CATEGORIES_FORBIDDEN_FROM_REMOTE } from '@/modules/catalog/domain/medicine.enums.js'
 import { type Medicine } from '@/modules/catalog/domain/medicine.entity.js'
 import {
@@ -31,7 +31,12 @@ import {
 export class InMemoryMedicineReadRepository implements MedicineReadRepository {
   private readonly byId: Map<string, Medicine>
 
-  constructor(initial: readonly Medicine[] = []) {
+  // @Optional(): tsc (боевая сборка) эмитит `design:paramtypes` и Nest видит тип `Array`,
+  // для которого провайдера нет — без этого декоратора приложение НЕ стартует
+  // («can't resolve dependencies of the InMemoryMedicineReadRepository (index 0 ... Array)»).
+  // Под vitest (esbuild) метаданных нет, класс создаётся без аргументов и дефект не виден —
+  // именно поэтому расхождение ловится только запуском собранного `dist/main.js`.
+  constructor(@Optional() initial: readonly Medicine[] = []) {
     this.byId = new Map()
     for (const medicine of initial) {
       this.byId.set(medicine.getId(), medicine)

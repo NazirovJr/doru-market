@@ -64,6 +64,23 @@
 >   (403). Миграции `0015a_inventory_sync_extensions.sql` +
 >   `0015b_inventory_sync_enum_extension.sql` (вне транзакции, IRREVERSIBLE).
 >   Зарегистрированы в `migration-files.ts`.
+>
+>   **[ИЗМЕНЕНО после этой сессии]** `0015b` удалена: она делала `ALTER TYPE
+>   inventory_sync_row_error_code`, но `CREATE TYPE` для этого типа не
+>   существует ни в одной миграции, таблица `inventory_sync_errors` нигде не
+>   создаётся, а drizzle-адаптера для записи в неё нет — `appendErrors`
+>   реализован только in-memory. Заодно из `enums.schema.ts` удалён
+>   неиспользуемый `inventorySyncRowErrorCodeEnum` — его значения
+>   противоречили рантайму (код эмитит `'unmatched_medicine'`, которого в
+>   enum не было). Источник истины по кодам ошибок строк теперь — TS-юнион
+>   `InventorySyncRowError['errorCode']`
+>   (`inventory-sync-batch.repository.port.ts`); таблица `inventory_sync_errors`
+>   появится вместе с drizzle-адаптером (DTJ-145) по конвенции `0012` —
+>   `VARCHAR` + `CHECK`, не pg enum. Файл `migration-files.ts` тоже удалён —
+>   он был нигде не импортируемым реестром и содержал ссылку на
+>   несуществующий `0008_i18n_overrides_review_status.sql`; реальный раннер —
+>   `apps/api/src/infrastructure/database/migrate.ts`, порядок задаёт
+>   `apps/api/migrations/meta/_journal.json`.
 > - **DTJ-143** — `PharmacyInventory` aggregate (FEFO, инварианты,
 >   `applyDelta` stale-фильтр). 244 строки + 190 строк spec. 8 тестов
 >   покрывают: create/restore, stockQuantity, getFefoLot (3 кейса),
@@ -1473,6 +1490,8 @@
 - `apps/api/src/db/schema/users.ts` — Drizzle schema с soft-delete, `user_role` enum, `UNIQUE(tenant_id, phone_number)`
 - `apps/api/src/db/schema/user-addresses.ts` — 1:N адреса пользователя
 - `apps/api/migrations/0013_users_base.sql` — обе таблицы + индексы, отложенные FK
+  ([ИЗМЕНЕНО] переименована в `0003_users_base.sql` и переставлена в журнале сразу после
+  `0002_tenants_and_settings` — `users` создаётся раньше первого FK-потребителя)
 - `apps/api/src/db/schema/index.ts` — добавлены 2 строки экспорта
 
 **DTJ-022 — каркас `modules/auth`:**

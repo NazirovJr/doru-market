@@ -8,13 +8,13 @@
 // - Каждый последующий эпик добавляет СВОЙ файл в подпапку (`src/inventory/`, `src/analogs/`,
 //   `src/payments/`, …) для DTO/Zod-схем своего модуля и ОДНУ строку экспорта здесь — этим
 //   файлом владеет соответствующий эпик, не EP-01.
-export * from './errors'
-export * from './domain-errors'
-export * from './permissions'
-export * from './pagination'
-export * from './envelope'
-export * from './catalog'
-export * from './onboarding'
+export * from './errors.js'
+export * from './domain-errors.js'
+export * from './permissions.js'
+export * from './pagination.js'
+export * from './envelope.js'
+export * from './catalog.js'
+export * from './onboarding.js'
 export * from './inventory/index.js'
-export * from './pharmacies-map'
-export * from './search'
+export * from './pharmacies-map.js'
+export * from './search.js'

@@ -142,23 +142,29 @@ export class CompositeInventoryMatcherService {
       return []
     }
     const candidatesByIndex = await this.fetchFuzzyCandidates(rows)
-    const results: FuzzyMatchResult[] = []
-    for (let i = 0; i < rows.length; i += 1) {
-      const row = rows[i]!
-      const resolved = this.resolveOneRow(row, candidatesByIndex.get(i) ?? [])
-      if (resolved.outcome === 'matched') {
-        await this.skuMappingRepository.upsert({
-          pharmacyId,
-          internalSku: row.internalSku,
-          medicineId: resolved.medicineId,
-          matchedVia: 'name_fuzzy',
-        })
-      } else {
+    // Резолвинг синхронный (без I/O) — считаем ВСЕ строки сразу, чтобы
+    // порядок `results` не зависел от порядка завершения side-эффектов ниже.
+    const resolvedRows = rows.map((row, i) => ({
+      row,
+      resolved: this.resolveOneRow(row, candidatesByIndex.get(i) ?? []),
+    }))
+    // Side-эффекты (upsert per-row) независимы между строками (разные
+    // internalSku) — выполняются параллельно, а не последовательно в цикле.
+    await Promise.all(
+      resolvedRows.map(({ row, resolved }) => {
+        if (resolved.outcome === 'matched') {
+          return this.skuMappingRepository.upsert({
+            pharmacyId,
+            internalSku: row.internalSku,
+            medicineId: resolved.medicineId,
+            matchedVia: 'name_fuzzy',
+          })
+        }
         this.outbox.append(this.buildUnmatchedEvent(pharmacyId, row, resolved.reason))
-      }
-      results.push(resolved)
-    }
-    return results
+        return Promise.resolve()
+      }),
+    )
+    return resolvedRows.map(({ resolved }) => resolved)
   }
 
   /** ШАГ 1: парсинг `Barcode` для каждой строки (без I/O). */
@@ -166,8 +172,7 @@ export class CompositeInventoryMatcherService {
     rows: readonly UnresolvedRowInput[],
   ): ReadonlyMap<number, Barcode | null> {
     const result = new Map<number, Barcode | null>()
-    for (let i = 0; i < rows.length; i += 1) {
-      const row = rows[i]!
+    for (const row of rows) {
       result.set(row.rowIndex, row.rawBarcode !== null ? Barcode.parse(row.rawBarcode) : null)
     }
     return result
@@ -181,15 +186,23 @@ export class CompositeInventoryMatcherService {
   ): Promise<ReadonlyMap<string, string>> {
     if (this.catalogFacade === null) return new Map()
     const candidates: string[] = []
-    for (let i = 0; i < rows.length; i += 1) {
-      const row = rows[i]!
+    let hasEligibleRow = false
+    for (const row of rows) {
       if (cached.has(row.internalSku)) continue
       const barcode = barcodeByRowIndex.get(row.rowIndex)
       if (barcode === undefined || barcode === null) continue
+      hasEligibleRow = true
+      // D-06: контрольная цифра EAN-13 не сходится ИЛИ префикс "2" (внутренний
+      // код продавца, не глобальный GTIN) — позиция не участвует в точном
+      // совпадении и идёт дальше по цепочке (chain_id, internal_sku) -> fuzzy -> catalog_match_queue.
       if (!barcode.isValidEan13() || barcode.isInternalPrefix()) continue
       candidates.push(barcode.rawValue)
     }
-    if (candidates.length === 0) return new Map()
+    // Батч содержит хотя бы одну не-кэшированную строку со штрихкодом — вызов
+    // делается ВСЕГДА (даже с пустым списком после D-06-фильтрации), чтобы
+    // отличать «нечего проверять» (0 вызовов) от «проверили — ничего не прошло
+    // фильтр» (1 вызов с []).
+    if (!hasEligibleRow) return new Map()
     return this.catalogFacade.findMedicineIdsByBarcodes(candidates)
   }
 
@@ -204,33 +217,43 @@ export class CompositeInventoryMatcherService {
     readonly exactMatches: ReadonlyMap<string, string>
     readonly pharmacyId: string
   }): Promise<readonly MatchResult[]> {
-    const results: MatchResult[] = []
-    for (let i = 0; i < input.rows.length; i += 1) {
-      const row = input.rows[i]!
-      const cachedEntry = input.cached.get(row.internalSku)
-      if (cachedEntry !== undefined) {
-        results.push({ row, outcome: 'cached', medicineId: cachedEntry.medicineId })
-        continue
-      }
-      const barcode = input.barcodeByRowIndex.get(row.rowIndex)
-      if (barcode !== undefined && barcode !== null) {
-        if (barcode.isValidEan13() && !barcode.isInternalPrefix()) {
-          const medicineId = input.exactMatches.get(barcode.rawValue)
-          if (medicineId !== undefined) {
-            await this.skuMappingRepository.upsert({
-              pharmacyId: input.pharmacyId,
-              internalSku: row.internalSku,
-              medicineId,
-              matchedVia: 'barcode',
-            })
-            results.push({ row, outcome: 'exact_barcode', medicineId })
-            continue
-          }
-        }
-      }
-      results.push({ row, outcome: 'needs_fuzzy' })
+    // Строки независимы (разные internalSku) — резолвятся параллельно,
+    // а не последовательно в цикле с await.
+    return Promise.all(input.rows.map((row) => this.resolveExactRow(row, input)))
+  }
+
+  /** Один ряд ШАГА 2.3: cache-hit → exact-barcode-hit → needs_fuzzy. */
+  private async resolveExactRow(
+    row: UnresolvedRowInput,
+    input: {
+      readonly cached: ReadonlyMap<
+        string,
+        { readonly medicineId: string; readonly matchedVia: 'barcode' | 'name_fuzzy' | 'manual_resolve' }
+      >
+      readonly barcodeByRowIndex: ReadonlyMap<number, Barcode | null>
+      readonly exactMatches: ReadonlyMap<string, string>
+      readonly pharmacyId: string
+    },
+  ): Promise<MatchResult> {
+    const cachedEntry = input.cached.get(row.internalSku)
+    if (cachedEntry !== undefined) {
+      return { row, outcome: 'cached', medicineId: cachedEntry.medicineId }
     }
-    return results
+    const barcode = input.barcodeByRowIndex.get(row.rowIndex)
+    if (barcode === undefined || barcode === null || !barcode.isValidEan13() || barcode.isInternalPrefix()) {
+      return { row, outcome: 'needs_fuzzy' }
+    }
+    const medicineId = input.exactMatches.get(barcode.rawValue)
+    if (medicineId === undefined) {
+      return { row, outcome: 'needs_fuzzy' }
+    }
+    await this.skuMappingRepository.upsert({
+      pharmacyId: input.pharmacyId,
+      internalSku: row.internalSku,
+      medicineId,
+      matchedVia: 'barcode',
+    })
+    return { row, outcome: 'exact_barcode', medicineId }
   }
 
   /** ШАГ 3: батчевый fuzzy-запрос (если `CatalogFacade` доступен). */
@@ -238,13 +261,13 @@ export class CompositeInventoryMatcherService {
     rows: readonly NeedsFuzzyRow[],
   ): Promise<ReadonlyMap<number, readonly FuzzyCandidate[]>> {
     if (this.catalogFacade === null) return new Map()
+    // `NeedsFuzzyRow` всегда несёт эти поля (тип `string | null`, без
+    // `undefined`) — условный spread был мёртвым кодом, всегда true.
     const inputs: FuzzyCandidateInput[] = rows.map((row) => ({
       rawTradeName: row.rawTradeName,
-      ...(row.rawDosageForm !== undefined ? { rawDosageForm: row.rawDosageForm } : {}),
-      ...(row.rawDosageStrength !== undefined ? { rawDosageStrength: row.rawDosageStrength } : {}),
-      ...(row.rawManufacturerName !== undefined
-        ? { rawManufacturerName: row.rawManufacturerName }
-        : {}),
+      rawDosageForm: row.rawDosageForm,
+      rawDosageStrength: row.rawDosageStrength,
+      rawManufacturerName: row.rawManufacturerName,
     }))
     return this.catalogFacade.findFuzzyCandidates(inputs)
   }
@@ -262,11 +285,17 @@ export class CompositeInventoryMatcherService {
       return { row, outcome: 'unmatched', reason: 'no_candidate' }
     }
     if (filtered.length === 1) {
-      const winner = filtered[0]!
+      const winner = filtered[0]
+      if (winner === undefined) {
+        return { row, outcome: 'unmatched', reason: 'no_candidate' }
+      }
       return { row, outcome: 'matched', medicineId: winner.medicineId }
     }
-    const top1 = filtered[0]!
-    const top2 = filtered[1]!
+    const top1 = filtered[0]
+    const top2 = filtered[1]
+    if (top1 === undefined || top2 === undefined) {
+      return { row, outcome: 'unmatched', reason: 'no_candidate' }
+    }
     if (top1.combinedScore - top2.combinedScore < AMBIGUITY_GAP) {
       return { row, outcome: 'unmatched', reason: 'ambiguous' }
     }

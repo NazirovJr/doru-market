@@ -14,7 +14,6 @@ import { createHash } from 'node:crypto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { OtpAttemptsExceededError, OtpExpiredError, OtpMismatchError } from '@dorutj/contracts'
 import { type Clock, type IdGenerator } from '@/shared-kernel/index.js'
-import { type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { VerifyOtpUseCase } from './verify-otp.use-case.js'
 import type {
   JwtClaims,
@@ -33,7 +32,7 @@ import type {
 } from '../ports/auth-sessions.repository.port.js'
 import type { RefreshTokenGeneratorPort } from '../ports/refresh-token-generator.port.js'
 import type { RateLimitCheckResult, RateLimitCheckerPort } from '../ports/rate-limit-checker.port.js'
-import type { UnitOfWorkPort } from '../ports/unit-of-work.port.js'
+import type { UnitOfWorkPort, UnitOfWorkTx } from '../ports/unit-of-work.port.js'
 import { type AuthSession } from '@/modules/auth/domain/value-objects/auth-session.vo.js'
 import { type User } from '@/modules/auth/domain/user.js'
 import { type AppConfigService } from '@/config/app-config.service.js'
@@ -87,12 +86,12 @@ class StubOtpCodesRepository implements OtpCodesRepository {
   }
 
    
-  findByIdForUpdate(_tx: DrizzleDb, id: string): Promise<OtpCodeRecord | null> {
+  findByIdForUpdate(_tx: UnitOfWorkTx, id: string): Promise<OtpCodeRecord | null> {
     return Promise.resolve(this.rows.get(id) ?? null)
   }
 
    
-  markConsumed(_tx: DrizzleDb, id: string, now: Date): Promise<void> {
+  markConsumed(_tx: UnitOfWorkTx, id: string, now: Date): Promise<void> {
     this.markConsumedCalls.push({ id, now })
     const row = this.rows.get(id)
     if (row !== undefined) {
@@ -102,7 +101,7 @@ class StubOtpCodesRepository implements OtpCodesRepository {
   }
 
    
-  incrementAttempts(_tx: DrizzleDb, id: string): Promise<void> {
+  incrementAttempts(_tx: UnitOfWorkTx, id: string): Promise<void> {
     this.incrementAttemptsCalls.push(id)
     const row = this.rows.get(id)
     if (row !== undefined) {
@@ -173,8 +172,20 @@ class StubUsersRepository implements UsersRepository {
       deletedAt: null,
     }
     this.byId.set(id, user)
-    this.tenantPhoneIndex.set(`${input.tenantId}|${input.phoneNumber}`, id)
+    this.tenantPhoneIndex.set(`${input.tenantId}|${String(input.phoneNumber)}`, id)
     return Promise.resolve(user)
+  }
+
+  async findActiveByPhone(phoneNumber: string): Promise<User | null> {
+    let earliest: User | null = null
+    for (const user of this.byId.values()) {
+      if (user.deletedAt !== null) continue
+      if (user.phoneNumber !== phoneNumber) continue
+      if (earliest === null || user.createdAt < earliest.createdAt) {
+        earliest = user
+      }
+    }
+    return Promise.resolve(earliest)
   }
 
   async findOrCreateByTenantAndPhone(input: CreateUserInput): Promise<User> {
@@ -245,40 +256,40 @@ class StubAuthSessionsRepository implements AuthSessionsRepository {
   // компиляция прошла — реальная логика покрывается собственными тестами
   // `refresh-token.use-case.spec.ts`.
    
-  async revokeCurrentAndCreateNext(
-    _tx: DrizzleDb,
+  revokeCurrentAndCreateNext(
+    _tx: UnitOfWorkTx,
     _previousId: string,
     _input: RotateAuthSessionInput,
   ): Promise<AuthSession> {
     throw new Error('not used in DTJ-024 tests (see refresh-token.use-case.spec.ts)')
   }
    
-  async revokeAllByFamilyId(
-    _tx: DrizzleDb,
-    _familyId: string,
-    _reason: RevokeReason,
-    _now: Date,
-  ): Promise<number> {
+  async revokeAllByFamilyId(_input: {
+    tx: UnitOfWorkTx
+    familyId: string
+    reason: RevokeReason
+    now: Date
+  }): Promise<number> {
     return Promise.resolve(0)
   }
   // DTJ-026: новые методы logout/logout-all/revoke не используются в
   // тестах DTJ-024, noop-стабы для компиляции.
-   
-  async revokeOneById(
-    _tx: DrizzleDb,
-    _sessionId: string,
-    _reason: RevokeReason,
-    _now: Date,
-  ): Promise<number> {
+
+  async revokeOneById(_input: {
+    tx: UnitOfWorkTx
+    sessionId: string
+    reason: RevokeReason
+    now: Date
+  }): Promise<number> {
     return Promise.resolve(0)
   }
-   
-  async revokeAllByUserId(
-    _tx: DrizzleDb,
-    _userId: string,
-    _reason: RevokeReason,
-    _now: Date,
-  ): Promise<number> {
+
+  async revokeAllByUserId(_input: {
+    tx: UnitOfWorkTx
+    userId: string
+    reason: RevokeReason
+    now: Date
+  }): Promise<number> {
     return Promise.resolve(0)
   }
 }
@@ -287,7 +298,7 @@ class StubJwtSigner implements JwtSignerPort {
   public lastClaims: JwtClaims | null = null
   sign(claims: JwtClaims): string {
     this.lastClaims = claims
-    return `jwt.${claims.sub}.${String(claims.role)}`
+    return `jwt.${claims.sub}.${claims.role}`
   }
   verify(): never {
     throw new Error('not used in tests')
@@ -319,7 +330,7 @@ class FakeRateLimiter implements RateLimitCheckerPort {
 class NoopUnitOfWork implements UnitOfWorkPort {
   async run<T>(callback: Parameters<UnitOfWorkPort['run']>[0]): Promise<T> {
      
-    return (callback as (tx: DrizzleDb) => Promise<T>)(null as unknown as DrizzleDb)
+    return (callback as (tx: UnitOfWorkTx) => Promise<T>)(null)
   }
 }
 
@@ -391,14 +402,17 @@ function buildUseCase(): Bundle {
   return { useCase, otpCodes, users, authSessions, jwt, rateLimiter }
 }
 
-function seedActive(otpCodes: StubOtpCodesRepository, id: string, code: string, expiresAt: Date, consumedAt: Date | null = null): void {
+function seedActive(
+  otpCodes: StubOtpCodesRepository,
+  input: { id: string; code: string; expiresAt: Date; consumedAt?: Date | null },
+): void {
   otpCodes.seed({
-    id,
-    codeRaw: code,
+    id: input.id,
+    codeRaw: input.code,
     phone: PHONE,
     issuedAt: NOW,
-    expiresAt,
-    consumedAt,
+    expiresAt: input.expiresAt,
+    consumedAt: input.consumedAt ?? null,
   })
 }
 
@@ -409,7 +423,7 @@ describe('VerifyOtpUseCase (DTJ-024, SRS-API-021..025)', () => {
   })
 
   it('1. успех с новым пользователем: find-or-create → user(role=customer), session, JWT, consumed', async () => {
-    seedActive(bundle.otpCodes, 'otp-1', '123456', LATER)
+    seedActive(bundle.otpCodes, { id: 'otp-1', code: '123456', expiresAt: LATER })
     const result = await bundle.useCase.execute({
       otpRequestId: 'otp-1',
       code: '123456',
@@ -433,7 +447,7 @@ describe('VerifyOtpUseCase (DTJ-024, SRS-API-021..025)', () => {
   })
 
   it('2. успех с существующим пользователем: users.create НЕ вызван повторно', async () => {
-    seedActive(bundle.otpCodes, 'otp-1', '111111', LATER)
+    seedActive(bundle.otpCodes, { id: 'otp-1', code: '111111', expiresAt: LATER })
     // первый verify
     const r1 = await bundle.useCase.execute({
       otpRequestId: 'otp-1', code: '111111', tenantId: TENANT,
@@ -443,7 +457,7 @@ describe('VerifyOtpUseCase (DTJ-024, SRS-API-021..025)', () => {
     expect(bundle.users.createCount).toBe(1)
     // consumed = true; повторный verify → mismatch (кейс 6, проверим ниже)
     // для кейса 2: выдаём НОВЫЙ otpRequestId, тот же phone
-    seedActive(bundle.otpCodes, 'otp-2', '222222', LATER)
+    seedActive(bundle.otpCodes, { id: 'otp-2', code: '222222', expiresAt: LATER })
     const r2 = await bundle.useCase.execute({
       otpRequestId: 'otp-2', code: '222222', tenantId: TENANT,
       deviceLabel: DEVICE_LABEL, userAgent: UA, ipAddress: IP,
@@ -455,7 +469,7 @@ describe('VerifyOtpUseCase (DTJ-024, SRS-API-021..025)', () => {
   })
 
   it('3. истёкший код → OtpExpiredError, сессия НЕ создана, consumed НЕ помечен', async () => {
-    seedActive(bundle.otpCodes, 'otp-1', '123456', EXPIRED)
+    seedActive(bundle.otpCodes, { id: 'otp-1', code: '123456', expiresAt: EXPIRED })
     const result = await bundle.useCase.execute({
       otpRequestId: 'otp-1', code: '123456', tenantId: TENANT,
       deviceLabel: DEVICE_LABEL, userAgent: UA, ipAddress: IP,
@@ -469,7 +483,7 @@ describe('VerifyOtpUseCase (DTJ-024, SRS-API-021..025)', () => {
   })
 
   it('4. неверный код → OtpMismatchError, incrementAttempts вызван', async () => {
-    seedActive(bundle.otpCodes, 'otp-1', '123456', LATER)
+    seedActive(bundle.otpCodes, { id: 'otp-1', code: '123456', expiresAt: LATER })
     const result = await bundle.useCase.execute({
       otpRequestId: 'otp-1', code: '999999', tenantId: TENANT,
       deviceLabel: DEVICE_LABEL, userAgent: UA, ipAddress: IP,
@@ -483,7 +497,7 @@ describe('VerifyOtpUseCase (DTJ-024, SRS-API-021..025)', () => {
   })
 
   it('5. 6-я подряд попытка → OtpAttemptsExceededError с каноническим ux.error.otp_locked', async () => {
-    seedActive(bundle.otpCodes, 'otp-1', '123456', LATER)
+    seedActive(bundle.otpCodes, { id: 'otp-1', code: '123456', expiresAt: LATER })
     // 5 неверных + 1 (любая, даже верная) — на 6-й блокировка
     for (let i = 0; i < 5; i += 1) {
       const r = await bundle.useCase.execute({
@@ -509,7 +523,7 @@ describe('VerifyOtpUseCase (DTJ-024, SRS-API-021..025)', () => {
   })
 
   it('6. повторный verify потреблённого otpRequestId → OtpMismatchError', async () => {
-    seedActive(bundle.otpCodes, 'otp-1', '123456', LATER)
+    seedActive(bundle.otpCodes, { id: 'otp-1', code: '123456', expiresAt: LATER })
     const r1 = await bundle.useCase.execute({
       otpRequestId: 'otp-1', code: '123456', tenantId: TENANT,
       deviceLabel: DEVICE_LABEL, userAgent: UA, ipAddress: IP,

@@ -21,13 +21,19 @@
  * Партии НЕ удаляются физически — только `quantity=0` (аудит/история,
  * тот же принцип, что просроченные партии, SRS-DB-020).
  *
- * `DrizzleDb`-зависимость инжектится извне (см. `drizzle.provider.ts`).
+ * `DrizzleDb`-зависимость инжектится извне через токен `DRIZZLE_DB` (см.
+ * `drizzle.provider.ts`) — явный `@Inject`, esbuild (vitest) не эмитит
+ * `design:paramtypes` (DTJ-001), а без `@Injectable()` на классе Nest вообще не
+ * видит метаданных конструктора и тихо создаёт инстанс без аргументов (`db`
+ * остаётся `undefined`, не бросая ошибку при бутстрапе).
  */
+import { Inject, Injectable } from '@nestjs/common'
 import { and, eq, isNotNull, lt, notInArray, sql } from 'drizzle-orm'
+import { DRIZZLE_DB } from '@/infrastructure/database/drizzle.provider.js'
 import { inventorySyncBatch } from '@/db/schema/inventory-sync-batch.js'
 import { inventorySyncRawItems } from '@/db/schema/inventory-sync-raw-items.js'
 import { pharmacyInventory } from '@/db/schema/pharmacy-inventory.js'
-import type { FullSyncCompletionPort } from '../../application/ports/full-sync-completion.port.js'
+import type { FullSyncCompletionPort } from '@/modules/inventory/application/ports/full-sync-completion.port.js'
 
 /** Минимальный контракт Drizzle, который мы используем. */
 interface DrizzleLike {
@@ -50,8 +56,9 @@ interface DrizzleLike {
   }
 }
 
+@Injectable()
 export class DrizzleFullSyncCompletionAdapter implements FullSyncCompletionPort {
-  constructor(private readonly db: DrizzleLike) {}
+  constructor(@Inject(DRIZZLE_DB) private readonly db: DrizzleLike) {}
 
   /**
    * Шаг 1: собрать `touchedBatchNumbers` — все `batch_number`, которые
@@ -75,8 +82,7 @@ export class DrizzleFullSyncCompletionAdapter implements FullSyncCompletionPort 
         ),
       )
     const unique = new Set<string>()
-    for (let i = 0; i < rows.length; i += 1) {
-      const row = rows[i] as { batchNumber: string }
+    for (const row of rows as readonly { batchNumber: string }[]) {
       if (row.batchNumber.length > 0) {
         unique.add(row.batchNumber)
       }

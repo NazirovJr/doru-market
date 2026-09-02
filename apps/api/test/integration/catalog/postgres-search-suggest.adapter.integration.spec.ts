@@ -61,12 +61,33 @@ const MIGRATIONS_DIR = new URL('../../../migrations/', import.meta.url)
 const EXTENSIONS_SQL = readFileSync(new URL('0001_extensions.sql', MIGRATIONS_DIR), 'utf8')
 const CATALOG_CORE_SQL = readFileSync(new URL('0006_catalog_core.sql', MIGRATIONS_DIR), 'utf8')
 
-/** Дословная копия индекса из `0018_search_schema_additions.sql` — см. JSDoc файла п. «Миграции». */
-const TRADE_NAME_PREFIX_INDEX_SQL = `
-  CREATE INDEX IF NOT EXISTS ix_medicines_trade_name_prefix
-      ON medicines (lower(unaccent(trade_name)) text_pattern_ops)
-      WHERE is_published = true;
-`
+/**
+ * `ix_medicines_trade_name_prefix` НЕ копируется вручную — извлекается дословно из
+ * `0018_search_schema_additions.sql` (см. JSDoc файла п. «Миграции»), чтобы этот тест не мог
+ * разойтись с реальной миграцией (в частности, с обёрткой `immutable_unaccent()`, объявленной
+ * `0001_extensions.sql` — голый `unaccent()` в индексном выражении Postgres отвергает как
+ * STABLE, а не IMMUTABLE, код 42P17). Применить миграцию `0018` целиком нельзя — она также
+ * создаёт `pharmacy_reliability_scores`/`search_query_log` с FK на `pharmacies`/`tenants`/`users`,
+ * которых в этой изолированной фикстуре нет.
+ */
+function extractTradeNamePrefixIndexSql(): string {
+  const migrationSql = readFileSync(
+    new URL('0018_search_schema_additions.sql', MIGRATIONS_DIR),
+    'utf8',
+  )
+  const match = /CREATE INDEX IF NOT EXISTS ix_medicines_trade_name_prefix[\s\S]*?;/.exec(
+    migrationSql,
+  )
+  if (!match) {
+    throw new Error(
+      'ix_medicines_trade_name_prefix не найден в 0018_search_schema_additions.sql — ' +
+        'миграция изменилась, обнови regex-извлечение в postgres-search-suggest.adapter.integration.spec.ts',
+    )
+  }
+  return match[0]
+}
+
+const TRADE_NAME_PREFIX_INDEX_SQL = extractTradeNamePrefixIndexSql()
 
 const PROBE_TIMEOUT_MS = 1_500
 const IRRELEVANT_TENANT_ID = 'irrelevant-tenant-id' as unknown as TenantId

@@ -62,7 +62,7 @@ function signInitData(
   const secretKey = createHmac('sha256', WEBAPP_DATA_LABEL).update(botToken).digest()
   const dataCheckString = Object.keys(params)
     .sort()
-    .map((k) => `${k}=${params[k]}`)
+    .map((k) => `${k}=${String(params[k])}`)
     .join('\n')
   const hash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex')
   return `${Object.entries(params)
@@ -322,7 +322,7 @@ describe('auth.twa-security (DTJ-029.5, SRS-API-031/032)', () => {
   it('7. missing hash: initData без hash=… → 401 INVALID_TELEGRAM_INIT_DATA', async () => {
     const initData =
       'auth_date=' +
-      Math.floor(Date.now() / 1000) +
+      String(Math.floor(Date.now() / 1000)) +
       '&user=' +
       encodeURIComponent('{"id":400,"first_name":"NoHash"}')
 

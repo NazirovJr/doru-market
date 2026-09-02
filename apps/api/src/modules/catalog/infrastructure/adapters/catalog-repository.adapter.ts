@@ -42,33 +42,11 @@ import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.pr
 import { categories } from '@/db/schema/categories.js'
 import { medicines } from '@/db/schema/medicines.js'
 import { medicineSubstances } from '@/db/schema/medicine-substances.js'
-import { CategoryTreeService } from '../../domain/services/category-tree.service.js'
-import { Medicine } from '../../domain/medicine.entity.js'
-import type { CategoryNode, MedicineRecord, SubstanceRef } from '../../domain/medicine.types.js'
-import { type CatalogRepository } from '../../application/ports/catalog-repository.port.js'
+import { CategoryTreeService } from '@/modules/catalog/domain/services/category-tree.service.js'
+import { Medicine } from '@/modules/catalog/domain/medicine.entity.js'
+import type { CategoryNode, MedicineRecord, SubstanceRef } from '@/modules/catalog/domain/medicine.types.js'
+import { type CatalogRepository } from '@/modules/catalog/application/ports/catalog-repository.port.js'
 import { toDomain, toRecord, type SubstanceRowLike } from '../mappers/medicine.mapper.js'
-
-/** Минимальный structural-тип для строки БД после select(). */
-interface MedicineRowLike {
-  readonly id: string
-  readonly tradeName: string
-  readonly innName: string
-  readonly barcode: string | null
-  readonly isGloballyIdentifiableByBarcode: boolean
-  readonly categoryId: number
-  readonly dosageForm: string
-  readonly dosageFormClass: string
-  readonly dosageStrength: string
-  readonly manufacturerCountry: string
-  readonly manufacturerName: string
-  readonly isPrescriptionRequired: boolean
-  readonly controlCategory: string
-  readonly isPublished: boolean
-  readonly requiresColdChain: boolean
-  readonly imageUrl: string | null
-  readonly descriptionTj: string | null
-  readonly descriptionRu: string | null
-}
 
 @Injectable()
 export class CatalogRepositoryAdapter implements CatalogRepository {
@@ -87,7 +65,7 @@ export class CatalogRepositoryAdapter implements CatalogRepository {
     const row = rows[0]
     if (row === undefined) return null
     const joins = await this.loadSubstanceJoins([id])
-    const entity = toDomain(row as MedicineRowLike, joins.get(id) ?? [])
+    const entity = toDomain(row, joins.get(id) ?? [])
     return toRecord(entity, row.barcode)
   }
 
@@ -102,7 +80,7 @@ export class CatalogRepositoryAdapter implements CatalogRepository {
     const joins = await this.loadSubstanceJoins(uniqueIds)
     const out: MedicineRecord[] = []
     for (const row of medicineRows) {
-      const entity = toDomain(row as MedicineRowLike, joins.get(row.id) ?? [])
+      const entity = toDomain(row, joins.get(row.id) ?? [])
       out.push(toRecord(entity, row.barcode))
     }
     return out
@@ -167,39 +145,42 @@ export class CatalogRepositoryAdapter implements CatalogRepository {
 
   async save(medicine: Medicine): Promise<void> {
     // Штрихкод для записи: `getBarcode()` возвращает доменный VO или `null`.
-    // При сериализации в БД используем `String(barcode)` — VO гарантирует
-    // стабильное текстовое представление (см. DTJ-090 JSDoc на `Barcode`).
+    // `Barcode` не переопределяет `toString()` — сериализуем через `getRawValue()`
+    // явно (см. DTJ-090 JSDoc на `Barcode`).
     const barcodeVo = medicine.getBarcode()
-    const barcodeForRecord: string | null = barcodeVo === null ? null : String(barcodeVo)
+    const barcodeForRecord: string | null = barcodeVo === null ? null : barcodeVo.getRawValue()
     const record = toRecord(medicine, barcodeForRecord)
-    const substanceRecords = medicine.getSubstances().map((s) => ({
-      substanceId: s.substanceId,
-      strengthValue: String(s.strengthValue),
-      strengthUnit: s.strengthUnit,
-    }))
 
-    // INSERT ... ON CONFLICT (id) DO UPDATE — атомарный upsert `medicines`.
+    await this.upsertMedicineRow(record)
+    await this.replaceSubstances(record.id, medicine)
+  }
+
+  /** INSERT ... ON CONFLICT (id) DO UPDATE — атомарный upsert `medicines`. */
+  private async upsertMedicineRow(record: MedicineRecord): Promise<void> {
+    const columns = {
+      tradeName: record.tradeName,
+      innName: record.innName,
+      barcode: record.barcode,
+      isGloballyIdentifiableByBarcode: record.isGloballyIdentifiableByBarcode,
+      categoryId: record.categoryId,
+      dosageForm: record.dosageForm,
+      dosageFormClass: record.dosageFormClass,
+      dosageStrength: record.dosageStrength,
+      manufacturerCountry: record.manufacturerCountry,
+      manufacturerName: record.manufacturerName,
+      isPrescriptionRequired: record.isPrescriptionRequired,
+      controlCategory: record.controlCategory,
+      isPublished: record.isPublished,
+      requiresColdChain: record.requiresColdChain,
+      imageUrl: record.imageUrl,
+      descriptionTj: record.descriptionTj,
+      descriptionRu: record.descriptionRu,
+    }
     await this.db
       .insert(medicines)
       .values({
         id: record.id,
-        tradeName: record.tradeName,
-        innName: record.innName,
-        barcode: record.barcode,
-        isGloballyIdentifiableByBarcode: record.isGloballyIdentifiableByBarcode,
-        categoryId: record.categoryId,
-        dosageForm: record.dosageForm,
-        dosageFormClass: record.dosageFormClass,
-        dosageStrength: record.dosageStrength,
-        manufacturerCountry: record.manufacturerCountry,
-        manufacturerName: record.manufacturerName,
-        isPrescriptionRequired: record.isPrescriptionRequired,
-        controlCategory: record.controlCategory,
-        isPublished: record.isPublished,
-        requiresColdChain: record.requiresColdChain,
-        imageUrl: record.imageUrl,
-        descriptionTj: record.descriptionTj,
-        descriptionRu: record.descriptionRu,
+        ...columns,
         // `dosageValue` и `dosageUnit` НЕ сохраняем через доменный путь —
         // они заполняются сидом/импортом и не управляются `Medicine`. Если
         // use case DTJ-099 захочет их писать — расширим сигнатуру `save`.
@@ -210,39 +191,30 @@ export class CatalogRepositoryAdapter implements CatalogRepository {
       } as typeof medicines.$inferInsert)
       .onConflictDoUpdate({
         target: medicines.id,
-        set: {
-          tradeName: record.tradeName,
-          innName: record.innName,
-          barcode: record.barcode,
-          isGloballyIdentifiableByBarcode: record.isGloballyIdentifiableByBarcode,
-          categoryId: record.categoryId,
-          dosageForm: record.dosageForm,
-          dosageFormClass: record.dosageFormClass,
-          dosageStrength: record.dosageStrength,
-          manufacturerCountry: record.manufacturerCountry,
-          manufacturerName: record.manufacturerName,
-          isPrescriptionRequired: record.isPrescriptionRequired,
-          controlCategory: record.controlCategory,
-          isPublished: record.isPublished,
-          requiresColdChain: record.requiresColdChain,
-          imageUrl: record.imageUrl,
-          descriptionTj: record.descriptionTj,
-          descriptionRu: record.descriptionRu,
-          updatedAt: new Date(),
-        },
+        set: { ...columns, updatedAt: new Date() },
       })
+  }
 
-    // Множество веществ — перезаписываем целиком: DELETE существующих +
-    // INSERT новых. Это простая и корректная семантика для R1; оптимизация
-    // через MERGE / bulk upsert — задача R2.
-    await this.db.delete(medicineSubstances).where(eq(medicineSubstances.medicineId, record.id))
+  /**
+   * Множество веществ — перезаписываем целиком: DELETE существующих + INSERT
+   * новых. Это простая и корректная семантика для R1; оптимизация через
+   * MERGE / bulk upsert — задача R2.
+   */
+  private async replaceSubstances(medicineId: string, medicine: Medicine): Promise<void> {
+    const substanceRecords = medicine.getSubstances().map((s) => ({
+      substanceId: s.substanceId,
+      strengthValue: String(s.strengthValue),
+      strengthUnit: s.strengthUnit,
+    }))
+
+    await this.db.delete(medicineSubstances).where(eq(medicineSubstances.medicineId, medicineId))
     if (substanceRecords.length > 0) {
       await this.db.insert(medicineSubstances).values(
         substanceRecords.map((s) => ({
-          medicineId: record.id,
+          medicineId,
           substanceId: s.substanceId,
           strengthValue: s.strengthValue,
-          strengthUnit: s.strengthUnit as 'mg' | 'mcg' | 'g' | 'ml' | 'iu' | 'percent' | 'mg_per_ml',
+          strengthUnit: s.strengthUnit,
         })),
       )
     }

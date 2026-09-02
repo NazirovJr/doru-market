@@ -83,6 +83,8 @@ export class GeoPoint {
   }
 }
 
+const DEGREES_PER_HALF_TURN = 180
+
 function toRadians(degrees: number): number {
-  return (degrees * Math.PI) / 180
+  return (degrees * Math.PI) / DEGREES_PER_HALF_TURN
 }

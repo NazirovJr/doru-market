@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createBuilder } from './builder'
+import { createBuilder } from './builder.js'
 
 interface TestFixture {
   status: string

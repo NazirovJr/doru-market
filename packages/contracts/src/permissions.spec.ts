@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PERMISSIONS } from './permissions'
+import { PERMISSIONS } from './permissions.js'
 
 describe('PERMISSIONS', () => {
   it('нет дублирующихся строковых значений', () => {

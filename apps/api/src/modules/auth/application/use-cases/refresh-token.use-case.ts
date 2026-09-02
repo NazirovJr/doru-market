@@ -95,6 +95,10 @@ export type RefreshTokenError = RefreshTokenInvalidError | RefreshTokenReuseDete
  
 @Injectable()
 export class RefreshTokenUseCase {
+  // Обоснование ниже, для строки eslint-disable непосредственно перед constructor: 6 DI-инъекций
+  // (NestJS constructor injection резолвит по позиции; единый options-объект не идиоматичен для
+  // Nest DI и потребовал бы кастомный factory provider — см. class JSDoc выше).
+  // eslint-disable-next-line max-params -- 6 DI-инъекций NestJS constructor injection, см. комментарий выше
   constructor(
     @Inject(AUTH_SESSIONS_REPOSITORY) private readonly authSessions: AuthSessionsRepository,
     @Inject(USERS_REPOSITORY) private readonly users: UsersRepository,
@@ -151,12 +155,12 @@ export class RefreshTokenUseCase {
     ipAddress: string,
   ): Promise<Result<RefreshTokenResult, RefreshTokenReuseDetectedError>> {
     await this.uow.run(async (tx) => {
-      await this.authSessions.revokeAllByFamilyId(
+      await this.authSessions.revokeAllByFamilyId({
         tx,
-        session.familyId,
-        'reuse_detected',
+        familyId: session.familyId,
+        reason: 'reuse_detected',
         now,
-      )
+      })
     })
     // DTJ-025 DoD п.4: «pino.warn security-событие содержит
     // userId/sessionFamilyId/ipAddress, НЕ содержит сами токены

@@ -8,7 +8,7 @@
  * Таймаут берётся из ENV `FULL_SYNC_SESSION_TIMEOUT_MINUTES` (ASSUMPTION
  * `60`, тикет DTJ-152). Если ENV не задан — дефолт `60` минут.
  */
-import { Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable, Logger } from '@nestjs/common'
 import { Cron } from '@nestjs/schedule'
 import { DetectStuckFullSyncSessionsUseCase } from '@/modules/inventory/application/use-cases/detect-stuck-full-sync-sessions.use-case.js'
 
@@ -18,7 +18,11 @@ const DEFAULT_TIMEOUT_MINUTES = 60
 export class FullSyncSessionWatchdogCron {
   private readonly logger = new Logger(FullSyncSessionWatchdogCron.name)
 
+  // Явный @Inject: единственный параметр без декоратора → paramtypes пуст → класс создаётся
+  // без аргументов и `this.detectStuck` === undefined. Бут при этом проходит, а падает первый
+  // же тик крона — раз в 10 минут, в фоне, без запроса пользователя (DTJ-001).
   constructor(
+    @Inject(DetectStuckFullSyncSessionsUseCase)
     private readonly detectStuck: DetectStuckFullSyncSessionsUseCase,
   ) {}
 

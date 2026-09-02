@@ -197,6 +197,58 @@ describe('AnalogEquivalenceService.isAnalog (SRS-CAT-031, TC-CAT-008..012, TC-DO
     expect(service.isAnalog(a, b)).toBe(true)
   })
 
+  it('D-07: 500 mg vs 0.5 g — analogs (same mass, different unit of the same family)', () => {
+    const a = makeMedicine(
+      'a-1',
+      'BrandA',
+      'inn',
+      DosageFormClass.tablet,
+      '500 мг',
+      [{ substanceId: PARACETAMOL_ID, strengthValue: 500, strengthUnit: DosageUnit.mg }],
+    )
+    const b = makeMedicine(
+      'b-1',
+      'BrandB',
+      'inn',
+      DosageFormClass.tablet,
+      '0.5 г',
+      [{ substanceId: PARACETAMOL_ID, strengthValue: 0.5, strengthUnit: DosageUnit.g }],
+    )
+    expect(service.isAnalog(a, b)).toBe(true)
+  })
+
+  it('D-07: 1 g vs 100 mg — NOT analogs (same family, non-equivalent value)', () => {
+    const a = makeMedicine(
+      'a-1',
+      'BrandA',
+      'inn',
+      DosageFormClass.tablet,
+      '1 г',
+      [{ substanceId: PARACETAMOL_ID, strengthValue: 1, strengthUnit: DosageUnit.g }],
+    )
+    const b = makeMedicine(
+      'b-1',
+      'BrandB',
+      'inn',
+      DosageFormClass.tablet,
+      '100 мг',
+      [{ substanceId: PARACETAMOL_ID, strengthValue: 100, strengthUnit: DosageUnit.mg }],
+    )
+    expect(service.isAnalog(a, b)).toBe(false)
+  })
+
+  it('D-07: combination of substances with per-substance unit equivalence (500 mg + 0.05 g caffeine) — analogs', () => {
+    const a = makeMedicine('a-1', 'A', 'inn', DosageFormClass.tablet, '500 мг', [
+      { substanceId: PARACETAMOL_ID, strengthValue: 500, strengthUnit: DosageUnit.mg },
+      { substanceId: CAFFEINE_ID, strengthValue: 50, strengthUnit: DosageUnit.mg },
+    ])
+    const b = makeMedicine('b-1', 'B', 'inn', DosageFormClass.tablet, '0.5 г', [
+      { substanceId: PARACETAMOL_ID, strengthValue: 0.5, strengthUnit: DosageUnit.g },
+      { substanceId: CAFFEINE_ID, strengthValue: 0.05, strengthUnit: DosageUnit.g },
+    ])
+    expect(service.isAnalog(a, b)).toBe(true)
+  })
+
   it('combination with one mismatched strength — NOT analogs', () => {
     const a = makeMedicine('a-1', 'A', 'inn', DosageFormClass.tablet, '500 мг', [
       { substanceId: PARACETAMOL_ID, strengthValue: 500, strengthUnit: DosageUnit.mg },

@@ -12,7 +12,7 @@ import {
   PHARMACY_SKU_MAPPING_REPOSITORY,
   type PharmacySkuMappingEntry,
   type PharmacySkuMappingRepository,
-} from '../../application/ports/pharmacy-sku-mapping.repository.port.js'
+} from '@/modules/inventory/application/ports/pharmacy-sku-mapping.repository.port.js'
 
 export class InMemoryPharmacySkuMappingRepository implements PharmacySkuMappingRepository {
   private readonly store = new Map<string, PharmacySkuMappingEntry>()
@@ -21,22 +21,21 @@ export class InMemoryPharmacySkuMappingRepository implements PharmacySkuMappingR
     return `${pharmacyId}::${internalSku}`
   }
 
-  async findManyByPharmacyAndSkus(
+  findManyByPharmacyAndSkus(
     pharmacyId: string,
     skus: readonly string[],
   ): Promise<ReadonlyMap<string, PharmacySkuMappingEntry>> {
     const result = new Map<string, PharmacySkuMappingEntry>()
-    for (let i = 0; i < skus.length; i += 1) {
-      const sku = skus[i]!
+    for (const sku of skus) {
       const entry = this.store.get(InMemoryPharmacySkuMappingRepository.compositeKey(pharmacyId, sku))
       if (entry !== undefined) {
         result.set(sku, entry)
       }
     }
-    return result
+    return Promise.resolve(result)
   }
 
-  async upsert(input: {
+  upsert(input: {
     pharmacyId: string
     internalSku: string
     medicineId: string
@@ -44,6 +43,7 @@ export class InMemoryPharmacySkuMappingRepository implements PharmacySkuMappingR
   }): Promise<void> {
     const key = InMemoryPharmacySkuMappingRepository.compositeKey(input.pharmacyId, input.internalSku)
     this.store.set(key, { medicineId: input.medicineId, matchedVia: input.matchedVia })
+    return Promise.resolve()
   }
 }
 

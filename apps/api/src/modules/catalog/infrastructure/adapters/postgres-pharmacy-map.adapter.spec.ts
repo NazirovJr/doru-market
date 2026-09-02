@@ -1,21 +1,18 @@
 /**
  * Unit-тест `PostgresPharmacyMapAdapter` (DTJ-195, EP-08, R1).
  *
- * Как и `analog-candidates.adapter.spec.ts` (DTJ-100) — testcontainers Postgres ещё не
- * раскатаны (EP-19, `STATE-AND-RESUME-POINT.md` §11.4), поэтому здесь ТОЛЬКО:
+ * Как и `analog-candidates.adapter.spec.ts` (DTJ-100) — здесь только:
  *   1. Форма сгенерированного SQL (мок `DrizzleDb.execute` перехватывает переданный `SQL`-объект,
  *      `renderSql()` разворачивает его — включая вложенные фрагменты — в плоский текст для
  *      проверки подстрок: наличие/отсутствие JOIN на `pharmacy_inventory` (критерий приёмки 3),
- *      наличие `LIMIT`, рубежа видимости, tenant-скоупа, defense-in-depth по `control_category`).
+ *      наличие `LIMIT`, рубежа видимости, tenant-скоупа, defense-in-depth по `control_category`,
+ *      диапазонного bbox-фильтра по `latitude`/`longitude` (DEFECT-FIX, см. JSDoc адаптера)).
  *   2. Маппинг строки результата → `PharmacyMapPin` (offer null/заполнен, isStale, isOpenNow) —
- *      SQL-семантика (реальный `bbox`-фильтр, реальное исключение suspended-сети/narcotic на
- *      живых данных) НЕ проверяется здесь, это ответственность будущего
- *      `postgres-pharmacy-map.adapter.integration.spec.ts`.
- *
- * Дополнительный блокер сверх EP-19 (см. JSDoc адаптера, п.1): `pharmacies.geo_point` и
- * расширение PostGIS отсутствуют в фактических миграциях — интеграционный тест не может быть
- * написан ДАЖЕ после раскатки testcontainers, пока эта миграция не появится. Зафиксировано как
- * `blockers` в отчёте сдачи DTJ-195, не скрыто `it.skip`/`it.todo` (§9 хендбука).
+ *      мок `db.execute` уже отдаёт `lon`/`lat` как JS `number` (реальный `::double precision`-каст
+ *      проверяется на реальном Postgres, см. п.3).
+ *   3. Реальная семантика (bbox включение/исключение на границе, suspended-сеть, narcotic,
+ *      numeric→number на `latitude`/`longitude`) — `postgres-pharmacy-map.adapter.integration.spec.ts`
+ *      на настоящем Postgres, не здесь.
  */
 import { describe, expect, it, vi } from 'vitest'
 import { getTableName, is, Table, type SQL } from 'drizzle-orm'
@@ -165,6 +162,19 @@ describe('PostgresPharmacyMapAdapter (DTJ-195)', () => {
       await makeAdapter(db).findPinsInBbox(makeQuery())
       expect(db.execute).toHaveBeenCalledTimes(1)
     })
+
+    it('DEFECT-FIX: bbox — BETWEEN по latitude/longitude, БЕЗ geo_point/PostGIS', async () => {
+      const db = makeDrizzleMock([])
+      await makeAdapter(db).findPinsInBbox(makeQuery())
+      const rendered = capturedSql(db)
+      expect(rendered).toContain('latitude')
+      expect(rendered).toContain('longitude')
+      expect(rendered).toContain('BETWEEN')
+      expect(rendered).not.toContain('geo_point')
+      expect(rendered).not.toContain('ST_MakeEnvelope')
+      expect(rendered).not.toContain('ST_X')
+      expect(rendered).not.toContain('ST_Y')
+    })
   })
 
   describe('форма SQL: medicineId передан (критерии приёмки 2, 5)', () => {
@@ -312,15 +322,8 @@ describe('PostgresPharmacyMapAdapter (DTJ-195)', () => {
 
   // ─── Что НЕ покрыто в этом файле ─────────────────────────────────────
   //
-  // 1. Интеграционные сценарии тест-плана DTJ-195 (требуют testcontainers Postgres, EP-19):
-  //    bbox включение/исключение по границе (TC эквивалент, GiST `&&`), suspended-сеть
-  //    исключена (TC-CAT-019-эквивалент), нулевой остаток → offer=null на реальных данных,
-  //    narcotic → offer=null на реальных данных, `EXPLAIN` подтверждает Index Scan по
-  //    `ix_pharmacies_geo_point`.
-  // 2. ДАЖЕ после раскатки EP-19 сценарии из п.1 не заработают, пока не появится миграция,
-  //    добавляющая `pharmacies.geo_point`/расширение `postgis`/индекс `ix_pharmacies_geo_point`
-  //    — см. JSDoc адаптера, блок «ВАЖНО», п.1. Никакой найденный тикет её не берёт на себя.
-  //
-  // Оба пункта зафиксированы как `blockers` в отчёте сдачи DTJ-195 (§9 хендбука запрещает
-  // `it.skip`/`it.todo` вместо честного отчёта).
+  // Реальная семантика на живых данных — bbox включение/исключение по границе (обычный
+  // btree-диапазон, `ix_pharmacies_lat_lon`), suspended-сеть исключена, narcotic → offer=null,
+  // нулевой остаток → offer=null, `latitude`/`longitude` (`numeric`) приходят как JS `number`,
+  // не строки — см. `postgres-pharmacy-map.adapter.integration.spec.ts` (реальный Postgres).
 })

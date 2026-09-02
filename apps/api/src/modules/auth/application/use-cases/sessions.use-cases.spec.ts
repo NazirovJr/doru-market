@@ -24,7 +24,6 @@
 import { createHash } from 'node:crypto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { ForbiddenError, type UserRole } from '@dorutj/contracts'
-import { type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { AuthSession } from '@/modules/auth/domain/value-objects/auth-session.vo.js'
 import { type User } from '@/modules/auth/domain/user.js'
 import type {
@@ -33,7 +32,7 @@ import type {
   RotateAuthSessionInput,
 } from '../ports/auth-sessions.repository.port.js'
 import type { CreateUserInput, UsersRepository } from '../ports/users.repository.port.js'
-import type { UnitOfWorkPort } from '../ports/unit-of-work.port.js'
+import type { UnitOfWorkPort, UnitOfWorkTx } from '../ports/unit-of-work.port.js'
 import { LogoutUseCase } from './logout.use-case.js'
 import { LogoutAllUseCase } from './logout-all.use-case.js'
 import { ListSessionsUseCase } from './list-sessions.use-case.js'
@@ -81,30 +80,31 @@ class StubAuthSessionsRepository implements AuthSessionsRepository {
   }
    
   revokeCurrentAndCreateNext(
-    _tx: DrizzleDb,
+    _tx: UnitOfWorkTx,
     _previousId: string,
     _input: RotateAuthSessionInput,
   ): Promise<AuthSession> {
     throw new Error('not used in DTJ-026 tests')
   }
    
-  revokeAllByFamilyId(
-    _tx: DrizzleDb,
-    _familyId: string,
-    _reason: RevokeReason,
-    _now: Date,
-  ): Promise<number> {
+  revokeAllByFamilyId(_input: {
+    tx: UnitOfWorkTx
+    familyId: string
+    reason: RevokeReason
+    now: Date
+  }): Promise<number> {
     return Promise.resolve(0)
   }
-  async revokeOneById(
-    _tx: DrizzleDb,
-    sessionId: string,
-    reason: RevokeReason,
-    now: Date,
-  ): Promise<number> {
+  async revokeOneById(input: {
+    tx: UnitOfWorkTx
+    sessionId: string
+    reason: RevokeReason
+    now: Date
+  }): Promise<number> {
+    const { sessionId, reason, now } = input
     this.oneRevokeCalls.push({ sessionId, reason, now })
     const session = this.byId.get(sessionId)
-    if (session === undefined || session.revokedAt !== null) {
+    if (session?.revokedAt !== null) {
       return Promise.resolve(0)
     }
     const revoked = AuthSession.restore({ ...session.props, revokedAt: now, revokeReason: reason })
@@ -114,20 +114,18 @@ class StubAuthSessionsRepository implements AuthSessionsRepository {
     }
     return Promise.resolve(1)
   }
-  async revokeAllByUserId(
-    _tx: DrizzleDb,
-    userId: string,
-    reason: RevokeReason,
-    now: Date,
-  ): Promise<number> {
+  async revokeAllByUserId(input: {
+    tx: UnitOfWorkTx
+    userId: string
+    reason: RevokeReason
+    now: Date
+  }): Promise<number> {
+    const { userId, reason, now } = input
     this.userRevokeCalls.push({ userId, reason, now })
     let count = 0
     for (const session of this.byId.values()) {
       if (session.userId === userId && session.revokedAt === null) {
-        const revoked = {
-          ...session,
-          props: { ...session.props, revokedAt: now, revokeReason: reason },
-        } as AuthSession
+        const revoked = AuthSession.restore({ ...session.props, revokedAt: now, revokeReason: reason })
         this.byId.set(session.id, revoked)
         if (this.byRefreshHash.get(session.refreshTokenHash)?.id === session.id) {
           this.byRefreshHash.delete(session.refreshTokenHash)
@@ -159,7 +157,12 @@ class StubUsersRepository implements UsersRepository {
   findOrCreateByTenantAndPhone(_input: CreateUserInput): Promise<User> {
     throw new Error('not used in DTJ-026 tests')
   }
-   
+
+  // [Task 5] Глобальный поиск по phone — заглушка для sessions тестов.
+  findActiveByPhone(_phoneNumber: string): Promise<User | null> {
+    return Promise.resolve(null)
+  }
+
   update(_id: string, _patch: never): Promise<User> {
     throw new Error('not used in DTJ-026 tests')
   }
@@ -168,7 +171,7 @@ class StubUsersRepository implements UsersRepository {
 class NoopUnitOfWork implements UnitOfWorkPort {
   async run<T>(callback: Parameters<UnitOfWorkPort['run']>[0]): Promise<T> {
      
-    return (callback as (tx: DrizzleDb) => Promise<T>)(null as unknown as DrizzleDb)
+    return (callback as (tx: UnitOfWorkTx) => Promise<T>)(null)
   }
 }
 
@@ -229,7 +232,7 @@ describe('LogoutUseCase (DTJ-026, SRS-API-029)', () => {
     const result = await useCase.execute({ refreshToken: REFRESH_TOKEN_1, currentUserId: USER_ID })
     expect(result.ok).toBe(true)
     expect(sessions.oneRevokeCalls).toEqual([
-      { sessionId: 's1', reason: 'user_logout', now: expect.any(Date) },
+      { sessionId: 's1', reason: 'user_logout', now: expect.any(Date) as Date },
     ])
   })
 
@@ -285,7 +288,7 @@ describe('LogoutAllUseCase (DTJ-026, SRS-API-029)', () => {
     sessions.seed(makeSession({ id: 's3', userId: OTHER_USER_ID }))
     await useCase.execute({ userId: USER_ID })
     expect(sessions.userRevokeCalls).toEqual([
-      { userId: USER_ID, reason: 'user_logout_all', now: expect.any(Date) },
+      { userId: USER_ID, reason: 'user_logout_all', now: expect.any(Date) as Date },
     ])
     // 2 сессии user-1 revoked, 1 сессия user-2 — нетронута
     const s1 = await sessions.findById('s1')
@@ -299,7 +302,7 @@ describe('LogoutAllUseCase (DTJ-026, SRS-API-029)', () => {
   it('2.2 успех с 0 сессий: пользователь ещё не залогинен', async () => {
     await useCase.execute({ userId: USER_ID })
     expect(sessions.userRevokeCalls).toEqual([
-      { userId: USER_ID, reason: 'user_logout_all', now: expect.any(Date) },
+      { userId: USER_ID, reason: 'user_logout_all', now: expect.any(Date) as Date },
     ])
   })
 })
@@ -415,7 +418,7 @@ describe('RevokeSessionUseCase (DTJ-026, SRS-API-030)', () => {
     const result = await useCase.execute({ sessionId: 's-mine', actorUserId: USER_ID })
     expect(result.ok).toBe(true)
     expect(sessions.oneRevokeCalls).toEqual([
-      { sessionId: 's-mine', reason: 'user_logout', now: expect.any(Date) },
+      { sessionId: 's-mine', reason: 'user_logout', now: expect.any(Date) as Date },
     ])
   })
 
@@ -440,12 +443,12 @@ describe('RevokeSessionUseCase (DTJ-026, SRS-API-030)', () => {
 // Compile-time check, что StubAuthSessionsRepository покрывает ВСЁ
 // текущее API AuthSessionsRepository (DTJ-024+025+026). Если кто-то добавит
 // новый метод в порт и забудет здесь — тесты упадут на компиляции.
-interface _CompileTimeCheck {
+interface CompileTimeCheck {
   sessions: AuthSessionsRepository
   users: UsersRepository
   role: UserRole
 }
-const _compileTimeCheck: _CompileTimeCheck = {
+const _compileTimeCheck: CompileTimeCheck = {
   sessions: new StubAuthSessionsRepository(),
   users: new StubUsersRepository(),
   role: 'customer',

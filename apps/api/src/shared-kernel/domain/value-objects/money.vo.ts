@@ -23,6 +23,8 @@ import { InvalidMoneyError } from '@/shared-kernel/domain/errors/invalid-money.e
 const DIRAMS_PER_TJS = 100n
 const DECIMAL_PART_LENGTH = 2
 const DECIMAL_PART_PADDING = '0'
+const ZERO_BIGINT = 0n
+const ONE_BIGINT = 1n
 
 /** ISO 4217 currency codes. В R1 — только `TJS`, в R3 добавится мульти-валюта. */
 export type Currency = 'TJS' | 'USD'
@@ -35,7 +37,7 @@ export class Money {
 
   /** Создание `Money` из целого числа дирамов. `n >= 0n`, иначе `InvalidMoneyError`. */
   static fromDiram(n: bigint, currency: Currency = 'TJS'): Money {
-    if (n < 0n) {
+    if (n < ZERO_BIGINT) {
       throw new InvalidMoneyError(`Money cannot be negative: ${n.toString()} dirams`, { diram: n.toString(), currency })
     }
     return new Money(n, currency)
@@ -61,7 +63,7 @@ export class Money {
     }
     if (fractionalPart.length > DECIMAL_PART_LENGTH) {
       throw new InvalidMoneyError(
-        `fractional part has more than ${DECIMAL_PART_LENGTH} digits: "${raw}"`,
+        `fractional part has more than ${String(DECIMAL_PART_LENGTH)} digits: "${raw}"`,
         { raw },
       )
     }
@@ -85,7 +87,7 @@ export class Money {
   subtract(other: Money): Money {
     assertSameCurrency(this, other, 'subtract')
     const result = this.diram - other.diram
-    if (result < 0n) {
+    if (result < ZERO_BIGINT) {
       throw new InvalidMoneyError(
         `subtract would yield negative Money: ${this.diram.toString()} - ${other.diram.toString()} = ${result.toString()}`,
         { minuendDiram: this.diram.toString(), subtrahendDiram: other.diram.toString() },
@@ -120,9 +122,9 @@ export class Money {
     }
     // Базовая доля: floor(total * ratio / sumRatios).
     const baseShares = ratios.map((r) => (this.diram * BigInt(r)) / BigInt(sumRatios))
-    const allocatedSum = baseShares.reduce((acc, s) => acc + s, 0n)
+    const allocatedSum = baseShares.reduce((acc, s) => acc + s, ZERO_BIGINT)
     const remainder = this.diram - allocatedSum
-    if (remainder < 0n) {
+    if (remainder < ZERO_BIGINT) {
       throw new InvalidMoneyError('internal: allocate remainder is negative', {
         diram: this.diram.toString(),
         baseShares: baseShares.map((s) => s.toString()),
@@ -151,20 +153,20 @@ export class Money {
       if (candidate === undefined) break
       extra.add(candidate.idx)
     }
-    return baseShares.map((s, idx) => new Money(s + (extra.has(idx) ? 1n : 0n), this.currency))
+    return baseShares.map((s, idx) => new Money(s + (extra.has(idx) ? ONE_BIGINT : ZERO_BIGINT), this.currency))
   }
 
   isZero(): boolean {
-    return this.diram === 0n
+    return this.diram === ZERO_BIGINT
   }
 
   isPositive(): boolean {
-    return this.diram > 0n
+    return this.diram > ZERO_BIGINT
   }
 
   /** Всегда `false` после DTJ-007 §1 — конструктор запрещает `n < 0n`. Оставлено для API полноты. */
   isNegative(): boolean {
-    return this.diram < 0n
+    return this.diram < ZERO_BIGINT
   }
 
   equals(other: Money): boolean {

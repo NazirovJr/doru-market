@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import type * as MapLibreGL from 'maplibre-gl'
 import type { BboxCoordinates } from '@dorutj/contracts'
 import { useT } from '@dorutj/i18n'
-import { useLocale } from '@/shared/config/locale-provider'
+import { LocaleProvider, useLocale } from '@/shared/config/locale-provider'
 import { useMapViewport } from '../model/use-map-viewport'
 import type { MapPin } from '../model/map-pin'
 import { PharmacyPinPopup } from './pharmacy-pin-popup'
@@ -65,7 +65,15 @@ interface OpenPinPopupArgs {
 function openPinPopup({ map, maplibregl, pin }: OpenPinPopupArgs): void {
   const container = document.createElement('div')
   const root = createRoot(container)
-  root.render(<PharmacyPinPopup pin={pin} />)
+  // Попап монтируется в ОТДЕЛЬНОЕ React-дерево (createRoot на DOM-узле maplibre-gl, вне дерева
+  // MapView) — контекст родителя (LocaleProvider) сюда не долетает. Регресс DTJ-198: без своего
+  // LocaleProvider `useLocale()` внутри PharmacyPinPopup падал с "должен использоваться внутри
+  // LocaleProvider". Персистентная локаль читается из того же localStorage, что и у родителя.
+  root.render(
+    <LocaleProvider>
+      <PharmacyPinPopup pin={pin} />
+    </LocaleProvider>,
+  )
 
   const popup = new maplibregl.Popup({ offset: POPUP_OFFSET_PX })
     .setLngLat([pin.lon, pin.lat])
@@ -95,7 +103,7 @@ function createPinMarker({ map, maplibregl, pin, onPinClick }: CreatePinMarkerAr
   return marker
 }
 
-export function MapView({ center, zoom, minZoom, pins, onViewportChange, onPinClick }: MapViewProps): ReactElement {
+export const MapView = ({ center, zoom, minZoom, pins, onViewportChange, onPinClick }: MapViewProps): ReactElement => {
   const { t } = useT(useLocale().locale)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<MapLibreGL.Map | null>(null)

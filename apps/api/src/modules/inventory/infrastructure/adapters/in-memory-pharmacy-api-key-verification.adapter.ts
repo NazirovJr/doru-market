@@ -20,13 +20,14 @@
  */
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 import { Inject, Injectable } from '@nestjs/common'
+import type Redis from 'ioredis'
 import { REDIS_CLIENT } from '@/infrastructure/redis/redis.token.js'
 import {
   PHARMACY_API_KEY_VERIFICATION,
   type PharmacyApiKeyVerificationInput,
   type PharmacyApiKeyVerificationPort,
   type PharmacyApiKeyVerificationResult,
-} from '../../application/ports/pharmacy-api-key-verification.port.js'
+} from '@/modules/inventory/application/ports/pharmacy-api-key-verification.port.js'
 import {
   MtlsRequiredError,
   PharmacyApiKeyInvalidError,
@@ -57,10 +58,7 @@ export class InMemoryPharmacyApiKeyVerificationAdapter
   /** Использованные nonce'ы: `${pharmacyId}::${nonce}` → момент. */
   private readonly usedNonces = new Map<string, Date>()
 
-  constructor(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ioredis Redis client
-    @Inject(REDIS_CLIENT) _redis: any,
-  ) {
+  constructor(@Inject(REDIS_CLIENT) _redis: Redis) {
     // In-memory адаптер не использует Redis — оставлено для совместимости с DI
     // будущих адаптеров (R2: реальная Redis-реализация nonce-store).
     void _redis
@@ -69,30 +67,50 @@ export class InMemoryPharmacyApiKeyVerificationAdapter
   async verify(
     input: PharmacyApiKeyVerificationInput,
   ): Promise<PharmacyApiKeyVerificationResult> {
-    // (2) lookup по `keyId`
+    // Нет реального `await` (R1-бутстрап, БД не задействована) — `async`
+    // сохранён намеренно, `await Promise.resolve()` держит функцию в
+    // promise-мире, чтобы синхронные `throw` ниже стали отклонением
+    // Promise (контракт порта), а не синхронным исключением.
+    await Promise.resolve()
+    const key = this.resolveVerifiedKey(input)
+    this.assertTimestampWithinWindow(input)
+    this.assertNonceNotReplayed(key, input)
+    this.assertSignatureValid(key, input)
+    // (10) success
+    return { pharmacyId: key.pharmacyId, chainId: key.chainId }
+  }
+
+  /** Шаги (2)-(4): lookup по `keyId`, сравнение `secret`, mTLS. */
+  private resolveVerifiedKey(input: PharmacyApiKeyVerificationInput): MockApiKey {
     const key = this.keys.get(input.keyId)
-    if (key === undefined || key.revokedAt !== null) {
+    if (key?.revokedAt !== null) {
       throw new PharmacyApiKeyInvalidError()
     }
-
     // (3) сравнение `secret` (мок; Drizzle → argon2)
     if (key.secretPlain !== input.secret) {
       throw new PharmacyApiKeyInvalidError()
     }
-
     // (4) mTLS
     if (key.requireMtls && input.mtlsVerifiedHeader !== 'SUCCESS') {
       throw new MtlsRequiredError()
     }
+    return key
+  }
 
-    // (5) timestamp-окно
+  /** Шаг (5): timestamp-окно. */
+  private assertTimestampWithinWindow(input: PharmacyApiKeyVerificationInput): void {
     const nowSec = Math.floor(Date.now() / 1000)
     const ts = Number.parseInt(input.timestamp, 10)
     if (Number.isNaN(ts) || Math.abs(nowSec - ts) > DEFAULT_SIGNATURE_WINDOW_SECONDS) {
       throw new PharmacyTimestampOutOfWindowError()
     }
+  }
 
-    // (6) Redis nonce-replay
+  /** Шаг (6): Redis nonce-replay (мок — `Map` в памяти). */
+  private assertNonceNotReplayed(
+    key: MockApiKey,
+    input: PharmacyApiKeyVerificationInput,
+  ): void {
     const nonceKey = `${key.pharmacyId}::${input.nonce}`
     const already = this.usedNonces.get(nonceKey)
     if (already !== undefined) {
@@ -100,14 +118,18 @@ export class InMemoryPharmacyApiKeyVerificationAdapter
     }
     this.usedNonces.set(nonceKey, new Date())
     // TODO(EP-19, DTJ-156 Drizzle): реальный `SET pharmacy_nonce:... 1 NX EX 300`.
+  }
 
+  /** Шаги (7)-(9): canonical → expected signature → timing-safe compare. */
+  private assertSignatureValid(
+    key: MockApiKey,
+    input: PharmacyApiKeyVerificationInput,
+  ): void {
     // (7) canonical
     const bodyHash = createHash('sha256').update(input.rawBody).digest('hex')
     const canonical = `${input.method}\n${input.path}\n${input.timestamp}\n${input.nonce}\n${bodyHash}`
-
     // (8) expected signature
     const expected = createHmac('sha256', key.secretPlain).update(canonical).digest('hex')
-
     // (9) timing-safe compare
     let provided: Buffer
     try {
@@ -125,9 +147,6 @@ export class InMemoryPharmacyApiKeyVerificationAdapter
     if (!timingSafeEqual(provided, expectedBuffer)) {
       throw new PharmacySignatureInvalidError()
     }
-
-    // (10) success
-    return { pharmacyId: key.pharmacyId, chainId: key.chainId }
   }
 
   /** Хелпер для тестов / R1-bутстрапа. */

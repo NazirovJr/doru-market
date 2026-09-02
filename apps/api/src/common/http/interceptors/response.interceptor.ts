@@ -14,11 +14,11 @@
  */
 import { CallHandler, type ExecutionContext, Injectable, type NestInterceptor } from '@nestjs/common'
 import { map, type Observable } from 'rxjs'
-import { type SuccessEnvelope, isSuccessEnvelope } from '@dorutj/contracts'
+import { isSuccessEnvelope } from '@dorutj/contracts'
 
 @Injectable()
 export class ResponseInterceptor implements NestInterceptor {
-  intercept(_context: ExecutionContext, next: CallHandler): Observable<SuccessEnvelope<unknown> | unknown> {
+  intercept(_context: ExecutionContext, next: CallHandler): Observable<unknown> {
     return next.handle().pipe(
       map((value: unknown) => {
         if (isSuccessEnvelope(value)) {

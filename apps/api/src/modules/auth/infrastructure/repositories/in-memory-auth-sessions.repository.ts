@@ -117,12 +117,13 @@ export class InMemoryAuthSessionsRepository implements AuthSessionsRepository {
   }
 
    
-  async revokeAllByFamilyId(
-    _tx: UnitOfWorkTx,
-    familyId: string,
-    reason: RevokeReason,
-    now: Date,
-  ): Promise<number> {
+  async revokeAllByFamilyId(input: {
+    tx: UnitOfWorkTx
+    familyId: string
+    reason: RevokeReason
+    now: Date
+  }): Promise<number> {
+    const { familyId, reason, now } = input
     let revokedCount = 0
     for (const session of this.byId.values()) {
       if (session.familyId === familyId && session.revokedAt === null) {
@@ -144,14 +145,15 @@ export class InMemoryAuthSessionsRepository implements AuthSessionsRepository {
   }
 
    
-  async revokeOneById(
-    _tx: UnitOfWorkTx,
-    sessionId: string,
-    reason: RevokeReason,
-    now: Date,
-  ): Promise<number> {
+  async revokeOneById(input: {
+    tx: UnitOfWorkTx
+    sessionId: string
+    reason: RevokeReason
+    now: Date
+  }): Promise<number> {
+    const { sessionId, reason, now } = input
     const session = this.byId.get(sessionId)
-    if (session === undefined || session.revokedAt !== null) {
+    if (session?.revokedAt !== null) {
       // Идемпотентный путь: 0 = либо не существует, либо уже revoked. Не
       // раскрываем причину подробнее (logout чужой сессии / повторный logout
       // / logout несуществующей — все дают 0, без раскрытия).
@@ -170,12 +172,13 @@ export class InMemoryAuthSessionsRepository implements AuthSessionsRepository {
   }
 
    
-  async revokeAllByUserId(
-    _tx: UnitOfWorkTx,
-    userId: string,
-    reason: RevokeReason,
-    now: Date,
-  ): Promise<number> {
+  async revokeAllByUserId(input: {
+    tx: UnitOfWorkTx
+    userId: string
+    reason: RevokeReason
+    now: Date
+  }): Promise<number> {
+    const { userId, reason, now } = input
     let revokedCount = 0
     for (const session of this.byId.values()) {
       if (session.userId === userId && session.revokedAt === null) {

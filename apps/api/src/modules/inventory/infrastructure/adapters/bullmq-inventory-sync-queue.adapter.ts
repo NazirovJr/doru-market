@@ -19,12 +19,13 @@
  */
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common'
 import { Queue, type JobsOptions } from 'bullmq'
+import type Redis from 'ioredis'
 import { REDIS_CLIENT } from '@/infrastructure/redis/redis.token.js'
 import {
   type InventorySyncJobData,
   type InventorySyncQueuePort,
   resolveInventorySyncJobPriority,
-} from '../../application/ports/inventory-sync-queue.port.js'
+} from '@/modules/inventory/application/ports/inventory-sync-queue.port.js'
 
 const QUEUE_NAME = 'inventory-sync-queue'
 const JOB_OPTIONS: Omit<JobsOptions, 'priority'> = {
@@ -39,13 +40,9 @@ export class BullmqInventorySyncQueueAdapter implements InventorySyncQueuePort, 
    
   private readonly queue: Queue<InventorySyncJobData>
 
-  constructor(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ioredis Redis client type.
-    @Inject(REDIS_CLIENT) redis: any,
-  ) {
+  constructor(@Inject(REDIS_CLIENT) redis: Redis) {
     this.queue = new Queue<InventorySyncJobData>(QUEUE_NAME, {
-       
-      connection: redis as never,
+      connection: redis,
     })
   }
 

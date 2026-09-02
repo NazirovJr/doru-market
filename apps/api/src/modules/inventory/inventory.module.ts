@@ -13,6 +13,17 @@
  * `DrizzleFullSyncCompletionAdapter` (DTJ-151) зарегистрирован, но НЕ
  * активирован — провайдер остаётся `InMemoryFullSyncCompletion` до
  * разблокировки БД-инфраструктуры.
+ *
+ * `DrizzleInventorySyncErrorsRepository` (DTJ-145) — реальная Postgres-запись
+ * построчных ошибок батча в `inventory_sync_errors`. Зарегистрирована как
+ * самостоятельный DI-провайдер (не биндинг `INVENTORY_SYNC_BATCH_REPOSITORY`
+ * целиком): её FK `batch_id → inventory_sync_batch(id)` требует, чтобы батч
+ * уже существовал строкой в реальном Postgres, а это (`findById`/`save`/
+ * `createIfNotExists`) — Drizzle-персистентность DTJ-154, которой ещё нет
+ * (сегодня батч существует только в `InMemoryInventorySyncBatchRepository`).
+ * Переключать `INVENTORY_SYNC_BATCH_REPOSITORY` до DTJ-154 нельзя — это
+ * уронит FK-constraint'ом каждый реальный `POST /inventory/batch-update`.
+ * См. JSDoc `drizzle-inventory-sync-errors.repository.ts`.
  */
 import { Module } from '@nestjs/common'
 import { AuthModule } from '@/modules/auth/auth.module.js'
@@ -39,6 +50,7 @@ import { DetectStuckFullSyncSessionsUseCase } from './application/use-cases/dete
 import { FullSyncSessionWatchdogCron } from './infrastructure/jobs/full-sync-session-watchdog.cron.js'
 import { BullmqInventorySyncQueueAdapter } from './infrastructure/adapters/bullmq-inventory-sync-queue.adapter.js'
 import { DrizzleFullSyncCompletionAdapter } from './infrastructure/adapters/drizzle-full-sync-completion.adapter.js'
+import { DrizzleInventorySyncErrorsRepository } from './infrastructure/adapters/drizzle-inventory-sync-errors.repository.js'
 
 @Module({
   imports: [AuthModule, RedisModule],
@@ -67,6 +79,10 @@ import { DrizzleFullSyncCompletionAdapter } from './infrastructure/adapters/driz
     // через `DrizzleDb`-провайдер, но как `FULL_SYNC_COMPLETION` активен
     // InMemory-вариант (TODO: переключить при наличии БД).
     DrizzleFullSyncCompletionAdapter,
+    // DTJ-145: реальная Postgres-запись `inventory_sync_errors`. НЕ активна
+    // как `INVENTORY_SYNC_BATCH_REPOSITORY` — см. JSDoc модуля выше и
+    // JSDoc класса (блокер: FK на `inventory_sync_batch`, DTJ-154).
+    DrizzleInventorySyncErrorsRepository,
   ],
   controllers: [InventoryBatchUpdateController],
   exports: [

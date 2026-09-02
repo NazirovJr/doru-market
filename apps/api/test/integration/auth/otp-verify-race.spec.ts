@@ -138,9 +138,9 @@ describe('auth.otp-verify-race (DTJ-029, SRS-API-071)', () => {
         request(httpServer).post('/api/v1/auth/otp/verify').send({ otpRequestId, code }),
       ])
       const statuses = [r1.status, r2.status].sort()
-      expect(statuses, `iter ${i + 1}/10`).toEqual([200, 400])
+      expect(statuses, `iter ${String(i + 1)}/10`).toEqual([200, 400])
       const after = sessionsRepo.byId.size
-      expect(after - before, `iter ${i + 1}/10: sessions created`).toBe(1)
+      expect(after - before, `iter ${String(i + 1)}/10: sessions created`).toBe(1)
     }
   })
 })

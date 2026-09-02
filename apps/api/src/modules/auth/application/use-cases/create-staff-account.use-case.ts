@@ -37,7 +37,7 @@ import {
   InvalidPhoneNumberFormatError,
   type UserRole,
 } from '@dorutj/contracts'
-import { err, ok, type Result } from '@dorutj/domain-kernel'
+import { err, isErr, ok, type Result } from '@dorutj/domain-kernel'
 import { PhoneNumber } from '@/modules/auth/domain/value-objects/phone-number.vo.js'
 import {
   StaffAccountPolicy,
@@ -73,76 +73,33 @@ export class CreateStaffAccountUseCase {
     actor: JwtClaims,
     command: CreateStaffAccountCommand,
   ): Promise<Result<CreateStaffAccountResult, ForbiddenError | ConflictError | InvalidPhoneNumberFormatError>> {
-    // Шаг 1: валидация phone.
-    let phone: PhoneNumber
-    try {
-      phone = PhoneNumber.parse(command.phone)
-    } catch {
-      return Promise.resolve(
-        err(
-          new InvalidPhoneNumberFormatError({ field: 'phone' }),
-        ),
-      )
+    const phoneResult = this.parsePhone(command.phone)
+    if (isErr(phoneResult)) {
+      return err(phoneResult.error)
+    }
+    const phone = phoneResult.value
+
+    const policyError = this.checkPolicy(actor, command)
+    if (policyError !== null) {
+      return err(policyError)
     }
 
-    // Шаг 2: проверка прав (ownership по chainId + role-based).
-    const policyActor: StaffAccountPolicyActor = {
-      role: actor.role,
-      pharmacyId: actor.pharmacyId ?? null,
-      chainId: actor.chainId ?? null,
-    }
-    const policyTarget: StaffAccountPolicyTarget = {
-      role: command.role,
-      chainId: command.chainId ?? null,
-    }
-    if (!StaffAccountPolicy.canCreate(policyActor, policyTarget)) {
-      return Promise.resolve(
-        err(
-          new ForbiddenError(
-            `actor.role="${actor.role}" (chain=${actor.chainId ?? '∅'}) cannot create ` +
-              `role="${command.role}" (chain=${command.chainId ?? '∅'})`,
-            {
-              actorRole: actor.role,
-              targetRole: command.role,
-              actorChainId: actor.chainId,
-              targetChainId: command.chainId,
-            },
-          ),
-        ),
-      )
-    }
-
-    // Шаг 3: проверка дубля phone (по `unique_phone_per_tenant` constraint —
-    // проверяем явно для осмысленного ErrorEnvelope).
     // `actor.tenantId` для `super_admin` может быть null; на этом шаге
     // запрещаем создание staff-аккаунтов супер-админом (R1: super_admin не
     // управляет тенантами через этот endpoint, для этого есть admin-API R2).
     if (actor.tenantId === null) {
-      return Promise.resolve(
-        err(
-          new ForbiddenError('super_admin cannot create staff accounts via this endpoint', {
-            actorRole: actor.role,
-          }),
-        ),
-      )
-    }
-    const existing = await this.users.findByTenantAndPhone(actor.tenantId, phone.value)
-    if (existing !== null) {
-      return Promise.resolve(
-        err(
-          new ConflictError(
-            `user with phone "${phone.value}" already exists in this tenant`,
-            {
-              resource: 'users',
-              existingUserId: existing.id,
-              conflictingField: 'phone',
-            },
-          ),
-        ),
+      return err(
+        new ForbiddenError('super_admin cannot create staff accounts via this endpoint', {
+          actorRole: actor.role,
+        }),
       )
     }
 
-    // Шаг 4: создание.
+    const duplicateError = await this.checkDuplicatePhone(actor.tenantId, phone)
+    if (duplicateError !== null) {
+      return err(duplicateError)
+    }
+
     const user = await this.users.create({
       tenantId: actor.tenantId,
       phoneNumber: phone.value,
@@ -152,7 +109,58 @@ export class CreateStaffAccountUseCase {
       ...(command.chainId !== undefined ? { chainId: command.chainId } : { chainId: null }),
     })
 
-    return Promise.resolve(ok({ userId: user.id, role: user.role }))
+    return ok({ userId: user.id, role: user.role })
+  }
+
+  /** Шаг 1: валидация phone. */
+  private parsePhone(rawPhone: string): Result<PhoneNumber, InvalidPhoneNumberFormatError> {
+    try {
+      return ok(PhoneNumber.parse(rawPhone))
+    } catch {
+      return err(new InvalidPhoneNumberFormatError({ field: 'phone' }))
+    }
+  }
+
+  /** Шаг 2: проверка прав (ownership по chainId + role-based). */
+  private checkPolicy(actor: JwtClaims, command: CreateStaffAccountCommand): ForbiddenError | null {
+    const policyActor: StaffAccountPolicyActor = {
+      role: actor.role,
+      pharmacyId: actor.pharmacyId ?? null,
+      chainId: actor.chainId ?? null,
+    }
+    const policyTarget: StaffAccountPolicyTarget = {
+      role: command.role,
+      chainId: command.chainId ?? null,
+    }
+    if (StaffAccountPolicy.canCreate(policyActor, policyTarget)) {
+      return null
+    }
+    return new ForbiddenError(
+      `actor.role="${actor.role}" (chain=${actor.chainId ?? '∅'}) cannot create ` +
+        `role="${command.role}" (chain=${command.chainId ?? '∅'})`,
+      {
+        actorRole: actor.role,
+        targetRole: command.role,
+        actorChainId: actor.chainId,
+        targetChainId: command.chainId,
+      },
+    )
+  }
+
+  /**
+   * Шаг 3: проверка дубля phone (по `unique_phone_per_tenant` constraint —
+   * проверяем явно для осмысленного ErrorEnvelope).
+   */
+  private async checkDuplicatePhone(tenantId: string, phone: PhoneNumber): Promise<ConflictError | null> {
+    const existing = await this.users.findByTenantAndPhone(tenantId, phone.value)
+    if (existing === null) {
+      return null
+    }
+    return new ConflictError(`user with phone "${phone.value}" already exists in this tenant`, {
+      resource: 'users',
+      existingUserId: existing.id,
+      conflictingField: 'phone',
+    })
   }
 }
 

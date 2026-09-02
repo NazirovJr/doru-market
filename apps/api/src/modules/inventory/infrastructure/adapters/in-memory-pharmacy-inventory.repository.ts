@@ -43,13 +43,12 @@ export class InMemoryPharmacyInventoryRepository implements PharmacyInventoryRep
     return Promise.resolve({ acceptedCount: accepted, updatedCount: updated })
   }
 
-  async findOrCreateManyByMedicineIds(input: {
+  findOrCreateManyByMedicineIds(input: {
     pharmacyId: string
     medicineIds: readonly string[]
   }): Promise<ReadonlyMap<string, PharmacyInventory>> {
     const result = new Map<string, PharmacyInventory>()
-    for (let i = 0; i < input.medicineIds.length; i += 1) {
-      const medicineId = input.medicineIds[i]!
+    for (const medicineId of input.medicineIds) {
       const key = `${input.pharmacyId}::${medicineId}`
       let aggregate = this.aggregates.get(key)
       if (aggregate === undefined) {
@@ -66,15 +65,15 @@ export class InMemoryPharmacyInventoryRepository implements PharmacyInventoryRep
       }
       result.set(medicineId, aggregate)
     }
-    return result
+    return Promise.resolve(result)
   }
 
-  async saveMany(aggregates: readonly PharmacyInventory[]): Promise<void> {
-    for (let i = 0; i < aggregates.length; i += 1) {
-      const aggregate = aggregates[i]!
+  saveMany(aggregates: readonly PharmacyInventory[]): Promise<void> {
+    for (const aggregate of aggregates) {
       const key = `${aggregate.pharmacyId}::${aggregate.medicineId}`
       this.aggregates.set(key, aggregate)
     }
+    return Promise.resolve()
   }
 
   private makeKey(pharmacyId: string, row: InventoryBatchUpsertRow): string {

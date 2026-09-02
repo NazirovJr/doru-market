@@ -5,5 +5,10 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["run-fixture-check.spec.ts", "runtime-connectivity.spec.ts", "suppression-justification.spec.ts"]
+  "include": [
+    "run-fixture-check.spec.ts",
+    "runtime-connectivity.spec.ts",
+    "suppression-justification.spec.ts",
+    "di-explicit-inject.spec.ts"
+  ]
 }

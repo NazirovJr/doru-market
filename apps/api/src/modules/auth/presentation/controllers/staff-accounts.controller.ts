@@ -30,6 +30,7 @@ import {
 import { ok, type ErrorEnvelope, type SuccessEnvelope } from '@dorutj/contracts'
 import { isOk } from '@dorutj/domain-kernel'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
+import { HTTP_STATUS_CREATED } from '@/common/http/http-status.constants.js'
 import { AuthGuard } from '@/modules/auth/presentation/guards/auth.guard.js'
 import { RolesGuard } from '@/modules/auth/presentation/guards/roles.guard.js'
 import { Roles } from '@/modules/auth/presentation/decorators/roles.decorator.js'
@@ -53,7 +54,7 @@ export class StaffAccountsController {
   constructor(@Inject(CreateStaffAccountUseCase) private readonly useCase: CreateStaffAccountUseCase) {}
 
   @Post()
-  @HttpCode(201)
+  @HttpCode(HTTP_STATUS_CREATED)
   async create(
     @Body(new ZodValidationPipe(createStaffAccountDtoSchema)) dto: CreateStaffAccountDto,
     @CurrentUser() actor: JwtClaims,

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import en from './dictionaries/en.json'
-import ru from './dictionaries/ru.json'
-import tj from './dictionaries/tj.json'
-import { useT } from './use-t'
+import en from './dictionaries/en.json' with { type: 'json' }
+import ru from './dictionaries/ru.json' with { type: 'json' }
+import tj from './dictionaries/tj.json' with { type: 'json' }
+import { useT } from './use-t.js'
 
 const ORIGINAL_NODE_ENV = process.env.NODE_ENV
 

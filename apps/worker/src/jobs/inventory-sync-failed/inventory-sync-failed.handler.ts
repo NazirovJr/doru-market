@@ -41,7 +41,7 @@ export interface FailedJobDescriptor {
   readonly opts: { readonly attempts: number }
   readonly failedReason: string
   readonly stacktrace: readonly string[]
-  readonly data: Readonly<Record<string, unknown>> | unknown
+  readonly data: unknown
 }
 
 /** Порт `Clock` (минимальный) — определён в `inventory-sync-ports.ts` (DRY). */
@@ -74,6 +74,66 @@ export interface HandleFailedJobResult {
   readonly markedAsFailed: boolean
 }
 
+/** (4) Попытка терминального перехода в `failed_validation` (шаг вынесен для max-lines-per-function). */
+async function transitionToFailedValidation(args: {
+  readonly repository: InventorySyncBatchRepositoryPort
+  readonly batch: InventorySyncBatchSnapshot
+  readonly batchId: string
+  readonly logger: Logger
+}): Promise<HandleFailedJobResult | null> {
+  const { repository, batch, batchId, logger } = args
+  // Локальный «снимок» — handler НЕ мутирует батч напрямую; реальный
+  // `markFailedValidation()` живёт в API (DTJ-144), worker выражает решение через snapshot.
+  const updatedSnapshot: InventorySyncBatchSnapshot = {
+    id: batch.id,
+    pharmacyId: batch.pharmacyId,
+    status: 'failed_validation',
+    syncType: batch.syncType,
+  }
+  try {
+    await repository.save(updatedSnapshot)
+    return null
+  } catch (error) {
+    if (error instanceof IllegalBatchStatusTransitionError) {
+      logger.warn(
+        { batchId, fromStatus: error.fromStatus, toStatus: error.toStatus },
+        'inventory-sync failed: race with concurrent terminal transition',
+      )
+      return { acted: true, markedAsFailed: false }
+    }
+    throw error
+  }
+}
+
+/** (5)+(6) Запись ошибки и алерт on-call (шаг вынесен для max-lines-per-function). */
+async function recordFailureAndAlert(args: {
+  readonly repository: InventorySyncBatchRepositoryPort
+  readonly outbox: InventoryOutboxPort
+  readonly job: FailedJobDescriptor
+  readonly batch: InventorySyncBatchSnapshot
+  readonly batchId: string
+}): Promise<void> {
+  const { repository, outbox, job, batch, batchId } = args
+  const sanitized = sanitizeErrorDetail(buildErrorDetail(job))
+  const truncated =
+    sanitized.length > MAX_ERROR_DETAIL_LENGTH
+      ? sanitized.slice(0, MAX_ERROR_DETAIL_LENGTH)
+      : sanitized
+  await repository.appendError({
+    batchId,
+    rowIndex: null,
+    errorCode: ERROR_CODE_PROCESSING_FAILED,
+    errorDetail: truncated,
+  })
+  outbox.appendProcessingFailedAlert({
+    eventType: 'inventory.sync_batch.processing_failed',
+    batchId,
+    pharmacyId: batch.pharmacyId,
+    attemptsMade: job.attemptsMade,
+    lastErrorCode: ERROR_CODE_PROCESSING_FAILED,
+  })
+}
+
 /** Чистая функция-оркестратор (тестируется без BullMQ). */
 export async function handleFailedJob(
   input: HandleFailedJobInput,
@@ -104,49 +164,12 @@ export async function handleFailedJob(
     return { acted: true, markedAsFailed: false }
   }
 
-  // (4) Попытка терминального перехода. Локальный «снимок» — handler
-  //     НЕ мутирует батч напрямую; реальный `markFailedValidation()`
-  //     живёт в API (DTJ-144), worker выражает решение через snapshot.
-  const updatedSnapshot: InventorySyncBatchSnapshot = {
-    id: batch.id,
-    pharmacyId: batch.pharmacyId,
-    status: 'failed_validation',
-    syncType: batch.syncType,
-  }
-  try {
-    await repository.save(updatedSnapshot)
-  } catch (error) {
-    if (error instanceof IllegalBatchStatusTransitionError) {
-      logger.warn(
-        { batchId, fromStatus: error.fromStatus, toStatus: error.toStatus },
-        'inventory-sync failed: race with concurrent terminal transition',
-      )
-      return { acted: true, markedAsFailed: false }
-    }
-    throw error
+  const transitionResult = await transitionToFailedValidation({ repository, batch, batchId, logger })
+  if (transitionResult !== null) {
+    return transitionResult
   }
 
-  // (5) Записать ОДНУ строку `inventory_sync_errors`.
-  const sanitized = sanitizeErrorDetail(buildErrorDetail(job))
-  const truncated =
-    sanitized.length > MAX_ERROR_DETAIL_LENGTH
-      ? sanitized.slice(0, MAX_ERROR_DETAIL_LENGTH)
-      : sanitized
-  await repository.appendError({
-    batchId,
-    rowIndex: null,
-    errorCode: ERROR_CODE_PROCESSING_FAILED,
-    errorDetail: truncated,
-  })
-
-  // (6) Алерт для on-call.
-  outbox.appendProcessingFailedAlert({
-    eventType: 'inventory.sync_batch.processing_failed',
-    batchId,
-    pharmacyId: batch.pharmacyId,
-    attemptsMade: job.attemptsMade,
-    lastErrorCode: ERROR_CODE_PROCESSING_FAILED,
-  })
+  await recordFailureAndAlert({ repository, outbox, job, batch, batchId })
 
   logger.error(
     { batchId, pharmacyId: batch.pharmacyId, attemptsMade: job.attemptsMade },

@@ -19,6 +19,8 @@ import { REDIS_CONNECTION } from '../../config/redis-connection.provider.js'
 import { InventorySyncFailedJobHandler, type FailedJobDescriptor } from './inventory-sync-failed.handler.js'
 import { INVENTORY_SYNC_QUEUE_NAME } from './inventory-sync-failed.constants.js'
 
+const DEFAULT_JOB_ATTEMPTS = 5
+
 @Injectable()
 export class InventorySyncFailedListener implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(InventorySyncFailedListener.name)
@@ -29,7 +31,7 @@ export class InventorySyncFailedListener implements OnModuleInit, OnModuleDestro
     private readonly handler: InventorySyncFailedJobHandler,
   ) {}
 
-  async onModuleInit(): Promise<void> {
+  onModuleInit(): void {
     this.queueEvents = new QueueEvents(INVENTORY_SYNC_QUEUE_NAME, {
       connection: this.connection,
     })
@@ -65,7 +67,7 @@ export class InventorySyncFailedListener implements OnModuleInit, OnModuleDestro
   ): Promise<void> {
     const attempts = typeof prev === 'string' ? Number.parseInt(prev, 10) : 0
     let data: Readonly<Record<string, unknown>> = {}
-    let optsAttempts = 5
+    let optsAttempts: number = DEFAULT_JOB_ATTEMPTS
     let attemptsMade = attempts + 1
     try {
       // Job.fromId требует MinimalQueue (не строку). Передаём сам `this.queueEvents` —
@@ -77,7 +79,7 @@ export class InventorySyncFailedListener implements OnModuleInit, OnModuleDestro
         const rawData = job.data as Readonly<Record<string, unknown>> | undefined
         data = rawData ?? {}
         const opts = job.opts as { attempts?: number }
-        optsAttempts = typeof opts.attempts === 'number' ? opts.attempts : 5
+        optsAttempts = typeof opts.attempts === 'number' ? opts.attempts : DEFAULT_JOB_ATTEMPTS
         attemptsMade = typeof job.attemptsMade === 'number' ? job.attemptsMade : attemptsMade
       } else {
         this.logger.warn({ jobId }, 'inventory-sync failed: job not found in Redis (likely cleaned up)')

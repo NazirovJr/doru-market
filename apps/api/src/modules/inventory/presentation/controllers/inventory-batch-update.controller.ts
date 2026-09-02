@@ -52,13 +52,14 @@ import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
 import { CLOCK, type Clock } from '@/shared-kernel/application/ports/clock.port.js'
 import {
   IngestInventoryBatchWithMatchingUseCase,
+  type IngestInventoryBatchCommand,
   type IngestRowInput,
-} from '../../application/use-cases/ingest-inventory-batch-with-matching.use-case.js'
+} from '@/modules/inventory/application/use-cases/ingest-inventory-batch-with-matching.use-case.js'
 import {
   INVENTORY_SYNC_BATCH_REPOSITORY,
   type InventorySyncBatchRepository,
-} from '../../application/ports/inventory-sync-batch.repository.port.js'
-import { INVENTORY_OUTBOX, type InventoryOutboxPort } from '../../application/ports/inventory-outbox.port.js'
+} from '@/modules/inventory/application/ports/inventory-sync-batch.repository.port.js'
+import { INVENTORY_OUTBOX, type InventoryOutboxPort } from '@/modules/inventory/application/ports/inventory-outbox.port.js'
 import {
   PharmacyApiKeyGuard,
   type FastifyRequestWithPrincipal,
@@ -71,7 +72,11 @@ const REST_BATCH_MAX_ITEMS = 1000
 @Controller({ path: 'inventory', version: '1' })
 @UseGuards(PharmacyApiKeyGuard)
 export class InventoryBatchUpdateController {
+  // eslint-disable-next-line max-params -- 4 DI-инъекции, NestJS constructor injection резолвит по позиции; единый options-объект не идиоматичен для Nest DI
   constructor(
+    // Явный @Inject(класс): esbuild (vitest) не эмитит `design:paramtypes` — без него Nest
+    // падает на компиляции модуля (DTJ-001).
+    @Inject(IngestInventoryBatchWithMatchingUseCase)
     private readonly ingestBatch: IngestInventoryBatchWithMatchingUseCase,
     @Inject(INVENTORY_SYNC_BATCH_REPOSITORY)
     private readonly syncBatchRepository: InventorySyncBatchRepository,
@@ -85,22 +90,8 @@ export class InventoryBatchUpdateController {
     dto: InventoryBatchUpdateRequest,
     req: FastifyRequestWithPrincipal,
   ): Promise<unknown> {
-    const principal: PharmacySystemPrincipal | undefined = req.principal
-    if (principal === undefined) {
-      throw new HttpException(
-        fail(ErrorCode.UNAUTHENTICATED, 'pharmacy principal required'),
-        HttpStatus.UNAUTHORIZED,
-      )
-    }
-    if (dto.items.length > REST_BATCH_MAX_ITEMS) {
-      throw new HttpException(
-        fail(
-          ErrorCode.VALIDATION_ERROR,
-          `items.length must be <= ${String(REST_BATCH_MAX_ITEMS)}`,
-        ),
-        HttpStatus.UNPROCESSABLE_ENTITY,
-      )
-    }
+    const principal = this.requirePrincipal(req)
+    this.assertWithinItemLimit(dto)
     // (chain-scope check TODO — см. JSDoc выше)
     const now = this.clock.now()
     const command = RestInventoryRequestToCommandMapper.toCommand(
@@ -127,25 +118,51 @@ export class InventoryBatchUpdateController {
         acceptedForProcessing: false,
       })
     }
-    // 2) raw items.
-    await this.syncBatchRepository.appendRawItems(
-      command.batchId,
-      command.rows.map((row) => ({ rowIndex: row.rowIndex, payload: rowToPayload(row) })),
-    )
-    // 3) Outbox-событие.
-    this.outbox.appendBatchQueued({
-      eventType: 'inventory.sync_batch.queued',
-      batchId: command.batchId,
-      pharmacyId: command.pharmacyId,
-      channel: 'rest',
-      syncType: command.syncType,
-    })
+    await this.persistAndQueueBatch(command)
     // 4) Синхронный вызов use case'а (R1; R2 — через worker).
     const result = await this.ingestBatch.execute(command)
     return ok({
       batchId: result.batchId,
       status: result.status,
       acceptedForProcessing: true,
+    })
+  }
+
+  private requirePrincipal(req: FastifyRequestWithPrincipal): PharmacySystemPrincipal {
+    const principal: PharmacySystemPrincipal | undefined = req.principal
+    if (principal === undefined) {
+      throw new HttpException(
+        fail(ErrorCode.UNAUTHENTICATED, 'pharmacy principal required'),
+        HttpStatus.UNAUTHORIZED,
+      )
+    }
+    return principal
+  }
+
+  private assertWithinItemLimit(dto: InventoryBatchUpdateRequest): void {
+    if (dto.items.length > REST_BATCH_MAX_ITEMS) {
+      throw new HttpException(
+        fail(
+          ErrorCode.VALIDATION_ERROR,
+          `items.length must be <= ${String(REST_BATCH_MAX_ITEMS)}`,
+        ),
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      )
+    }
+  }
+
+  /** Шаги (2)-(3): батчевый `appendRawItems` + outbox-событие `queued`. */
+  private async persistAndQueueBatch(command: IngestInventoryBatchCommand): Promise<void> {
+    await this.syncBatchRepository.appendRawItems(
+      command.batchId,
+      command.rows.map((row) => ({ rowIndex: row.rowIndex, payload: rowToPayload(row) })),
+    )
+    this.outbox.appendBatchQueued({
+      eventType: 'inventory.sync_batch.queued',
+      batchId: command.batchId,
+      pharmacyId: command.pharmacyId,
+      channel: 'rest',
+      syncType: command.syncType,
     })
   }
 }

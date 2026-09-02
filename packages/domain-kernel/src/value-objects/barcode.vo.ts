@@ -73,27 +73,27 @@ export class Barcode {
   /**
    * Контрольная цифра EAN-13: `S = Σ(нечётные × 1) + 3 × Σ(чётные × 1)` для первых 12,
    * контрольная = `(10 - S mod 10) mod 10` (SRS-DOM-074, GS1 General Specifications).
+   *
+   * Вызывается только из `parse()` после `EAN_13_DIGITS_REGEX.test()` — на входе
+   * гарантированно ровно `EAN_13_LENGTH` ASCII-цифр. Поэтому обход через
+   * `Array.from(value).entries()` (пары `[индекс, символ]`) не требует ни проверки
+   * символа на цифру, ни индексного доступа к массиву — `noUncheckedIndexedAccess`
+   * не создаёт мёртвых `?? 0` веток.
    */
   private static checkEan13Checksum(value: string): boolean {
-    const digits: number[] = []
-    for (let i = 0; i < EAN_13_LENGTH; i += 1) {
-      const ch = value.charAt(i)
-      if (ch < '0' || ch > '9') {
-        return false
-      }
-      digits.push(Number(ch))
-    }
     let sumOdd = 0
     let sumEven = 0
-    for (let i = 0; i < EAN_13_LENGTH - 1; i += 1) {
-      const digit = digits[i] ?? 0
-      if (i % 2 === 0) {
+    let control = 0
+    for (const [i, ch] of Array.from(value).entries()) {
+      const digit = Number(ch)
+      if (i === CONTROL_DIGIT_INDEX) {
+        control = digit
+      } else if (i % 2 === 0) {
         sumOdd += digit
       } else {
         sumEven += digit
       }
     }
-    const control = digits[CONTROL_DIGIT_INDEX] ?? 0
     const s = sumOdd + EAN_13_ODD_POS_MULTIPLIER * sumEven
     const expected = (EAN_13_MODULUS - (s % EAN_13_MODULUS)) % EAN_13_MODULUS
     return control === expected

@@ -17,7 +17,7 @@ import {
   OtpRequestRateLimitedError,
 } from '@dorutj/contracts'
 import { type Clock, type IdGenerator } from '@/shared-kernel/index.js'
-import { type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
+import { type UnitOfWorkTx } from '../ports/unit-of-work.port.js'
 import { RequestOtpUseCase } from './request-otp.use-case.js'
 import type { OtpGeneratorPort, OtpPurpose } from '../ports/otp-generator.port.js'
 import type { SmsProviderPort } from '../ports/sms-provider.port.js'
@@ -91,17 +91,17 @@ class StubOtpCodesRepository implements OtpCodesRepository {
   }
 
    
-  findByIdForUpdate(_tx: DrizzleDb, _id: string): Promise<OtpCodeRecord | null> {
+  findByIdForUpdate(_tx: UnitOfWorkTx, _id: string): Promise<OtpCodeRecord | null> {
     return Promise.resolve(null)
   }
 
    
-  markConsumed(_tx: DrizzleDb, _id: string, _now: Date): Promise<void> {
+  markConsumed(_tx: UnitOfWorkTx, _id: string, _now: Date): Promise<void> {
     return Promise.resolve()
   }
 
    
-  incrementAttempts(_tx: DrizzleDb, _id: string): Promise<void> {
+  incrementAttempts(_tx: UnitOfWorkTx, _id: string): Promise<void> {
     return Promise.resolve()
   }
 

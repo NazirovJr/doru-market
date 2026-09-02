@@ -109,9 +109,7 @@ const TEST_ENV: Readonly<Record<string, string>> = {
 
 function applyTestEnv(): void {
   for (const [key, value] of Object.entries(TEST_ENV)) {
-    if (process.env[key] === undefined) {
-      process.env[key] = value
-    }
+    process.env[key] ??= value
   }
 }
 
@@ -163,6 +161,19 @@ export async function createTestApp(): Promise<TestApp> {
 
 const NEUTRAL_SLUG = 'test-harness-neutral'
 const BEARER_PREFIX = 'Bearer '
+/**
+ * Нейтральный тенант — НАСТОЯЩАЯ строка в `tenants` с настоящим UUID (см. JSDoc
+ * `TenantContextStore` в `tenant-context.ts` и `apps/api/migrations/0021_seed_neutral_tenant.sql`,
+ * единственный источник истины). Раньше здесь стоял `tenantId: null` — «резолвинг не
+ * произошёл» по контракту `TenantContext`, а НЕ «резолвлен в нейтральный». Это давало
+ * `OtpVerifyController.resolveTenantIdForVerify()` пустой `TenantContext` для ЛЮБОГО
+ * unauthenticated-запроса (otp/verify всегда идёт без Bearer) → контроллер честно бросал
+ * ошибку (CTO-решение: громкое падение вместо мусора в UUID-колонке — правильно), но в
+ * ПРОДЕ такой запрос резолвится `TenantResolutionMiddleware` в реальный нейтральный тенант,
+ * а не остаётся unresolved. Харнесс обязан воспроизводить это (Ж13), поэтому неаутентифи-
+ * цированный fallback теперь возвращает id из миграции, а не `null`.
+ */
+const NEUTRAL_TENANT_ID = '00000000-0000-4000-8000-000000000001'
 
 /**
  * Этот harness строит дерево ТОЛЬКО из `AuthModule` (Ж13) — без `TenancyModule`/
@@ -203,7 +214,7 @@ function resolveFromBearerClaims(
   app: NestFastifyApplication,
   authHeader: string | undefined,
 ): { tenantId: string | null; slug: string; chainId: string | null; isNeutral: boolean } {
-  const neutral = { tenantId: null, slug: NEUTRAL_SLUG, chainId: null, isNeutral: true }
+  const neutral = { tenantId: NEUTRAL_TENANT_ID, slug: NEUTRAL_SLUG, chainId: null, isNeutral: true }
   if (typeof authHeader !== 'string' || !authHeader.startsWith(BEARER_PREFIX)) {
     return neutral
   }

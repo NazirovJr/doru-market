@@ -43,7 +43,7 @@ export class LogoutAllUseCase {
   async execute(input: LogoutAllInput): Promise<void> {
     const now = new Date()
     await this.uow.run(async (tx) => {
-      await this.authSessions.revokeAllByUserId(tx, input.userId, 'user_logout_all', now)
+      await this.authSessions.revokeAllByUserId({ tx, userId: input.userId, reason: 'user_logout_all', now })
     })
   }
 }

@@ -12,20 +12,16 @@ import type { SubstanceRef } from './domain/medicine.types.js'
 import type { MedicineRecord } from './domain/medicine.types.js'
 import type { CatalogRepository } from './application/ports/catalog-repository.port.js'
 import { CONTROL_CATEGORIES_FORBIDDEN_FROM_REMOTE } from './domain/medicine.enums.js'
+import { Inject, Injectable } from '@nestjs/common'
+import { CATALOG_REPOSITORY } from './application/ports/catalog-repository.port.js'
+import { ResolveMedicineByCompositeUseCase } from './application/use-cases/resolve-medicine-by-composite.use-case.js'
 
-/** Сигнатура composite-матчинга (SRS-INV-019..026, наполняется в DTJ-097). */
-export interface CompositeMatchInput {
-  readonly rawBarcode: string | null
-  readonly rawTradeName: string
-  readonly rawDosageForm: string | null
-  readonly rawDosageStrength: string | null
-  readonly rawManufacturerName: string | null
-}
-
-export type MedicineMatchResult =
-  | { readonly outcome: 'matched'; readonly medicineId: string; readonly matchedVia: 'barcode' | 'fuzzy' }
-  | { readonly outcome: 'ambiguous'; readonly candidateIds: readonly string[] }
-  | { readonly outcome: 'no_candidate' }
+// Определения этих двух типов переехали в `application/ports/composite-match.types.ts`:
+// иначе получался цикл `resolve-medicine-by-composite.use-case.ts → index.ts → он же`,
+// на котором падал гейт `no-circular` в arch:check. Ре-экспорт сохраняет публичный API
+// барреля — все существующие импортёры продолжают брать типы отсюда.
+import type { CompositeMatchInput, MedicineMatchResult } from './application/ports/composite-match.types.js'
+export type { CompositeMatchInput, MedicineMatchResult }
 
 /**
  * `CatalogFacade` (DTJ-096): контракт модуля для чужих контекстов. Реализация
@@ -60,9 +56,16 @@ export interface NewControlCategoryCandidateEvent {
  * Использует `CatalogRepository` для доступа к данным. Не содержит бизнес-логики,
  * только делегирует к репозиторию и применяет правила видимости (SRS-CAT-064).
  */
+@Injectable()
 export class CatalogFacadeImpl implements CatalogFacade {
   constructor(
+    @Inject(CATALOG_REPOSITORY)
     private readonly catalogRepository: CatalogRepository,
+    // Явный @Inject: без него параметр не попадает в paramtypes (esbuild не эмитит
+    // `design:paramtypes`, DTJ-001), фасад создаётся с одним аргументом, и поле молча
+    // остаётся undefined — бут зелёный, TypeError на первом же вызове через фасад.
+    @Inject(ResolveMedicineByCompositeUseCase)
+    private readonly resolveMedicineByCompositeUseCase: ResolveMedicineByCompositeUseCase,
   ) {}
 
   /**
@@ -110,13 +113,17 @@ export class CatalogFacadeImpl implements CatalogFacade {
   }
 
   /**
-   * Заглушка для DTJ-097 (composite-матчинг).
-   * Реализуется в отдельном тикете DTJ-097.
+   * Проброс composite-матчинга на `ResolveMedicineByCompositeUseCase` (DTJ-097).
+   * Use case возвращает `Result` — здесь он разворачивается: `err` перебрасывается
+   * как исключение, т.к. контракт `CatalogFacade.resolveMedicineByComposite`
+   * (см. интерфейс выше) объявлен через `Promise<MedicineMatchResult>`, без `Result`.
    */
-  resolveMedicineByComposite(_input: CompositeMatchInput): Promise<MedicineMatchResult> {
-    // TODO(DTJ-097): реализовать composite-матчинг (точная проверка штрихкода +
-    // trigram fuzzy + постфильтр по дозировке, D-06)
-    return Promise.reject(new Error('resolveMedicineByComposite not implemented yet (DTJ-097)'))
+  async resolveMedicineByComposite(input: CompositeMatchInput): Promise<MedicineMatchResult> {
+    const result = await this.resolveMedicineByCompositeUseCase.execute(input)
+    if (!result.ok) {
+      throw result.error
+    }
+    return result.value
   }
 
   private recordToSnapshot(record: MedicineRecord): MedicineSnapshot {

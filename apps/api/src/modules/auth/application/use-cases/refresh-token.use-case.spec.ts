@@ -24,7 +24,6 @@ import {
   RefreshTokenInvalidError,
   RefreshTokenReuseDetectedError,
 } from '@dorutj/contracts'
-import { type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { type Logger } from 'pino'
 import { RefreshTokenUseCase } from './refresh-token.use-case.js'
 import type {
@@ -35,7 +34,7 @@ import type {
 import type { CreateUserInput, UsersRepository } from '../ports/users.repository.port.js'
 import type { JwtClaims, JwtSignerPort } from '../ports/jwt-signer.port.js'
 import type { RefreshTokenGeneratorPort } from '../ports/refresh-token-generator.port.js'
-import type { UnitOfWorkPort } from '../ports/unit-of-work.port.js'
+import type { UnitOfWorkPort, UnitOfWorkTx } from '../ports/unit-of-work.port.js'
 import { AuthSession } from '@/modules/auth/domain/value-objects/auth-session.vo.js'
 import { type User } from '@/modules/auth/domain/user.js'
 
@@ -71,7 +70,7 @@ class StubAuthSessionsRepository implements AuthSessionsRepository {
   }
 
   async revokeCurrentAndCreateNext(
-    _tx: DrizzleDb,
+    _tx: UnitOfWorkTx,
     previousId: string,
     input: RotateAuthSessionInput,
   ): Promise<AuthSession> {
@@ -112,12 +111,13 @@ class StubAuthSessionsRepository implements AuthSessionsRepository {
     return Promise.resolve(next)
   }
 
-  async revokeAllByFamilyId(
-    _tx: DrizzleDb,
-    familyId: string,
-    reason: RevokeReason,
-    now: Date,
-  ): Promise<number> {
+  async revokeAllByFamilyId(input: {
+    tx: UnitOfWorkTx
+    familyId: string
+    reason: RevokeReason
+    now: Date
+  }): Promise<number> {
+    const { familyId, reason, now } = input
     this.familyRevokeCalls.push({ familyId, reason, now })
     let count = 0
     for (const session of this.byId.values()) {
@@ -137,21 +137,21 @@ class StubAuthSessionsRepository implements AuthSessionsRepository {
   // не используются. Noop-стабы для компиляции; реальная логика покрыта
   // `logout.use-case.spec.ts` и `revoke-session.use-case.spec.ts`.
    
-  async revokeOneById(
-    _tx: DrizzleDb,
-    _sessionId: string,
-    _reason: RevokeReason,
-    _now: Date,
-  ): Promise<number> {
+  async revokeOneById(_input: {
+    tx: UnitOfWorkTx
+    sessionId: string
+    reason: RevokeReason
+    now: Date
+  }): Promise<number> {
     return Promise.resolve(0)
   }
-   
-  async revokeAllByUserId(
-    _tx: DrizzleDb,
-    _userId: string,
-    _reason: RevokeReason,
-    _now: Date,
-  ): Promise<number> {
+
+  async revokeAllByUserId(_input: {
+    tx: UnitOfWorkTx
+    userId: string
+    reason: RevokeReason
+    now: Date
+  }): Promise<number> {
     return Promise.resolve(0)
   }
 }
@@ -183,6 +183,11 @@ class StubUsersRepository implements UsersRepository {
     throw new Error('not used in refresh-token tests')
   }
 
+  // [Task 5] Глобальный поиск по phone — заглушка для refresh-token тестов.
+  findActiveByPhone(_phoneNumber: string): Promise<User | null> {
+    return Promise.resolve(null)
+  }
+
    
   update(_id: string, _patch: never): Promise<User> {
     throw new Error('not used in refresh-token tests')
@@ -195,7 +200,7 @@ class StubJwtSigner implements JwtSignerPort {
   sign(claims: JwtClaims): string {
     this.callCount += 1
     this.lastClaims = claims
-    return `jwt.${claims.sub}.${String(claims.sessionId)}`
+    return `jwt.${claims.sub}.${claims.sessionId}`
   }
   verify(): never {
     throw new Error('not used in refresh-token tests')
@@ -226,7 +231,7 @@ class NoopUnitOfWork implements UnitOfWorkPort {
   // мы явно кастим callback к ожидаемой форме.
   async run<T>(callback: Parameters<UnitOfWorkPort['run']>[0]): Promise<T> {
      
-    return (callback as (tx: DrizzleDb) => Promise<T>)(null as unknown as DrizzleDb)
+    return (callback as (tx: UnitOfWorkTx) => Promise<T>)(null)
   }
 }
 
@@ -378,7 +383,7 @@ describe('RefreshTokenUseCase (DTJ-025, SRS-API-026/027/028)', () => {
     expect(bundle.sessions.familyRevokeCalls[0]?.reason).toBe('reuse_detected')
     // warn-лог содержит userId/sessionFamilyId/ipAddress (DoD п.4)
     expect(bundle.logger.warnCalls).toHaveLength(1)
-    const warnObj = bundle.logger.warnCalls[0]?.obj as Record<string, unknown>
+    const warnObj = bundle.logger.warnCalls[0]?.obj as Record<string, unknown> | undefined
     expect(warnObj?.userId).toBe(USER_ID)
     expect(warnObj?.sessionFamilyId).toBe(FAMILY_ID)
     expect(warnObj?.ipAddress).toBe(IP)

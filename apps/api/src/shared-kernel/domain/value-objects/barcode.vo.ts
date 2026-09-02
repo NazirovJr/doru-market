@@ -15,6 +15,9 @@
  */
 const EAN13_LENGTH = 13
 const INTERNAL_PREFIX = '2'
+const EAN13_CHECK_DIGIT_INDEX = 12
+const EAN13_DATA_DIGIT_COUNT = 12
+const EAN13_ODD_POSITION_MULTIPLIER = 3
 
 export class Barcode {
   private constructor(readonly rawValue: string) {}
@@ -34,15 +37,15 @@ export class Barcode {
     }
     const digits = this.rawValue.split('').map((d) => Number.parseInt(d, 10))
     let sum = 0
-    for (let i = 0; i < 12; i += 1) {
+    for (let i = 0; i < EAN13_DATA_DIGIT_COUNT; i += 1) {
       const digit = digits[i]
       if (digit === undefined) return false
       // Позиции 1,3,5,7,9,11 (0-indexed: 0,2,4,6,8,10) — множитель 1
       // Позиции 2,4,6,8,10,12 (0-indexed: 1,3,5,7,9,11) — множитель 3
-      sum += i % 2 === 0 ? digit : digit * 3
+      sum += i % 2 === 0 ? digit : digit * EAN13_ODD_POSITION_MULTIPLIER
     }
     const expectedCheckDigit = (10 - (sum % 10)) % 10
-    return digits[12] === expectedCheckDigit
+    return digits[EAN13_CHECK_DIGIT_INDEX] === expectedCheckDigit
   }
 
   /** Внутренний префикс продавца (D-06, SRS-DOM-075). Только для длины 13. */

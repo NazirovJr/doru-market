@@ -783,6 +783,15 @@ ALTER TYPE inventory_sync_row_error_code ADD VALUE 'processing_failed';
 -- отдельная миграция ВНЕ транзакции (SRS-DB-009, ограничение PostgreSQL на ALTER TYPE ADD VALUE)
 ```
 
+**[ИЗМЕНЕНО]** Этот путь не реализован: `CREATE TYPE inventory_sync_row_error_code` не существует
+ни в одной применённой миграции, поэтому и `ALTER TYPE` (миграция `0015b`, DTJ-142 п.5) удалён —
+применять его было не к чему. Код ошибки строки живёт в TS-юнионе
+`InventorySyncRowError['errorCode']`
+(`apps/api/src/modules/inventory/application/ports/inventory-sync-batch.repository.port.ts`);
+`'processing_failed'` добавляется туда же, а таблица `inventory_sync_errors` (когда появится с
+DTJ-145) должна использовать `VARCHAR` + `CHECK` по конвенции `0012_inventory_foundation.sql`, не
+pg ENUM — ограничение PostgreSQL из обоснования ниже как раз и есть причина отказа от enum.
+
 Обоснование: SRS-INV-035 — батч, чей BullMQ job исчерпал все retry из-за инфраструктурного сбоя (не
 ошибки данных строки), обязан достичь одного из уже существующих терминальных статусов
 (`failed_validation`, SRS-DOM-149/150 — фиксированная state machine, новый статус не добавляется), но

@@ -69,7 +69,7 @@ export class LogoutUseCase {
     }
     const now = new Date()
     await this.uow.run(async (tx) => {
-      await this.authSessions.revokeOneById(tx, session.id, 'user_logout', now)
+      await this.authSessions.revokeOneById({ tx, sessionId: session.id, reason: 'user_logout', now })
     })
     return ok(undefined)
   }

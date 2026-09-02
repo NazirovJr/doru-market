@@ -13,6 +13,8 @@
  * Дефолтный допуск — `0` (SRS-DOM-078: «сравнение строгое, без допуска»).
  */
 import { err, ok, type Result } from '@dorutj/domain-kernel'
+
+const MCG_PER_MG = 1_000n
 import { ErrorCode, ValidationError } from '@dorutj/contracts'
 
 export type DosageUnit = 'mg' | 'mcg' | 'g' | 'ml' | 'iu' | 'percent' | 'mg_per_ml'
@@ -93,42 +95,38 @@ export class Dosage {
   }
 }
 
+// Алиасы единиц (рус./лат.) → канонический `DosageUnit`. Вынесено из
+// `switch` в таблицу: 14 веток `case` толкали cyclomatic complexity
+// `normalizeUnit` далеко за порог, а сам разбор — чистый lookup, не ветвление.
+const UNIT_ALIASES: Readonly<Record<string, DosageUnit>> = {
+  мг: 'mg',
+  mg: 'mg',
+  мкг: 'mcg',
+  mcg: 'mcg',
+  µg: 'mcg',
+  г: 'g',
+  g: 'g',
+  мл: 'ml',
+  ml: 'ml',
+  ме: 'iu',
+  iu: 'iu',
+  '%': 'percent',
+  percent: 'percent',
+  'мг/мл': 'mg_per_ml',
+  'mg/ml': 'mg_per_ml',
+  'мг\\мл': 'mg_per_ml',
+  'mg\\ml': 'mg_per_ml',
+}
+
 function normalizeUnit(raw: string): DosageUnit | null {
   const lower = raw.toLowerCase().replace(/ё/g, 'е')
-  switch (lower) {
-    case 'мг':
-    case 'mg':
-      return 'mg'
-    case 'мкг':
-    case 'mcg':
-    case 'µg':
-      return 'mcg'
-    case 'г':
-    case 'g':
-      return 'g'
-    case 'мл':
-    case 'ml':
-      return 'ml'
-    case 'ме':
-    case 'iu':
-      return 'iu'
-    case '%':
-    case 'percent':
-      return 'percent'
-    case 'мг/мл':
-    case 'mg/ml':
-    case 'мг\\мл':
-    case 'mg\\ml':
-      return 'mg_per_ml'
-    default:
-      return null
-  }
+  return UNIT_ALIASES[lower] ?? null
 }
 
 function toMicrograms(d: Dosage): bigint {
   switch (d.unit) {
     case 'mg':
-      return d.value * 1_000n // 1 mg = 1000 mcg
+      return d.value * MCG_PER_MG // 1 mg = 1000 mcg
     case 'mcg':
       return d.value
     case 'g':

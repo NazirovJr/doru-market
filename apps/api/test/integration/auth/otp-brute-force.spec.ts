@@ -88,7 +88,7 @@ describe('auth.otp-brute-force (DTJ-029, SRS-API-019/022, SRS-DOM-173)', () => {
       const verifyResp = await request(httpServer)
         .post('/api/v1/auth/otp/verify')
         .send({ otpRequestId, code: INVALID_CODE })
-      expect(verifyResp.status, `attempt ${i + 1}/5`).toBe(400)
+      expect(verifyResp.status, `attempt ${String(i + 1)}/5`).toBe(400)
       const body = verifyResp.body as ErrorBody
       expect(body.error.code).toBe('OTP_MISMATCH')
       const attemptsLeft = body.error.details?.attempts

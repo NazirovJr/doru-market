@@ -21,6 +21,7 @@ import { isOk } from '@dorutj/domain-kernel'
 import { Public } from '@/common/decorators/public.decorator.js'
 // Внутренние импорты — ПРЯМО из файла (D-27).
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
+import { HTTP_STATUS_OK } from '@/common/http/http-status.constants.js'
 import {
   TelegramAuthUseCase,
   type TelegramAuthResult,
@@ -64,7 +65,7 @@ export class TelegramAuthController {
 
   @Public()
   @Post('telegram')
-  @HttpCode(200)
+  @HttpCode(HTTP_STATUS_OK)
   async telegram(
     @Body(new ZodValidationPipe(telegramAuthDtoSchema)) dto: TelegramAuthDto,
     @Req() request: FastifyLikeRequest,

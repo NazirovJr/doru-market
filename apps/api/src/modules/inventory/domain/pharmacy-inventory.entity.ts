@@ -46,29 +46,61 @@ export interface InventoryLotProps {
 
 /** Партия товара внутри `PharmacyInventory`. Иммутабельная. */
 export class InventoryLot {
-  private constructor(
-    readonly batchNumber: string | null,
-    readonly price: Money,
-    readonly quantity: number,
-    readonly expiryDate: ExpiryDate,
-    readonly lastSyncedAt: Date,
-  ) {}
+  private constructor(props: {
+    batchNumber: string | null
+    price: Money
+    quantity: number
+    expiryDate: ExpiryDate
+    lastSyncedAt: Date
+  }) {
+    this.batchNumber = props.batchNumber
+    this.price = props.price
+    this.quantity = props.quantity
+    this.expiryDate = props.expiryDate
+    this.lastSyncedAt = props.lastSyncedAt
+  }
+
+  readonly batchNumber: string | null
+  readonly price: Money
+  readonly quantity: number
+  readonly expiryDate: ExpiryDate
+  readonly lastSyncedAt: Date
 
   static create(props: InventoryLotProps): Result<InventoryLot, InvalidInventoryRowError> {
-    if (!Number.isInteger(props.quantity) || props.quantity < 0) {
-      return err(
-        new InvalidInventoryRowError(
-          `quantity must be non-negative integer, got ${String(props.quantity)}`,
-        ),
+    const quantityError = InventoryLot.validateQuantity(props.quantity)
+    if (quantityError !== null) return err(quantityError)
+    const parsed = InventoryLot.parsePriceAndExpiry(props)
+    if (!parsed.ok) return err(parsed.error)
+    const batchNumberError = InventoryLot.validateBatchNumber(props.batchNumber)
+    if (batchNumberError !== null) return err(batchNumberError)
+    return ok(
+      new InventoryLot({
+        batchNumber: props.batchNumber,
+        price: parsed.value.price,
+        quantity: props.quantity,
+        expiryDate: parsed.value.expiryDate,
+        lastSyncedAt: props.lastSyncedAt,
+      }),
+    )
+  }
+
+  private static validateQuantity(quantity: number): InvalidInventoryRowError | null {
+    if (!Number.isInteger(quantity) || quantity < 0) {
+      return new InvalidInventoryRowError(
+        `quantity must be non-negative integer, got ${String(quantity)}`,
       )
     }
-    if (props.quantity > MAX_QUANTITY) {
-      return err(
-        new InvalidInventoryRowError(
-          `quantity exceeds cap ${String(MAX_QUANTITY)}, got ${String(props.quantity)}`,
-        ),
+    if (quantity > MAX_QUANTITY) {
+      return new InvalidInventoryRowError(
+        `quantity exceeds cap ${String(MAX_QUANTITY)}, got ${String(quantity)}`,
       )
     }
+    return null
+  }
+
+  private static parsePriceAndExpiry(
+    props: InventoryLotProps,
+  ): Result<{ readonly price: Money; readonly expiryDate: ExpiryDate }, InvalidInventoryRowError> {
     const priceResult = tryCreatePrice(props.priceDiram)
     if (priceResult === null) {
       return err(
@@ -80,27 +112,19 @@ export class InventoryLot {
     const expiryResult = ExpiryDate.parse(props.expiryDateIso)
     if (!expiryResult.ok) {
       return err(
-        new InvalidInventoryRowError(
-          `expiryDate is invalid: ${expiryResult.error.message}`,
-        ),
+        new InvalidInventoryRowError(`expiryDate is invalid: ${expiryResult.error.message}`),
       )
     }
-    if (props.batchNumber !== null && props.batchNumber.length > MAX_BATCH_NUMBER_LENGTH) {
-      return err(
-        new InvalidInventoryRowError(
-          `batchNumber length exceeds ${String(MAX_BATCH_NUMBER_LENGTH)}`,
-        ),
+    return ok({ price: priceResult, expiryDate: expiryResult.value })
+  }
+
+  private static validateBatchNumber(batchNumber: string | null): InvalidInventoryRowError | null {
+    if (batchNumber !== null && batchNumber.length > MAX_BATCH_NUMBER_LENGTH) {
+      return new InvalidInventoryRowError(
+        `batchNumber length exceeds ${String(MAX_BATCH_NUMBER_LENGTH)}`,
       )
     }
-    return ok(
-      new InventoryLot(
-        props.batchNumber,
-        priceResult,
-        props.quantity,
-        expiryResult.value,
-        props.lastSyncedAt,
-      ),
-    )
+    return null
   }
 
   /**
@@ -134,13 +158,20 @@ export interface PharmacyInventoryCreateProps {
 export class PharmacyInventory {
   private readonly _lots: InventoryLot[]
 
-  private constructor(
-    readonly id: string,
-    readonly pharmacyId: string,
-    readonly medicineId: string,
-    lots: readonly InventoryLot[],
-  ) {
-    this._lots = [...lots]
+  readonly id: string
+  readonly pharmacyId: string
+  readonly medicineId: string
+
+  private constructor(props: {
+    id: string
+    pharmacyId: string
+    medicineId: string
+    lots: readonly InventoryLot[]
+  }) {
+    this.id = props.id
+    this.pharmacyId = props.pharmacyId
+    this.medicineId = props.medicineId
+    this._lots = [...props.lots]
   }
 
   /** Фабрика «с нуля» — валидирует все лоты (для `restore` см. ниже). */
@@ -156,14 +187,14 @@ export class PharmacyInventory {
     }
     const lots: InventoryLot[] = []
     const initial = props.initialLots ?? []
-    for (let i = 0; i < initial.length; i += 1) {
-      const lotResult = InventoryLot.create(initial[i]!)
+    for (const lotProps of initial) {
+      const lotResult = InventoryLot.create(lotProps)
       if (!lotResult.ok) {
         return err(lotResult.error)
       }
       lots.push(lotResult.value)
     }
-    return ok(new PharmacyInventory(props.id, props.pharmacyId, props.medicineId, lots))
+    return ok(new PharmacyInventory({ id: props.id, pharmacyId: props.pharmacyId, medicineId: props.medicineId, lots }))
   }
 
   /**
@@ -173,14 +204,14 @@ export class PharmacyInventory {
    */
   static restore(snapshot: PharmacyInventorySnapshot): Result<PharmacyInventory, InvalidInventoryRowError> {
     const lots: InventoryLot[] = []
-    for (let i = 0; i < snapshot.lots.length; i += 1) {
-      const lotResult = InventoryLot.create(snapshot.lots[i]!)
+    for (const lotProps of snapshot.lots) {
+      const lotResult = InventoryLot.create(lotProps)
       if (!lotResult.ok) {
         return err(lotResult.error)
       }
       lots.push(lotResult.value)
     }
-    return ok(new PharmacyInventory(snapshot.id, snapshot.pharmacyId, snapshot.medicineId, lots))
+    return ok(new PharmacyInventory({ id: snapshot.id, pharmacyId: snapshot.pharmacyId, medicineId: snapshot.medicineId, lots }))
   }
 
   /**
@@ -191,8 +222,7 @@ export class PharmacyInventory {
    */
   stockQuantity(today: Date): number {
     let total = 0
-    for (let i = 0; i < this._lots.length; i += 1) {
-      const lot = this._lots[i]!
+    for (const lot of this._lots) {
       if (lot.quantity > 0 && lot.expiryDate.isSellable(today)) {
         total += lot.quantity
       }
@@ -208,8 +238,7 @@ export class PharmacyInventory {
    */
   getFefoLot(today: Date): InventoryLot | null {
     let best: InventoryLot | null = null
-    for (let i = 0; i < this._lots.length; i += 1) {
-      const lot = this._lots[i]!
+    for (const lot of this._lots) {
       if (lot.quantity <= 0 || !lot.expiryDate.isSellable(today)) {
         continue
       }
@@ -241,7 +270,10 @@ export class PharmacyInventory {
       (lot) => lot.getFefoKey() === incoming.getFefoKey(),
     )
     if (existingIndex !== -1) {
-      const existing = this._lots[existingIndex]!
+      const existing = this._lots[existingIndex]
+      if (existing === undefined) {
+        return { applied: false, reason: 'stale' }
+      }
       if (incoming.lastSyncedAt.getTime() <= existing.lastSyncedAt.getTime()) {
         return { applied: false, reason: 'stale' }
       }

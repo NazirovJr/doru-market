@@ -6,6 +6,7 @@ import { pino } from 'pino'
 import { ERROR_CODE_PROCESSING_FAILED } from './inventory-sync-failed.constants.js'
 import {
   IllegalBatchStatusTransitionError,
+  InventorySyncFailedJobHandler,
   handleFailedJob,
   type FailedJobDescriptor,
   type HandleFailedJobInput,
@@ -177,5 +178,66 @@ describe('handleFailedJob (DTJ-155, SRS-INV-035)', () => {
     expect(result.markedAsFailed).toBe(false)
     expect(saveMock).not.toHaveBeenCalled()
     expect(alertMock).not.toHaveBeenCalled()
+  })
+
+  it('repository.save() бросает НЕ IllegalBatchStatusTransitionError — пробрасывается наружу', async () => {
+    const { ctx } = makeContext()
+    const unexpectedError = new Error('unique constraint violation')
+    ctx.repository.save = vi.fn().mockRejectedValue(unexpectedError)
+
+    await expect(handleFailedJob(ctx)).rejects.toBe(unexpectedError)
+  })
+})
+
+describe('InventorySyncFailedJobHandler (класс-обёртка для QueueEvents)', () => {
+  function makePorts(): {
+    findByIdMock: ReturnType<typeof vi.fn>
+    saveMock: ReturnType<typeof vi.fn>
+    appendErrorMock: ReturnType<typeof vi.fn>
+    alertMock: ReturnType<typeof vi.fn>
+    handler: InventorySyncFailedJobHandler
+  } {
+    const findByIdMock = vi.fn().mockResolvedValue(makeBatch())
+    const saveMock = vi.fn().mockResolvedValue(undefined)
+    const appendErrorMock = vi.fn().mockResolvedValue(undefined)
+    const alertMock = vi.fn()
+    const repository: InventorySyncBatchRepositoryPort = {
+      findById: findByIdMock,
+      save: saveMock,
+      appendError: appendErrorMock,
+    }
+    const outbox: InventoryOutboxPort = { appendProcessingFailedAlert: alertMock }
+    const handler = new InventorySyncFailedJobHandler(repository, outbox, silentLogger)
+    return { findByIdMock, saveMock, appendErrorMock, alertMock, handler }
+  }
+
+  it('job.data.batchId — строка: делегирует в handleFailedJob с этим batchId', async () => {
+    const { handler, findByIdMock } = makePorts()
+
+    const result = await handler.handle(makeJob({ data: { batchId: 'B-1' } }))
+
+    expect(result).toEqual({ acted: true, markedAsFailed: true })
+    expect(findByIdMock).toHaveBeenCalledWith('B-1')
+  })
+
+  it('job.data.batchId отсутствует/не строка — warn и no-op, порты НЕ вызываются', async () => {
+    const { handler, findByIdMock, saveMock, appendErrorMock, alertMock } = makePorts()
+
+    const result = await handler.handle(makeJob({ data: { batchId: 123 } }))
+
+    expect(result).toEqual({ acted: false, markedAsFailed: false })
+    expect(findByIdMock).not.toHaveBeenCalled()
+    expect(saveMock).not.toHaveBeenCalled()
+    expect(appendErrorMock).not.toHaveBeenCalled()
+    expect(alertMock).not.toHaveBeenCalled()
+  })
+
+  it('job.data вообще undefined — тот же no-op, без исключения', async () => {
+    const { handler, findByIdMock } = makePorts()
+
+    const result = await handler.handle(makeJob({ data: undefined }))
+
+    expect(result).toEqual({ acted: false, markedAsFailed: false })
+    expect(findByIdMock).not.toHaveBeenCalled()
   })
 })

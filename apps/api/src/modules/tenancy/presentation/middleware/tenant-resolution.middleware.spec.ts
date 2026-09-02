@@ -17,8 +17,9 @@
  *   4. Запрос с `X-Tenant-Slug: unknown-tenant` → `unresolved: true`,
  *      `unresolvedReason: 'unknown_slug'`. `tenantId === null`.
  *   5. Запрос без `X-Tenant-Slug` (только Host=null) → фоллбэк на `slug=neutral`,
- *      `isNeutral === true`, `tenantId === null` (нейтральный — это shared-пул,
- *      НЕ привязан к chain).
+ *      `isNeutral === true`, `tenantId === UUID нейтрального тенанта` (нейтральный —
+ *      это shared-пул, НЕ привязан к chain, но резолвлен как настоящая запись
+ *      в `tenants`, поэтому несёт реальный `tenantId`).
  *
  * Граница применимости: этот тест проверяет **нижний** слой изоляции — middleware
  * корректно резолвит тенанта из заголовка. Полный кросс-тенантный тест уровня
@@ -288,10 +289,11 @@ describe('TenantResolutionMiddleware — изоляция тенантов на 
     const store: TenantContextStore = captured!
     expect(store.isNeutral).toBe(true)
     expect(store.slug).toBe('neutral')
-    // Нейтральный тенант существует, но `tenantId === null` — это shared-пул,
-    // не привязанный к chain. `TenantScopeGuard` это различает (см. JSDoc
-    // tenant-scope.guard.ts).
-    expect(store.tenantId).toBeNull()
+    // Нейтральный тенант — настоящая строка в `tenants` с настоящим UUID
+    // (CTO-решение: не прятать id нейтрального тенанта за `null`, различие
+    // «нейтральный / обычный» несёт `isNeutral`, не `tenantId`). Это shared-пул,
+    // не привязанный к chain (`chainId === null`), но `tenantId` — реальный UUID.
+    expect(store.tenantId).toBe(NEUTRAL_ID)
     expect(store.unresolved).toBe(false)
   })
 

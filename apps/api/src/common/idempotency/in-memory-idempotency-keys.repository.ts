@@ -23,16 +23,25 @@ export class InMemoryIdempotencyKeysRepository implements IdempotencyKeysReposit
     return `${userId}${TRIPLE_SEPARATOR}${endpoint}${TRIPLE_SEPARATOR}${key}`
   }
 
-  async findByTriple(userId: string, endpoint: string, key: string): Promise<IdempotencyKeyRecord | null> {
-    return this.byTriple.get(InMemoryIdempotencyKeysRepository.tripleKey(userId, endpoint, key)) ?? null
+  findByTriple(userId: string, endpoint: string, key: string): Promise<IdempotencyKeyRecord | null> {
+    return Promise.resolve(
+      this.byTriple.get(InMemoryIdempotencyKeysRepository.tripleKey(userId, endpoint, key)) ?? null,
+    )
   }
 
+  /**
+   * Не `async` (нет `await`), но обязана возвращать ОТКЛОНЁННЫЙ `Promise`
+   * при конфликте (контракт порта, вызывающие используют `await`/`.rejects`)
+   * — `await Promise.resolve()` в начале держит функцию в promise-мире,
+   * чтобы синхронный `throw` ниже стал отклонением, а не синхронным throw.
+   */
   async createProcessing(input: {
     userId: string
     endpoint: string
     key: string
     requestHash: string
   }): Promise<IdempotencyKeyRecord> {
+    await Promise.resolve()
     const composite = InMemoryIdempotencyKeysRepository.tripleKey(
       input.userId,
       input.endpoint,
@@ -56,11 +65,13 @@ export class InMemoryIdempotencyKeysRepository implements IdempotencyKeysReposit
     return record
   }
 
+  /** См. JSDoc `createProcessing` — тот же приём для отклонения при «не найдено». */
   async markCompleted(
     id: string,
     responseStatus: number,
     responseBody: IdempotencyKeyRecord['responseBody'],
   ): Promise<void> {
+    await Promise.resolve()
     for (const [triple, record] of this.byTriple) {
       if (record.id === id) {
         this.byTriple.set(triple, {
@@ -69,6 +80,21 @@ export class InMemoryIdempotencyKeysRepository implements IdempotencyKeysReposit
           responseStatus,
           responseBody,
         })
+        return
+      }
+    }
+    throw new Error(`idempotency record not found: ${id}`)
+  }
+
+  /**
+   * Удаляет запись целиком (не переводит в промежуточный статус) — освобождённый
+   * `(userId, endpoint, key)` должен вести себя так, будто запроса не было.
+   */
+  async releaseProcessing(id: string): Promise<void> {
+    await Promise.resolve()
+    for (const [triple, record] of this.byTriple) {
+      if (record.id === id) {
+        this.byTriple.delete(triple)
         return
       }
     }

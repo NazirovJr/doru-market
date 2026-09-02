@@ -28,6 +28,24 @@ describe('Dosage.create', () => {
       expect(result.error).toBeInstanceOf(InvalidDosageError)
     }
   })
+
+  it('rejects NaN as not finite', () => {
+    const result = Dosage.create(Number.NaN, DosageUnit.mg)
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBeInstanceOf(InvalidDosageError)
+      expect(result.error.message).toContain('not finite')
+    }
+  })
+
+  it('rejects Infinity as not finite', () => {
+    const result = Dosage.create(Number.POSITIVE_INFINITY, DosageUnit.mg)
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBeInstanceOf(InvalidDosageError)
+      expect(result.error.message).toContain('not finite')
+    }
+  })
 })
 
 describe('Dosage.isEquivalentTo (SRS-DOM-078, TC-DOM-012/013)', () => {
@@ -84,6 +102,36 @@ describe('Dosage.isEquivalentTo (SRS-DOM-078, TC-DOM-012/013)', () => {
       expect(a.value.isEquivalentTo(b.value)).toBe(false)
     }
   })
+
+  it('500 mg equivalent to 500 mg (equality by value, same unit)', () => {
+    const a = Dosage.create(500, DosageUnit.mg)
+    const b = Dosage.create(500, DosageUnit.mg)
+    expect(a.ok && b.ok).toBe(true)
+    if (a.ok && b.ok) {
+      expect(a.value.isEquivalentTo(b.value)).toBe(true)
+    }
+  })
+
+  it('1 mcg NOT equivalent to 0.0009 mg (boundary: sub-microgram rounding must not create false equivalence)', () => {
+    // 0.0009 mg = 0.9 mcg, округляется до 6 знаков в промежуточном bigint, но
+    // ПОСЛЕ конвертации не должно совпасть с ровно 1 mcg — иначе строгое (0%)
+    // сравнение (SRS-DOM-078) стало бы нестрогим.
+    const a = Dosage.create(1, DosageUnit.mcg)
+    const b = Dosage.create(0.0009, DosageUnit.mg)
+    expect(a.ok && b.ok).toBe(true)
+    if (a.ok && b.ok) {
+      expect(a.value.isEquivalentTo(b.value)).toBe(false)
+    }
+  })
+
+  it('0.001 mg equivalent to 1 mcg (boundary: smallest representable microgram)', () => {
+    const a = Dosage.create(0.001, DosageUnit.mg)
+    const b = Dosage.create(1, DosageUnit.mcg)
+    expect(a.ok && b.ok).toBe(true)
+    if (a.ok && b.ok) {
+      expect(a.value.isEquivalentTo(b.value)).toBe(true)
+    }
+  })
 })
 
 describe('Dosage.parse', () => {
@@ -127,6 +175,37 @@ describe('Dosage.parse', () => {
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.error).toBeInstanceOf(DosageParseError)
+    }
+  })
+
+  it('rejects input with no leading number (fails the number+unit shape entirely)', () => {
+    const result = Dosage.parse('mg')
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBeInstanceOf(DosageParseError)
+      expect(result.error.message).toContain('mg')
+    }
+  })
+
+  it('parses comma as decimal separator ("0,5 г")', () => {
+    const result = Dosage.parse('0,5 г')
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.value.getValue()).toBe(0.5)
+      expect(result.value.getUnit()).toBe(DosageUnit.g)
+    }
+  })
+
+  it('is idempotent: parsing the reconstructed "value unit" string yields an equivalent Dosage', () => {
+    const first = Dosage.parse('500 мг')
+    expect(first.ok).toBe(true)
+    if (first.ok) {
+      const reparsed = Dosage.parse(`${String(first.value.getValue())} ${first.value.getUnit()}`)
+      expect(reparsed.ok).toBe(true)
+      if (reparsed.ok) {
+        expect(reparsed.value.getUnit()).toBe(first.value.getUnit())
+        expect(reparsed.value.isEquivalentTo(first.value)).toBe(true)
+      }
     }
   })
 })

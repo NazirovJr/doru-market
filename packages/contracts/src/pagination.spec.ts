@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cursorQuerySchema, decodeCursor, encodeCursor, isValidCursorShape } from './pagination'
+import { cursorQuerySchema, decodeCursor, encodeCursor, isValidCursorShape } from './pagination.js'
 
 describe('encodeCursor / decodeCursor', () => {
   it('round-trip: decodeCursor(encodeCursor(x)) равен x', () => {

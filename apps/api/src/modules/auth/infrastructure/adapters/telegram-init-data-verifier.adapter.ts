@@ -50,77 +50,19 @@ const TELEGRAM_WEBAPP_DATA_LABEL = 'WebAppData'
 @Injectable()
 export class TelegramInitDataVerifierAdapter implements TelegramInitDataVerifierPort {
   async verify(input: TelegramInitDataVerifierVerifyInput): Promise<TelegramInitDataVerified> {
-    if (input.botToken.length === 0) {
-      // Защита от `TELEGRAM_BOT_TOKEN_NEUTRAL=""` — НЕ валидный токен,
-      // лучше 503, чем подделывать подпись.
-      throw new TelegramBotNotConfiguredError()
-    }
+    assertBotConfigured(input.botToken)
 
-    // === Шаг 1: парсинг initData как application/x-www-form-urlencoded.
-    const params = new URLSearchParams(input.initData)
-    const hash = params.get('hash')
-    if (hash === null || hash.length === 0) {
-      throw new InvalidTelegramInitDataError({ reason: 'missing_hash' })
-    }
-    params.delete('hash')
+    // Шаги 1-3: парсинг + сборка data_check_string.
+    const { params, hash, dataCheckString } = buildDataCheckString(input.initData)
 
-    // === Шаг 2+3: собрать data_check_string (значения — как есть, не
-    // URL-декодированные; Telegram не декодирует).
-    const pairs: string[] = []
-    for (const [key, value] of params.entries()) {
-      pairs.push(`${key}=${value}`)
-    }
-    pairs.sort((a, b) => a.localeCompare(b))
-    const dataCheckString = pairs.join('\n')
+    // Шаги 4-6: подпись (HMAC_SHA256 ×2 + constant-time compare).
+    verifySignature(input.botToken, dataCheckString, hash)
 
-    // === Шаг 4: secret_key = HMAC_SHA256('WebAppData', botToken).
-    const secretKey = createHmac('sha256', TELEGRAM_WEBAPP_DATA_LABEL)
-      .update(input.botToken)
-      .digest()
+    // Шаг 7: auth_date ≤ now - maxAgeSeconds.
+    const authDate = verifyAuthDate(params, input.now, input.maxAgeSeconds)
 
-    // === Шаг 5: computed = HEX(HMAC_SHA256(secretKey, data_check_string)).
-    const computed = createHmac('sha256', secretKey).update(dataCheckString).digest('hex')
-
-    // === Шаг 6: constant-time compare.
-    if (computed.length !== HMAC_SHA256_HEX_LENGTH || hash.length !== HMAC_SHA256_HEX_LENGTH) {
-      throw new InvalidTelegramInitDataError({ reason: 'hash_length_mismatch' })
-    }
-    const computedBuf = Buffer.from(computed, 'hex')
-    const hashBuf = Buffer.from(hash, 'hex')
-    if (computedBuf.length !== hashBuf.length || !timingSafeEqual(computedBuf, hashBuf)) {
-      throw new InvalidTelegramInitDataError({ reason: 'signature_mismatch' })
-    }
-
-    // === Шаг 7: auth_date ≤ now - maxAgeSeconds.
-    const authDateStr = params.get('auth_date')
-    if (authDateStr === null) {
-      throw new InvalidTelegramInitDataError({ reason: 'missing_auth_date' })
-    }
-    const authDateSec = Number.parseInt(authDateStr, 10)
-    if (!Number.isFinite(authDateSec) || authDateSec <= 0) {
-      throw new InvalidTelegramInitDataError({ reason: 'invalid_auth_date' })
-    }
-    const authDate = new Date(authDateSec * 1000)
-    const nowSec = Math.floor(input.now.getTime() / 1000)
-    if (nowSec - authDateSec > input.maxAgeSeconds) {
-      throw new TelegramAuthDateExpiredError({
-        ageSeconds: nowSec - authDateSec,
-        maxAgeSeconds: input.maxAgeSeconds,
-      })
-    }
-
-    // === Шаг 8: распарсить JSON-поле `user`.
-    const userJson = params.get('user')
-    if (userJson === null) {
-      throw new InvalidTelegramInitDataError({ reason: 'missing_user' })
-    }
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(userJson)
-    } catch (_err) {
-      throw new InvalidTelegramInitDataError({ reason: 'user_not_json' })
-    }
-    const user = parseTelegramUser(parsed)
+    // Шаг 8: распарсить JSON-поле `user`.
+    const user = parseUserField(params)
 
     return Promise.resolve({
       telegramUserId: user.id,
@@ -131,6 +73,95 @@ export class TelegramInitDataVerifierAdapter implements TelegramInitDataVerifier
 }
 
 /**
+ * Защита от `TELEGRAM_BOT_TOKEN_NEUTRAL=""` — НЕ валидный токен, лучше 503,
+ * чем подделывать подпись.
+ */
+function assertBotConfigured(botToken: string): void {
+  if (botToken.length === 0) {
+    throw new TelegramBotNotConfiguredError()
+  }
+}
+
+/**
+ * Шаг 1: парсинг initData как application/x-www-form-urlencoded.
+ * Шаги 2+3: собрать data_check_string (значения — как есть, не
+ * URL-декодированные; Telegram не декодирует).
+ */
+function buildDataCheckString(initData: string): {
+  params: URLSearchParams
+  hash: string
+  dataCheckString: string
+} {
+  const params = new URLSearchParams(initData)
+  const hash = params.get('hash')
+  if (hash === null || hash.length === 0) {
+    throw new InvalidTelegramInitDataError({ reason: 'missing_hash' })
+  }
+  params.delete('hash')
+
+  const pairs: string[] = []
+  for (const [key, value] of params.entries()) {
+    pairs.push(`${key}=${value}`)
+  }
+  pairs.sort((a, b) => a.localeCompare(b))
+  return { params, hash, dataCheckString: pairs.join('\n') }
+}
+
+/**
+ * Шаг 4: secret_key = HMAC_SHA256('WebAppData', botToken).
+ * Шаг 5: computed = HEX(HMAC_SHA256(secretKey, data_check_string)).
+ * Шаг 6: constant-time compare.
+ */
+function verifySignature(botToken: string, dataCheckString: string, hash: string): void {
+  const secretKey = createHmac('sha256', TELEGRAM_WEBAPP_DATA_LABEL).update(botToken).digest()
+  const computed = createHmac('sha256', secretKey).update(dataCheckString).digest('hex')
+
+  if (computed.length !== HMAC_SHA256_HEX_LENGTH || hash.length !== HMAC_SHA256_HEX_LENGTH) {
+    throw new InvalidTelegramInitDataError({ reason: 'hash_length_mismatch' })
+  }
+  const computedBuf = Buffer.from(computed, 'hex')
+  const hashBuf = Buffer.from(hash, 'hex')
+  if (computedBuf.length !== hashBuf.length || !timingSafeEqual(computedBuf, hashBuf)) {
+    throw new InvalidTelegramInitDataError({ reason: 'signature_mismatch' })
+  }
+}
+
+/** Шаг 7: auth_date ≤ now - maxAgeSeconds. */
+function verifyAuthDate(params: URLSearchParams, now: Date, maxAgeSeconds: number): Date {
+  const authDateStr = params.get('auth_date')
+  if (authDateStr === null) {
+    throw new InvalidTelegramInitDataError({ reason: 'missing_auth_date' })
+  }
+  const authDateSec = Number.parseInt(authDateStr, 10)
+  if (!Number.isFinite(authDateSec) || authDateSec <= 0) {
+    throw new InvalidTelegramInitDataError({ reason: 'invalid_auth_date' })
+  }
+  const nowSec = Math.floor(now.getTime() / 1000)
+  if (nowSec - authDateSec > maxAgeSeconds) {
+    throw new TelegramAuthDateExpiredError({
+      ageSeconds: nowSec - authDateSec,
+      maxAgeSeconds,
+    })
+  }
+  return new Date(authDateSec * 1000)
+}
+
+/** Шаг 8: распарсить JSON-поле `user`. */
+function parseUserField(params: URLSearchParams): TelegramUser {
+  const userJson = params.get('user')
+  if (userJson === null) {
+    throw new InvalidTelegramInitDataError({ reason: 'missing_user' })
+  }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(userJson)
+  } catch (_err) {
+    throw new InvalidTelegramInitDataError({ reason: 'user_not_json' })
+  }
+  return parseTelegramUser(parsed)
+}
+
+/**
  * `parseTelegramUser` — type-guard для `TelegramUser`. ВАЖНО: это НЕ
  * отдельный VO (тикет DTJ-027 явно решил: «`telegramUserId` — НЕ отдельный
  * VO, хранится как `string`/`bigint`»). Преобразования: `id` →
@@ -138,33 +169,39 @@ export class TelegramInitDataVerifierAdapter implements TelegramInitDataVerifier
  * в `user_telegram_identities.telegram_user_id BIGINT` безопасно хранить
  * как string, а конвертировать в bigint на границе Drizzle-репозитория).
  */
+/**
+ * `id` может прийти как number или string (если Telegram > 2^53 — редко, но
+ * Postgres BIGINT принимает оба).
+ */
+function parseTelegramUserId(obj: Record<string, unknown>): string {
+  if (typeof obj.id === 'number' && Number.isFinite(obj.id) && obj.id > 0) {
+    return String(obj.id)
+  }
+  if (typeof obj.id === 'string' && obj.id.length > 0) {
+    return obj.id
+  }
+  throw new InvalidTelegramInitDataError({ reason: 'invalid_user_id' })
+}
+
+function optionalString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null
+}
+
 function parseTelegramUser(value: unknown): TelegramUser {
   if (typeof value !== 'object' || value === null) {
     throw new InvalidTelegramInitDataError({ reason: 'user_not_object' })
   }
   const obj = value as Record<string, unknown>
-  // `id` может прийти как number или string (если Telegram > 2^53 — редко,
-  // но Postgres BIGINT принимает оба).
-  let idStr: string
-  if (typeof obj.id === 'number' && Number.isFinite(obj.id) && obj.id > 0) {
-    idStr = String(obj.id)
-  } else if (typeof obj.id === 'string' && obj.id.length > 0) {
-    idStr = obj.id
-  } else {
-    throw new InvalidTelegramInitDataError({ reason: 'invalid_user_id' })
-  }
+  const idStr = parseTelegramUserId(obj)
   if (typeof obj.first_name !== 'string' || obj.first_name.length === 0) {
     throw new InvalidTelegramInitDataError({ reason: 'missing_first_name' })
   }
-  const lastName = typeof obj.last_name === 'string' ? obj.last_name : null
-  const username = typeof obj.username === 'string' ? obj.username : null
-  const languageCode = typeof obj.language_code === 'string' ? obj.language_code : null
   return {
     id: idStr,
     firstName: obj.first_name,
-    lastName,
-    username,
-    languageCode,
+    lastName: optionalString(obj.last_name),
+    username: optionalString(obj.username),
+    languageCode: optionalString(obj.language_code),
   }
 }
 

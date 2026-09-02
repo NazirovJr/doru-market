@@ -24,4 +24,5 @@ import { IDEMPOTENCY_KEYS } from './idempotency-keys.repository.js'
   ],
   exports: [IDEMPOTENCY_KEYS],
 })
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.
 export class IdempotencyModule {}

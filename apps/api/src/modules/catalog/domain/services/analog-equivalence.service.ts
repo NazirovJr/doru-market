@@ -13,7 +13,14 @@
  * ВАЖНО (SRS-CAT-035, TC-CAT-010): суммарная/кратностная эквивалентность
  * (`500мг×2 ≟ 1000мг×1`) НЕ реализуется намеренно — домен не имеет понятия
  * «количество единиц в приёме», это относится к посологии, не к `Dosage` товара.
+ *
+ * ИСПРАВЛЕНО (D-07, аудит эквивалентности единиц): дозировка сравнивается через
+ * `Dosage.isEquivalentTo()` (импорт `@dorutj/domain-kernel` — именно эта копия VO
+ * используется в модуле `catalog`, см. `medicine.entity.ts`), а НЕ через `!==` по
+ * сырым `strengthValue`/`strengthUnit`. `500 мг` и `0.5 г` — одна и та же дозировка
+ * в разных единицах одного семейства (`mass`) и обязаны признаваться аналогами.
  */
+import { Dosage, isOk } from '@dorutj/domain-kernel'
 import type { Medicine } from '../medicine.entity.js'
 
 export class AnalogEquivalenceService {
@@ -21,8 +28,10 @@ export class AnalogEquivalenceService {
    * Финальное решение (SRS-CAT-031): препарат B — аналог A И ТОЛЬКО ЕСЛИ:
    * 1. Множество `substanceId` идентично (не подмножество/пересечение).
    * 2. `dosageForm.isEquivalentTo(...)` — точное совпадение класса (диагональ).
-   * 3. Для каждого общего `substanceId` — точное совпадение дозировки через
-   *    `Dosage.isEquivalentTo()` (SRS-DOM-078, bigint-конвертация в микрограммы).
+   * 3. Для каждого общего `substanceId` — ЭКВИВАЛЕНТНАЯ дозировка через
+   *    `Dosage.isEquivalentTo()` (SRS-DOM-078, bigint-конвертация в микрограммы
+   *    внутри семейства единиц: `500 мг` эквивалентно `0.5 г`, но НЕ `1 г` —
+   *    `100 мг`).
    * 4. Сравнение по строке `inn_name` ЗАПРЕЩЕНО как достаточное условие (SRS-DOM-017).
    */
   public isAnalog(a: Medicine, b: Medicine): boolean {
@@ -60,14 +69,19 @@ export class AnalogEquivalenceService {
       if (!bSubstance) {
         return false
       }
-      if (aSubstance.strengthUnit !== bSubstance.strengthUnit) {
-        // Разные семейства единиц — НЕ эквивалентны, даже при числовом совпадении
-        // (SRS-DOM-078, TC-CAT-012).
+      const aDosageResult = Dosage.create(aSubstance.strengthValue, aSubstance.strengthUnit)
+      const bDosageResult = Dosage.create(bSubstance.strengthValue, bSubstance.strengthUnit)
+      if (!isOk(aDosageResult) || !isOk(bDosageResult)) {
+        // `MedicineSubstance.create` уже гарантирует `strengthValue > 0` и конечность
+        // (`medicine-substance.entity.ts`), так что `Dosage.create` здесь не должен
+        // падать. Если всё же падает — fail-safe: не считаем аналогом.
         return false
       }
-      // Точное совпадение значения после конвертации внутри одной единицы
-      // (DOSAGE_EQUIVALENCE_TOLERANCE_PCT = 0, SRS-DOM-078).
-      if (aSubstance.strengthValue !== bSubstance.strengthValue) {
+      // Эквивалентность через `Dosage.isEquivalentTo()` (SRS-DOM-078): сравнение
+      // внутри семейства единиц после конвертации в базовую единицу (bigint,
+      // микрограммы для `mass`), а НЕ равенство сырых `strengthValue`/`strengthUnit`.
+      // `500 мг` эквивалентно `0.5 г`; разные семейства (`mg` vs `ml`) — никогда.
+      if (!aDosageResult.value.isEquivalentTo(bDosageResult.value)) {
         return false
       }
     }

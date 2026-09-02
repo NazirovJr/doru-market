@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { ErrorCode } from './errors'
-import { fail, ok } from './envelope'
+import { ErrorCode } from './errors.js'
+import { fail, isSuccessEnvelope, ok } from './envelope.js'
 
 describe('ok', () => {
   it('без meta даёт { data }', () => {
@@ -25,5 +25,39 @@ describe('fail', () => {
     expect(fail(ErrorCode.VALIDATION_ERROR, 'Invalid', details)).toEqual({
       error: { code: ErrorCode.VALIDATION_ERROR, message: 'Invalid', details },
     })
+  })
+})
+
+describe('isSuccessEnvelope', () => {
+  it('{ data } без error — true', () => {
+    expect(isSuccessEnvelope({ data: { id: '1' } })).toBe(true)
+  })
+
+  it('{ data, meta } — true (наличие meta не мешает)', () => {
+    expect(isSuccessEnvelope(ok({ id: '1' }, { pagination: { nextCursor: null, hasMore: false, limit: 20 } }))).toBe(
+      true,
+    )
+  })
+
+  it('{ error } без data — false', () => {
+    expect(isSuccessEnvelope(fail(ErrorCode.NOT_FOUND, 'Resource not found'))).toBe(false)
+  })
+
+  it('объект и с data, и с error одновременно — false (не должен считаться успехом)', () => {
+    expect(isSuccessEnvelope({ data: {}, error: { code: ErrorCode.NOT_FOUND, message: 'x' } })).toBe(false)
+  })
+
+  it('объект без поля data — false', () => {
+    expect(isSuccessEnvelope({ meta: {} })).toBe(false)
+  })
+
+  it('null — false (typeof null === "object", но явно исключён)', () => {
+    expect(isSuccessEnvelope(null)).toBe(false)
+  })
+
+  it('примитив (не объект) — false', () => {
+    expect(isSuccessEnvelope('data')).toBe(false)
+    expect(isSuccessEnvelope(42)).toBe(false)
+    expect(isSuccessEnvelope(undefined)).toBe(false)
   })
 })

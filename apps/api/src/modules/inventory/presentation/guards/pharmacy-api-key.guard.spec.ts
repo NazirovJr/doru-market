@@ -3,16 +3,17 @@
  */
 import { type ExecutionContext, UnauthorizedException } from '@nestjs/common'
 import { describe, expect, it } from 'vitest'
-import { InMemoryPharmacyApiKeyVerificationAdapter } from '../../infrastructure/adapters/in-memory-pharmacy-api-key-verification.adapter.js'
-import { PharmacyApiKeyGuard } from './pharmacy-api-key.guard.js'
+import type Redis from 'ioredis'
+import { InMemoryPharmacyApiKeyVerificationAdapter } from '@/modules/inventory/infrastructure/adapters/in-memory-pharmacy-api-key-verification.adapter.js'
+import { PharmacyApiKeyGuard, type FastifyRequestWithPrincipal } from './pharmacy-api-key.guard.js'
 import { createHash, createHmac } from 'node:crypto'
 
 function makeContext(
   headers: Record<string, string | undefined>,
   body: string,
-  method = 'POST',
-  path = '/api/v1/inventory/batch-update',
+  route: { method?: string; path?: string } = {},
 ): ExecutionContext {
+  const { method = 'POST', path = '/api/v1/inventory/batch-update' } = route
   const rawBody = Buffer.from(body, 'utf-8')
   const req = {
     method,
@@ -29,8 +30,8 @@ function makeContext(
 }
 
 function makeVerifier(): InMemoryPharmacyApiKeyVerificationAdapter {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock: in-memory адаптер не использует переданный коннектор (тест работает в полностью автономной фейк-БД).
-  return new InMemoryPharmacyApiKeyVerificationAdapter({} as any)
+  // Тест-мок: in-memory адаптер не использует переданный коннектор (тест работает в полностью автономной фейк-БД).
+  return new InMemoryPharmacyApiKeyVerificationAdapter({} as unknown as Redis)
 }
 
 function signRequest(input: {
@@ -80,7 +81,7 @@ describe('PharmacyApiKeyGuard (DTJ-156, SRS-API-033)', () => {
       },
       body,
     )
-    const req = ctx.switchToHttp().getRequest()
+    const req = ctx.switchToHttp().getRequest<FastifyRequestWithPrincipal>()
     expect(await guard.canActivate(ctx)).toBe(true)
     expect(req.principal).toEqual({
       type: 'pharmacy_system',
@@ -274,7 +275,7 @@ describe('PharmacyApiKeyGuard (DTJ-156, SRS-API-033)', () => {
       },
       body,
     )
-    const req = ctx.switchToHttp().getRequest()
+    const req = ctx.switchToHttp().getRequest<FastifyRequestWithPrincipal>()
     await guard.canActivate(ctx)
     expect(req.principal?.chainId).toBe('C-1')
   })

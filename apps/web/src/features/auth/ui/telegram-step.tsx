@@ -39,7 +39,7 @@ export interface TelegramStepProps {
  * `disabled` + hint «откройте в Telegram Mini App». Если внутри TWA —
  * активна, на клик вызывает `POST /api/v1/auth/telegram`.
  */
-export function TelegramStep({ onSuccess }: TelegramStepProps): ReactElement {
+export const TelegramStep = ({ onSuccess }: TelegramStepProps): ReactElement => {
   const { locale } = useLocale()
   const { t } = useT(locale)
   const mutation = useTelegramAuth()

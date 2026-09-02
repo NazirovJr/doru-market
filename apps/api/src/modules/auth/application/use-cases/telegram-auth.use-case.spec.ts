@@ -19,7 +19,6 @@ import {
 } from '@dorutj/contracts'
 import { isErr, isOk } from '@dorutj/domain-kernel'
 import { type AppConfigService } from '@/config/app-config.service.js'
-import { type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { type User } from '@/modules/auth/domain/user.js'
 import {
   type Clock,
@@ -50,6 +49,7 @@ import {
 } from '../ports/refresh-token-generator.port.js'
 import {
   type UnitOfWorkPort,
+  type UnitOfWorkTx,
 } from '../ports/unit-of-work.port.js'
 import {
   type CreateUserTelegramIdentityInput,
@@ -81,12 +81,12 @@ class StubUsersRepository implements UsersRepository {
     return Promise.resolve(this.byId.get(id) ?? null)
   }
    
-  async findByTenantAndPhone(_t: string, _p: string): Promise<User | null> {
+  findByTenantAndPhone(_t: string, _p: string): Promise<User | null> {
     throw new Error('not used')
   }
    
   async create(input: CreateUserInput): Promise<User> {
-    const id = `user-${this.byId.size + 1}`
+    const id = `user-${String(this.byId.size + 1)}`
     const user: User = {
       id,
       tenantId: input.tenantId,
@@ -105,11 +105,16 @@ class StubUsersRepository implements UsersRepository {
     return Promise.resolve(user)
   }
    
-  async findOrCreateByTenantAndPhone(_i: CreateUserInput): Promise<User> {
+  findOrCreateByTenantAndPhone(_i: CreateUserInput): Promise<User> {
     throw new Error('not used in Telegram path')
   }
-   
-  async update(_id: string, _patch: UpdateUserPatch): Promise<User> {
+
+  // [Task 5] Глобальный поиск по phone — заглушка для Telegram-auth тестов.
+  findActiveByPhone(_phoneNumber: string): Promise<User | null> {
+    return Promise.resolve(null)
+  }
+
+  update(_id: string, _patch: UpdateUserPatch): Promise<User> {
     throw new Error('not used')
   }
 }
@@ -125,17 +130,17 @@ class StubTelegramIdentitiesRepository implements UserTelegramIdentitiesReposito
   async findByTenantAndTelegramId(
     tenantId: string,
     telegramUserId: bigint,
-    _tx?: DrizzleDb,
+    _tx?: UnitOfWorkTx,
   ): Promise<UserTelegramIdentity | null> {
     return Promise.resolve(this.byTenantTelegram.get(this.key(tenantId, telegramUserId)) ?? null)
   }
    
   async create(
     input: CreateUserTelegramIdentityInput,
-    _tx?: DrizzleDb,
+    _tx?: UnitOfWorkTx,
   ): Promise<UserTelegramIdentity> {
     this.createCalls.push(input)
-    const identity: UserTelegramIdentity = { id: `tid-${this.createCalls.length}`, ...input }
+    const identity: UserTelegramIdentity = { id: `tid-${String(this.createCalls.length)}`, ...input }
     this.byTenantTelegram.set(this.key(input.tenantId, input.telegramUserId), identity)
     return Promise.resolve(identity)
   }
@@ -146,59 +151,59 @@ class StubAuthSessionsRepository implements AuthSessionsRepository {
   public createCalls: CreateAuthSessionInput[] = []
 
    
-  async create(input: CreateAuthSessionInput): Promise<never> {
+  create(input: CreateAuthSessionInput): Promise<never> {
     this.createCalls.push(input)
     this.sessions.set(input.id, { userId: input.userId, deviceLabel: input.deviceLabel })
     // Возвращаем fake AuthSession, но только для type-satisfaction; use case
     // использует `session.id` уже из input, так что это OK.
-    return {} as never
+    return Promise.resolve({} as never)
   }
-   
-  async findById(_id: string): Promise<never> {
+
+  findById(_id: string): Promise<never> {
     throw new Error('not used')
   }
-   
-  async findByRefreshHash(_h: string): Promise<never> {
+
+  findByRefreshHash(_h: string): Promise<never> {
     throw new Error('not used')
   }
-   
-  async findActiveByUserId(_u: string, _n: Date): Promise<readonly never[]> {
-    return []
+
+  findActiveByUserId(_u: string, _n: Date): Promise<readonly never[]> {
+    return Promise.resolve([])
   }
-   
-  async revokeCurrentAndCreateNext(
-    _tx: DrizzleDb,
+
+  revokeCurrentAndCreateNext(
+    _tx: UnitOfWorkTx,
     _p: string,
     _i: RotateAuthSessionInput,
   ): Promise<never> {
     throw new Error('not used')
   }
-   
-  async revokeAllByFamilyId(
-    _tx: DrizzleDb,
-    _f: string,
-    _r: RevokeReason,
-    _n: Date,
-  ): Promise<number> {
-    return 0
+
+  revokeAllByFamilyId(_input: {
+    tx: UnitOfWorkTx
+    familyId: string
+    reason: RevokeReason
+    now: Date
+  }): Promise<number> {
+    return Promise.resolve(0)
   }
-   
-  async revokeOneById(
-    _tx: DrizzleDb,
-    _s: string,
-    _r: RevokeReason,
-    _n: Date,
-  ): Promise<number> {
-    return 0
+
+  revokeOneById(_input: {
+    tx: UnitOfWorkTx
+    sessionId: string
+    reason: RevokeReason
+    now: Date
+  }): Promise<number> {
+    return Promise.resolve(0)
   }
-   
-  async revokeAllByUserId(
-    _tx: DrizzleDb,
-    _u: string,
-    _r: RevokeReason,
-    _n: Date,
-  ): Promise<number> {
-    return 0
+
+  revokeAllByUserId(_input: {
+    tx: UnitOfWorkTx
+    userId: string
+    reason: RevokeReason
+    now: Date
+  }): Promise<number> {
+    return Promise.resolve(0)
   }
 }
 
@@ -216,24 +221,24 @@ class StubRefreshGen implements RefreshTokenGeneratorPort {
   public counter = 0
   generate(): { token: string; hash: string } {
     this.counter += 1
-    return { token: `refresh-token-${this.counter}`, hash: `hash-${this.counter}` }
+    return { token: `refresh-token-${String(this.counter)}`, hash: `hash-${String(this.counter)}` }
   }
 }
 
 class StubUnitOfWork implements UnitOfWorkPort {
   async run<T>(callback: Parameters<UnitOfWorkPort['run']>[0]): Promise<T> {
      
-    return (callback as (tx: DrizzleDb) => Promise<T>)(null as unknown as DrizzleDb)
+    return (callback as (tx: UnitOfWorkTx) => Promise<T>)(null)
   }
 }
 
 class StubVerifier implements TelegramInitDataVerifierPort {
   public nextResult: TelegramInitDataVerified | null = null
   public nextError: Error | null = null
-  async verify(): Promise<TelegramInitDataVerified> {
+  verify(): Promise<TelegramInitDataVerified> {
     if (this.nextError !== null) throw this.nextError
     if (this.nextResult === null) throw new Error('no nextResult set')
-    return this.nextResult
+    return Promise.resolve(this.nextResult)
   }
 }
 

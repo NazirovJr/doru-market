@@ -92,29 +92,33 @@ export class InventorySyncBatch {
   private _completedAt: Date | null
   private _errorSummary: readonly { readonly rowIndex: number; readonly reason: string }[] | null
 
-  private constructor(
-    readonly id: string,
-    readonly pharmacyId: string,
-    readonly channel: InventorySyncChannel,
-    readonly syncType: SyncType,
-    readonly totalRows: number,
-    readonly fullSyncSessionId: string | null,
-    readonly pageNumber: number,
-    readonly isLastPage: boolean,
-    receivedAt: Date,
-    status: BatchStatus,
-    acceptedRows: number,
-    rejectedRows: number,
-    completedAt: Date | null,
-    errorSummary: readonly { readonly rowIndex: number; readonly reason: string }[] | null,
-    readonly note: string | null,
-  ) {
-    this._receivedAt = receivedAt
-    this._status = status
-    this._acceptedRows = acceptedRows
-    this._rejectedRows = rejectedRows
-    this._completedAt = completedAt
-    this._errorSummary = errorSummary
+  readonly id: string
+  readonly pharmacyId: string
+  readonly channel: InventorySyncChannel
+  readonly syncType: SyncType
+  readonly totalRows: number
+  readonly fullSyncSessionId: string | null
+  readonly pageNumber: number
+  readonly isLastPage: boolean
+  readonly note: string | null
+
+  /** Единственный параметр-снапшот (C1/max-params) — поля см. `InventorySyncBatchSnapshot`. */
+  private constructor(snapshot: InventorySyncBatchSnapshot) {
+    this.id = snapshot.id
+    this.pharmacyId = snapshot.pharmacyId
+    this.channel = snapshot.channel
+    this.syncType = snapshot.syncType
+    this.totalRows = snapshot.totalRows
+    this.fullSyncSessionId = snapshot.fullSyncSessionId
+    this.pageNumber = snapshot.pageNumber
+    this.isLastPage = snapshot.isLastPage
+    this.note = snapshot.note
+    this._receivedAt = snapshot.receivedAt
+    this._status = snapshot.status
+    this._acceptedRows = snapshot.acceptedRows
+    this._rejectedRows = snapshot.rejectedRows
+    this._completedAt = snapshot.completedAt
+    this._errorSummary = snapshot.errorSummary
   }
 
   /**
@@ -126,6 +130,30 @@ export class InventorySyncBatch {
     now: Date,
     note: string | null = null,
   ): InventorySyncBatch {
+    InventorySyncBatch.validateCreateProps(props)
+    const pageNumber = props.pageNumber ?? 1
+    InventorySyncBatch.validatePageNumber(pageNumber)
+    return new InventorySyncBatch({
+      id: props.id,
+      pharmacyId: props.pharmacyId,
+      channel: props.channel,
+      syncType: props.syncType,
+      totalRows: props.totalRows,
+      fullSyncSessionId: props.fullSyncSessionId ?? null,
+      pageNumber,
+      isLastPage: props.isLastPage ?? true,
+      receivedAt: now,
+      status: 'queued',
+      acceptedRows: 0,
+      rejectedRows: 0,
+      completedAt: null,
+      errorSummary: null,
+      note,
+    })
+  }
+
+  /** Валидация входных `props` для `create` (без `pageNumber` — см. `validatePageNumber`). */
+  private static validateCreateProps(props: InventorySyncBatchCreateProps): void {
     if (props.id.trim() === '') {
       throw new Error('id must be non-empty')
     }
@@ -144,27 +172,12 @@ export class InventorySyncBatch {
     if (props.syncType === 'delta' && props.fullSyncSessionId !== undefined) {
       throw new Error('fullSyncSessionId must be undefined for syncType=delta')
     }
-    const pageNumber = props.pageNumber ?? 1
+  }
+
+  private static validatePageNumber(pageNumber: number): void {
     if (!Number.isInteger(pageNumber) || pageNumber < 1) {
       throw new Error(`pageNumber must be integer >= 1, got ${String(pageNumber)}`)
     }
-    return new InventorySyncBatch(
-      props.id,
-      props.pharmacyId,
-      props.channel,
-      props.syncType,
-      props.totalRows,
-      props.fullSyncSessionId ?? null,
-      pageNumber,
-      props.isLastPage ?? true,
-      now,
-      'queued',
-      0,
-      0,
-      null,
-      null,
-      note,
-    )
   }
 
   /**
@@ -173,23 +186,7 @@ export class InventorySyncBatch {
    * (например, терминальный статус + completedAt=null — corruption).
    */
   static restore(snapshot: InventorySyncBatchSnapshot): InventorySyncBatch {
-    return new InventorySyncBatch(
-      snapshot.id,
-      snapshot.pharmacyId,
-      snapshot.channel,
-      snapshot.syncType,
-      snapshot.totalRows,
-      snapshot.fullSyncSessionId,
-      snapshot.pageNumber,
-      snapshot.isLastPage,
-      snapshot.receivedAt,
-      snapshot.status,
-      snapshot.acceptedRows,
-      snapshot.rejectedRows,
-      snapshot.completedAt,
-      snapshot.errorSummary,
-      snapshot.note,
-    )
+    return new InventorySyncBatch(snapshot)
   }
 
   /** Текущий статус FSM. */

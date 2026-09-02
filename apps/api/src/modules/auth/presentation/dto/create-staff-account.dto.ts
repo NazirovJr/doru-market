@@ -21,10 +21,11 @@
 import { z } from 'zod'
 
 const STAFF_ROLES = ['pharmacist', 'courier', 'pharmacy_admin', 'support_agent', 'super_admin'] as const
+const FULL_NAME_MAX_LENGTH = 255
 
 export const createStaffAccountDtoSchema = z.object({
   phone: z.string().min(1, 'phone is required'),
-  fullName: z.string().min(1, 'fullName is required').max(255, 'fullName too long'),
+  fullName: z.string().min(1, 'fullName is required').max(FULL_NAME_MAX_LENGTH, 'fullName too long'),
   role: z.enum(STAFF_ROLES, { message: `role must be one of: ${STAFF_ROLES.join(', ')}` }),
   // `.nullish()` (не только `.optional()`): `CreateStaffAccountCommand.pharmacyId/chainId`
   // уже типизированы как `string | null | undefined` (см. use case) — для `courier`/

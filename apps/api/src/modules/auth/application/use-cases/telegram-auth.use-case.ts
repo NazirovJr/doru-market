@@ -44,6 +44,7 @@ import {
   type UserRole,
   InvalidTelegramInitDataError,
   TelegramAuthDateExpiredError,
+  TelegramBotNotConfiguredError,
 } from '@dorutj/contracts'
 import { type Result, err, ok } from '@dorutj/domain-kernel'
 import { CLOCK, ID_GENERATOR, type Clock, type IdGenerator } from '@/shared-kernel/index.js'
@@ -105,13 +106,17 @@ export interface TelegramAuthResult {
 }
 
 export type TelegramAuthError =
-  | import('@dorutj/contracts').InvalidTelegramInitDataError
-  | import('@dorutj/contracts').TelegramAuthDateExpiredError
-  | import('@dorutj/contracts').TelegramBotNotConfiguredError
+  | InvalidTelegramInitDataError
+  | TelegramAuthDateExpiredError
+  | TelegramBotNotConfiguredError
 
  
 @Injectable()
 export class TelegramAuthUseCase {
+  // Обоснование ниже, для строки eslint-disable непосредственно перед constructor: 10 DI-инъекций
+  // (NestJS constructor injection резолвит по позиции; единый options-объект не идиоматичен для
+  // Nest DI и потребовал бы кастомный factory provider — см. class JSDoc выше).
+  // eslint-disable-next-line max-params -- 10 DI-инъекций NestJS constructor injection, см. комментарий выше
   constructor(
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(ID_GENERATOR) private readonly ids: IdGenerator,
@@ -135,7 +140,7 @@ export class TelegramAuthUseCase {
     // напрямую из тестов/скриптов).
     const botToken = this.config.telegramBotTokenNeutral
     if (botToken === undefined || botToken.length === 0) {
-      return err(new (await import('@dorutj/contracts')).TelegramBotNotConfiguredError())
+      return err(new TelegramBotNotConfiguredError())
     }
 
     // 1) Шаги 1-8 SRS-API-031: валидация initData. `TelegramInitDataVerifierPort.verify`

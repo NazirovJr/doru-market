@@ -27,7 +27,7 @@ async function generate(): Promise<void> {
   await ensureDir(OUTPUT_PATH)
   await writeFile(OUTPUT_PATH, json, 'utf-8')
   // eslint-disable-next-line no-console -- CLI-скрипт (`*.scripts.ts` не входит в Nest-приложение), console — единственный канал вывода для пользователя скрипта.
-  console.log(`[openapi:generate] wrote ${OUTPUT_PATH} (${json.length} bytes)`)
+  console.log(`[openapi:generate] wrote ${OUTPUT_PATH} (${String(json.length)} bytes)`)
 }
 
 async function check(): Promise<void> {

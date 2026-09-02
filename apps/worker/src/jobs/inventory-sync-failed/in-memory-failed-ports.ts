@@ -28,21 +28,23 @@ export class InMemoryInventorySyncBatchRepository implements InventorySyncBatchR
     errorDetail: string
   }[] = []
 
-  async findById(id: string): Promise<InventorySyncBatchSnapshot | null> {
-    return this.store.get(id) ?? null
+  findById(id: string): Promise<InventorySyncBatchSnapshot | null> {
+    return Promise.resolve(this.store.get(id) ?? null)
   }
 
-  async save(batch: InventorySyncBatchSnapshot): Promise<void> {
+  save(batch: InventorySyncBatchSnapshot): Promise<void> {
     this.store.set(batch.id, batch)
+    return Promise.resolve()
   }
 
-  async appendError(input: {
+  appendError(input: {
     batchId: string
     rowIndex: number | null
     errorCode: string
     errorDetail: string
   }): Promise<void> {
     this.errors.push(input)
+    return Promise.resolve()
   }
 }
 

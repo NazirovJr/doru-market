@@ -2,8 +2,27 @@
  * Drizzle-реализация `PharmacyMapRepository` (DTJ-195, EP-08 — Карта аптек, R1-6).
  *
  * bbox-запрос пинов аптек видимой области карты (`SRS-CAT-052`/`SRS-CAT-053`) — принципиально
- * ОТДЕЛЬНЫЙ путь от `ST_DWithin`-поиска (DTJ-185): `ph.geo_point && ST_MakeEnvelope(...)`
- * (GiST `&&`), без ранжирования.
+ * ОТДЕЛЬНЫЙ путь от гаверсинус-поиска (DTJ-185): bbox — прямоугольник, выражается обычным
+ * диапазонным сравнением `latitude BETWEEN ... AND longitude BETWEEN ...`, без ранжирования.
+ *
+ * **DEFECT-FIX (пост-мортем, см. отчёт сдачи): `geo_point`/PostGIS не существуют, фильтр
+ * переведён на `latitude`/`longitude`.** Первая версия этого файла (DTJ-195) была написана
+ * «по целевой схеме» — `ph.geo_point && ST_MakeEnvelope(...)` (GiST `&&`) — и падала на живой
+ * БД с `type "geometry" does not exist`: колонки `geo_point` НЕТ ни в одной миграции
+ * (`apps/api/migrations/`), расширение `postgis` НЕ установлено (`pg_extension`), и образ
+ * `postgres:16` его даже не может поставить (`pg_available_extensions` — 0 строк для
+ * `postgis%`). Дефект был невидим, потому что `pharmacies-map-controller.integration.spec.ts`
+ * подменяет `PHARMACY_MAP_REPOSITORY` фейком — ни один тест не выполнял этот SQL на реальном
+ * Postgres (закрыто здесь, см. `postgres-pharmacy-map.adapter.integration.spec.ts`).
+ *
+ * Решение — то же самое, что уже принято в этом модуле для DTJ-185
+ * (`postgres-search.sql.ts`, JSDoc п.1: гаверсинус на `latitude`/`longitude` вместо
+ * `ST_DWithin`): bbox не нуждается в GiST/geometry вообще — это диапазон, а не радиус.
+ * `ix_pharmacies_lat_lon` (обычный составной btree, миграция `0022_pharmacies_lat_lon_index.sql`)
+ * покрывает диапазонный предикат. **`numeric`-ловушка**: `latitude`/`longitude` — `numeric(10,8)`/
+ * `numeric(11,8)`, драйвер `pg` без явного приведения отдаёт `numeric` СТРОКОЙ — `lon`/`lat` в
+ * SELECT приводятся к `::double precision`, иначе `PharmacyMapPin.lat`/`.lon` ушли бы во фронт
+ * строками (`"38.5"` вместо `38.5`) — тот же класс дефекта, что был здесь с geo_point.
  *
  * **Обоснование прямого JOIN чужих bounded contexts (аналогично DTJ-185, `SRS-CAT-014`).**
  * Этот адаптер джойнит `pharmacy_chains`/`pharmacy_inventory` (`onboarding`/`inventory`) и
@@ -12,21 +31,12 @@
  * проверкой видимости сети/тенанта и (опционально) цены/остатка ОДНОГО медикамента; проведение
  * этого через `OrdersFacade`-подобные фасады означало бы N+1 запросов на страницу карты.
  *
- * **ВАЖНО — три расхождения между текстом тикета/спецификацией и фактическим состоянием
- * репозитория на момент реализации (детали — в отчёте сдачи DTJ-195, раздел «Найденные чужие
- * проблемы»); НЕ исправлены здесь молча, т.к. требуют правки файлов вне `files_owned` этого
- * тикета:**
+ * **ВАЖНО — два оставшихся расхождения между текстом тикета/спецификацией и фактическим
+ * состоянием репозитория на момент реализации (детали — в отчёте сдачи DTJ-195, раздел
+ * «Найденные чужие проблемы»); НЕ исправлены здесь молча, т.к. требуют правки файлов вне
+ * `files_owned` этого тикета (п.1 из исходного списка — `geo_point`/PostGIS — закрыт выше):**
  *
- * 1. **`pharmacies.geo_point` (`GEOGRAPHY(POINT,4326)`, генерируемая колонка) и расширение
- *    `postgis` ОТСУТСТВУЮТ в фактических миграциях** (`apps/api/migrations/`), хотя
- *    `docs/spec/11-database-schema.md` их специфицирует, а `0001_extensions.sql` (DTJ-012)
- *    включает только `pgcrypto`/`pg_trgm`/`unaccent`/`btree_gin`. Индекс `ix_pharmacies_geo_point`
- *    (GiST) тоже нигде не создан. SQL ниже написан ПО ЦЕЛЕВОЙ схеме (буквально по тексту тикета
- *    и спецификации) и не выполнится на текущей БД до отдельной миграции — ни один найденный
- *    тикет (DTJ-012/DTJ-091/DTJ-181) её не берёт на себя. Это блокирует как реальный прогон
- *    запроса, так и `EXPLAIN`-проверку использования индекса, требуемую критерием приёмки 3
- *    тест-плана.
- * 2. **`PharmacyMapPin` (порт DTJ-194) объявляет уже ВЫЧИСЛЕННЫЙ `isOpenNow: boolean` и НЕ несёт
+ * 1. **`PharmacyMapPin` (порт DTJ-194) объявляет уже ВЫЧИСЛЕННЫЙ `isOpenNow: boolean` и НЕ несёт
  *    сырых `openingTime`/`closingTime`**, хотя текст ЭТОГО тикета прямо требует возвращать сырые
  *    поля и НЕ вычислять `isOpenNow` здесь (см. Definition of Done тикета) — вычисление должен
  *    делать `GetPharmacyMapPinsUseCase` (DTJ-196) через `PharmacyOpeningHoursPolicy` (DTJ-184).
@@ -36,7 +46,7 @@
  *    (`@/shared-kernel`, НЕ `Date.now()`) и дословно алгоритм `SRS-CAT-046`, см. `computeIsOpenNow`
  *    ниже. Это ЗНАЕТ дублирование с будущей `PharmacyOpeningHoursPolicy` — технический долг,
  *    подлежащий удалению, когда порт DTJ-194 будет скорректирован (добавит сырые поля).
- * 3. **`pharmacy_inventory` не имеет колонки `last_synced_at`** (только `updated_at`), хотя
+ * 2. **`pharmacy_inventory` не имеет колонки `last_synced_at`** (только `updated_at`), хотя
  *    `docs/spec/11-database-schema.md` её специфицирует и текст тикета явно ссылается на неё.
  *    `updated_at` используется как ближайший практический эквивалент для `offer.lastSyncedAt`/
  *    `isStale` — обновляется при каждой записи остатка/цены (1С/Excel/ручной ввод), что на
@@ -58,12 +68,12 @@
  * реализован — переиспользуемого строителя нет. `visibilityAndTenantScopeFragment()` ниже —
  * кандидат на выделение в общий модуль при появлении DTJ-185 (см. риски тикета DTJ-195).
  *
- * **Тест-контейнеры Postgres ещё не раскатаны (EP-19, `STATE-AND-RESUME-POINT.md` §11.4)** —
- * тот же прецедент, что `analog-candidates.adapter.spec.ts` (DTJ-100): здесь только unit-тесты
- * контракта адаптера на моке `DrizzleDb`. Интеграционные сценарии тест-плана DTJ-195 (bbox
- * включение/исключение, `EXPLAIN`, suspended-сеть, narcotic) добавляются отдельным файлом
- * `postgres-pharmacy-map.adapter.integration.spec.ts` после EP-19 И после миграции из п.1 выше —
- * см. blockers в отчёте сдачи, не скрыто как `it.skip`.
+ * **Unit vs integration.** `postgres-pharmacy-map.adapter.spec.ts` — форма SQL/маппинг на моке
+ * `DrizzleDb` (тот же приём, что `analog-candidates.adapter.spec.ts`, DTJ-100). Реальная
+ * семантика фильтра — bbox включение/исключение на границе, suspended-сеть, narcotic, вырезание
+ * numeric-строк — проверяется `postgres-pharmacy-map.adapter.integration.spec.ts` на реальном
+ * Postgres (тот же паттерн раннера миграций/фикстур, что `postgres-search.adapter.integration.spec.ts`,
+ * DTJ-185); `EXPLAIN`/GiST не применимы — обычный btree-диапазон, не геоиндекс.
  */
 import { Inject, Injectable } from '@nestjs/common'
 import { sql, type SQL } from 'drizzle-orm'
@@ -141,11 +151,13 @@ function visibilityAndTenantScopeFragment(): SQL {
 }
 
 /**
- * `geo_point`/`ST_MakeEnvelope` — см. JSDoc файла п.1: колонка/расширение PostGIS отсутствуют
- * в фактических миграциях на момент этого тикета, запрос написан по целевой схеме.
+ * bbox = диапазон, не радиус — обычное `BETWEEN` по `latitude`/`longitude` (см. JSDoc файла,
+ * DEFECT-FIX): не нуждается в GiST/geometry, `ix_pharmacies_lat_lon` (btree,
+ * `0022_pharmacies_lat_lon_index.sql`) покрывает оба диапазона.
  */
 function bboxFilterFragment(query: BboxQuery): SQL {
-  return sql`pharmacies.geo_point && ST_MakeEnvelope(${query.lonMin}, ${query.latMin}, ${query.lonMax}, ${query.latMax}, 4326)`
+  return sql`${pharmacies.latitude} BETWEEN ${query.latMin} AND ${query.latMax}
+    AND ${pharmacies.longitude} BETWEEN ${query.lonMin} AND ${query.lonMax}`
 }
 
 function buildPinsQuery(query: BboxQuery): SQL {
@@ -153,8 +165,8 @@ function buildPinsQuery(query: BboxQuery): SQL {
     SELECT
       ${pharmacies.id} AS "pharmacyId",
       ${pharmacies.name} AS "name",
-      ST_X(pharmacies.geo_point::geometry) AS "lon",
-      ST_Y(pharmacies.geo_point::geometry) AS "lat",
+      ${pharmacies.longitude}::double precision AS "lon",
+      ${pharmacies.latitude}::double precision AS "lat",
       ${pharmacies.is24_7} AS "is24x7",
       ${pharmacies.openingTime} AS "openingTime",
       ${pharmacies.closingTime} AS "closingTime"
@@ -193,8 +205,8 @@ function buildPinsWithOfferQuery(query: BboxQuery, medicineId: string): SQL {
     SELECT
       ${pharmacies.id} AS "pharmacyId",
       ${pharmacies.name} AS "name",
-      ST_X(pharmacies.geo_point::geometry) AS "lon",
-      ST_Y(pharmacies.geo_point::geometry) AS "lat",
+      ${pharmacies.longitude}::double precision AS "lon",
+      ${pharmacies.latitude}::double precision AS "lat",
       ${pharmacies.is24_7} AS "is24x7",
       ${pharmacies.openingTime} AS "openingTime",
       ${pharmacies.closingTime} AS "closingTime",

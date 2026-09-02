@@ -15,11 +15,18 @@
  * `AppConfigService`. Эквивалентно по сути (гарантированный `57014` от РЕАЛЬНОГО Postgres на
  * ЛЮБОМ запросе), проще и не требует правки схемы вне `files_owned`.
  *
- * **AC1 (`finalScore=0.770`, TC-CAT-002/SRS-CAT-020)**: `similarity('Цитрамон','цытрамон')=0.62`
- * — каноническое значение из спецификации §3.2, ТА ЖЕ пара, что уже использует интеграционный
- * тест DTJ-186 (`postgres-search-suggest.adapter.integration.spec.ts`, AC3) как «гарантированно
- * выше порога pg_trgm». Значение НЕ пересчитано здесь заново (зависит от версии `pg_trgm`) —
- * тест доверяет каноническому примеру спецификации, как и его предшественник.
+ * **AC1 (TC-CAT-002/SRS-CAT-020)**: спецификация (`20-module-catalog-search.md` §3.2) приводит
+ * пример с `similarity('Цитрамон','цытрамон')=0.62` и итоговым `finalScore=0.770` как
+ * ИЛЛЮСТРАЦИЮ формулы, а не как гарантированную константу окружения — `similarity()` зависит от
+ * версии `pg_trgm`. На фактической версии этого окружения (PostgreSQL 16.15,
+ * Debian 16.15-1.pgdg13+2) `similarity('Цитрамон','цытрамон')=0.5`, не `0.62`, поэтому литеральные
+ * `0.770` НЕ воспроизводимы здесь и тест их не проверяет. Вместо этого тест запрашивает
+ * `similarity()` напрямую у ТОЙ ЖЕ БД в рантайме и считает ожидаемый `finalScore` по формуле
+ * `SRS-CAT-018/019` (веса + нормализация `RankingScoreMapper`) из этого живого значения и
+ * остальных компонент фикстуры (AC1: 4 аптеки в радиусе → `availability` насыщена до `1.0`,
+ * 800м из 5000м радиуса → `proximity`, единственный медикамент на странице → `price=1.0`
+ * (вырожденный случай), `reliability=4.2/5`). Так тест проверяет саму формулу ранжирования,
+ * а не конкретный релиз `pg_trgm`.
  *
  * **Окружение**: см. JSDoc `postgres-search-suggest.adapter.integration.spec.ts` — тот же
  * `describe.skipIf`, честный skip при недоступном Postgres (не «зелёный по умолчанию»).
@@ -38,6 +45,16 @@ import { PostgresSearchProvider } from '@/modules/catalog/infrastructure/adapter
 import { SearchTemporarilyDegradedError } from '@/modules/catalog/domain/errors/search-temporarily-degraded.error.js'
 import { TenantId } from '@/modules/tenancy/index.js'
 import { GeoPoint } from '@/shared-kernel/domain/value-objects/geo-point.vo.js'
+import { TRIGRAM_SIMILARITY_FLOOR } from '@/modules/catalog/infrastructure/adapters/postgres-search.sql.js'
+import {
+  AVAILABILITY_SATURATION_OFFERS,
+  RANKING_WEIGHT_AVAILABILITY,
+  RANKING_WEIGHT_PRICE,
+  RANKING_WEIGHT_PROXIMITY,
+  RANKING_WEIGHT_RELIABILITY,
+  RANKING_WEIGHT_TEXT,
+  RELIABILITY_SCALE_MAX,
+} from '@/modules/catalog/domain/services/ranking-score-mapper.service.js'
 import type { SearchQuery } from '@/modules/catalog/application/search/ports/search-provider.port.js'
 
 const TEST_DATABASE_URL =
@@ -112,7 +129,46 @@ describe.skipIf(!postgresAvailable)('PostgresSearchProvider.search() — integra
       `INSERT INTO categories (slug, name_tj, name_ru, name_en, commission_category, sort_order, is_active)
        VALUES ('root', 'Корень', 'Root', 'Root', 'otc', 0, true)`,
     )
-    await pool.query(`INSERT INTO tenants (id, slug, is_neutral) VALUES ($1, 'neutral', true)`, [NEUTRAL_TENANT_ID])
+    // Ж13: `TRUNCATE ... tenants ... CASCADE` в truncateAll() сносит и `tenant_settings`
+    // (FK на tenants.id) — восстанавливаем ОБЕ строки, иначе `tenantFromDb` считает
+    // нейтрального тенанта неконсистентным (null) и ЛЮБОЙ анонимный запрос к общей БД
+    // после этого файла получает 500 «neutral tenant not configured». Значения — 1:1 из
+    // `migrations/0021_seed_neutral_tenant.sql`, тем же id, чтобы не конфликтовать с ней.
+    await pool.query(
+      `INSERT INTO tenants (id, slug, is_neutral, courier_sourcing_mode, custom_domain_status)
+       VALUES ($1, 'neutral', true, 'platform_pool', 'none')`,
+      [NEUTRAL_TENANT_ID],
+    )
+    await pool.query(
+      `INSERT INTO tenant_settings (
+         tenant_id, brand_name, brand_palette, default_locale,
+         cod_limit_diram, hold_period_days, pickup_sla_minutes, pickup_sla_buffer_minutes,
+         delivery_sla_city_minutes, delivery_sla_remote_minutes, dispute_window_hours,
+         inventory_delta_sla_minutes, return_restock_min_remaining_days
+       )
+       VALUES (
+         $1, 'DoruTJ', '{
+           "--brand-primary": "#64748b",
+           "--brand-primary-hover": "#475569",
+           "--brand-secondary": "#94a3b8",
+           "--brand-accent": "#0ea5e9",
+           "--brand-bg": "#ffffff",
+           "--brand-surface": "#f8fafc",
+           "--brand-text": "#0f172a",
+           "--brand-text-muted": "#64748b",
+           "--brand-border": "#e2e8f0",
+           "--brand-success": "#16a34a",
+           "--brand-danger": "#dc2626",
+           "--brand-warning": "#d97706",
+           "--brand-radius": "8px",
+           "--brand-font-family": "system-ui, sans-serif"
+         }', 'tj',
+         50000, 1, 7, 5,
+         240, 1440, 24,
+         5, 30
+       )`,
+      [NEUTRAL_TENANT_ID],
+    )
     await pool.query(
       `INSERT INTO pharmacy_chains (id, name, legal_entity_name, tin_inn, status, tenant_id)
        VALUES ($1, 'Сеть 1', 'ООО Сеть 1', '000000001', 'active', NULL)`,
@@ -184,14 +240,68 @@ describe.skipIf(!postgresAvailable)('PostgresSearchProvider.search() — integra
     )
   }
 
-  it('AC1/TC-CAT-002/SRS-CAT-020: опечатка «цытрамон» находит «Цитрамон», finalScore = 0.770 ± 0.001', async () => {
+  it('AC1/TC-CAT-002/SRS-CAT-020: опечатка «цытрамон» находит «Цитрамон», finalScore по формуле ранжирования из живой similarity', async () => {
     const medicineId = '10000000-0000-4000-8000-000000000001'
+    const cheapestPharmacyId = PHARMACY_ID
+    // AC1 дословно: «4 аптеки в радиусе на 800 м» — offersCountInRadius=4 обязано насытить
+    // availability до 1.0 (AVAILABILITY_SATURATION_OFFERS=3). Прежняя фикстура создавала РОВНО
+    // ОДИН оффер — дефект фикстуры (availability=1/3), а не кода ранжирования (разбор CTO).
+    const extraPharmacyIds = [
+      '00000000-0000-4000-8000-000000000010',
+      '00000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000012',
+    ]
     await seedMedicine({ id: medicineId, tradeName: 'Цитрамон', innName: 'Ацетилсалициловая кислота' })
-    await seedOffer({ medicineId, priceDiram: 1200 })
-    await seedReliability(PHARMACY_ID, 4.2)
+
+    // Все 4 аптеки — в той же геоточке, что и исходная CENTER-аптека (~800м от geo-запроса ниже),
+    // поэтому nearestOfferDistanceMeters (MIN по всем офферам) остаётся 800м независимо от того,
+    // сколько их — proximityScore не меняется добавлением дополнительных аптек.
+    for (const pharmacyId of extraPharmacyIds) {
+      await pool.query(
+        `INSERT INTO pharmacies (id, chain_id, name, address_text, latitude, longitude, phone, status)
+         VALUES ($1, $2, 'Аптека доп.', 'ул. Тестовая доп.', $3, $4, '+992900000001', 'active')`,
+        [pharmacyId, CHAIN_ID, CENTER.lat, CENTER.lon],
+      )
+    }
+
+    // AC1: цена самого дешёвого оффера — 12.00 TJS (1200 диram), reliability его аптеки — 4.2/5.
+    // У трёх дополнительных аптек цена заведомо выше 1200, чтобы ARRAY_AGG(... ORDER BY price ASC)
+    // однозначно (без гонки на равных ценах) выбрал cheapestPharmacyId «самым дешёвым» оффером.
+    await seedOffer({ medicineId, pharmacyId: cheapestPharmacyId, priceDiram: 1200 })
+    await seedReliability(cheapestPharmacyId, 4.2)
+    for (const pharmacyId of extraPharmacyIds) {
+      await seedOffer({ medicineId, pharmacyId, priceDiram: 1500 })
+    }
 
     const geo = GeoPoint.create(CENTER.lat + 0.0072, CENTER.lon) // ~800м к северу
     if (!geo.ok) throw new Error('fixture GeoPoint invalid')
+
+    // Живая similarity ИЗ ЭТОЙ ЖЕ БД (см. JSDoc файла — версия pg_trgm меняет это число, спека
+    // приводит его лишь как иллюстрацию формулы). Тест считает ожидаемый finalScore из НЕЁ, а не
+    // из литерала спецификации.
+    const similarityProbe = await pool.query<{ sim: number }>(
+      `SELECT similarity('Цитрамон', 'цытрамон')::real AS sim`,
+    )
+    const similarity = similarityProbe.rows[0]?.sim
+    if (similarity === undefined) throw new Error('similarity probe returned no rows')
+
+    // SRS-CAT-019 п.3: clamp((similarity - floor) / (1 - floor), 0, 1). AC1 «без tsvector-хита» —
+    // весовые CASE-компоненты (A/C) не срабатывают, textRelevance определяется триграммой trade_name.
+    const textRelevance = Math.min(
+      Math.max((similarity - TRIGRAM_SIMILARITY_FLOOR) / (1 - TRIGRAM_SIMILARITY_FLOOR), 0),
+      1,
+    )
+    const availability = Math.min(4 / AVAILABILITY_SATURATION_OFFERS, 1) // AC1: 4 аптеки → насыщение
+    const proximity = 1 - Math.min(800 / 5000, 1) // AC1: 800м из радиуса 5000м
+    const price = 1 // единственный медикамент на странице → вырожденный случай computePriceScore
+    const reliability = 4.2 / RELIABILITY_SCALE_MAX // AC1: reliability самой дешёвой аптеки
+
+    const expectedFinalScore =
+      RANKING_WEIGHT_TEXT * textRelevance +
+      RANKING_WEIGHT_AVAILABILITY * availability +
+      RANKING_WEIGHT_PROXIMITY * proximity +
+      RANKING_WEIGHT_PRICE * price +
+      RANKING_WEIGHT_RELIABILITY * reliability
 
     const result = await provider.search(
       baseSearchQuery({ text: 'цытрамон', geo: geo.value, radiusMeters: 5000 }),
@@ -199,7 +309,7 @@ describe.skipIf(!postgresAvailable)('PostgresSearchProvider.search() — integra
 
     expect(result.items).toHaveLength(1)
     expect(result.items[0]?.tradeName).toBe('Цитрамон')
-    expect(result.items[0]?.relevanceScore).toBeCloseTo(0.77, 3)
+    expect(result.items[0]?.relevanceScore).toBeCloseTo(expectedFinalScore, 3)
   })
 
   it('AC2/TC-CAT-005: 13-значный штрихкод, НЕ существующий в medicines.barcode → data:[], без текстового фолбэка', async () => {

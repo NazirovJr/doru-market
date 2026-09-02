@@ -11,6 +11,13 @@
  * `markCompleted()` — обновление `status='completed'`, `responseStatus`,
  * `responseBody` после успешного ответа use case'а. Хранилище обязано
  * сохранить `responseBody` для возврата при повторном запросе.
+ *
+ * `releaseProcessing()` — снимает запись `status='processing'`, когда
+ * обработчик бросил ошибку. Без этого одна транзиентная ошибка навсегда
+ * отравляет ключ: `status='processing'` осталась бы висеть бессрочно, и
+ * КАЖДЫЙ повтор с тем же `Idempotency-Key` получал бы
+ * `409 still_processing`, хотя неуспешный запрос не оставил клиенту
+ * никакого наблюдаемого результата, который стоило бы кэшировать.
  */
 import { type Result } from '@dorutj/domain-kernel'
 import { type ErrorCode, type ErrorEnvelope } from '@dorutj/contracts'
@@ -55,6 +62,12 @@ export interface IdempotencyKeysRepository {
     responseStatus: number,
     responseBody: ErrorEnvelope | { data: unknown; meta?: unknown },
   ): Promise<void>
+  /**
+   * Снимает запись `status='processing'` после ошибки обработчика, освобождая
+   * `(userId, endpoint, key)` для повторной попытки. Ответ не кэшируется —
+   * запись просто перестаёт существовать, как будто запроса не было.
+   */
+  releaseProcessing(id: string): Promise<void>
 }
 
 /** Type-guard для repository result — не используется, документирует API. */

@@ -38,8 +38,14 @@ const ID_PARSE_UUID = new ParseUUIDPipe({ version: '4' })
 export class PharmacyChainsPublicController {
   /* eslint-disable max-params -- NestJS DI: 4 провайдера в конструкторе — стандартная практика фреймворка */
   constructor(
+    // Явный @Inject на каждом параметре: esbuild не эмитит `design:paramtypes` (DTJ-001).
+    // Эти три шли ДО декорированных, поэтому попадали в paramtypes как `undefined` и роняли
+    // бут: «can't resolve dependencies of the PharmacyChainsPublicController (?, +, +, ...)».
+    @Inject(SubmitChainApplicationUseCase)
     private readonly submitChainApplication: SubmitChainApplicationUseCase,
+    @Inject(VerifyChainContactPhoneUseCase)
     private readonly verifyChainContactPhone: VerifyChainContactPhoneUseCase,
+    @Inject(SubmitChainForReviewUseCase)
     private readonly submitChainForReview: SubmitChainForReviewUseCase,
     @Inject(PHARMACY_CHAIN_REPOSITORY)
     private readonly pharmacyChainRepository: PharmacyChainRepositoryPort,

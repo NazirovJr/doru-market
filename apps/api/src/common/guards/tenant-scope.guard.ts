@@ -5,6 +5,10 @@
  * в `TenantContext`, а guard превращает это в корректный HTTP-ответ.
  *
  * Контракт (SRS-TEN-008, SRS-API-041):
+ *   0. Endpoint помечен `@SkipTenantResolution()` — guard пропускает ВСЮ
+ *      проверку резолвинга целиком (см. JSDoc декоратора ниже). Это НЕ то же
+ *      самое, что `@Public()` (шаг 1): `@Public()` до сих пор требует
+ *      успешно резолвленного (хотя бы нейтрального) тенанта.
  *   1. Endpoint помечен `@Public()` — guard пропускает проверку
  *      `token.tenantId === resolvedTenantId` (это работа `AuthGuard`,
  *      ещё не написан в рамках волны 3.5), НО проверка резолва тенанта
@@ -24,17 +28,56 @@
  * application (порт `TenantContext` — это application-инфраструктура, не
  * domain).
  */
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common'
+import { CanActivate, ExecutionContext, Inject, Injectable, SetMetadata, UnauthorizedException } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import { ErrorCode } from '@dorutj/contracts'
 import { TenantContext } from '../context/tenant-context.js'
 import { PUBLIC_METADATA_KEY } from '../decorators/public.decorator.js'
 
+/**
+ * Маркер живучести (SRS-NFR-037): по умолчанию `TenantScopeGuard` требует
+ * успешно резолвленного тенанта (хотя бы нейтрального) для ЛЮБОГО маршрута,
+ * включая `@Public()` (см. шаг 1 контракта выше) — так и должно оставаться
+ * для всех бизнес-маршрутов.
+ *
+ * Единственное намеренное исключение — liveness/readiness (`/health`,
+ * `/ready`, см. `HealthController`): проба живучести обязана отвечать даже
+ * когда тенанты вообще не заведены в БД (пустая `tenants` до применения
+ * seed/миграции нейтрального тенанта), иначе Docker/K8s healthcheck не может
+ * отличить «приложение упало» от «справочники пока пустые» — получается
+ * замкнутый круг (см. миграцию `0021_seed_neutral_tenant.sql`, JSDoc).
+ *
+ * Инвариант: этот декоратор навешивается ТОЛЬКО на health/readiness-маршруты.
+ * Он специально не переиспользует `@Public()` — `@Public()` уже применяется
+ * к другим бизнес-эндпоинтам (`otp-request`, `telegram-auth` и т.д.), которым
+ * резолвинг тенанта по-прежнему обязателен. Смешивать эти два маркера означало
+ * бы ослабить проверку для всех public-маршрутов сразу, а не только для двух
+ * health-эндпоинтов.
+ */
+export const SKIP_TENANT_RESOLUTION_KEY = Symbol.for('@dorutj/common/skip-tenant-resolution')
+
+/** См. `SKIP_TENANT_RESOLUTION_KEY`. Применять ТОЛЬКО к liveness/readiness. */
+export const SkipTenantResolution = (): MethodDecorator & ClassDecorator =>
+  SetMetadata(SKIP_TENANT_RESOLUTION_KEY, true)
+
 @Injectable()
 export class TenantScopeGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  // Явный @Inject: esbuild (vitest) не эмитит `design:paramtypes` (DTJ-001). Без него
+  // paramtypes пуст, guard создаётся без аргументов и `this.reflector` — undefined; бут при
+  // этом НЕ падает, а TypeError прилетает на первом же запросе. Guard глобальный (APP_GUARD),
+  // поэтому цена ошибки — все эндпоинты сразу. Та же конвенция уже соблюдена в
+  // `modules/auth/presentation/guards/auth.guard.ts` и `roles.guard.ts`.
+  constructor(@Inject(Reflector) private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
+    const skipTenantResolution = this.reflector.getAllAndOverride<boolean>(SKIP_TENANT_RESOLUTION_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ])
+    if (skipTenantResolution) {
+      return true
+    }
+
     const isPublic = this.reflector.getAllAndOverride<boolean>(PUBLIC_METADATA_KEY, [
       context.getHandler(),
       context.getClass(),

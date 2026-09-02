@@ -1,12 +1,16 @@
 /**
  * `suppression-justification.spec.ts` (Блок 5.4 задача STATE-AND-RESUME-POINT.md §11.4) —
- * машинно-проверяемое правило подавлений ESLint.
+ * машинно-проверяемое правило подавлений ESLint и v8-coverage.
  *
- * Правило: каждый `eslint-disable*` ДОЛЖЕН иметь обоснование после `--` на той же строке.
- * Если подавление не подавляет ничего полезного — оно протухло (refactor оставил закомментированный
- * обход) и должно быть удалено. Если подавление всё ещё нужно — за ним должна быть причина,
- * отличающая «правило объективно неприменимо» от «правило нашло настоящую проблему, которую
- * мы решили не решать».
+ * Правило: каждый `eslint-disable*` И каждый `v8 ignore ...` ДОЛЖНЫ иметь обоснование после
+ * `--` на той же строке. Если подавление не подавляет ничего полезного — оно протухло (refactor
+ * оставил закомментированный обход) и должно быть удалено. Если подавление всё ещё нужно — за
+ * ним должна быть причина, отличающая «правило объективно неприменимо» от «правило нашло
+ * настоящую проблему, которую мы решили не решать».
+ *
+ * `v8 ignore` подавления добавлены в скан по той же логике: это точечное исключение ветки/строки
+ * из порога покрытия (`vitest.config.ts` → `coverage.thresholds`), и оно так же легко может
+ * протухнуть или прикрыть настоящую проблему без обоснования — гейт обязан ловить оба вида.
  *
  * Исключения из скана:
  *   - `tests/arch/fixtures/**` (там нарушения намеренные, тестируют ловушки)
@@ -47,8 +51,16 @@ const EXCLUDED_PATH_FRAGMENTS = [
 /** Слабый «justification» — текст после `--` отделён пробелами, не пустой. */
 const JUSTIFICATION_PATTERN = / -- \S/
 
-/** Сами директивы — все варианты. */
-const SUPPRESSION_PATTERN = /eslint-disable(?:-next-line|-file)?(?:\s+[A-Za-z@/_-][\w@/_-]*)+/
+/** `eslint-disable`, `eslint-disable-next-line`, `eslint-disable-file` + список правил. */
+const ESLINT_SUPPRESSION_PATTERN = /eslint-disable(?:-next-line|-file)?(?:\s+[A-Za-z@/_-][\w@/_-]*)+/
+/**
+ * `v8 ignore next[ N]|start|if|else|file` — точечное исключение ветки/строки из покрытия.
+ * `v8 ignore stop` намеренно ИСКЛЮЧЕНА: это не отдельное подавление, а закрывающий маркер
+ * диапазона, открытого обоснованным `v8 ignore start`, и сама по себе причины не несёт.
+ */
+const V8_IGNORE_PATTERN = /v8 ignore (?:next(?:\s+\d+)?|start|if|else|file)\b/
+/** Обе директивы разом — то, что вообще считается «подавлением» для целей этого гейта. */
+const SUPPRESSION_PATTERN = new RegExp(`${ESLINT_SUPPRESSION_PATTERN.source}|${V8_IGNORE_PATTERN.source}`)
 
 function shouldSkip(path: string): boolean {
   return EXCLUDED_PATH_FRAGMENTS.some((fragment) => path.includes(fragment))
@@ -99,7 +111,7 @@ function scanFile(absPath: string): readonly Suppression[] {
   return result
 }
 
-describe('eslint-disable — подавления должны иметь обоснование после `--` (Ж4)', () => {
+describe('eslint-disable / v8 ignore — подавления должны иметь обоснование после `--` (Ж4)', () => {
   const allSuppressions: Suppression[] = []
 
   for (const dir of SCAN_DIRS) {
@@ -113,7 +125,7 @@ describe('eslint-disable — подавления должны иметь обо
     expect(allSuppressions.length).toBeGreaterThan(0)
   })
 
-  it('каждое eslint-disable* имеет обоснование после `--`', () => {
+  it('каждое eslint-disable* / v8 ignore имеет обоснование после `--`', () => {
     const offenders = allSuppressions.filter((s) => !s.hasJustification)
     if (offenders.length > 0) {
       // Выводим offenders, чтобы ревьюер видел, что чинить (см. STATE-AND-RESUME-POINT.md §11.4 задача 5.4).
@@ -123,7 +135,7 @@ describe('eslint-disable — подавления должны иметь обо
         .join('\n')
       const more = offenders.length > 50 ? `\n  ... and ${String(offenders.length - 50)} more` : ''
       throw new Error(
-        `Найдено ${String(offenders.length)} подавлений eslint-disable без обоснования после "--":\n${summary}${more}\n\n` +
+        `Найдено ${String(offenders.length)} подавлений eslint-disable/v8-ignore без обоснования после "--":\n${summary}${more}\n\n` +
           'Правило (AGENTS.md §4 / Ж4): каждое подавление должно иметь причину после "--". ' +
           'Если правило больше не срабатывает — удалите директиву; если срабатывает — добавьте обоснование.',
       )

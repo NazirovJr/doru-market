@@ -7,6 +7,7 @@
  * последующими тикетами.
  */
 import { Module } from '@nestjs/common'
+import { AuthModule } from '@/modules/auth/auth.module.js'
 import { PHARMACY_CHAIN_REPOSITORY } from './application/ports/pharmacy-chain.repository.port.js'
 import { PHARMACY_ACCOUNT_REPOSITORY } from './application/ports/pharmacy-account.repository.port.js'
 import { OBJECT_STORAGE } from './application/ports/object-storage.port.js'
@@ -49,6 +50,12 @@ import { PharmacyVerificationRevocationController } from './presentation/control
 import { PharmacyAccountsAdminController } from './presentation/controllers/pharmacy-accounts-admin.controller.js'
 
 @Module({
+  // Контроллеры этого модуля защищены `@UseGuards(AuthGuard)`. Nest создаёт guard в контексте
+  // ТОГО модуля, где он применён, поэтому `JWT_SIGNER` должен быть виден именно здесь —
+  // без этого импорта AppModule не поднимался: «can't resolve dependencies of the AuthGuard
+  // (Reflector, ?) ... in the OnboardingModule». `AuthModule` экспортирует и `AuthGuard`,
+  // и `JWT_SIGNER`; цикла нет — `AuthModule` не импортирует onboarding.
+  imports: [AuthModule],
   providers: [
     { provide: PHARMACY_CHAIN_REPOSITORY, useClass: DrizzlePharmacyChainRepository },
     { provide: PHARMACY_ACCOUNT_REPOSITORY, useClass: DrizzlePharmacyAccountRepository },

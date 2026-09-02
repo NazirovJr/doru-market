@@ -35,7 +35,7 @@ import {
  * переключатель доступен на ВСЕХ неавторизованных экранах, не только на
  * главном (как в дизайне).
  */
-export default function LoginPage(): ReactElement {
+const LoginPage = (): ReactElement => {
   const { locale } = useLocale()
   const { t } = useT(locale)
   const navigate = useNavigate()
@@ -52,15 +52,15 @@ export default function LoginPage(): ReactElement {
     // use-telegram-auth уже положил session в стор; нам остаётся редирект.
     // Тот же intent-flow, что и для verify-OTP.
     const intentRaw = new URLSearchParams(window.location.search).get('intent')
-    const target = intentRaw !== null && intentRaw.startsWith('/') ? intentRaw : '/'
-    navigate(target, { replace: true })
+    const target = intentRaw?.startsWith('/') === true ? intentRaw : '/'
+    void navigate(target, { replace: true })
   }, [navigate])
 
   const handleCodeSuccess = useCallback((): void => {
     // use-verify-otp уже положил session в стор; нам остаётся редирект.
     const intentRaw = new URLSearchParams(window.location.search).get('intent')
-    const target = intentRaw !== null && intentRaw.startsWith('/') ? intentRaw : '/'
-    navigate(target, { replace: true })
+    const target = intentRaw?.startsWith('/') === true ? intentRaw : '/'
+    void navigate(target, { replace: true })
   }, [navigate])
 
   const handleLockedResend = useCallback((): void => {
@@ -116,7 +116,9 @@ export default function LoginPage(): ReactElement {
   )
 }
 
-function LockedScreen({
+export default LoginPage
+
+const LockedScreen = ({
   errorText,
   resendLabel,
   onResend,
@@ -124,7 +126,7 @@ function LockedScreen({
   readonly errorText: string
   readonly resendLabel: string
   readonly onResend: () => void
-}): ReactElement {
+}): ReactElement => {
   return (
     <div className="flex flex-col gap-4" data-testid="locked-screen">
       <p

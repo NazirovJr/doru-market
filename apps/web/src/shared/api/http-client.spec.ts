@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuthStore } from '@/shared/api/auth-store'
-import { httpRequest } from '@/shared/api/http-client'
+import { httpGetJson, httpGetJsonWithMeta, HttpError, httpRequest } from '@/shared/api/http-client'
 import { getClientEnv } from '@/shared/config/env'
 
 /**
@@ -86,5 +86,73 @@ describe('httpRequest', () => {
 
     expect(refreshCalls).toBe(1)
     expect(response.status).toBe(401)
+  })
+})
+
+/**
+ * `httpGetJsonWithMeta` (DTJ-193, `SRS-API-004/005`) — расширение `httpGetJson`, сохраняющее
+ * `meta` конверта (курсорная пагинация `GET /medicines/search`).
+ */
+describe('httpGetJsonWithMeta', () => {
+  it('возвращает data и meta.pagination из конверта', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({ data: [{ id: '1' }], meta: { pagination: { nextCursor: 'abc', hasMore: true, limit: 20 } } }),
+            { status: 200 },
+          ),
+        ),
+      ),
+    )
+
+    const result = await httpGetJsonWithMeta<readonly { id: string }[]>('/things', { q: 'x' })
+
+    expect(result.data).toEqual([{ id: '1' }])
+    expect(result.meta).toEqual({ pagination: { nextCursor: 'abc', hasMore: true, limit: 20 } })
+  })
+
+  it('meta отсутствует в ответе — meta undefined, не бросает', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }))))
+
+    const result = await httpGetJsonWithMeta<readonly unknown[]>('/things')
+
+    expect(result.data).toEqual([])
+    expect(result.meta).toBeUndefined()
+  })
+})
+
+/**
+ * `SRS-CAT-075`/`TC-CAT-025`: `DomainExceptionFilter` (`apps/api/.../domain-exception.filter.ts`)
+ * урезает `error.code`/`details` до обобщённых для ЛЮБОГО статуса `>=500` — `HttpError.status`
+ * (взятый из реального `response.status`, не из тела) остаётся ЕДИНСТВЕННЫМ надёжным сигналом
+ * для распознавания деградации поиска на клиенте (`use-search-results.ts`, DTJ-193).
+ */
+describe('httpGetJson — статус ответа переживает урезание тела фильтром (SRS-CAT-075)', () => {
+  it('503 с обобщённым INTERNAL_ERROR в теле — HttpError.status всё равно 503', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } }), {
+            status: 503,
+          }),
+        ),
+      ),
+    )
+
+    let caught: unknown
+    try {
+      await httpGetJson('/medicines/search')
+    } catch (error) {
+      caught = error
+    }
+
+    expect(caught).toBeInstanceOf(HttpError)
+    if (caught instanceof HttpError) {
+      expect(caught.status).toBe(503)
+      expect(caught.code).toBe('INTERNAL_ERROR')
+    }
   })
 })

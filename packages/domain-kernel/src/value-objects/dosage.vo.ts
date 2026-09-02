@@ -56,6 +56,18 @@ const ZERO_NUMBER = 0
 const ALLOWED_PARSER_UNITS = new Set<string>(Object.values(DosageUnit))
 
 /**
+ * Числовой префикс дозировки: необязательный `-`, обязательные цифры, необязательная
+ * дробная часть после `.`/`,`. Разбит на отдельный regex (а не единый с юнитом), чтобы
+ * `exec()[0]` — гарантированно `string` (не `T | undefined`) даже при
+ * `noUncheckedIndexedAccess`: индекс `0` у результата регэкспа типизирован особо, в отличие
+ * от индексов capture-групп (`match[1]`, `match[2]`), которые всегда `string | undefined`
+ * независимо от того, что группа обязательна по построению регэкспа.
+ */
+const DOSAGE_NUMERIC_PREFIX_REGEX = /^-?\d+(?:[.,]\d+)?/u
+/** Суффикс единицы измерения: без пробелов и `/`, с необязательной частью `/единица` (напр. `мг/мл`). */
+const DOSAGE_UNIT_SUFFIX_REGEX = /^[^\s/]+(?:\/[^\s/]+)?$/u
+
+/**
  * Value Object `Dosage` (SRS-DOM-077/078). Неизменяемый (`readonly`-поля), сравнение
  * через `isEquivalentTo` (ТОЧНОЕ совпадение после конвертации в базовую единицу
  * семейства), парсинг строк — только в конструкторе `Dosage.parse()`.
@@ -79,21 +91,25 @@ export class Dosage {
   /**
    * Разбор строки вида `"500 мг"`, `"10 мг/мл"`, `"0.5 g"`, `"100 IU"`. Используется
    * сидом/импортом 1С; не домен-инвариант, вспомогательный парсер. Чистая функция.
+   *
+   * Числовая и юнит-часть разбираются ДВУМЯ отдельными regex-проходами (а не одним regex
+   * с двумя capture-группами) — см. обоснование у `DOSAGE_NUMERIC_PREFIX_REGEX`.
    */
   public static parse(raw: string): Result<Dosage, DosageParseError> {
     const trimmed = raw.trim()
     if (trimmed.length === 0) {
       return err(new DosageParseError('empty input'))
     }
-    const match = /^(-?\d+(?:[.,]\d+)?)\s*([^\s/]+(?:\/[^\s/]+)?)$/u.exec(trimmed)
-    if (!match) {
+    const numericMatch = DOSAGE_NUMERIC_PREFIX_REGEX.exec(trimmed)
+    if (!numericMatch) {
       return err(new DosageParseError(`cannot parse dosage from: ${raw}`))
     }
-    const numericRaw = match[1] ?? ''
-    const unitRaw = (match[2] ?? '').toLowerCase()
-    if (numericRaw === '' || unitRaw === '') {
+    const numericRaw = numericMatch[0]
+    const unitPart = trimmed.slice(numericRaw.length).trim()
+    if (!DOSAGE_UNIT_SUFFIX_REGEX.test(unitPart)) {
       return err(new DosageParseError(`cannot parse dosage from: ${raw}`))
     }
+    const unitRaw = unitPart.toLowerCase()
     const normalized = unitRaw.replace(',', '.')
     const numeric = Number(numericRaw.replace(',', '.'))
     const unit = unitToEnum(normalized)
@@ -152,6 +168,7 @@ export class Dosage {
     // оставлена намеренно как заготовка для будущей конфигурируемой толерантности (SRS-DOM-078
     // явно разрешает «0» как «строгое совпадение»). Не удалять dead-code, пока архитектор
     // не утвердит противоположное ADR.
+    /* v8 ignore start -- недостижимо, пока STRICT_TOLERANCE_PCT = 0 (SRS-DOM-078: «0» = строгое совпадение); оживёт, когда архитектор утвердит ADR о конфигурируемой толерантности и константа станет ненулевой */
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- заготовка под ADR о конфигурируемой толерантности (SRS-DOM-078 явно разрешает «0» как «строгое совпадение»); ветка «else» с толерантностью мёртвая при `STRICT_TOLERANCE_PCT = 0`, но оставлена осознанно. Не удалять dead-code, пока архитектор не утвердит противоположное ADR.
     if (STRICT_TOLERANCE_PCT !== STRICT_TOLERANCE_DEFAULT) {
       const diff = aMicro > bMicro ? aMicro - bMicro : bMicro - aMicro
@@ -162,12 +179,14 @@ export class Dosage {
       const diffPct = Number((diff * PERCENT_SCALE_BIGINT) / max) / PERCENT_SCALE_NUMBER
       return diffPct <= STRICT_TOLERANCE_PCT
     }
+    /* v8 ignore stop */
     return aMicro === bMicro
   }
 
   private valuesMatchWithTolerance(a: number, b: number): boolean {
     // См. обоснование в `isEquivalentTo` — ветка с толерантностью мёртвая при
     // `STRICT_TOLERANCE_PCT = 0`, но оставлена как заготовка под ADR.
+    /* v8 ignore start -- недостижимо, пока STRICT_TOLERANCE_PCT = 0 (SRS-DOM-078: «0» = строгое совпадение); оживёт, когда архитектор утвердит ADR о конфигурируемой толерантности и константа станет ненулевой */
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- см. обоснование в `isEquivalentTo` выше: ветка с толерантностью мёртвая при `STRICT_TOLERANCE_PCT = 0`, но оставлена как заготовка под ADR.
     if (STRICT_TOLERANCE_PCT !== STRICT_TOLERANCE_DEFAULT) {
       const diff = Math.abs(a - b)
@@ -177,6 +196,7 @@ export class Dosage {
       }
       return (diff / max) * PERCENT_SCALE_NUMBER <= STRICT_TOLERANCE_PCT
     }
+    /* v8 ignore stop */
     return a === b
   }
 }

@@ -44,26 +44,31 @@ export class DetectStuckFullSyncSessionsUseCase {
     const candidates = await this.syncBatchRepository.findIncompleteFullSyncSessions(
       olderThanMinutes,
     )
-    let count = 0
-    for (let i = 0; i < candidates.length; i += 1) {
-      const session = candidates[i] as {
-        fullSyncSessionId: string
-        pharmacyId: string
-        lastPageReceivedAt: Date
-      }
-      const alreadyAlerted = await this.outbox.hasStuckAlert(
-        session.fullSyncSessionId,
-        olderThanMinutes,
-      )
-      if (alreadyAlerted) continue
-      this.outbox.appendStuckSession({
-        eventType: 'inventory.full_sync_session.stuck',
-        fullSyncSessionId: session.fullSyncSessionId,
-        pharmacyId: session.pharmacyId,
-        lastPageReceivedAt: session.lastPageReceivedAt,
-      })
-      count += 1
-    }
-    return { stuckSessionsCount: count }
+    // Сессии независимы (разные fullSyncSessionId, разные строки в outbox) —
+    // дедуп-проверка и алерт каждой выполняются параллельно, а не
+    // последовательно в цикле с await.
+    const alertedFlags = await Promise.all(
+      (
+        candidates as readonly {
+          fullSyncSessionId: string
+          pharmacyId: string
+          lastPageReceivedAt: Date
+        }[]
+      ).map(async (session) => {
+        const alreadyAlerted = await this.outbox.hasStuckAlert(
+          session.fullSyncSessionId,
+          olderThanMinutes,
+        )
+        if (alreadyAlerted) return false
+        this.outbox.appendStuckSession({
+          eventType: 'inventory.full_sync_session.stuck',
+          fullSyncSessionId: session.fullSyncSessionId,
+          pharmacyId: session.pharmacyId,
+          lastPageReceivedAt: session.lastPageReceivedAt,
+        })
+        return true
+      }),
+    )
+    return { stuckSessionsCount: alertedFlags.filter(Boolean).length }
   }
 }

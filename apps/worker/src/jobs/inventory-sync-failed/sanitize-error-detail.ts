@@ -20,9 +20,9 @@ const SENSITIVE_PATTERNS: readonly RegExp[] = [
   // X-Pharmacy-Signature: <token>
   /X-Pharmacy-Signature:\s*[A-Za-z0-9+/=]+/gi,
   // Authorization: Bearer <jwt>
-  /Authorization:\s*Bearer\s+[A-Za-z0-9._\-]+/gi,
+  /Authorization:\s*Bearer\s+[A-Za-z0-9._-]+/gi,
   // голые JWT (eyJ...)
-  /\beyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\b/g,
+  /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g,
   // refresh/access токены UUIDv7
   /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/g,
 ]
@@ -36,8 +36,7 @@ const REDACTED = '<redacted>'
  */
 export function sanitizeErrorDetail(text: string): string {
   let result = text
-  for (let i = 0; i < SENSITIVE_PATTERNS.length; i += 1) {
-    const pattern = SENSITIVE_PATTERNS[i]!
+  for (const pattern of SENSITIVE_PATTERNS) {
     result = result.replace(pattern, REDACTED)
   }
   return result

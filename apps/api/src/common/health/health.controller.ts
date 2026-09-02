@@ -3,6 +3,7 @@ import { HealthCheckService, type HealthCheckResult } from '@nestjs/terminus'
 import { Public } from './public.decorator.js'
 import { EventLoopLagIndicator } from './event-loop-lag.indicator.js'
 import { ReadinessIndicators } from './readiness-indicators.service.js'
+import { SkipTenantResolution } from '../guards/tenant-scope.guard.js'
 
 interface LivenessResponse {
   readonly data: { readonly status: 'ok' }
@@ -10,8 +11,10 @@ interface LivenessResponse {
 
 /**
  * SRS-NFR-037 (DTJ-001, шаг 6): `/health` — liveness (процесс жив, без БД/Redis), `/ready` —
- * readiness (Postgres + Redis). Оба — `@Public()` (см. JSDoc декоратора), должны
- * регистрироваться ДО `TenantResolutionMiddleware`/`AuthGuard` следующих эпиков.
+ * readiness (Postgres + Redis). Оба помечены `@Public()` (не требуют JWT) И
+ * `@SkipTenantResolution()` — проба живучести обязана отвечать даже на пустой `tenants`,
+ * иначе healthcheck контейнера не отличит упавшее приложение от незаполненных справочников
+ * (см. JSDoc маркера в `tenant-scope.guard.ts`). Это ЕДИНСТВЕННОЕ место применения маркера.
  *
  * Тело `/health` зафиксировано критерием приёмки тикета как `{ data: { status: 'ok' } }`
  * (общий конверт успешного ответа, SRS-API-014). Тело `/ready` намеренно НЕ приводится к
@@ -31,6 +34,7 @@ export class HealthController {
   ) {}
 
   @Public()
+  @SkipTenantResolution()
   @Get('health')
   async checkLiveness(): Promise<LivenessResponse> {
     await this.health.check([() => this.eventLoopLag.check()])
@@ -38,6 +42,7 @@ export class HealthController {
   }
 
   @Public()
+  @SkipTenantResolution()
   @Get('ready')
   checkReadiness(): Promise<HealthCheckResult> {
     return this.health.check(this.readiness.list())

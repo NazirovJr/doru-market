@@ -39,6 +39,25 @@ export class InMemoryUsersRepository implements UsersRepository {
     return Promise.resolve(null)
   }
 
+  /**
+   * [Task 5, handoff §6] Глобальный поиск по phone — см. JSDoc в port.
+   * Возвращает первого активного пользователя с указанным телефоном,
+   * детерминированно по `createdAt`. В тестовых сценариях хватает
+   * одного совпадения — admin создаёт уникальных пользователей на
+   * уникальные телефоны в своём тенанте.
+   */
+  async findActiveByPhone(phoneNumber: string): Promise<User | null> {
+    let earliest: User | null = null
+    for (const user of this.byId.values()) {
+      if (user.deletedAt !== null) continue
+      if (user.phoneNumber !== phoneNumber) continue
+      if (earliest === null || user.createdAt < earliest.createdAt) {
+        earliest = user
+      }
+    }
+    return Promise.resolve(earliest)
+  }
+
   async create(input: CreateUserInput): Promise<User> {
     const id = randomUUID()
     const now = new Date()
@@ -60,7 +79,7 @@ export class InMemoryUsersRepository implements UsersRepository {
       deletedAt: null,
     }
     this.byId.set(id, user)
-    this.tenantPhoneIndex.set(`${input.tenantId}|${input.phoneNumber}`, id)
+    this.tenantPhoneIndex.set(`${input.tenantId}|${String(input.phoneNumber)}`, id)
     return Promise.resolve(user)
   }
 

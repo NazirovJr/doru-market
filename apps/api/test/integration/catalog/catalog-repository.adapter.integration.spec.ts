@@ -115,9 +115,14 @@ describe.skipIf(!postgresAvailable)('CatalogRepositoryAdapter — integration (D
     substances: readonly { substanceId: string; strengthValue: number; strengthUnit: string }[],
   ): Promise<void> {
     // category_id FK требует существующую категорию — создаём одну общую рут-категорию.
+    // ON CONFLICT DO NOTHING: seedMedicineWithSubstances() вызывается дважды в одном тесте
+    // (для MEDICINE_ID и MEDICINE_ID_2, например в findMedicinesByIds/findSubstancesByMedicineIds) —
+    // без него второй INSERT падает на unique constraint categories_slug_key (beforeEach truncate
+    // работает между тестами, но не внутри одного).
     await pool.query(
       `INSERT INTO categories (slug, name_tj, name_ru, name_en, commission_category, sort_order, is_active)
-       VALUES ('root', 'Корень', 'Root', 'Root', 'otc', 0, $1)`,
+       VALUES ('root', 'Корень', 'Root', 'Root', 'otc', 0, $1)
+       ON CONFLICT (slug) DO NOTHING`,
       [CATEGORY_ACTIVE_TRUE],
     )
     await pool.query(

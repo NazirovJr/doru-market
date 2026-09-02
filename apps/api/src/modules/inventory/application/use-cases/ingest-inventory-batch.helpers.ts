@@ -46,7 +46,9 @@ export function validateRowForDelta(row: IngestRowInput): {
   readonly code: 'invalid_price' | 'invalid_quantity' | 'expires_at_invalid'
   readonly reason: string
 } | null {
-  if (row.priceDiram < 0n) {
+  const MIN_PRICE_DIRAM = 0n
+
+if (row.priceDiram < MIN_PRICE_DIRAM) {
     return {
       code: 'invalid_price',
       reason: `price cannot be negative: ${row.priceDiram.toString()}`,
@@ -70,11 +72,11 @@ export function validateRowForDelta(row: IngestRowInput): {
   return null
 }
 
-export function buildRowError(
-  batchId: string,
-  rowIndex: number,
-  errorCode: InventorySyncRowError['errorCode'],
-  reason: string,
-): InventorySyncRowError {
-  return { batchId, rowIndex, errorCode, reason }
+export function buildRowError(input: {
+  batchId: string
+  rowIndex: number
+  errorCode: InventorySyncRowError['errorCode']
+  reason: string
+}): InventorySyncRowError {
+  return { ...input }
 }

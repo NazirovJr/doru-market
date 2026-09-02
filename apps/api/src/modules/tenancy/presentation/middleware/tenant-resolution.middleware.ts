@@ -137,6 +137,13 @@ export class TenantResolutionMiddleware implements NestMiddleware {
   private async resolveNeutral(host: string | null, slug: string | null) {
     const neutral = await this.tenantRepo.findBySlug(NEUTRAL_SLUG)
     if (neutral !== null) {
+      // Нейтральный тенант — настоящая строка в `tenants` с настоящим UUID
+      // (`neutral.id.value`). Кладём его в контекст как обычный `tenantId`:
+      // `isNeutral: true` уже несёт семантику «это нейтральный пул», прятать
+      // его id за `null` не нужно и вредно — потребителям (например,
+      // `resolveTenantIdForVerify()` в `otp-verify.controller.ts`) нужен
+      // настоящий UUID для записи в колонки `UUID NOT NULL`
+      // (`users.tenant_id`, `otp_codes.tenant_id`, `auth_sessions.tenant_id`).
       return TenantContext.forTenant({
         tenantId: neutral.id.value,
         slug: neutral.slug.value,

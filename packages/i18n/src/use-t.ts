@@ -5,9 +5,9 @@
  * Не проектировать этот API как окончательный (см. «Риски» тикета DTJ-004) — EP-18 может
  * переписать реализацию, сохранив контракт `useT(locale) -> { t }`.
  */
-import en from './dictionaries/en.json'
-import ru from './dictionaries/ru.json'
-import tj from './dictionaries/tj.json'
+import en from './dictionaries/en.json' with { type: 'json' }
+import ru from './dictionaries/ru.json' with { type: 'json' }
+import tj from './dictionaries/tj.json' with { type: 'json' }
 
 /** Три поддерживаемые локали (`SRS-UX-027`): `tj` — дефолт платформы. */
 export type Locale = 'tj' | 'ru' | 'en'

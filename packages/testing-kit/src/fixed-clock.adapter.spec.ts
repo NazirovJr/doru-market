@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { FixedClockAdapter } from './fixed-clock.adapter'
-import { SequentialTestIdGenerator } from './sequential-test-id-generator'
-import { FixedOtpGeneratorAdapter } from './fixed-otp-generator.adapter'
+import { FixedClockAdapter } from './fixed-clock.adapter.js'
+import { SequentialTestIdGenerator } from './sequential-test-id-generator.js'
+import { FixedOtpGeneratorAdapter } from './fixed-otp-generator.adapter.js'
 
 // SequentialTestIdGenerator и FixedOtpGeneratorAdapter не имеют отдельных *.spec.ts в
 // files_owned этого тикета (DTJ-416) — тест-план явно допускает «тот же файл или отдельные

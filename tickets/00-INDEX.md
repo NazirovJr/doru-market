@@ -162,11 +162,11 @@ domain/application/infrastructure/presentation конкретного модул
 | DTJ-100 | AnalogCandidatesRepository — SQL-предфильтр кандидатов по множеству веществ (top-50) | EP-07 | infrastructure | S | DTJ-091, DTJ-092 | apps/api/src/modules/catalog/application/ports/analog-candidates.port.ts; apps/api/src/modules/catalog/infrastructure/adapters/analog-candidates.adapter.ts; apps/api/src/modules/catalog/catalog.module.ts |
 | DTJ-101 | FindAnalogsUseCase — оркестрация подбора аналогов, расчёт экономии, AnalogOfferLookupPort | EP-07 | application | L | DTJ-096, DTJ-099, DTJ-100 | apps/api/src/modules/catalog/application/use-cases/find-analogs.use-case.ts; apps/api/src/modules/catalog/application/ports/analog-offer-lookup.port.ts; apps/api/src/modules/catalog/infrastructure/adapters/analog-offer-lookup.adapter.ts; +1 файлов |
 | DTJ-102 | GET /api/v1/medicines/:id/analogs — контроллер, DTO, Rx-бейдж, дисклеймер | EP-07 | presentation | M | DTJ-101, DTJ-103 | apps/api/src/modules/catalog/presentation/controllers/analogs.controller.ts; apps/api/src/modules/catalog/presentation/dto/analog-result.dto.ts |
-| DTJ-103 | i18n-контент блока аналогов (savings/neutral/disclaimer/rx-badge) + i18n_overrides.review_status | EP-07 | infrastructure | S | DTJ-091 | apps/api/migrations/0008_i18n_overrides_review_status.sql; apps/api/src/db/seed/i18n-overrides-catalog.seed.ts; packages/i18n/src/dictionaries/tj/catalog.json; +2 файлов |
+| DTJ-103 | i18n-контент блока аналогов (savings/neutral/disclaimer/rx-badge) + i18n_overrides.review_status | EP-07 | infrastructure | S | DTJ-091 | apps/api/migrations/0008_i18n_overrides_review_status.sql¹; apps/api/src/db/seed/i18n-overrides-catalog.seed.ts; packages/i18n/src/dictionaries/tj/catalog.json; +2 файлов |
 | DTJ-104 | Frontend AnalogsBlock — плашка экономии, нейтральный заголовок, дисклеймер, Rx-бейдж | EP-07 | frontend | M | DTJ-102, DTJ-103 | apps/web/src/features/analogs/api/use-analogs-query.ts; apps/web/src/features/analogs/model/format-savings.ts; apps/web/src/features/analogs/ui/AnalogsBlock.tsx; +2 файлов |
 | DTJ-140 | Создать scaffolding модуля inventory (4 слоя) и барабанный файл контрактов | EP-05 | infrastructure | L | — | apps/api/src/modules/inventory/domain/.gitkeep; apps/api/src/modules/inventory/application/use-cases/.gitkeep; apps/api/src/modules/inventory/application/ports/.gitkeep; +12 файлов |
 | DTJ-141 | Drizzle-схема и baseline-миграция для основных таблиц inventory | EP-05 | infrastructure | M | DTJ-140 | apps/api/src/infrastructure/db/schema/inventory.schema.ts; apps/api/src/infrastructure/db/migrations/0007_inventory.sql |
-| DTJ-142 | Миграция расширений схемы БД для синхронизации (Дополнения §10 модуля 22) | EP-05 | infrastructure | S | DTJ-141 | apps/api/src/infrastructure/db/schema/inventory.schema.ts; apps/api/src/infrastructure/db/migrations/0015a_inventory_sync_extensions.sql; apps/api/src/infrastructure/db/migrations/0015b_inventory_sync_enum_extension.sql |
+| DTJ-142 | Миграция расширений схемы БД для синхронизации (Дополнения §10 модуля 22) | EP-05 | infrastructure | S | DTJ-141 | apps/api/src/infrastructure/db/schema/inventory.schema.ts; apps/api/src/infrastructure/db/migrations/0015a_inventory_sync_extensions.sql; apps/api/src/infrastructure/db/migrations/0015b_inventory_sync_enum_extension.sql² |
 | DTJ-143 | Domain-сущность PharmacyInventory (агрегат остатка, FEFO, инварианты) | EP-05 | domain | M | DTJ-140 | apps/api/src/modules/inventory/domain/pharmacy-inventory.entity.ts; apps/api/src/modules/inventory/domain/pharmacy-inventory.entity.spec.ts |
 | DTJ-144 | Domain-агрегат InventorySyncBatch + явная state machine статусов | EP-05 | domain | M | DTJ-140 | apps/api/src/modules/inventory/domain/inventory-sync-batch.entity.ts; apps/api/src/modules/inventory/domain/inventory-sync-batch.entity.spec.ts |
 | DTJ-145 | VO InventoryBatchUpsertRow + каталог доменных ошибок inventory | EP-05 | domain | S | DTJ-140 | apps/api/src/modules/inventory/domain/inventory-batch-upsert-row.vo.ts; apps/api/src/modules/inventory/domain/errors/inventory.errors.ts; apps/api/src/modules/inventory/domain/inventory-batch-upsert-row.vo.spec.ts |
@@ -363,6 +363,16 @@ domain/application/infrastructure/presentation конкретного модул
 | DTJ-426 | Реализовать CI-гейт env:check (.env.example vs Zod-схема конфигурации) | EP-19 | infra | S | DTJ-414 | .env.example; scripts/env-check.ts; .github/workflows/ci.yml |
 | DTJ-427 | Реализовать CI-гейт бюджета JS первого экрана (pnpm size-check, ≤250KB gzip) | EP-19 | infra | S | DTJ-414 | scripts/size-check.ts; .github/workflows/ci.yml |
 | DTJ-428 | Подготовить автоматизацию релиза (rolling-деплой, откат) и чек-лист готовности к продакшену | EP-19 | infra | M | DTJ-412 | scripts/deploy/rolling-deploy.sh; scripts/deploy/rollback.sh; scripts/deploy/backup-restore-drill.sh; +1 файлов |
+
+¹ `0008_i18n_overrides_review_status.sql` (DTJ-103) ещё не реализован, но это имя уже занято
+двумя другими миграциями (`0008_onboarding_foundation.sql`, `0008_user_telegram_identities.sql`) —
+см. `tickets/ep03-catalog-analogs/DTJ-103.md` для подробностей, номер потребует пересчёта на
+момент реализации.
+
+² `0015b_inventory_sync_enum_extension.sql` (DTJ-142) удалена: делала `ALTER TYPE
+inventory_sync_row_error_code`, но `CREATE TYPE` для этого типа не существует ни в одной
+миграции, таблица `inventory_sync_errors` нигде не создаётся, drizzle-адаптера нет —
+`appendErrors` реализован только in-memory. См. `tickets/ep04-inventory-ingestion/DTJ-142.md`.
 
 ---
 

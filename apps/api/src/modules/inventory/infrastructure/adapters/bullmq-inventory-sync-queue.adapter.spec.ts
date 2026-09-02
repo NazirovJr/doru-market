@@ -7,11 +7,17 @@
  *   3. Повторный `enqueue()` с тем же `batchId` отбрасывается (дедупликация).
  */
 import { describe, expect, it, vi } from 'vitest'
+import type Redis from 'ioredis'
 import {
   INVENTORY_SYNC_JOB_PRIORITY,
   resolveInventorySyncJobPriority,
-} from '../../application/ports/inventory-sync-queue.port.js'
+} from '@/modules/inventory/application/ports/inventory-sync-queue.port.js'
 import { BullmqInventorySyncQueueAdapter } from './bullmq-inventory-sync-queue.adapter.js'
+
+interface FakeQueue {
+  add: ReturnType<typeof vi.fn>
+  close: ReturnType<typeof vi.fn>
+}
 
 describe('resolveInventorySyncJobPriority (DTJ-153, SRS-INV-034)', () => {
   it('rest + delta → 1', () => {
@@ -55,11 +61,11 @@ describe('BullmqInventorySyncQueueAdapter (DTJ-153)', () => {
     const closeMock = vi.fn().mockResolvedValue(undefined)
     // Подменяем конструктор Queue через временный импорт — для теста
     // достаточно проверить, что `add` вызван с правильными опциями.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock: коннектор не используется в проверяемых методах (см. ниже подмену `queue.add`/`queue.close`).
-    const adapter = new BullmqInventorySyncQueueAdapter({} as any)
+    // Коннектор не используется в проверяемых методах (см. ниже подмену `queue.add`/`queue.close`).
+    const adapter = new BullmqInventorySyncQueueAdapter({} as unknown as Redis)
     // Меняем внутренний `queue` на мок через хак: подменяем метод add.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock: подмена приватного поля `queue` на фейк-BullMQ-объект ради проверки контракта адаптера.
-    ;(adapter as any).queue = { add: addMock, close: closeMock }
+    // Подмена приватного поля `queue` на фейк-BullMQ-объект ради проверки контракта адаптера.
+    ;(adapter as unknown as { queue: FakeQueue }).queue = { add: addMock, close: closeMock }
     return { adapter, addMock, closeMock }
   }
 

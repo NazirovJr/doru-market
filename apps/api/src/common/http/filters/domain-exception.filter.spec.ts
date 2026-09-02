@@ -1,7 +1,25 @@
 import { type ArgumentsHost, HttpException } from '@nestjs/common'
-import { ErrorCode, NotFoundError, ValidationError } from '@dorutj/contracts'
+import { DomainError, ErrorCode, NotFoundError, ValidationError } from '@dorutj/contracts'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DomainExceptionFilter } from './domain-exception.filter.js'
+
+/** Доменная ошибка с кодом, который маппится РОВНО в 500 (`ErrorCode.INTERNAL_ERROR`). */
+class InternalBoomError extends DomainError {
+  constructor(details?: Record<string, unknown>) {
+    super(ErrorCode.INTERNAL_ERROR, 'internal boom', details)
+  }
+}
+
+/**
+ * Доменная ошибка с кодом, который маппится в 503 (`ErrorCode.SERVICE_UNAVAILABLE`) —
+ * намеренный, документированный сигнал деградации (напр. DTJ-190 `SearchServiceUnavailableError`),
+ * а НЕ незапланированная поломка. Единственный статус, который фильтр обязан маскировать, — 500.
+ */
+class ServiceDegradedError extends DomainError {
+  constructor(details?: Record<string, unknown>) {
+    super(ErrorCode.SERVICE_UNAVAILABLE, 'Search is temporarily degraded, please retry shortly', details)
+  }
+}
 
 function makeArgsHost(reply: { status: (n: number) => typeof reply; send: (b: unknown) => unknown }): ArgumentsHost {
   return {
@@ -12,7 +30,7 @@ function makeArgsHost(reply: { status: (n: number) => typeof reply; send: (b: un
   } as unknown as ArgumentsHost
 }
 
-describe('DomainExceptionFilter (DTJ-018, SRS-API-014/016)', () => {
+describe('DomainExceptionFilter (DTJ-018, SRS-API-014/016, DTJ-193)', () => {
   let filter: DomainExceptionFilter
 
   beforeEach(() => {
@@ -57,9 +75,7 @@ describe('DomainExceptionFilter (DTJ-018, SRS-API-014/016)', () => {
     expect(body.error.details?.field).toBe('phone')
   })
 
-  it('3. 5xx в production → code INTERNAL_ERROR, details={requestId} (НЕ раскрывает оригинал)', () => {
-    const originalEnv = process.env.NODE_ENV
-    process.env.NODE_ENV = 'production'
+  it('3. 500 (INTERNAL_ERROR) → code маскируется на INTERNAL_ERROR, details заменяется на {requestId}, оригинал НЕ утекает', () => {
     const sent: unknown[] = []
     const reply = {
       status: (n: number) => {
@@ -71,27 +87,37 @@ describe('DomainExceptionFilter (DTJ-018, SRS-API-014/016)', () => {
         return reply
       },
     }
-    // Используем ValidationError с кодом, который маппится в 5xx. Берём NotFoundError
-    // (404 — не 5xx). Создадим доменную ошибку с нестандартным кодом через ValidationError,
-    // и замаппим в 5xx через логику маппинга.
-    // Проще: используем прямую имитацию — подменим ERROR_HTTP_STATUS через тип,
-    // а для теста — возьмём ошибку с малым кодом, но проверим ветку 5xx через env=production.
-    // Здесь 404 (NotFoundError) — НЕ 5xx, поэтому проверим production-ветку через unknown код
-    // (нет в ERROR_HTTP_STATUS → fallback 500). Берём ValidationError с UNKNOWN_CODE:
-    //    На самом деле ERROR_HTTP_STATUS полный Record, fallback не сработает.
-    //    Проверим production-ветку через подделку:  бросаем кастомный DomainError с
-    //    SERVER_ERROR_5XX не существует; воспользуемся тем, что 500 маппится для
-    //    INTERNAL_ERROR (ERROR_HTTP_STATUS[INTERNAL_ERROR] = 500).
-    const err = new ValidationError('boom', { secret: 'leak' })
-    // Ожидаем, что ValidationError → 400, не 5xx; этот тест демонстрирует, что для 4xx
-    // details сохраняются (включая наш `secret` в dev).
-    filter.catch(err, makeArgsHost(reply))
-    const body = sent[1] as { error: { code: string; details?: { secret: string } } }
-    expect(body.error.details?.secret).toBe('leak')
-    process.env.NODE_ENV = originalEnv
+    filter.catch(new InternalBoomError({ secret: 'leak', stack: 'at SomeInternal.fn (/app/src/x.ts:1:1)' }), makeArgsHost(reply))
+    expect(sent[0]).toEqual({ status: 500 })
+    const body = sent[1] as { error: { code: string; message: string; details?: Record<string, unknown> } }
+    expect(body.error.code).toBe(ErrorCode.INTERNAL_ERROR)
+    expect(body.error.message).toBe('Internal server error')
+    // Оригинальные details (и тем более stack) НЕ должны попасть в HTTP-тело ни в каком виде.
+    expect(JSON.stringify(body)).not.toContain('leak')
+    expect(JSON.stringify(body)).not.toContain('SomeInternal.fn')
   })
 
-  it('4. HttpException НЕ перехватывается DomainExceptionFilter (он для @Catch(DomainError))', () => {
+  it('4. 503 (SERVICE_UNAVAILABLE) — намеренная деградация → code и details.reason доходят до клиента как есть (НЕ маскируются)', () => {
+    const sent: unknown[] = []
+    const reply = {
+      status: (n: number) => {
+        sent.push({ status: n })
+        return reply
+      },
+      send: (b: unknown) => {
+        sent.push(b)
+        return reply
+      },
+    }
+    filter.catch(new ServiceDegradedError({ reason: 'search_temporarily_degraded' }), makeArgsHost(reply))
+    expect(sent[0]).toEqual({ status: 503 })
+    const body = sent[1] as { error: { code: string; message: string; details?: { reason: string } } }
+    expect(body.error.code).toBe(ErrorCode.SERVICE_UNAVAILABLE)
+    expect(body.error.message).toBe('Search is temporarily degraded, please retry shortly')
+    expect(body.error.details?.reason).toBe('search_temporarily_degraded')
+  })
+
+  it('5. HttpException НЕ перехватывается DomainExceptionFilter (он для @Catch(DomainError))', () => {
     // DomainExceptionFilter имеет @Catch(DomainError) — HttpException должен
     // пройти насквозь к TransportExceptionFilter. Этот тест документирует контракт.
     const ex = new HttpException('test', 404)

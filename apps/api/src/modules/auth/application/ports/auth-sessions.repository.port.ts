@@ -15,17 +15,17 @@
  *     и создаёт НОВУЮ запись с тем же `familyId` / `absoluteExpiresAt`,
  *     `userId`/deviceLabel/userAgent/ipAddress скопированы, новый
  *     `refreshTokenHash`. Внутри `uow.run` — обязательно в транзакции.
- *   - `revokeAllByFamilyId(familyId, reason, now, tx)` (DTJ-025 §2.3) —
+ *   - `revokeAllByFamilyId({ tx, familyId, reason, now })` (DTJ-025 §2.3) —
  *     атомарный `UPDATE ... SET revoked_at = now(), revoke_reason = :reason
  *     WHERE family_id = :fid AND revoked_at IS NULL`. Используется при
  *     detect-reuse — отзывает ВСЕ `auth_sessions` с тем же `family_id`.
- *     Внутри `uow.run`.
- *   - `revokeOneById(sessionId, reason, now, tx)` (DTJ-026 §3.1) — атомарный
+ *     Внутри `uow.run`. Именованный параметр-объект (C-стиль, max-params).
+ *   - `revokeOneById({ tx, sessionId, reason, now })` (DTJ-026 §3.1) — атомарный
  *     `UPDATE ... SET revoked_at = now(), revoke_reason = :reason WHERE id = :id
  *     AND revoked_at IS NULL`. Используется в `LogoutUseCase` (текущая
  *     сессия) и `RevokeSessionUseCase` (конкретное устройство из списка).
  *     Возвращает количество отозванных строк (0 если уже revoked/не найдено).
- *   - `revokeAllByUserId(userId, reason, now, tx)` (DTJ-026 §3.2) — атомарный
+ *   - `revokeAllByUserId({ tx, userId, reason, now })` (DTJ-026 §3.2) — атомарный
  *     `UPDATE ... WHERE user_id = :uid AND revoked_at IS NULL`. `LogoutAllUseCase`.
  *   - `updateLastSeenAt(sessionId, now, tx)` (DTJ-026, не вызывается в R1 —
  *     место для будущего heartbeat'а; см. также `RefreshTokenUseCase`,
@@ -98,12 +98,12 @@ export interface AuthSessionsRepository {
    * количество реально отозванных строк (для логирования). Должна вызываться
    * ВНУТРИ `unitOfWork.run(...)`.
    */
-  revokeAllByFamilyId(
-    tx: UnitOfWorkTx,
-    familyId: string,
-    reason: RevokeReason,
-    now: Date,
-  ): Promise<number>
+  revokeAllByFamilyId(input: {
+    tx: UnitOfWorkTx
+    familyId: string
+    reason: RevokeReason
+    now: Date
+  }): Promise<number>
 
   /**
    * Атомарный `UPDATE ... SET revoked_at = now(), revoke_reason = :reason
@@ -111,21 +111,21 @@ export interface AuthSessionsRepository {
    * количество реально отозванных строк (0 = уже revoked или не найдено —
    * идемпотентный путь для `LogoutUseCase`).
    */
-  revokeOneById(
-    tx: UnitOfWorkTx,
-    sessionId: string,
-    reason: RevokeReason,
-    now: Date,
-  ): Promise<number>
+  revokeOneById(input: {
+    tx: UnitOfWorkTx
+    sessionId: string
+    reason: RevokeReason
+    now: Date
+  }): Promise<number>
 
   /**
    * Атомарный `UPDATE ... WHERE user_id = :uid AND revoked_at IS NULL`
    * (DTJ-026 §3.2, `logout-all`). Возвращает количество отозванных строк.
    */
-  revokeAllByUserId(
-    tx: UnitOfWorkTx,
-    userId: string,
-    reason: RevokeReason,
-    now: Date,
-  ): Promise<number>
+  revokeAllByUserId(input: {
+    tx: UnitOfWorkTx
+    userId: string
+    reason: RevokeReason
+    now: Date
+  }): Promise<number>
 }

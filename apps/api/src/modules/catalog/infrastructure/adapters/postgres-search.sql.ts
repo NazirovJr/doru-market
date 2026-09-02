@@ -127,8 +127,9 @@ export function isBarcodeShaped(text: string): boolean {
 // ─── Фрагменты: видимость, tenant-скоуп, гео, время работы ────────────────────────────
 
 /** SRS-CAT-055 первый рубеж + доп. фильтры candidates. Переиспользует `postgres-suggest.sql.ts` (Ж12). */
-function buildCandidatesFilterFragment(filters: SearchFiltersParams): SQL {
+function buildCandidatesFilterFragment(filters: SearchFiltersParams, tenantId: string): SQL {
   return sql`${buildMedicinesVisibilityCondition()}
+    AND ${hardOfferVisibilityCondition(tenantId)}
     ${filters.categoryId === undefined ? sql`` : sql`AND ${medicines.categoryId} = ${filters.categoryId}`}
     ${
       filters.isPrescriptionRequired === undefined
@@ -146,6 +147,36 @@ function buildCandidatesFilterFragment(filters: SearchFiltersParams): SQL {
 function visibilityAndTenantScopeFragment(): SQL {
   return sql`${pharmacies.status} = 'active' AND ${pharmacyChains.status} IN ('approved', 'active')
     AND (${pharmacyChains.tenantId} = ${tenants.id} OR (${tenants.isNeutral} AND ${pharmacyChains.tenantId} IS NULL))`
+}
+
+/**
+ * SRS-CAT-010 п.2/3 — HARD-гейт видимости, НЕ зависящий от soft-фильтров (`inStockOnly`/
+ * гео-радиус/`openNowOnly`/`is24x7Only`). Медикамент обязан иметь ≥1 строку `pharmacy_inventory`
+ * (`quantity >= 0` — тривиально истинно, `chk_pharmacy_inventory_quantity_nonneg`, т.е. условие
+ * сводится к «строка существует») у аптеки `status='active'` под сетью `status IN
+ * ('approved','active')`, видимой для `tenantId` (White-Label/нейтральный скоуп, тот же вырез,
+ * что `visibilityAndTenantScopeFragment`).
+ *
+ * БАГ ДО ЭТОГО ФИКСА (`AC5/TC-CAT-019`): без этого условия `offers`/`aggregated` CTE ниже сами
+ * фильтруют по активной аптеке/сети, НО кандидат из `candidates` всё равно проходил в финальный
+ * `SELECT` через `LEFT JOIN aggregated` (обязателен при `inStockOnly=false`, SRS-CAT-045 — «нет
+ * остатка В РАДИУСЕ всё равно показывается»). `pharmacy_chains.status='suspended'` для
+ * ЕДИНСТВЕННОЙ несущей товар сети давало `offers_count=0`/`min_price=NULL`, но САМА строка
+ * оставалась в выдаче — SRS-CAT-045 покрывает «нет валидного оффера В РАДИУСЕ/фильтре», а не
+ * «нет НИ ОДНОГО валидного оффера НИГДЕ», которое обязано убирать медикамент целиком (SRS-CAT-010).
+ * Это условие — единственно верное место фикса: `candidates`, а не `offers`/`aggregated`,
+ * потому что `offers`/`aggregated` обязаны остаться soft (радиус/наличие/время работы могут
+ * законно дать 0 без скрытия товара).
+ */
+function hardOfferVisibilityCondition(tenantId: string): SQL {
+  return sql`EXISTS (
+    SELECT 1 FROM ${pharmacyInventory}
+    JOIN ${pharmacies} ON ${pharmacies.id} = ${pharmacyInventory.pharmacyId} AND ${pharmacies.status} = 'active'
+    JOIN ${pharmacyChains} ON ${pharmacyChains.id} = ${pharmacies.chainId} AND ${pharmacyChains.status} IN ('approved', 'active')
+    JOIN ${tenants} ON ${tenants.id} = ${tenantId}::uuid
+    WHERE ${pharmacyInventory.medicineId} = ${medicines.id}
+      AND (${pharmacyChains.tenantId} = ${tenants.id} OR (${tenants.isNeutral} AND ${pharmacyChains.tenantId} IS NULL))
+  )`
 }
 
 /** Гаверсинус в метрах — см. п.1 JSDoc файла (нет PostGIS). `NULL`, если `geo` не передан. */
@@ -195,15 +226,19 @@ function buildOffersFilterFragment(params: SearchQueryParams): SQL {
 
 /** `clamp((similarity - floor) / range, 0, 1)` — SRS-CAT-019 п.3. */
 function trigramRelevanceExpr(column: typeof medicines.tradeName | typeof medicines.innName, text: string): SQL {
-  return sql`LEAST(GREATEST((similarity(${column}, ${text}) - ${TRIGRAM_SIMILARITY_FLOOR}) / ${TRIGRAM_SIMILARITY_RANGE}, ${RELEVANCE_FLOOR}), ${RELEVANCE_CEILING})`
+  return sql`LEAST(GREATEST((similarity(${column}, ${text}) - ${TRIGRAM_SIMILARITY_FLOOR}::real) / ${TRIGRAM_SIMILARITY_RANGE}::real, ${RELEVANCE_FLOOR}::real), ${RELEVANCE_CEILING}::real)`
 }
 
 /** GREATEST(весA, весC-если-не-A, триграмма×2) — см. п. «Текстовая релевантность» JSDoc файла. */
 function textRelevanceExpr(text: string): SQL {
   const weightAVector = sql`(to_tsvector(${SEARCH_TS_CONFIG}, unaccent(coalesce(${medicines.tradeName}, ''))) || to_tsvector(${SEARCH_TS_CONFIG}, unaccent(coalesce(${medicines.innName}, ''))))`
+  // `::real` обязателен: drizzle подставляет числовые константы bind-параметрами,
+  // Postgres типизирует их как `unknown`/`text`, а `similarity()` возвращает `real` —
+  // без приведения GREATEST падает с 42804 `types text and real cannot be matched`
+  // на КАЖДОМ поисковом запросе (`SEARCH_DRIVER='postgres'` — дефолт).
   return sql`GREATEST(
-    CASE WHEN ${weightAVector} @@ plainto_tsquery(${SEARCH_TS_CONFIG}, ${text}) THEN ${TEXT_RELEVANCE_WEIGHT_A} ELSE ${RELEVANCE_FLOOR} END,
-    CASE WHEN ${medicines.searchVector} @@ plainto_tsquery(${SEARCH_TS_CONFIG}, ${text}) THEN ${TEXT_RELEVANCE_WEIGHT_C} ELSE ${RELEVANCE_FLOOR} END,
+    CASE WHEN ${weightAVector} @@ plainto_tsquery(${SEARCH_TS_CONFIG}, ${text}) THEN ${TEXT_RELEVANCE_WEIGHT_A}::real ELSE ${RELEVANCE_FLOOR}::real END,
+    CASE WHEN ${medicines.searchVector} @@ plainto_tsquery(${SEARCH_TS_CONFIG}, ${text}) THEN ${TEXT_RELEVANCE_WEIGHT_C}::real ELSE ${RELEVANCE_FLOOR}::real END,
     ${trigramRelevanceExpr(medicines.tradeName, text)},
     ${trigramRelevanceExpr(medicines.innName, text)}
   )`
@@ -216,11 +251,11 @@ const CANDIDATE_BASE_COLUMNS = sql`${medicines.id} AS id, ${medicines.tradeName}
   ${medicines.controlCategory} AS control_category`
 
 /** Кандидаты: текстовый режим (`SRS-CAT-024` п.4) — три способа объединены OR (WHERE использует индексы). */
-function buildTextCandidatesQuery(text: string, filters: SearchFiltersParams): SQL {
+function buildTextCandidatesQuery(text: string, filters: SearchFiltersParams, tenantId: string): SQL {
   return sql`
     SELECT ${CANDIDATE_BASE_COLUMNS}, ${textRelevanceExpr(text)} AS text_relevance
     FROM ${medicines}
-    WHERE ${buildCandidatesFilterFragment(filters)}
+    WHERE ${buildCandidatesFilterFragment(filters, tenantId)}
       AND (
         ${medicines.searchVector} @@ plainto_tsquery(${SEARCH_TS_CONFIG}, ${text})
         OR ${medicines.tradeName} % ${text}
@@ -230,11 +265,11 @@ function buildTextCandidatesQuery(text: string, filters: SearchFiltersParams): S
 }
 
 /** Кандидаты: браузинг категории без текста (`SRS-CAT-023`) — релевантность форсирована. */
-function buildBrowsingCandidatesQuery(filters: SearchFiltersParams): SQL {
+function buildBrowsingCandidatesQuery(filters: SearchFiltersParams, tenantId: string): SQL {
   return sql`
     SELECT ${CANDIDATE_BASE_COLUMNS}, ${FORCED_TEXT_RELEVANCE_FOR_BROWSING}::double precision AS text_relevance
     FROM ${medicines}
-    WHERE ${buildCandidatesFilterFragment(filters)}
+    WHERE ${buildCandidatesFilterFragment(filters, tenantId)}
   `
 }
 
@@ -317,7 +352,10 @@ function aggregatedJoinFragment(inStockOnly: boolean): SQL {
 
 /** Полный запрос `search()` (текст ИЛИ браузинг) — CTE `candidates`→`offers`→`aggregated`, пагинация LIMIT/OFFSET. */
 export function buildSearchQuery(mode: SearchCandidatesMode, params: SearchQueryParams): SQL {
-  const candidatesSql = mode.kind === 'text' ? buildTextCandidatesQuery(mode.text, params.filters) : buildBrowsingCandidatesQuery(params.filters)
+  const candidatesSql =
+    mode.kind === 'text'
+      ? buildTextCandidatesQuery(mode.text, params.filters, params.tenantId)
+      : buildBrowsingCandidatesQuery(params.filters, params.tenantId)
   return sql`
     WITH candidates AS (${candidatesSql}),
     ${buildOffersCte(params)},

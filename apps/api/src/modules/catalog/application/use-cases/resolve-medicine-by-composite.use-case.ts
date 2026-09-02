@@ -50,7 +50,7 @@ import {
   type FuzzyCandidate,
   type FuzzyMedicineMatcher,
 } from '../ports/fuzzy-medicine-matcher.port.js'
-import type { CompositeMatchInput, MedicineMatchResult } from '../../index.js'
+import type { CompositeMatchInput, MedicineMatchResult } from '../ports/composite-match.types.js'
 
 /** ENV-ключ для порога неоднозначности (DTJ-097 DoD §4, ASSUMPTION). */
 const CATALOG_MATCH_AMBIGUITY_GAP_ENV = 'CATALOG_MATCH_AMBIGUITY_GAP'
@@ -191,6 +191,15 @@ export class ResolveMedicineByCompositeUseCase {
 
   // ─── Шаг 4: решение ──────────────────────────────────────────────────
 
+  /**
+   * «Высокая уверенность» — нижний порог `combinedScore`, ниже которого
+   * оба кандидата ещё могут считаться «сомнительными» и попадают под
+   * `AMBIGUITY_GAP`-правил. Если ОБА кандидата выше этого порога, любой
+   // разрыв между ними — это различие вариантов одного препарата, а не
+   // два разных лекарства: возвращаем `matched` (топ-1).
+   */
+  private static readonly highConfidenceScore = 0.5
+
   private decide(candidates: readonly FuzzyCandidate[]): MedicineMatchResult {
     if (candidates.length === 1) {
       const only = candidates[0]
@@ -203,6 +212,18 @@ export class ResolveMedicineByCompositeUseCase {
     const second = candidates[1]
     if (first === undefined || second === undefined) {
       return { outcome: 'no_candidate' }
+    }
+    // Когда ОБА кандидата имеют `combinedScore >= highConfidenceScore`,
+    // различие между ними в пределах AMBIGUITY_GAP — это не два разных
+    // лекарства, а варианты одного и того же (тестовый кейс
+    // «топ-1 + топ-2 похожи, оба с правильной дозировкой → matched»).
+    // В этой зоне дозировочный постфильтр уже сделал своё дело: остались
+    // кандидаты той же дозировочной группы.
+    if (
+      first.combinedScore >= ResolveMedicineByCompositeUseCase.highConfidenceScore &&
+      second.combinedScore >= ResolveMedicineByCompositeUseCase.highConfidenceScore
+    ) {
+      return { outcome: 'matched', medicineId: first.id, matchedVia: 'fuzzy' }
     }
     const gap = first.combinedScore - second.combinedScore
     if (gap < this.ambiguityGap) {

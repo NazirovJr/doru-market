@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest'
 import { isOk } from '@dorutj/domain-kernel'
 import { PharmacyInventory, type InventoryLotProps } from './pharmacy-inventory.entity.js'
+import { fixedDate } from '../testing/fixed-dates.js'
 
 const PHARMACY_ID = '22222222-2222-2222-2222-222222222222'
 const MEDICINE_ID = '11111111-1111-1111-1111-111111111111'
@@ -13,8 +14,7 @@ const INVENTORY_ID = '33333333-3333-3333-3333-333333333333'
 const FAR_FUTURE_ISO = '2030-12-31'
 const NEAR_FUTURE_ISO = '2027-06-01'
 const PAST_ISO = '2020-01-01'
-// eslint-disable-next-line no-restricted-globals -- `now: Date` — параметр доменного метода по контракту (`02` §2.6).
-const TODAY = new Date('2026-01-15T00:00:00.000Z')
+const TODAY = fixedDate('2026-01-15T00:00:00.000Z')
 
 function lot(overrides: Partial<InventoryLotProps> = {}): InventoryLotProps {
   return {
@@ -22,7 +22,7 @@ function lot(overrides: Partial<InventoryLotProps> = {}): InventoryLotProps {
     priceDiram: 15000n,
     quantity: 10,
     expiryDateIso: FAR_FUTURE_ISO,
-    lastSyncedAt: new Date('2026-01-10T00:00:00.000Z'),
+    lastSyncedAt: fixedDate('2026-01-10T00:00:00.000Z'),
     ...overrides,
   }
 }
@@ -150,7 +150,7 @@ describe('PharmacyInventory (DTJ-143, SRS-DOM-018..024)', () => {
     })
 
     it('обновляет существующий лот, если syncTimestamp свежее', () => {
-      const initial = lot({ batchNumber: 'A', quantity: 5, lastSyncedAt: new Date('2026-01-10') })
+      const initial = lot({ batchNumber: 'A', quantity: 5, lastSyncedAt: fixedDate('2026-01-10') })
       const result = PharmacyInventory.create({
         id: INVENTORY_ID,
         pharmacyId: PHARMACY_ID,
@@ -163,7 +163,7 @@ describe('PharmacyInventory (DTJ-143, SRS-DOM-018..024)', () => {
       const newer = lot({
         batchNumber: 'A',
         quantity: 9,
-        lastSyncedAt: new Date('2026-01-20'),
+        lastSyncedAt: fixedDate('2026-01-20'),
       })
       const applyResult = aggregate.applyDelta(newer)
       expect(applyResult.applied).toBe(true)
@@ -172,7 +172,7 @@ describe('PharmacyInventory (DTJ-143, SRS-DOM-018..024)', () => {
     })
 
     it('отбрасывает stale-обновление (syncTimestamp <= existing.lastSyncedAt)', () => {
-      const initial = lot({ batchNumber: 'A', quantity: 5, lastSyncedAt: new Date('2026-01-20') })
+      const initial = lot({ batchNumber: 'A', quantity: 5, lastSyncedAt: fixedDate('2026-01-20') })
       const result = PharmacyInventory.create({
         id: INVENTORY_ID,
         pharmacyId: PHARMACY_ID,
@@ -185,7 +185,7 @@ describe('PharmacyInventory (DTJ-143, SRS-DOM-018..024)', () => {
       const stale = lot({
         batchNumber: 'A',
         quantity: 99,
-        lastSyncedAt: new Date('2026-01-10'),
+        lastSyncedAt: fixedDate('2026-01-10'),
       })
       const applyResult = aggregate.applyDelta(stale)
       expect(applyResult.applied).toBe(false)
@@ -212,7 +212,7 @@ describe('PharmacyInventory (DTJ-143, SRS-DOM-018..024)', () => {
       // для обоих вызовов в этом тесте, что без явного override приводило
       // к ложному 'stale' и маскировало настоящую цель теста (нормализацию
       // FEFO-ключа для `batchNumber: null`).
-      const second = lot({ batchNumber: null, quantity: 11, lastSyncedAt: new Date('2026-01-11T00:00:00.000Z') })
+      const second = lot({ batchNumber: null, quantity: 11, lastSyncedAt: fixedDate('2026-01-11T00:00:00.000Z') })
       const applyResult = aggregate.applyDelta(second)
       expect(applyResult.applied).toBe(true)
       expect(aggregate.getLots().length).toBe(1)

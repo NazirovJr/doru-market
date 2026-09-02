@@ -24,7 +24,7 @@ import {
   PHARMACY_API_KEY_VERIFICATION,
   type PharmacyApiKeyVerificationInput,
   type PharmacyApiKeyVerificationPort,
-} from '../../application/ports/pharmacy-api-key-verification.port.js'
+} from '@/modules/inventory/application/ports/pharmacy-api-key-verification.port.js'
 import {
   MtlsRequiredError,
   PharmacyApiKeyInvalidError,
@@ -56,7 +56,50 @@ export class PharmacyApiKeyGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<FastifyRequestWithPrincipal>()
-    const headers = req.headers
+    const input = this.buildVerificationInput(req)
+    try {
+      const result = await this.verifier.verify(input)
+      req.principal = {
+        type: 'pharmacy_system',
+        pharmacyId: result.pharmacyId,
+        chainId: result.chainId,
+      }
+      return true
+    } catch (error) {
+      throw this.mapToUnauthorized(error)
+    }
+  }
+
+  /** Заголовки `X-Pharmacy-*` + `rawBody` → `PharmacyApiKeyVerificationInput`. */
+  private buildVerificationInput(
+    req: FastifyRequestWithPrincipal,
+  ): PharmacyApiKeyVerificationInput {
+    const { keyId, secret, timestamp, nonce, signature, mtls } = this.parseAuthHeaders(
+      req.headers,
+    )
+    const rawBody = req.rawBody ?? Buffer.alloc(0)
+    return {
+      keyId,
+      secret,
+      timestamp,
+      nonce,
+      signature,
+      method: req.method,
+      path: req.url,
+      rawBody,
+      mtlsVerifiedHeader: mtls ?? undefined,
+    }
+  }
+
+  /** Парсинг + валидация 4 обязательных `X-Pharmacy-*` заголовков и `keyId.secret`. */
+  private parseAuthHeaders(headers: FastifyRequest['headers']): {
+    readonly keyId: string
+    readonly secret: string
+    readonly timestamp: string
+    readonly nonce: string
+    readonly signature: string
+    readonly mtls: string | null
+  } {
     const keyIdHeader = this.headerToString(headers['x-pharmacy-api-key'])
     const timestamp = this.headerToString(headers['x-pharmacy-timestamp'])
     const nonce = this.headerToString(headers['x-pharmacy-nonce'])
@@ -73,32 +116,13 @@ export class PharmacyApiKeyGuard implements CanActivate {
       // (не раскрываем, что именно).
       throw new UnauthorizedException('Invalid X-Pharmacy-API-Key format')
     }
-    const keyId = keyIdHeader.slice(0, dotIndex)
-    const secret = keyIdHeader.slice(dotIndex + 1)
-
-    const rawBody = req.rawBody ?? Buffer.alloc(0)
-    const input: PharmacyApiKeyVerificationInput = {
-      keyId,
-      secret,
+    return {
+      keyId: keyIdHeader.slice(0, dotIndex),
+      secret: keyIdHeader.slice(dotIndex + 1),
       timestamp,
       nonce,
       signature,
-      method: req.method,
-      path: req.url,
-      rawBody,
-      mtlsVerifiedHeader: mtls === null ? undefined : mtls,
-    }
-
-    try {
-      const result = await this.verifier.verify(input)
-      req.principal = {
-        type: 'pharmacy_system',
-        pharmacyId: result.pharmacyId,
-        chainId: result.chainId,
-      }
-      return true
-    } catch (error) {
-      throw this.mapToUnauthorized(error)
+      mtls,
     }
   }
 

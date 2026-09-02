@@ -15,10 +15,10 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DosageForm, DosageUnit } from '@dorutj/domain-kernel'
-import { ControlCategory, DosageFormClass } from '../../domain/medicine.enums.js'
-import { Medicine, type MedicineCreateCommand } from '../../domain/medicine.entity.js'
+import { ControlCategory, DosageFormClass } from '@/modules/catalog/domain/medicine.enums.js'
+import { Medicine, type MedicineCreateCommand } from '@/modules/catalog/domain/medicine.entity.js'
 import { CatalogRepositoryAdapter } from './catalog-repository.adapter.js'
-import type { CatalogRepository } from '../../application/ports/catalog-repository.port.js'
+import type { CatalogRepository } from '@/modules/catalog/application/ports/catalog-repository.port.js'
 import { categories } from '@/db/schema/categories.js'
 import { medicines } from '@/db/schema/medicines.js'
 import { medicineSubstances } from '@/db/schema/medicine-substances.js'
@@ -33,11 +33,33 @@ interface DrizzleMock {
 /** Тег, по которому мок различает таблицы (Drizzle не раскрывает символ). */
 type TableName = 'medicines' | 'medicine_substances' | 'categories'
 
-/** Подсказки для упрощённой интерпретации `eq(...)` в моке. */
-const whereHints = new Map<TableName, { kind: 'isActive1' }>()
+/** Подсказки для упрощённой интерпретации `eq(...)` в моке (единственный различаемый фильтр — `isActive = 1`). */
+const activeFilterHints = new Set<TableName>()
 
 function resetWhereHints(): void {
-  whereHints.clear()
+  activeFilterHints.clear()
+}
+
+/** `queryChunks` из Drizzle SQL-объекта условия, либо `null`, если это не он. */
+function getQueryChunks(cond: unknown): readonly unknown[] | null {
+  if (cond === null || typeof cond !== 'object' || !('queryChunks' in cond)) {
+    return null
+  }
+  return (cond as { queryChunks: readonly unknown[] }).queryChunks
+}
+
+/** Чанк — ссылка на колонку `is_active`/`isActive`. */
+function isActiveColumnChunk(chunk: unknown): boolean {
+  if (chunk === null || typeof chunk !== 'object' || !('name' in chunk)) return false
+  const name = chunk.name
+  return name === 'is_active' || name === 'isActive'
+}
+
+/** Чанк-параметр со значением `1`/`true` (то, во что Drizzle упаковывает связанный параметр). */
+function isTruthyParamChunk(chunk: unknown): boolean {
+  if (chunk === null || typeof chunk !== 'object' || !('value' in chunk)) return false
+  const value = chunk.value
+  return value === 1 || value === true
 }
 
 /**
@@ -53,29 +75,12 @@ function resetWhereHints(): void {
  * просачивались в дерево. Здесь ищем колонку по имени и значение связанного параметра.
  */
 function isIsActiveEqualsOne(cond: unknown): boolean {
-  if (cond === null || typeof cond !== 'object' || !('queryChunks' in cond)) {
-    return false
-  }
-  const chunks = (cond as { queryChunks: ReadonlyArray<unknown> }).queryChunks
+  const chunks = getQueryChunks(cond)
+  if (chunks === null) return false
   for (let i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i] as { name?: unknown } | null
-    if (chunk === null || typeof chunk !== 'object' || typeof chunk.name !== 'string') {
-      continue
-    }
-    if (chunk.name !== 'is_active' && chunk.name !== 'isActive') {
-      continue
-    }
-    // Значение условия — следующий chunk-Param после колонки (" = " между ними).
-    for (let j = i + 1; j < chunks.length; j++) {
-      const candidate = chunks[j] as { value?: unknown } | null
-      if (candidate === null || typeof candidate !== 'object' || !('value' in candidate)) {
-        continue
-      }
-      const value = candidate.value
-      if (value === 1 || value === true) {
-        return true
-      }
-    }
+    if (!isActiveColumnChunk(chunks[i])) continue
+    // Значение условия — один из чанков-параметров после колонки (" = " между ними).
+    if (chunks.slice(i + 1).some(isTruthyParamChunk)) return true
   }
   return false
 }
@@ -84,15 +89,15 @@ function isIsActiveEqualsOne(cond: unknown): boolean {
 function makeDrizzleMock(): {
   db: DrizzleMock
   medicines: Map<string, Record<string, unknown>>
-  medicineSubstances: Array<Record<string, unknown>>
-  categories: Array<Record<string, unknown>>
+  medicineSubstances: Record<string, unknown>[]
+  categories: Record<string, unknown>[]
   selectCalls: { table: TableName; args: unknown[] }[]
   insertCalls: { table: TableName; values: unknown }[]
   deleteCalls: { table: TableName; where: unknown }[]
 } {
   const medicinesStore = new Map<string, Record<string, unknown>>()
-  const medicineSubstancesStore: Array<Record<string, unknown>> = []
-  const categoriesStore: Array<Record<string, unknown>> = []
+  const medicineSubstancesStore: Record<string, unknown>[] = []
+  const categoriesStore: Record<string, unknown>[] = []
   const selectCalls: { table: TableName; args: unknown[] }[] = []
   const insertCalls: { table: TableName; values: unknown }[] = []
   const deleteCalls: { table: TableName; where: unknown }[] = []
@@ -117,21 +122,18 @@ function makeDrizzleMock(): {
             // `.where(cond)`; без финального `.limit()`/`.orderBy()` мы всё равно
             // попадём в `selfOrderChain.then(...)`, который вызывает `applyWhere`
             // с уже разрешённым набором. Здесь применяем hint.
-            const hint = whereHints.get(name)
+            const hasActiveFilter = activeFilterHints.has(name)
             // eslint-disable-next-line no-console -- диагностический лог в тесте, чтобы понять путь вызова
-            console.error(`[mock:applyWhere] table=${name} hint=${JSON.stringify(hint)} rows=${rows.length}`)
-            if (hint === undefined) return rows
-            if (hint.kind === 'isActive1') {
-              return rows.filter((r) => r.isActive === 1 || r.isActive === true)
-            }
-            return rows
+            console.error(`[mock:applyWhere] table=${name} hasActiveFilter=${String(hasActiveFilter)} rows=${String(rows.length)}`)
+            if (!hasActiveFilter) return rows
+            return rows.filter((r) => r.isActive === 1 || r.isActive === true)
           }
           const selfWhereChain = {
             where(cond: unknown) {
               selectCalls.push({ table: name, args: [cols] })
               // Запоминаем форму условия для последующего resolve.
               if (isIsActiveEqualsOne(cond)) {
-                whereHints.set(name, { kind: 'isActive1' })
+                activeFilterHints.add(name)
               }
               return selfOrderChain
             },
@@ -166,8 +168,7 @@ function makeDrizzleMock(): {
           function selfResolveAll(n: TableName): Row[] {
             if (n === 'medicines') return [...medicinesStore.values()]
             if (n === 'medicine_substances') return medicineSubstancesStore
-            if (n === 'categories') return categoriesStore
-            return []
+            return categoriesStore
           }
           return selfWhereChain
         },
@@ -206,12 +207,12 @@ function makeDrizzleMock(): {
       }
       function applyInsert(n: TableName, vals: unknown): void {
         if (n === 'medicines') {
-          const arr = (Array.isArray(vals) ? vals : [vals]) as Array<Record<string, unknown>>
+          const arr = (Array.isArray(vals) ? vals : [vals]) as Record<string, unknown>[]
           for (const v of arr) {
             medicinesStore.set(String(v.id), v)
           }
         } else if (n === 'medicine_substances') {
-          const arr = (Array.isArray(vals) ? vals : [vals]) as Array<Record<string, unknown>>
+          const arr = (Array.isArray(vals) ? vals : [vals]) as Record<string, unknown>[]
           medicineSubstancesStore.push(...arr)
         }
       }
@@ -312,9 +313,9 @@ function seedMedicine(
 }
 
 function seedSubstances(
-  store: { medicineSubstances: Array<Record<string, unknown>> },
+  store: { medicineSubstances: Record<string, unknown>[] },
   medicineId: string,
-  items: Array<{ substanceId: string; strengthValue: number | string; strengthUnit: string }>,
+  items: { substanceId: string; strengthValue: number | string; strengthUnit: string }[],
 ): void {
   for (const s of items) {
     store.medicineSubstances.push({

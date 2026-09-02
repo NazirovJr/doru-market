@@ -167,6 +167,12 @@ CREATE TYPE inventory_sync_row_error_code AS ENUM (
     'invalid_barcode', 'ambiguous_date_format', 'missing_required_field',
     'unmatched_medicine', 'skipped_stale', 'invalid_price', 'invalid_quantity'
 );
+-- [ИЗМЕНЕНО] В реализации этот CREATE TYPE не создаётся ни одной миграцией — как и
+-- inventory_sync_batch_status выше, тип реализован VARCHAR + CHECK (конвенция
+-- 0012_inventory_foundation.sql), не pg ENUM (PG не допускает ALTER TYPE ADD VALUE внутри
+-- транзакции, см. §11 п.779 модуля 22). Источник истины по кодам —
+-- TS-юнион `InventorySyncRowError['errorCode']`
+-- (apps/api/src/modules/inventory/application/ports/inventory-sync-batch.repository.port.ts).
 
 -- === D-22 / REQ-ONBOARD: онбординг аптек и сетей ===
 CREATE TYPE chain_onboarding_status AS ENUM (
@@ -536,10 +542,12 @@ CREATE TABLE inventory_sync_errors (
     batch_id UUID NOT NULL REFERENCES inventory_sync_batches(id) ON DELETE CASCADE,
     row_index INT NOT NULL, -- позиция строки в исходном payload, для отчёта аптеке
     raw_row JSONB NOT NULL,
-    error_code inventory_sync_row_error_code NOT NULL,
+    error_code inventory_sync_row_error_code NOT NULL, -- [ИЗМЕНЕНО] на практике VARCHAR + CHECK, не pg ENUM — см. примечание у CREATE TYPE выше (§11 п.166)
     error_detail TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+-- [ИЗМЕНЕНО] Эта таблица тоже нигде не создана ни одной миграцией и не имеет drizzle-адаптера;
+-- появится вместе с DTJ-145. `appendErrors` пока реализован только in-memory.
 COMMENT ON TABLE inventory_sync_errors IS
     'Построчные ошибки батча (REQ-SYNC-9: одна плохая строка не роняет весь батч). '
     'skipped_stale — ОЖИДАЕМЫЙ штатный случай (SRS-DOM-169), не сбой интеграции.';

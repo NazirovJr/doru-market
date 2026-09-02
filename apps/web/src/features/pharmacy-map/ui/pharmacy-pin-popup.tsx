@@ -27,14 +27,14 @@ interface OpeningHoursLabelProps {
   readonly t: (key: string) => string
 }
 
-function OpeningHoursLabel({ pin, t }: OpeningHoursLabelProps): ReactElement {
+const OpeningHoursLabel = ({ pin, t }: OpeningHoursLabelProps): ReactElement => {
   if (pin.is24x7) {
     return <>{t('map.pin.open_24_7')}</>
   }
   return <>{pin.isOpenNow ? t('map.pin.open_now') : t('map.pin.closed_now')}</>
 }
 
-export function PharmacyPinPopup({ pin }: PharmacyPinPopupProps): ReactElement {
+export const PharmacyPinPopup = ({ pin }: PharmacyPinPopupProps): ReactElement => {
   const { t } = useT(useLocale().locale)
 
   return (

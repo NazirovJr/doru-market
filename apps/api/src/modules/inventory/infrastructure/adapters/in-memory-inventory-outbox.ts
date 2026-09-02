@@ -11,7 +11,9 @@ import {
   type InventoryBatchQueuedEvent,
   type InventoryOutboxPort,
   type UnmatchedInventoryRowEvent,
-} from '../../application/ports/inventory-outbox.port.js'
+} from '@/modules/inventory/application/ports/inventory-outbox.port.js'
+
+const MS_PER_MINUTE = 60_000
 
 interface StoredEvent {
   readonly type: string
@@ -56,13 +58,15 @@ export class InMemoryInventoryOutbox implements InventoryOutboxPort {
     })
   }
 
-  async hasStuckAlert(fullSyncSessionId: string, withinMinutes: number): Promise<boolean> {
-    const cutoff = new Date(Date.now() - withinMinutes * 60_000)
-    return this.all.some(
-      (e) =>
-        e.type === 'inventory.full_sync_session.stuck' &&
-        e.aggregateId === fullSyncSessionId &&
-        e.at >= cutoff,
+  hasStuckAlert(fullSyncSessionId: string, withinMinutes: number): Promise<boolean> {
+    const cutoff = new Date(Date.now() - withinMinutes * MS_PER_MINUTE)
+    return Promise.resolve(
+      this.all.some(
+        (e) =>
+          e.type === 'inventory.full_sync_session.stuck' &&
+          e.aggregateId === fullSyncSessionId &&
+          e.at >= cutoff,
+      ),
     )
   }
 }

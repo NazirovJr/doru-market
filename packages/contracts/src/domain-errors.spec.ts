@@ -2,7 +2,7 @@
  * Каждый класс `domain-errors.ts` — `instanceof DomainError`, корректный `code` (DTJ-005 тест-план).
  */
 import { describe, expect, it } from 'vitest'
-import { ErrorCode } from './errors'
+import { ErrorCode } from './errors.js'
 import {
   AmbiguousDateFormatError,
   AutomaticReactivationForbiddenError,
@@ -62,7 +62,7 @@ import {
   TokenInvalidatedError,
   UnauthorizedAdjustmentError,
   ValidationError,
-} from './domain-errors'
+} from './domain-errors.js'
 
 /**
  * Полный список concrete-классов из `./domain-errors.ts` (на момент фикса Блока 1.2 — 57 штук).

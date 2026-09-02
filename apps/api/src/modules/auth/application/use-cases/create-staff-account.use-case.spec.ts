@@ -10,15 +10,73 @@
  *   - duplicate phone: 409 CONFLICT;
  *   - invalid phone: 400 INVALID_PHONE_FORMAT.
  *
- * Использует `InMemoryUsersRepository` из production (он уже реализует
- * `CreateUserInput` с `pharmacyId`/`chainId`, см. DTJ-030 правка).
+ * Локальный `FakeUsersRepository` (Map-based, тот же контракт `CreateUserInput`
+ * с `pharmacyId`/`chainId`, что и production `InMemoryUsersRepository`) — не
+ * production-класс: application не импортирует infrastructure (§1.1).
  */
+import { randomUUID } from 'node:crypto'
 import { ErrorCode } from '@dorutj/contracts'
 import { isErr, isOk } from '@dorutj/domain-kernel'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { InMemoryUsersRepository } from '@/modules/auth/infrastructure/repositories/in-memory-users.repository.js'
+import {
+  type CreateUserInput,
+  type UpdateUserPatch,
+  type UsersRepository,
+} from '@/modules/auth/application/ports/users.repository.port.js'
+import { type User } from '@/modules/auth/domain/user.js'
 import { type JwtClaims } from '@/modules/auth/application/ports/jwt-signer.port.js'
 import { CreateStaffAccountUseCase } from './create-staff-account.use-case.js'
+
+class FakeUsersRepository implements UsersRepository {
+  private readonly byId = new Map<string, User>()
+  private readonly tenantPhoneIndex = new Map<string, string>()
+
+  findByTenantAndPhone(tenantId: string, phoneNumber: string): Promise<User | null> {
+    const id = this.tenantPhoneIndex.get(`${tenantId}|${phoneNumber}`)
+    return Promise.resolve(id === undefined ? null : (this.byId.get(id) ?? null))
+  }
+
+  findById(id: string): Promise<User | null> {
+    return Promise.resolve(this.byId.get(id) ?? null)
+  }
+
+  create(input: CreateUserInput): Promise<User> {
+    const id = randomUUID()
+    const user: User = {
+      id,
+      tenantId: input.tenantId,
+      phoneNumber: input.phoneNumber,
+      role: input.role,
+      fullName: input.fullName,
+      pharmacyId: input.pharmacyId ?? null,
+      chainId: input.chainId ?? null,
+      telegramChatId: null,
+      preferredLocale: 'tj',
+      isActive: true,
+      createdAt: new Date(),
+      deletedAt: null,
+    }
+    this.byId.set(id, user)
+    if (input.phoneNumber !== null) {
+      this.tenantPhoneIndex.set(`${input.tenantId}|${input.phoneNumber}`, id)
+    }
+    return Promise.resolve(user)
+  }
+
+  async findOrCreateByTenantAndPhone(input: CreateUserInput): Promise<User> {
+    if (input.phoneNumber === null) return this.create(input)
+    const existing = await this.findByTenantAndPhone(input.tenantId, input.phoneNumber)
+    return existing ?? this.create(input)
+  }
+
+  findActiveByPhone(_phoneNumber: string): Promise<User | null> {
+    throw new Error('not used in DTJ-030 tests')
+  }
+
+  update(_id: string, _patch: UpdateUserPatch): Promise<User> {
+    throw new Error('not used in DTJ-030 tests')
+  }
+}
 
 const TENANT_ID = '33333333-3333-3333-3333-333333333333'
 const CHAIN_A = '11111111-1111-1111-1111-111111111111'
@@ -37,11 +95,11 @@ function actor(overrides: Partial<JwtClaims> = {}): JwtClaims {
 }
 
 describe('CreateStaffAccountUseCase (DTJ-030, SRS-API-035)', () => {
-  let users: InMemoryUsersRepository
+  let users: FakeUsersRepository
   let useCase: CreateStaffAccountUseCase
 
   beforeEach(() => {
-    users = new InMemoryUsersRepository()
+    users = new FakeUsersRepository()
     useCase = new CreateStaffAccountUseCase(users)
   })
 

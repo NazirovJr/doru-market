@@ -23,8 +23,18 @@ import {
 } from '@dorutj/contracts'
 import { type FastifyReply } from 'fastify'
 import { RequestContext } from '@/common/context/request-context.js'
+import {
+  HTTP_STATUS_BAD_REQUEST,
+  HTTP_STATUS_CONFLICT,
+  HTTP_STATUS_FORBIDDEN,
+  HTTP_STATUS_INTERNAL_SERVER_ERROR,
+  HTTP_STATUS_LOCKED,
+  HTTP_STATUS_NOT_FOUND,
+  HTTP_STATUS_TOO_MANY_REQUESTS,
+  HTTP_STATUS_UNAUTHORIZED,
+} from '../http-status.constants.js'
 
-const FALLBACK_HTTP_STATUS = 500
+const FALLBACK_HTTP_STATUS = HTTP_STATUS_INTERNAL_SERVER_ERROR
 
 @Catch()
 export class TransportExceptionFilter implements ExceptionFilter {
@@ -36,7 +46,11 @@ export class TransportExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       const status = exception.getStatus()
-      const body = exception.getResponse()
+      // `getResponse()` типизирован как `string | object`, но исключение сюда приходит из
+      // произвольного места приложения — типизирован намеренно как `unknown`, чтобы не
+      // терять runtime-проверку `body !== null` (защита от `HttpException`, созданных в обход
+      // штатного конструктора, напр. сторонним кодом через `as any`).
+      const body: unknown = exception.getResponse()
       const message =
         typeof body === 'object' && body !== null && 'message' in body
           ? String((body).message)
@@ -50,7 +64,7 @@ export class TransportExceptionFilter implements ExceptionFilter {
 
     // Неожиданное исключение — НЕ раскрываем stack в HTTP, логируем подробно.
     this.logger.error(
-      `Неожиданное исключение в request handler: ${exception instanceof Error ? exception.stack : String(exception)}`,
+      `Неожиданное исключение в request handler: ${exception instanceof Error ? (exception.stack ?? exception.message) : String(exception)}`,
     )
     const requestId = RequestContext.get()?.requestId
     const envelope: ErrorEnvelope = {
@@ -66,19 +80,19 @@ export class TransportExceptionFilter implements ExceptionFilter {
 
 function mapHttpStatusToCode(status: number): ErrorCode {
   switch (status) {
-    case 400:
+    case HTTP_STATUS_BAD_REQUEST:
       return ErrorCode.VALIDATION_ERROR
-    case 401:
+    case HTTP_STATUS_UNAUTHORIZED:
       return ErrorCode.UNAUTHENTICATED
-    case 403:
+    case HTTP_STATUS_FORBIDDEN:
       return ErrorCode.FORBIDDEN
-    case 404:
+    case HTTP_STATUS_NOT_FOUND:
       return ErrorCode.NOT_FOUND
-    case 409:
+    case HTTP_STATUS_CONFLICT:
       return ErrorCode.CONFLICT
-    case 423:
+    case HTTP_STATUS_LOCKED:
       return ErrorCode.OTP_LOCKED
-    case 429:
+    case HTTP_STATUS_TOO_MANY_REQUESTS:
       return ErrorCode.RATE_LIMITED
     default:
       return ErrorCode.INTERNAL_ERROR

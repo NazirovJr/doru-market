@@ -16,7 +16,7 @@ import {
   PHARMACY_SKU_MAPPING_REPOSITORY,
   type PharmacySkuMappingEntry,
   type PharmacySkuMappingRepository,
-} from '../../application/ports/pharmacy-sku-mapping.repository.port.js'
+} from '@/modules/inventory/application/ports/pharmacy-sku-mapping.repository.port.js'
 
 /**
  * Минимальный контракт Drizzle, который мы используем. Заменим на
@@ -25,7 +25,7 @@ import {
  * экспортирует единый `DrizzleDb` тип).
  */
 interface DrizzleLike {
-  select: <T>(args: T) => {
+  select: (args: unknown) => {
     from: (table: unknown) => {
       where: (condition: SQL) => Promise<
         readonly {
@@ -56,6 +56,10 @@ export class DrizzlePharmacySkuMappingRepository implements PharmacySkuMappingRe
     if (skus.length === 0) {
       return new Map()
     }
+    const conditions = and(
+      eq(pharmacySkuMapping.pharmacyId, pharmacyId),
+      inArray(pharmacySkuMapping.internalSku, skus as string[]),
+    )
     const rows = await this.db
       .select({
         internalSku: pharmacySkuMapping.internalSku,
@@ -63,19 +67,13 @@ export class DrizzlePharmacySkuMappingRepository implements PharmacySkuMappingRe
         matchedVia: pharmacySkuMapping.matchedVia,
       })
       .from(pharmacySkuMapping)
-      .where(
-        and(
-          eq(pharmacySkuMapping.pharmacyId, pharmacyId),
-          inArray(pharmacySkuMapping.internalSku, skus as string[]),
-        )!,
-      )
+      .where(conditions ?? sql`false`)
     const result = new Map<string, PharmacySkuMappingEntry>()
-    for (let i = 0; i < rows.length; i += 1) {
-      const row = rows[i] as {
-        internalSku: string
-        medicineId: string
-        matchedVia: string
-      }
+    for (const row of rows as readonly {
+      internalSku: string
+      medicineId: string
+      matchedVia: string
+    }[]) {
       if (
         row.matchedVia !== 'barcode' &&
         row.matchedVia !== 'name_fuzzy' &&

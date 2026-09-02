@@ -21,6 +21,7 @@ import {
 } from '@/modules/auth/application/use-cases/refresh-token.use-case.js'
 import { type RefreshDto, refreshDtoSchema } from '@/modules/auth/presentation/dto/refresh.dto.js'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
+import { HTTP_STATUS_OK } from '@/common/http/http-status.constants.js'
 
 const IP_ADDRESS_PLACEHOLDER = '0.0.0.0'
 
@@ -49,7 +50,7 @@ export class RefreshController {
 
   @Public()
   @Post('refresh')
-  @HttpCode(200)
+  @HttpCode(HTTP_STATUS_OK)
   async refresh(
     @Body(new ZodValidationPipe(refreshDtoSchema)) dto: RefreshDto,
     @Req() request: FastifyLikeRequest,

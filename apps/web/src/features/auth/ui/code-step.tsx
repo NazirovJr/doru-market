@@ -46,7 +46,7 @@ export interface CodeStepProps {
   readonly onCooldownTick: () => void
 }
 
-export function CodeStep({
+export const CodeStep = ({
   state,
   onSuccess,
   onMismatch,
@@ -54,7 +54,7 @@ export function CodeStep({
   onLocked,
   onResend,
   onCooldownTick,
-}: CodeStepProps): ReactElement {
+}: CodeStepProps): ReactElement => {
   const { locale } = useLocale()
   const { t } = useT(locale)
   const formId = useId()
@@ -139,7 +139,7 @@ export function CodeStep({
       >
         {code.map((cell, index) => (
           <input
-            key={`${formId}-cell-${index}`}
+            key={`${formId}-cell-${String(index)}`}
             ref={(el): void => {
               inputRefs.current[index] = el
             }}
@@ -160,7 +160,7 @@ export function CodeStep({
             onKeyDown={(e): void => {
               handleCellKey(index, e)
             }}
-            aria-label={`${t('auth.login.code_title')} ${index + 1}`}
+            aria-label={`${t('auth.login.code_title')} ${String(index + 1)}`}
             className="rounded-md border border-line bg-surface text-center text-lg font-mono focus:outline-none focus:ring-2 focus:ring-brand-primary"
             style={{ minWidth: MIN_TAP_ZONE_PX, minHeight: MIN_TAP_ZONE_PX }}
           />

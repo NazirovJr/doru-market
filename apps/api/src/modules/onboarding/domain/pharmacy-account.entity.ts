@@ -253,7 +253,7 @@ export class PharmacyAccount {
     // разойдутся). Без явной проверки здесь `suspensionReason` мог принять
     // произвольную строку, не входящую в `PHARMACY_SUSPENSION_REASONS`.
     if (!PHARMACY_SUSPENSION_REASONS.includes(reason)) {
-      throw new ValidationError(`Invalid suspension reason: ${String(reason)}`, { field: 'reason' })
+      throw new ValidationError(`Invalid suspension reason: ${reason}`, { field: 'reason' })
     }
     assertTransitionAllowed(this.status, 'suspended')
     return new PharmacyAccount({

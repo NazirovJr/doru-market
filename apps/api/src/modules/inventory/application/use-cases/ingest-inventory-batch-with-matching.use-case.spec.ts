@@ -9,24 +9,217 @@
  *      `IllegalBatchStatusTransitionError`.
  *   5. Полный `unitOfWork.run(...)` обёртка — ровно один вызов.
  *
- * Использует InMemory-реализации портов, без реальной БД.
+ * Локальные Map-based фейки портов (не production `InMemory*`-адаптеры из
+ * infrastructure: application не импортирует infrastructure, §1.1).
  */
 import { describe, expect, it } from 'vitest'
-import { InMemoryPharmacyInventoryRepository } from '../../infrastructure/adapters/in-memory-pharmacy-inventory.repository.js'
-import { InMemoryInventorySyncBatchRepository } from '../../infrastructure/adapters/in-memory-inventory-sync-batch.repository.js'
-import { InMemoryPharmacySkuMappingRepository } from '../../infrastructure/adapters/in-memory-pharmacy-sku-mapping.repository.js'
-import { InMemoryInventoryOutbox } from '../../infrastructure/adapters/in-memory-inventory-outbox.js'
 import { CompositeInventoryMatcherService } from '../services/composite-inventory-matcher.service.js'
 import {
   IngestInventoryBatchWithMatchingUseCase,
   type IngestRowInput,
 } from './ingest-inventory-batch-with-matching.use-case.js'
 import { type FullSyncCompletionPort } from '../ports/full-sync-completion.port.js'
-import { type UnitOfWorkPort } from '@/modules/auth/application/ports/unit-of-work.port.js'
+import { type UnitOfWorkPort, type UnitOfWorkTx } from '@/modules/auth/application/ports/unit-of-work.port.js'
 import { type Clock } from '@/shared-kernel/application/ports/clock.port.js'
-import { type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
-import { InventorySyncBatch } from '../../domain/inventory-sync-batch.entity.js'
-import { IllegalBatchStatusTransitionError } from '../../domain/errors/inventory.errors.js'
+import { InventorySyncBatch } from '@/modules/inventory/domain/inventory-sync-batch.entity.js'
+import { IllegalBatchStatusTransitionError } from '@/modules/inventory/domain/errors/inventory.errors.js'
+import type {
+  CreateInventorySyncBatchInput,
+  IncompleteFullSyncSession,
+  InventorySyncBatchRepository,
+  InventorySyncRowError,
+  RawInventoryRow,
+} from '../ports/inventory-sync-batch.repository.port.js'
+import type { InventorySyncStatus } from '@/modules/inventory/domain/inventory-sync.types.js'
+import type {
+  FullSyncSessionStuckEvent,
+  InventoryBatchQueuedEvent,
+  InventoryOutboxPort,
+  UnmatchedInventoryRowEvent,
+} from '../ports/inventory-outbox.port.js'
+import type {
+  PharmacyInventoryRepository,
+  UpsertResult,
+} from '../ports/pharmacy-inventory.repository.port.js'
+import type { InventoryBatchUpsertRow } from '@/modules/inventory/domain/value-objects/inventory-batch-upsert-row.vo.js'
+import { PharmacyInventory } from '@/modules/inventory/domain/pharmacy-inventory.entity.js'
+import type {
+  PharmacySkuMappingEntry,
+  PharmacySkuMappingRepository,
+} from '../ports/pharmacy-sku-mapping.repository.port.js'
+
+class FakePharmacyInventoryRepository implements PharmacyInventoryRepository {
+  private readonly rows = new Map<string, InventoryBatchUpsertRow>()
+  private readonly aggregates = new Map<string, PharmacyInventory>()
+
+  private makeKey(pharmacyId: string, row: InventoryBatchUpsertRow): string {
+    return `${pharmacyId}|${row.getMedicineId()}|${row.getBatchNumber() ?? ''}|${row.getExpiresAt()}`
+  }
+
+  upsertMany(input: {
+    pharmacyId: string
+    rows: readonly InventoryBatchUpsertRow[]
+  }): Promise<UpsertResult> {
+    let accepted = 0
+    let updated = 0
+    for (const row of input.rows) {
+      const key = this.makeKey(input.pharmacyId, row)
+      if (this.rows.has(key)) {
+        updated += 1
+      } else {
+        accepted += 1
+      }
+      this.rows.set(key, row)
+    }
+    return Promise.resolve({ acceptedCount: accepted, updatedCount: updated })
+  }
+
+  findOrCreateManyByMedicineIds(input: {
+    pharmacyId: string
+    medicineIds: readonly string[]
+  }): Promise<ReadonlyMap<string, PharmacyInventory>> {
+    const result = new Map<string, PharmacyInventory>()
+    for (const medicineId of input.medicineIds) {
+      const key = `${input.pharmacyId}::${medicineId}`
+      let aggregate = this.aggregates.get(key)
+      if (aggregate === undefined) {
+        const created = PharmacyInventory.create({ id: key, pharmacyId: input.pharmacyId, medicineId })
+        if (!created.ok) {
+          throw new Error(`failed to create PharmacyInventory: ${created.error.message}`)
+        }
+        this.aggregates.set(key, created.value)
+        aggregate = created.value
+      }
+      result.set(medicineId, aggregate)
+    }
+    return Promise.resolve(result)
+  }
+
+  saveMany(aggregates: readonly PharmacyInventory[]): Promise<void> {
+    for (const aggregate of aggregates) {
+      this.aggregates.set(`${aggregate.pharmacyId}::${aggregate.medicineId}`, aggregate)
+    }
+    return Promise.resolve()
+  }
+}
+
+class FakeInventorySyncBatchRepository implements InventorySyncBatchRepository {
+  private readonly batches = new Map<string, InventorySyncBatch>()
+  private readonly errors: InventorySyncRowError[] = []
+
+  create(_input: CreateInventorySyncBatchInput): Promise<{ readonly id: string }> {
+    throw new Error('not used in ingest tests')
+  }
+
+  markStatus(_id: string, _status: InventorySyncStatus): Promise<void> {
+    throw new Error('not used in ingest tests')
+  }
+
+  findById(id: string): Promise<InventorySyncBatch | null> {
+    return Promise.resolve(this.batches.get(id) ?? null)
+  }
+
+  save(batch: InventorySyncBatch): Promise<void> {
+    this.batches.set(batch.id, batch)
+    return Promise.resolve()
+  }
+
+  appendErrors(errors: readonly InventorySyncRowError[]): Promise<void> {
+    this.errors.push(...errors)
+    return Promise.resolve()
+  }
+
+  findRawItems(_batchId: string): Promise<readonly RawInventoryRow[]> {
+    throw new Error('not used in ingest tests')
+  }
+
+  createIfNotExists(_input: {
+    readonly id: string
+    readonly pharmacyId: string
+    readonly channel: 'rest' | 'excel' | 'manual'
+    readonly syncType: 'delta' | 'full'
+    readonly fullSyncSessionId: string | null
+    readonly isLastPage: boolean
+    readonly totalRows: number
+    readonly note: string | null
+    readonly now: Date
+  }): Promise<{ readonly batch: InventorySyncBatch; readonly created: boolean }> {
+    throw new Error('not used in ingest tests')
+  }
+
+  appendRawItems(
+    _batchId: string,
+    _items: readonly { readonly rowIndex: number; readonly payload: Readonly<Record<string, unknown>> }[],
+  ): Promise<void> {
+    throw new Error('not used in ingest tests')
+  }
+
+  findIncompleteFullSyncSessions(
+    _olderThanMinutes: number,
+  ): Promise<readonly IncompleteFullSyncSession[]> {
+    throw new Error('not used in ingest tests')
+  }
+
+  /** TEST-ONLY: прочитать все накопленные ошибки. */
+  getAllErrors(): readonly InventorySyncRowError[] {
+    return this.errors
+  }
+}
+
+class FakePharmacySkuMappingRepository implements PharmacySkuMappingRepository {
+  private readonly store = new Map<string, PharmacySkuMappingEntry>()
+
+  private static compositeKey(pharmacyId: string, internalSku: string): string {
+    return `${pharmacyId}::${internalSku}`
+  }
+
+  findManyByPharmacyAndSkus(
+    pharmacyId: string,
+    skus: readonly string[],
+  ): Promise<ReadonlyMap<string, PharmacySkuMappingEntry>> {
+    const result = new Map<string, PharmacySkuMappingEntry>()
+    for (const sku of skus) {
+      const entry = this.store.get(FakePharmacySkuMappingRepository.compositeKey(pharmacyId, sku))
+      if (entry !== undefined) {
+        result.set(sku, entry)
+      }
+    }
+    return Promise.resolve(result)
+  }
+
+  upsert(input: {
+    pharmacyId: string
+    internalSku: string
+    medicineId: string
+    matchedVia: 'barcode' | 'name_fuzzy' | 'manual_resolve'
+  }): Promise<void> {
+    const key = FakePharmacySkuMappingRepository.compositeKey(input.pharmacyId, input.internalSku)
+    this.store.set(key, { medicineId: input.medicineId, matchedVia: input.matchedVia })
+    return Promise.resolve()
+  }
+}
+
+class FakeInventoryOutbox implements InventoryOutboxPort {
+  public readonly events: UnmatchedInventoryRowEvent[] = []
+  public readonly stuckEvents: FullSyncSessionStuckEvent[] = []
+  public readonly batchQueuedEvents: InventoryBatchQueuedEvent[] = []
+
+  append(event: UnmatchedInventoryRowEvent): void {
+    this.events.push(event)
+  }
+
+  appendStuckSession(event: FullSyncSessionStuckEvent): void {
+    this.stuckEvents.push(event)
+  }
+
+  appendBatchQueued(event: InventoryBatchQueuedEvent): void {
+    this.batchQueuedEvents.push(event)
+  }
+
+  hasStuckAlert(_fullSyncSessionId: string, _withinMinutes: number): Promise<boolean> {
+    return Promise.resolve(false)
+  }
+}
 
 const PHARMACY_ID = '22222222-2222-2222-2222-222222222222'
 const MEDICINE_1 = '11111111-1111-1111-1111-111111111111'
@@ -43,19 +236,19 @@ class FixedClock implements Clock {
 class NoopUnitOfWork implements UnitOfWorkPort {
   async run<T>(callback: Parameters<UnitOfWorkPort['run']>[0]): Promise<T> {
      
-    return (callback as (tx: DrizzleDb) => Promise<T>)(null as unknown as DrizzleDb)
+    return (callback as (tx: UnitOfWorkTx) => Promise<T>)(null)
   }
 }
 
 class NoopFullSyncCompletion implements FullSyncCompletionPort {
   public zeroOutCalls = 0
-  async zeroOutMissing(
+  zeroOutMissing(
     _pharmacyId: string,
     _sessionId: string,
     _timestamp: Date,
   ): Promise<{ readonly zeroedLots: number }> {
     this.zeroOutCalls += 1
-    return { zeroedLots: 0 }
+    return Promise.resolve({ zeroedLots: 0 })
   }
 }
 
@@ -97,15 +290,15 @@ function makeUnresolvedRow(rowIndex: number, internalSku: string): IngestRowInpu
 
 interface UseCaseHarness {
   useCase: IngestInventoryBatchWithMatchingUseCase
-  syncBatchRepository: InMemoryInventorySyncBatchRepository
+  syncBatchRepository: FakeInventorySyncBatchRepository
   fullSyncCompletion: NoopFullSyncCompletion
 }
 
 function makeHarness(): UseCaseHarness {
-  const inventoryRepository = new InMemoryPharmacyInventoryRepository()
-  const syncBatchRepository = new InMemoryInventorySyncBatchRepository()
-  const skuMappingRepository = new InMemoryPharmacySkuMappingRepository()
-  const outbox = new InMemoryInventoryOutbox()
+  const inventoryRepository = new FakePharmacyInventoryRepository()
+  const syncBatchRepository = new FakeInventorySyncBatchRepository()
+  const skuMappingRepository = new FakePharmacySkuMappingRepository()
+  const outbox = new FakeInventoryOutbox()
   const matcher = new CompositeInventoryMatcherService(skuMappingRepository, null, outbox)
   const fullSyncCompletion = new NoopFullSyncCompletion()
   const useCase = new IngestInventoryBatchWithMatchingUseCase(
@@ -120,7 +313,8 @@ function makeHarness(): UseCaseHarness {
 }
 
 async function seedQueuedBatch(
-  syncBatchRepository: InMemoryInventorySyncBatchRepository,
+  syncBatchRepository: FakeInventorySyncBatchRepository,
+  totalRows: number,
 ): Promise<void> {
   const batch = InventorySyncBatch.create(
     {
@@ -128,7 +322,7 @@ async function seedQueuedBatch(
       pharmacyId: PHARMACY_ID,
       channel: 'manual',
       syncType: 'delta',
-      totalRows: 5,
+      totalRows,
     },
     new Date('2026-01-15T10:00:00.000Z'),
   )
@@ -138,7 +332,7 @@ async function seedQueuedBatch(
 describe('IngestInventoryBatchWithMatchingUseCase (DTJ-148)', () => {
   it('все строки валидны и сматчены → completed_full_success', async () => {
     const { useCase, syncBatchRepository } = makeHarness()
-    await seedQueuedBatch(syncBatchRepository)
+    await seedQueuedBatch(syncBatchRepository, 2)
     const rows = [
       makeValidResolvedRow(0, 'SKU-1', MEDICINE_1),
       makeValidResolvedRow(1, 'SKU-2', MEDICINE_1),
@@ -158,7 +352,7 @@ describe('IngestInventoryBatchWithMatchingUseCase (DTJ-148)', () => {
 
   it('невалидная цена одной строки не блокирует остальные строки батча', async () => {
     const { useCase, syncBatchRepository } = makeHarness()
-    await seedQueuedBatch(syncBatchRepository)
+    await seedQueuedBatch(syncBatchRepository, 3)
     const rows = [
       makeValidResolvedRow(0, 'SKU-1', MEDICINE_1),
       { ...makeValidResolvedRow(1, 'SKU-2', MEDICINE_1), priceDiram: -1n },
@@ -183,7 +377,7 @@ describe('IngestInventoryBatchWithMatchingUseCase (DTJ-148)', () => {
 
   it('unmatched-строка формирует inventory_sync_errors', async () => {
     const { useCase, syncBatchRepository } = makeHarness()
-    await seedQueuedBatch(syncBatchRepository)
+    await seedQueuedBatch(syncBatchRepository, 1)
     const rows = [makeUnresolvedRow(0, 'SKU-UNK')]
     const result = await useCase.execute({
       batchId: BATCH_ID,
@@ -201,7 +395,7 @@ describe('IngestInventoryBatchWithMatchingUseCase (DTJ-148)', () => {
 
   it('syncType=delta НЕ вызывает FullSyncCompletion даже при isLastPage=true', async () => {
     const { useCase, syncBatchRepository, fullSyncCompletion } = makeHarness()
-    await seedQueuedBatch(syncBatchRepository)
+    await seedQueuedBatch(syncBatchRepository, 1)
     await useCase.execute({
       batchId: BATCH_ID,
       pharmacyId: PHARMACY_ID,
@@ -273,13 +467,13 @@ describe('IngestInventoryBatchWithMatchingUseCase (DTJ-148)', () => {
       async run<T>(callback: Parameters<UnitOfWorkPort['run']>[0]): Promise<T> {
         calls += 1
          
-        return (callback as (tx: DrizzleDb) => Promise<T>)(null as unknown as DrizzleDb)
+        return (callback as (tx: UnitOfWorkTx) => Promise<T>)(null)
       }
     }
-    const inventoryRepository = new InMemoryPharmacyInventoryRepository()
-    const syncBatchRepository = new InMemoryInventorySyncBatchRepository()
-    const skuMappingRepository = new InMemoryPharmacySkuMappingRepository()
-    const outbox = new InMemoryInventoryOutbox()
+    const inventoryRepository = new FakePharmacyInventoryRepository()
+    const syncBatchRepository = new FakeInventorySyncBatchRepository()
+    const skuMappingRepository = new FakePharmacySkuMappingRepository()
+    const outbox = new FakeInventoryOutbox()
     const matcher = new CompositeInventoryMatcherService(skuMappingRepository, null, outbox)
     const useCase = new IngestInventoryBatchWithMatchingUseCase(
       inventoryRepository,
@@ -289,7 +483,7 @@ describe('IngestInventoryBatchWithMatchingUseCase (DTJ-148)', () => {
       new FixedClock(),
       new CountingUnitOfWork(),
     )
-    await seedQueuedBatch(syncBatchRepository)
+    await seedQueuedBatch(syncBatchRepository, 1)
     await useCase.execute({
       batchId: BATCH_ID,
       pharmacyId: PHARMACY_ID,

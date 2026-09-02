@@ -81,4 +81,5 @@ export { ApiDocsAccessGuard }
 @Module({
   controllers: [ApiDocsController],
 })
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.
 export class OpenApiModule {}

@@ -5,8 +5,6 @@
  * DTJ-147 (шаги 3-4): fuzzy-резолюция, дозировочный фильтр, неоднозначность.
  */
 import { describe, expect, it, vi } from 'vitest'
-import { InMemoryPharmacySkuMappingRepository } from '../../infrastructure/adapters/in-memory-pharmacy-sku-mapping.repository.js'
-import { InMemoryInventoryOutbox } from '../../infrastructure/adapters/in-memory-inventory-outbox.js'
 import {
   CompositeInventoryMatcherService,
   type NeedsFuzzyRow,
@@ -17,6 +15,71 @@ import type {
   PharmacySkuMappingEntry,
   PharmacySkuMappingRepository,
 } from '../ports/pharmacy-sku-mapping.repository.port.js'
+import type {
+  FullSyncSessionStuckEvent,
+  InventoryBatchQueuedEvent,
+  InventoryOutboxPort,
+  UnmatchedInventoryRowEvent,
+} from '../ports/inventory-outbox.port.js'
+
+/**
+ * Локальные Map-based фейки портов (не production `InMemory*`-адаптеры из
+ * infrastructure: application не импортирует infrastructure, §1.1).
+ */
+class FakePharmacySkuMappingRepository implements PharmacySkuMappingRepository {
+  private readonly store = new Map<string, PharmacySkuMappingEntry>()
+
+  private static compositeKey(pharmacyId: string, internalSku: string): string {
+    return `${pharmacyId}::${internalSku}`
+  }
+
+  findManyByPharmacyAndSkus(
+    pharmacyId: string,
+    skus: readonly string[],
+  ): Promise<ReadonlyMap<string, PharmacySkuMappingEntry>> {
+    const result = new Map<string, PharmacySkuMappingEntry>()
+    for (const sku of skus) {
+      const entry = this.store.get(FakePharmacySkuMappingRepository.compositeKey(pharmacyId, sku))
+      if (entry !== undefined) {
+        result.set(sku, entry)
+      }
+    }
+    return Promise.resolve(result)
+  }
+
+  upsert(input: {
+    pharmacyId: string
+    internalSku: string
+    medicineId: string
+    matchedVia: 'barcode' | 'name_fuzzy' | 'manual_resolve'
+  }): Promise<void> {
+    const key = FakePharmacySkuMappingRepository.compositeKey(input.pharmacyId, input.internalSku)
+    this.store.set(key, { medicineId: input.medicineId, matchedVia: input.matchedVia })
+    return Promise.resolve()
+  }
+}
+
+class FakeInventoryOutbox implements InventoryOutboxPort {
+  public readonly events: UnmatchedInventoryRowEvent[] = []
+  public readonly stuckEvents: FullSyncSessionStuckEvent[] = []
+  public readonly batchQueuedEvents: InventoryBatchQueuedEvent[] = []
+
+  append(event: UnmatchedInventoryRowEvent): void {
+    this.events.push(event)
+  }
+
+  appendStuckSession(event: FullSyncSessionStuckEvent): void {
+    this.stuckEvents.push(event)
+  }
+
+  appendBatchQueued(event: InventoryBatchQueuedEvent): void {
+    this.batchQueuedEvents.push(event)
+  }
+
+  hasStuckAlert(_fullSyncSessionId: string, _withinMinutes: number): Promise<boolean> {
+    return Promise.resolve(false)
+  }
+}
 
 const PHARMACY_ID = '22222222-2222-2222-2222-222222222222'
 const MEDICINE_1 = '11111111-1111-1111-1111-111111111111'
@@ -30,20 +93,20 @@ function row(rowIndex: number, internalSku: string, rawBarcode: string | null): 
   return { rowIndex, internalSku, rawBarcode }
 }
 
-function fuzzyRow(
-  rowIndex: number,
-  internalSku: string,
-  rawBarcode: string | null,
-  rawTradeName: string,
-  rawDosageStrength: string | null = null,
-): NeedsFuzzyRow {
+function fuzzyRow(input: {
+  rowIndex: number
+  internalSku: string
+  rawBarcode: string | null
+  rawTradeName: string
+  rawDosageStrength?: string | null
+}): NeedsFuzzyRow {
   return {
-    rowIndex,
-    internalSku,
-    rawBarcode,
-    rawTradeName,
+    rowIndex: input.rowIndex,
+    internalSku: input.internalSku,
+    rawBarcode: input.rawBarcode,
+    rawTradeName: input.rawTradeName,
     rawDosageForm: 'tablets',
-    rawDosageStrength,
+    rawDosageStrength: input.rawDosageStrength ?? null,
     rawManufacturerName: 'Acme',
   }
 }
@@ -59,17 +122,17 @@ function makeFacadeMock(candidatesByIndex: ReadonlyMap<number, readonly FuzzyCan
     findByBarcodesCalls,
     findFuzzyCalls,
     facade: {
-      findMedicineIdsByBarcodes: vi.fn(async (barcodes: readonly string[]) => {
+      findMedicineIdsByBarcodes: vi.fn((barcodes: readonly string[]) => {
         findByBarcodesCalls.push([...barcodes])
         const result = new Map<string, string>()
         if (barcodes.includes(VALID_GLOBAL_BARCODE)) {
           result.set(VALID_GLOBAL_BARCODE, MEDICINE_1)
         }
-        return result
+        return Promise.resolve(result)
       }),
-      findFuzzyCandidates: vi.fn(async (rows: readonly unknown[]) => {
+      findFuzzyCandidates: vi.fn((rows: readonly unknown[]) => {
         findFuzzyCalls.push(rows.length)
-        return candidatesByIndex
+        return Promise.resolve(candidatesByIndex)
       }),
     },
   }
@@ -77,11 +140,11 @@ function makeFacadeMock(candidatesByIndex: ReadonlyMap<number, readonly FuzzyCan
 
 async function makeMappingMock(seed: ReadonlyMap<string, PharmacySkuMappingEntry> = new Map()): Promise<{
   repo: PharmacySkuMappingRepository
-  inMemory: InMemoryPharmacySkuMappingRepository
+  inMemory: FakePharmacySkuMappingRepository
 }> {
-  const inMemory = new InMemoryPharmacySkuMappingRepository()
+  const inMemory = new FakePharmacySkuMappingRepository()
   for (const [key, value] of seed) {
-    // `key` имеет формат `${pharmacyId}::${internalSku}` (см. InMemoryPharmacySkuMappingRepository.compositeKey).
+    // `key` имеет формат `${pharmacyId}::${internalSku}` (см. FakePharmacySkuMappingRepository.compositeKey).
     // Используем публичный API `upsert`, а не приватный `store.set`, чтобы не нарушать
     // инкапсуляцию (test-double повторяет контракт PharmacySkuMappingRepository).
     const [pharmacyId, internalSku] = key.split('::')
@@ -105,7 +168,7 @@ describe('CompositeInventoryMatcherService — matchBatch (DTJ-146, шаги 1-2
     ])
     const { repo } = await makeMappingMock(seed)
     const { facade, findByBarcodesCalls } = makeFacadeMock()
-    const outbox = new InMemoryInventoryOutbox()
+    const outbox = new FakeInventoryOutbox()
     const service = new CompositeInventoryMatcherService(repo, facade, outbox)
     const results = await service.matchBatch(PHARMACY_ID, [row(0, 'SKU-042', VALID_GLOBAL_BARCODE)])
     expect(results[0]?.outcome).toBe('cached')
@@ -118,7 +181,7 @@ describe('CompositeInventoryMatcherService — matchBatch (DTJ-146, шаги 1-2
   it('штрихкод с префиксом 2 не участвует в точном совпадении (D-06, internal prefix)', async () => {
     const { repo } = await makeMappingMock()
     const { facade, findByBarcodesCalls } = makeFacadeMock()
-    const outbox = new InMemoryInventoryOutbox()
+    const outbox = new FakeInventoryOutbox()
     const service = new CompositeInventoryMatcherService(repo, facade, outbox)
     const results = await service.matchBatch(PHARMACY_ID, [row(0, 'SKU-INT', INTERNAL_BARCODE)])
     expect(results[0]?.outcome).toBe('needs_fuzzy')
@@ -128,7 +191,7 @@ describe('CompositeInventoryMatcherService — matchBatch (DTJ-146, шаги 1-2
   it('невалидный EAN-13 (неверная контрольная цифра) не участвует в точном совпадении', async () => {
     const { repo } = await makeMappingMock()
     const { facade, findByBarcodesCalls } = makeFacadeMock()
-    const outbox = new InMemoryInventoryOutbox()
+    const outbox = new FakeInventoryOutbox()
     const service = new CompositeInventoryMatcherService(repo, facade, outbox)
     const results = await service.matchBatch(PHARMACY_ID, [row(0, 'SKU-INV', INVALID_BARCODE)])
     expect(results[0]?.outcome).toBe('needs_fuzzy')
@@ -138,7 +201,7 @@ describe('CompositeInventoryMatcherService — matchBatch (DTJ-146, шаги 1-2
   it('штрихкод без префикса 2, валидный EAN-13, найден в medicines → exact_barcode', async () => {
     const { repo } = await makeMappingMock()
     const { facade } = makeFacadeMock()
-    const outbox = new InMemoryInventoryOutbox()
+    const outbox = new FakeInventoryOutbox()
     const service = new CompositeInventoryMatcherService(repo, facade, outbox)
     const results = await service.matchBatch(PHARMACY_ID, [row(0, 'SKU-NEW', VALID_GLOBAL_BARCODE)])
     expect(results[0]?.outcome).toBe('exact_barcode')
@@ -150,7 +213,7 @@ describe('CompositeInventoryMatcherService — matchBatch (DTJ-146, шаги 1-2
   it('успешный точный матч обновляет pharmacy_sku_mapping через upsert() (идемпотентность кэша)', async () => {
     const { repo, inMemory } = await makeMappingMock()
     const { facade } = makeFacadeMock()
-    const outbox = new InMemoryInventoryOutbox()
+    const outbox = new FakeInventoryOutbox()
     const service = new CompositeInventoryMatcherService(repo, facade, outbox)
     await service.matchBatch(PHARMACY_ID, [row(0, 'SKU-A', VALID_GLOBAL_BARCODE)])
     await service.matchBatch(PHARMACY_ID, [row(0, 'SKU-A', VALID_GLOBAL_BARCODE)])
@@ -161,7 +224,7 @@ describe('CompositeInventoryMatcherService — matchBatch (DTJ-146, шаги 1-2
   it('findManyByPharmacyAndSkus вызывается ровно один раз на весь батч (SRS-INV-052 п.1)', async () => {
     const { repo } = await makeMappingMock()
     const { facade, findByBarcodesCalls } = makeFacadeMock()
-    const outbox = new InMemoryInventoryOutbox()
+    const outbox = new FakeInventoryOutbox()
     const service = new CompositeInventoryMatcherService(repo, facade, outbox)
     const rows: readonly UnresolvedRowInput[] = [
       row(0, 'A', VALID_GLOBAL_BARCODE),
@@ -177,7 +240,7 @@ describe('CompositeInventoryMatcherService — matchBatch (DTJ-146, шаги 1-2
   it('строка без barcode сразу передаётся на fuzzy (outcome=needs_fuzzy)', async () => {
     const { repo } = await makeMappingMock()
     const { facade } = makeFacadeMock()
-    const outbox = new InMemoryInventoryOutbox()
+    const outbox = new FakeInventoryOutbox()
     const service = new CompositeInventoryMatcherService(repo, facade, outbox)
     const results = await service.matchBatch(PHARMACY_ID, [row(0, 'SKU-NB', null)])
     expect(results[0]?.outcome).toBe('needs_fuzzy')
@@ -185,7 +248,7 @@ describe('CompositeInventoryMatcherService — matchBatch (DTJ-146, шаги 1-2
 
   it('без CatalogFacade (Optional) все строки без кэша → needs_fuzzy, без падения', async () => {
     const { repo } = await makeMappingMock()
-    const outbox = new InMemoryInventoryOutbox()
+    const outbox = new FakeInventoryOutbox()
     const service = new CompositeInventoryMatcherService(repo, null, outbox)
     const results = await service.matchBatch(PHARMACY_ID, [row(0, 'SKU-Z', VALID_GLOBAL_BARCODE)])
     expect(results[0]?.outcome).toBe('needs_fuzzy')
@@ -204,10 +267,10 @@ describe('CompositeInventoryMatcherService — resolveFuzzyCandidates (DTJ-147, 
       ],
     ])
     const { facade, findFuzzyCalls } = makeFacadeMock(candidates)
-    const outbox = new InMemoryInventoryOutbox()
+    const outbox = new FakeInventoryOutbox()
     const service = new CompositeInventoryMatcherService(repo, facade, outbox)
     const results = await service.resolveFuzzyCandidates(PHARMACY_ID, [
-      fuzzyRow(0, 'SKU-A', null, 'Цитрамон П', '500 мг'),
+      fuzzyRow({ rowIndex: 0, internalSku: 'SKU-A', rawBarcode: null, rawTradeName: 'Цитрамон П', rawDosageStrength: '500 мг' }),
     ])
     expect(results[0]?.outcome).toBe('unmatched')
     if (results[0]?.outcome === 'unmatched') {
@@ -228,10 +291,10 @@ describe('CompositeInventoryMatcherService — resolveFuzzyCandidates (DTJ-147, 
       ],
     ])
     const { facade } = makeFacadeMock(candidates)
-    const outbox = new InMemoryInventoryOutbox()
+    const outbox = new FakeInventoryOutbox()
     const service = new CompositeInventoryMatcherService(repo, facade, outbox)
     const results = await service.resolveFuzzyCandidates(PHARMACY_ID, [
-      fuzzyRow(0, 'SKU-A', null, 'Аспирин', '500 мг'),
+      fuzzyRow({ rowIndex: 0, internalSku: 'SKU-A', rawBarcode: null, rawTradeName: 'Аспирин', rawDosageStrength: '500 мг' }),
     ])
     expect(results[0]?.outcome).toBe('unmatched')
     if (results[0]?.outcome === 'unmatched') {
@@ -251,10 +314,10 @@ describe('CompositeInventoryMatcherService — resolveFuzzyCandidates (DTJ-147, 
       ],
     ])
     const { facade } = makeFacadeMock(candidates)
-    const outbox = new InMemoryInventoryOutbox()
+    const outbox = new FakeInventoryOutbox()
     const service = new CompositeInventoryMatcherService(repo, facade, outbox)
     const results = await service.resolveFuzzyCandidates(PHARMACY_ID, [
-      fuzzyRow(0, 'SKU-A', null, 'Аспирин', '500 мг'),
+      fuzzyRow({ rowIndex: 0, internalSku: 'SKU-A', rawBarcode: null, rawTradeName: 'Аспирин', rawDosageStrength: '500 мг' }),
     ])
     expect(results[0]?.outcome).toBe('matched')
     if (results[0]?.outcome === 'matched') {
@@ -274,10 +337,10 @@ describe('CompositeInventoryMatcherService — resolveFuzzyCandidates (DTJ-147, 
       ],
     ])
     const { facade } = makeFacadeMock(candidates)
-    const outbox = new InMemoryInventoryOutbox()
+    const outbox = new FakeInventoryOutbox()
     const service = new CompositeInventoryMatcherService(repo, facade, outbox)
     const results = await service.resolveFuzzyCandidates(PHARMACY_ID, [
-      fuzzyRow(0, 'SKU-A', null, 'Аспирин', '500 мг'),
+      fuzzyRow({ rowIndex: 0, internalSku: 'SKU-A', rawBarcode: null, rawTradeName: 'Аспирин', rawDosageStrength: '500 мг' }),
     ])
     expect(results[0]?.outcome).toBe('unmatched')
     if (results[0]?.outcome === 'unmatched') {
@@ -297,10 +360,10 @@ describe('CompositeInventoryMatcherService — resolveFuzzyCandidates (DTJ-147, 
       ],
     ])
     const { facade } = makeFacadeMock(candidates)
-    const outbox = new InMemoryInventoryOutbox()
+    const outbox = new FakeInventoryOutbox()
     const service = new CompositeInventoryMatcherService(repo, facade, outbox)
     const results = await service.resolveFuzzyCandidates(PHARMACY_ID, [
-      fuzzyRow(0, 'SKU-A', null, 'Аспирин', '500 мг'),
+      fuzzyRow({ rowIndex: 0, internalSku: 'SKU-A', rawBarcode: null, rawTradeName: 'Аспирин', rawDosageStrength: '500 мг' }),
     ])
     expect(results[0]?.outcome).toBe('matched')
     if (results[0]?.outcome === 'matched') {
@@ -317,10 +380,10 @@ describe('CompositeInventoryMatcherService — resolveFuzzyCandidates (DTJ-147, 
       ],
     ])
     const { facade } = makeFacadeMock(candidates)
-    const outbox = new InMemoryInventoryOutbox()
+    const outbox = new FakeInventoryOutbox()
     const service = new CompositeInventoryMatcherService(repo, facade, outbox)
     const results = await service.resolveFuzzyCandidates(PHARMACY_ID, [
-      fuzzyRow(0, 'SKU-A', null, 'Аспирин', '500 мг'),
+      fuzzyRow({ rowIndex: 0, internalSku: 'SKU-A', rawBarcode: null, rawTradeName: 'Аспирин', rawDosageStrength: '500 мг' }),
     ])
     expect(results[0]?.outcome).toBe('matched')
     if (results[0]?.outcome === 'matched') {
@@ -337,10 +400,10 @@ describe('CompositeInventoryMatcherService — resolveFuzzyCandidates (DTJ-147, 
       ],
     ])
     const { facade } = makeFacadeMock(candidates)
-    const outbox = new InMemoryInventoryOutbox()
+    const outbox = new FakeInventoryOutbox()
     const service = new CompositeInventoryMatcherService(repo, facade, outbox)
     await service.resolveFuzzyCandidates(PHARMACY_ID, [
-      fuzzyRow(0, 'SKU-A', null, 'Аспирин', '500 мг'),
+      fuzzyRow({ rowIndex: 0, internalSku: 'SKU-A', rawBarcode: null, rawTradeName: 'Аспирин', rawDosageStrength: '500 мг' }),
     ])
     const cache = await inMemory.findManyByPharmacyAndSkus(PHARMACY_ID, ['SKU-A'])
     expect(cache.get('SKU-A')?.matchedVia).toBe('name_fuzzy')
@@ -356,12 +419,12 @@ describe('CompositeInventoryMatcherService — resolveFuzzyCandidates (DTJ-147, 
       ],
     ])
     const { facade, findFuzzyCalls } = makeFacadeMock(candidates)
-    const outbox = new InMemoryInventoryOutbox()
+    const outbox = new FakeInventoryOutbox()
     const service = new CompositeInventoryMatcherService(repo, facade, outbox)
     await service.resolveFuzzyCandidates(PHARMACY_ID, [
-      fuzzyRow(0, 'A', null, 'Аспирин', '500 мг'),
-      fuzzyRow(1, 'B', null, 'Ибупрофен', '200 мг'),
-      fuzzyRow(2, 'C', null, 'Цитрамон', '300 мг'),
+      fuzzyRow({ rowIndex: 0, internalSku: 'A', rawBarcode: null, rawTradeName: 'Аспирин', rawDosageStrength: '500 мг' }),
+      fuzzyRow({ rowIndex: 1, internalSku: 'B', rawBarcode: null, rawTradeName: 'Ибупрофен', rawDosageStrength: '200 мг' }),
+      fuzzyRow({ rowIndex: 2, internalSku: 'C', rawBarcode: null, rawTradeName: 'Цитрамон', rawDosageStrength: '300 мг' }),
     ])
     expect(findFuzzyCalls.length).toBe(1)
     expect(findFuzzyCalls[0]).toBe(3)
@@ -379,10 +442,10 @@ describe('CompositeInventoryMatcherService — resolveFuzzyCandidates (DTJ-147, 
       ],
     ])
     const { facade } = makeFacadeMock(candidates)
-    const outbox = new InMemoryInventoryOutbox()
+    const outbox = new FakeInventoryOutbox()
     const service = new CompositeInventoryMatcherService(repo, facade, outbox)
     await service.resolveFuzzyCandidates(PHARMACY_ID, [
-      fuzzyRow(0, 'SKU-AMB', null, 'Аспирин', '500 мг'),
+      fuzzyRow({ rowIndex: 0, internalSku: 'SKU-AMB', rawBarcode: null, rawTradeName: 'Аспирин', rawDosageStrength: '500 мг' }),
     ])
     expect(outbox.events.length).toBe(1)
     expect(outbox.events[0]?.eventType).toBe('inventory.row.unmatched')

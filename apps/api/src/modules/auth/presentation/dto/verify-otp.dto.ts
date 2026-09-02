@@ -12,7 +12,7 @@ import { OTP_CODE_LENGTH } from '@/modules/auth/application/use-cases/verify-otp
 
 export const verifyOtpDtoSchema = z.object({
   otpRequestId: z.uuid('otpRequestId должен быть валидным UUID'),
-  code: z.string().length(OTP_CODE_LENGTH, `code должен содержать ${OTP_CODE_LENGTH} цифр`),
+  code: z.string().length(OTP_CODE_LENGTH, `code должен содержать ${String(OTP_CODE_LENGTH)} цифр`),
 })
 
 export type VerifyOtpDto = z.infer<typeof verifyOtpDtoSchema>

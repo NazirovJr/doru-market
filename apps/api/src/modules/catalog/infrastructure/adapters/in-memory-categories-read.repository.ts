@@ -4,7 +4,7 @@
  *
  * @see docs/STATE-AND-RESUME-POINT.md §11.6
  */
-import { Injectable } from '@nestjs/common'
+import { Injectable, Optional } from '@nestjs/common'
 import {
   CATEGORIES_READ_REPOSITORY,
   type CategoriesReadRepository,
@@ -15,7 +15,9 @@ import {
 export class InMemoryCategoriesReadRepository implements CategoriesReadRepository {
   private readonly rows: readonly CategoryRecord[]
 
-  constructor(initial: readonly CategoryRecord[] = []) {
+  // @Optional(): см. пояснение в `in-memory-medicine-read.repository.ts` — tsc эмитит
+  // `design:paramtypes: [Array]`, провайдера для `Array` нет, бут падает без декоратора.
+  constructor(@Optional() initial: readonly CategoryRecord[] = []) {
     this.rows = initial
   }
 

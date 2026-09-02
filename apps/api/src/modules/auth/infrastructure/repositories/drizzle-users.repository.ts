@@ -54,6 +54,29 @@ export class DrizzleUsersRepository implements UsersRepository {
     return Promise.resolve(userRowToDomain(row))
   }
 
+  /**
+   * [Task 5, handoff §6] Глобальный поиск по phone — см. JSDoc в port.
+   * Используется только в VerifyOtpUseCase для логина (после успешной
+   * verify-OTP, когда пользователь уже «предъявил» identity через код).
+   * Нарушает обычную tenant-isolation, но оправдан фактом владения
+   * одноразовым OTP-кодом (DTJ-024). Без этого метода pharmacist, созданный
+   * в TENANT_ID через /staff-accounts, не находился бы при логине — verify
+   * видел бы только `tenantId='neutral'` placeholder из контроллера.
+   */
+  async findActiveByPhone(phoneNumber: string): Promise<User | null> {
+    const rows = await this.db
+      .select()
+      .from(users)
+      .where(and(eq(users.phoneNumber, phoneNumber), isNull(users.deletedAt)))
+      .orderBy(users.createdAt)
+      .limit(1)
+    const row = rows[0]
+    if (row === undefined) {
+      return Promise.resolve(null)
+    }
+    return Promise.resolve(userRowToDomain(row))
+  }
+
   async create(input: CreateUserInput): Promise<User> {
     const rows = await this.db
       .insert(users)
@@ -97,11 +120,15 @@ export class DrizzleUsersRepository implements UsersRepository {
       .onConflictDoNothing()
       .returning()
     if (inserted.length > 0) {
-      return Promise.resolve(userRowToDomain(inserted[0]!))
+      const insertedRow = inserted[0]
+      if (insertedRow === undefined) {
+        throw new Error('findOrCreateByTenantAndPhone: empty insert with length>0')
+      }
+      return Promise.resolve(userRowToDomain(insertedRow))
     }
     const existing = await this.findByTenantAndPhone(input.tenantId, input.phoneNumber ?? '')
     if (existing === null) {
-      throw new Error(`findOrCreateByTenantAndPhone: race after conflict for ${input.tenantId}|${input.phoneNumber}`)
+      throw new Error(`findOrCreateByTenantAndPhone: race after conflict for ${input.tenantId}|${String(input.phoneNumber)}`)
     }
     return existing
   }

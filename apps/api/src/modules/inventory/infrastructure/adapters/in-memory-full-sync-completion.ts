@@ -9,21 +9,21 @@ import { Injectable } from '@nestjs/common'
 import {
   FULL_SYNC_COMPLETION,
   type FullSyncCompletionPort,
-} from '../../application/ports/full-sync-completion.port.js'
+} from '@/modules/inventory/application/ports/full-sync-completion.port.js'
 
 @Injectable()
 export class InMemoryFullSyncCompletion implements FullSyncCompletionPort {
   public zeroOutCalls = 0
   public lastArgs: { pharmacyId: string; sessionId: string; timestamp: Date } | null = null
 
-  async zeroOutMissing(
+  zeroOutMissing(
     pharmacyId: string,
     sessionId: string,
     timestamp: Date,
   ): Promise<{ readonly zeroedLots: number }> {
     this.zeroOutCalls += 1
     this.lastArgs = { pharmacyId, sessionId, timestamp }
-    return { zeroedLots: 0 }
+    return Promise.resolve({ zeroedLots: 0 })
   }
 }
 

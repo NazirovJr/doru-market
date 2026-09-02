@@ -105,6 +105,10 @@ export { OTP_CODE_LENGTH }
  
 @Injectable()
 export class VerifyOtpUseCase {
+  // Обоснование ниже, для строки eslint-disable непосредственно перед constructor: 10 DI-инъекций
+  // (NestJS constructor injection резолвит по позиции; единый options-объект не идиоматичен для
+  // Nest DI и потребовал бы кастомный factory provider — см. class JSDoc выше).
+  // eslint-disable-next-line max-params -- 10 DI-инъекций NestJS constructor injection, см. комментарий выше
   constructor(
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(ID_GENERATOR) private readonly ids: IdGenerator,
@@ -146,12 +150,12 @@ export class VerifyOtpUseCase {
         expiresAt: record.expiresAt,
       })
       if (otp.isExpired(this.clock)) {
-        await this.recordFailedVerify(tx, input.otpRequestId, record.id, record.expiresAt)
+        await this.recordFailedVerify({ tx, otpRequestId: input.otpRequestId, otpId: record.id, expiresAt: record.expiresAt })
         return err(new OtpExpiredError())
       }
       const verifyResult = otp.verify(candidateHash)
       if (isErr(verifyResult)) {
-        await this.recordFailedVerify(tx, input.otpRequestId, record.id, record.expiresAt)
+        await this.recordFailedVerify({ tx, otpRequestId: input.otpRequestId, otpId: record.id, expiresAt: record.expiresAt })
         // `details.attempts` — SRS-API-022, сколько попыток ОСТАЛОСЬ (клиент
         // показывает счётчик пользователю). Новый `OtpMismatchError`, а не
         // `verifyResult.error` как есть — VO-уровень (`OtpCode.verify`) не
@@ -160,7 +164,7 @@ export class VerifyOtpUseCase {
       }
 
       // 3) Успех: find-or-create User, AuthSession, JWT, consume OTP.
-      return this.completeVerification(tx, record, input, now)
+      return this.completeVerification({ tx, record, input, now })
     })
   }
 
@@ -213,42 +217,70 @@ export class VerifyOtpUseCase {
    * `otp_codes.attempts` (для аудита/консистентности) — не блокирует для
    * `login`, но фиксируется.
    */
-  private async recordFailedVerify(
-    tx: Parameters<OtpCodesRepository['findByIdForUpdate']>[0],
-    otpRequestId: string,
-    otpId: string,
-    _expiresAt: Date,
-  ): Promise<void> {
+  private async recordFailedVerify(input: {
+    tx: Parameters<OtpCodesRepository['findByIdForUpdate']>[0]
+    otpRequestId: string
+    otpId: string
+    expiresAt: Date
+  }): Promise<void> {
     // `otpId === otpRequestId` — обе формы UUID используются взаимозаменяемо
     // в R1 (мы выдаём `otpRequestId` равный `id` OTP-записи; в будущих версиях
     // это может разойтись, и тогда придётся искать по `id`).
-    void otpRequestId
-    await this.otpCodes.incrementAttempts(tx, otpId)
+    void input.otpRequestId
+    void input.expiresAt
+    await this.otpCodes.incrementAttempts(input.tx, input.otpId)
   }
 
   /**
    * Успешная ветка: User find-or-create + AuthSession + JWT + consumed.
    * Отдельный метод (C1) — `execute` остаётся оркестратором.
    */
-  private async completeVerification(
-    tx: Parameters<OtpCodesRepository['findByIdForUpdate']>[0],
-    record: Awaited<ReturnType<OtpCodesRepository['findByIdForUpdate']>> & object,
-    input: VerifyOtpInput,
-    now: Date,
-  ): Promise<Result<VerifyOtpResult, VerifyOtpError>> {
+  private async completeVerification(args: {
+    tx: Parameters<OtpCodesRepository['findByIdForUpdate']>[0]
+    record: Awaited<ReturnType<OtpCodesRepository['findByIdForUpdate']>> & object
+    input: VerifyOtpInput
+    now: Date
+  }): Promise<Result<VerifyOtpResult, VerifyOtpError>> {
+    const { tx, record, input, now } = args
     if (record.consumedAt !== null) {
       // DTJ-024 §3 (SRS-DOM-082 alreadyConsumed): повторный verify с тем
       // же `otpRequestId`, даже верным кодом → `OtpMismatchError`.
       return err(new OtpMismatchError())
     }
     const phone = PhoneNumber.parse(record.subjectRef)
-    const user = await this.users.findOrCreateByTenantAndPhone({
-      tenantId: input.tenantId,
-      phoneNumber: phone.value,
-      role: 'customer' satisfies UserRole,
-      fullName: null,
-    } satisfies CreateUserInput)
+    const user = await this.resolveUser(phone, input.tenantId)
+    const { session, refresh } = await this.createSession(user, input)
+    await this.otpCodes.markConsumed(tx, record.id, now)
+    const accessToken = this.signAccessToken(user, session)
+    return ok({ accessToken, refreshToken: refresh.token, user })
+  }
 
+  /**
+   * [Task 5, handoff §6] Найти существующего пользователя по phone ВНУТРИ
+   * всех тенантов — `findActiveByPhone` оправдан фактом владения OTP-кодом
+   * (SRS-API-018). Без этого шага pharmacist/courier, созданный через
+   * /staff-accounts в конкретном тенанте, теряется: `findOrCreateByTenantAndPhone`
+   * с placeholder'ом `tenantId='neutral'` не находит его и создаёт нового
+   * customer'а в 'neutral' — цепочка рвётся, роль теряется.
+   */
+  private async resolveUser(phone: PhoneNumber, tenantId: string): Promise<User> {
+    const existingAcrossTenants = await this.users.findActiveByPhone(phone.value)
+    return (
+      existingAcrossTenants
+      ?? this.users.findOrCreateByTenantAndPhone({
+        tenantId,
+        phoneNumber: phone.value,
+        role: 'customer' satisfies UserRole,
+        fullName: null,
+      } satisfies CreateUserInput)
+    )
+  }
+
+  /** Выпускает `AuthSession` + opaque refresh-токен и сохраняет сессию. */
+  private async createSession(
+    user: User,
+    input: VerifyOtpInput,
+  ): Promise<{ session: AuthSession; refresh: { readonly token: string; readonly hash: string } }> {
     const refresh = this.refreshGen.generate()
     const sessionId = this.ids.next()
     const session = AuthSession.create({
@@ -261,10 +293,11 @@ export class VerifyOtpUseCase {
       ipAddress: input.ipAddress,
       clock: this.clock,
     })
-    const sessionInput = sessionToCreateInput(session)
-    await this.authSessions.create(sessionInput)
-    await this.otpCodes.markConsumed(tx, record.id, now)
+    await this.authSessions.create(sessionToCreateInput(session))
+    return { session, refresh }
+  }
 
+  private signAccessToken(user: User, session: AuthSession): string {
     const claims: JwtClaims = {
       sub: user.id,
       role: user.role,
@@ -273,8 +306,7 @@ export class VerifyOtpUseCase {
       chainId: user.chainId,
       sessionId: session.id,
     }
-    const accessToken = this.jwt.sign(claims)
-    return ok({ accessToken, refreshToken: refresh.token, user })
+    return this.jwt.sign(claims)
   }
 
   private hashCode(code: string, otpRequestId: string): string {

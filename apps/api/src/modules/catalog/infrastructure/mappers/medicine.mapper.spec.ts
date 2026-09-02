@@ -15,8 +15,8 @@
  */
 import { describe, expect, it } from 'vitest'
 import { DosageForm, DosageUnit } from '@dorutj/domain-kernel'
-import { ControlCategory, DosageFormClass } from '../../domain/medicine.enums.js'
-import { Medicine, type MedicineCreateCommand } from '../../domain/medicine.entity.js'
+import { ControlCategory, DosageFormClass } from '@/modules/catalog/domain/medicine.enums.js'
+import { Medicine, type MedicineCreateCommand } from '@/modules/catalog/domain/medicine.entity.js'
 import { toDomain, toDomainSafe, toRecord, type MedicineRowLike, type SubstanceRowLike } from './medicine.mapper.js'
 
 const SUBSTANCE_A = '11111111-1111-4111-8111-111111111111'

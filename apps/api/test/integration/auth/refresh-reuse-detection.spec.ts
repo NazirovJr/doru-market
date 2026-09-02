@@ -86,13 +86,15 @@ describe('auth.refresh-reuse-detection (DTJ-029, SRS-API-027)', () => {
   }
 
   async function refresh(oldRefresh: string): Promise<{ accessToken: string; refreshToken: string }> {
+    // `refresh()` — только для ЛЕГИТИМНЫХ ротаций (см. использование ниже); reuse/invalid
+    // сценарии идут через прямой `request(...)` + `ErrorBody`. `.expect(200)` делает контракт
+    // явным: если сервер вернул не 200, тест падает здесь же, а не молча на `undefined.data`.
     const response = await request(httpServer)
       .post('/api/v1/auth/refresh')
       .send({ refreshToken: oldRefresh })
-    return {
-      accessToken: (response.body as RefreshBody).data?.accessToken ?? '',
-      refreshToken: (response.body as RefreshBody).data?.refreshToken ?? '',
-    }
+      .expect(200)
+    const body = response.body as RefreshBody
+    return { accessToken: body.data.accessToken, refreshToken: body.data.refreshToken }
   }
 
   it('1. login → 2 rotate → reuse первого токена → 401 REFRESH_TOKEN_REUSE_DETECTED + revoke family', async () => {

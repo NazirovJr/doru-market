@@ -29,12 +29,7 @@ export class DrizzleTenantRepository implements TenantRepositoryPort {
     if (row === undefined) {
       return null
     }
-    const settingsRows = await this.db
-      .select()
-      .from(tenantSettings)
-      .where(eq(tenantSettings.tenantId, id.value))
-      .limit(1)
-    return tenantFromDb(row, settingsRows[0] ?? null)
+    return this.attachSettings(row)
   }
 
   async findBySlug(slug: string): Promise<Tenant | null> {
@@ -43,7 +38,7 @@ export class DrizzleTenantRepository implements TenantRepositoryPort {
     if (row === undefined) {
       return null
     }
-    return this.findById(row.id as unknown as TenantId)
+    return this.attachSettings(row)
   }
 
   async findByCustomDomain(domain: string): Promise<Tenant | null> {
@@ -56,7 +51,7 @@ export class DrizzleTenantRepository implements TenantRepositoryPort {
     if (row === undefined) {
       return null
     }
-    return this.findById(row.id as unknown as TenantId)
+    return this.attachSettings(row)
   }
 
   async findByChainId(chainId: TenantId): Promise<Tenant | null> {
@@ -69,7 +64,35 @@ export class DrizzleTenantRepository implements TenantRepositoryPort {
     if (row === undefined) {
       return null
     }
-    return this.findById(row.id as unknown as TenantId)
+    return this.attachSettings(row)
+  }
+
+  /**
+   * Догружает `tenant_settings` для уже прочитанной строки `tenants` и собирает агрегат
+   * маппером `tenantFromDb`.
+   *
+   * ИСПРАВЛЕНИЕ (см. отчёт сдачи): раньше `findBySlug`/`findByCustomDomain`/`findByChainId`
+   * звали `this.findById(row.id as unknown as TenantId)` — `row.id` это сырая `string`
+   * (колонка `tenants.id` без `.$type<TenantId>()`), приведение типа НЕ создавало `TenantId`,
+   * а просто врало компилятору. Внутри `findById` это било в `eq(tenants.id, id.value)` —
+   * у строки нет `.value`, что даёт `id.value === undefined`, `WHERE id = NULL` никогда не
+   * матчит строку. `TenantResolutionMiddleware` дергает эти три метода на каждом HTTP-запросе —
+   * ни один тенант не резолвился на живом Postgres.
+   *
+   * Здесь `row` уже прочитана из `tenants` — второй проход в эту таблицу через `findById`
+   * не нужен, только `TenantId.from(row.id)` для валидации UUID внутри `tenantFromDb`
+   * (валидирует сам маппер). Достаточно догрузить `tenant_settings` по `row.id` напрямую —
+   * это убирает лишний round-trip к `tenants` на каждый вызов `findBySlug`/`findByCustomDomain`/
+   * `findByChainId` (было 2 запроса, стало 2 запроса вместо потенциальных 3: `tenants` уже
+   * прочитан здесь, второй `tenants`-запрос из `findById` был чистым дублированием).
+   */
+  private async attachSettings(row: typeof tenants.$inferSelect): Promise<Tenant | null> {
+    const settingsRows = await this.db
+      .select()
+      .from(tenantSettings)
+      .where(eq(tenantSettings.tenantId, row.id))
+      .limit(1)
+    return tenantFromDb(row, settingsRows[0] ?? null)
   }
 
   async save(tenant: Tenant): Promise<void> {

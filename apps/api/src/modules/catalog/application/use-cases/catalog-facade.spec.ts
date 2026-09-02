@@ -16,18 +16,24 @@
  *        published + psychotropic → false
  *        published + narcotic → false
  *        !published + none → false
- *   4. `resolveMedicineByComposite`:
- *      - Заглушка для DTJ-097 → бросает ошибку "not implemented".
+ *   4. `resolveMedicineByComposite` (DTJ-097 follow-up — фасад пробрасывает на
+ *      `ResolveMedicineByCompositeUseCase`, а не бросает заглушку):
+ *      - Успех (`Result.ok`) → фасад возвращает `result.value` как есть.
+ *      - Ошибка (`Result.err`) → фасад перебрасывает `result.error` как исключение.
  *
  * Репозиторий замокирован in-memory — unit-тест без БД.
  *
  * @see docs/tickets/ep03-catalog-analogs/DTJ-096.md
  */
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { err, ok } from '@dorutj/domain-kernel'
 import { ControlCategory } from '@/modules/catalog/domain/medicine.enums.js'
 import type { MedicineRecord, SubstanceRef } from '@/modules/catalog/domain/medicine.types.js'
 import type { CatalogRepository } from '@/modules/catalog/application/ports/catalog-repository.port.js'
+import { InvalidCompositeMatchInputError } from '@/modules/catalog/application/use-cases/resolve-medicine-by-composite.use-case.js'
+import type { ResolveMedicineByCompositeUseCase } from '@/modules/catalog/application/use-cases/resolve-medicine-by-composite.use-case.js'
 import { CatalogFacadeImpl } from '@/modules/catalog/index.js'
+import type { CompositeMatchInput, MedicineMatchResult } from '@/modules/catalog/index.js'
 
 /** Минимальный in-memory `CatalogRepository` для теста. */
 class FakeCatalogRepository implements CatalogRepository {
@@ -114,8 +120,19 @@ function makeSubstanceRef(overrides: Partial<SubstanceRef> = {}): SubstanceRef {
   return { ...base, ...overrides }
 }
 
-function makeFacade(repo: FakeCatalogRepository): CatalogFacadeImpl {
-  return new CatalogFacadeImpl(repo)
+/** Fake `ResolveMedicineByCompositeUseCase` — конкретный класс с приватными полями,
+ * структурно не подделать, поэтому явный `as unknown as`. */
+function makeFakeResolveUseCase(
+  execute: ResolveMedicineByCompositeUseCase['execute'] = vi.fn(),
+): ResolveMedicineByCompositeUseCase {
+  return { execute } as unknown as ResolveMedicineByCompositeUseCase
+}
+
+function makeFacade(
+  repo: FakeCatalogRepository,
+  resolveUseCase: ResolveMedicineByCompositeUseCase = makeFakeResolveUseCase(),
+): CatalogFacadeImpl {
+  return new CatalogFacadeImpl(repo, resolveUseCase)
 }
 
 describe('CatalogFacade (DTJ-096, SRS-CAT-051, SRS-CAT-064, SRS-DOM-107)', () => {
@@ -300,20 +317,34 @@ describe('CatalogFacade (DTJ-096, SRS-CAT-051, SRS-CAT-064, SRS-DOM-107)', () =>
     })
   })
 
-  describe('resolveMedicineByComposite (DTJ-097 заглушка)', () => {
-    it('бросает ошибку "not implemented" (заглушка для DTJ-097)', async () => {
-      const repo = new FakeCatalogRepository()
-      const facade = makeFacade(repo)
+  describe('resolveMedicineByComposite (DTJ-097 follow-up — реальный проброс на use case)', () => {
+    const input: CompositeMatchInput = {
+      rawBarcode: null,
+      rawTradeName: 'Test',
+      rawDosageForm: null,
+      rawDosageStrength: null,
+      rawManufacturerName: null,
+    }
 
-      await expect(
-        facade.resolveMedicineByComposite({
-          rawBarcode: null,
-          rawTradeName: 'Test',
-          rawDosageForm: null,
-          rawDosageStrength: null,
-          rawManufacturerName: null,
-        }),
-      ).rejects.toThrow('resolveMedicineByComposite not implemented yet (DTJ-097)')
+    it('вызывает use case с тем же input и возвращает его результат при успехе', async () => {
+      const repo = new FakeCatalogRepository()
+      const expected: MedicineMatchResult = { outcome: 'matched', medicineId: 'med-1', matchedVia: 'fuzzy' }
+      const execute = vi.fn().mockResolvedValue(ok(expected))
+      const facade = makeFacade(repo, makeFakeResolveUseCase(execute))
+
+      const result = await facade.resolveMedicineByComposite(input)
+
+      expect(execute).toHaveBeenCalledWith(input)
+      expect(result).toEqual(expected)
+    })
+
+    it('перебрасывает ошибку use case как исключение, если Result — err', async () => {
+      const repo = new FakeCatalogRepository()
+      const error = new InvalidCompositeMatchInputError('rawTradeName is required')
+      const execute = vi.fn().mockResolvedValue(err(error))
+      const facade = makeFacade(repo, makeFakeResolveUseCase(execute))
+
+      await expect(facade.resolveMedicineByComposite(input)).rejects.toThrow(error)
     })
   })
 })

@@ -6,7 +6,7 @@
  * незамеченным.
  */
 import { describe, expect, it } from 'vitest'
-import { ERROR_HTTP_STATUS, ErrorCode } from './errors'
+import { ERROR_HTTP_STATUS, ErrorCode } from './errors.js'
 
 /** [код, HTTP-статус] — построчно по таблице §2.1, затем по дереву §«Доменные ошибки». */
 const EXPECTED: readonly (readonly [ErrorCode, number])[] = [

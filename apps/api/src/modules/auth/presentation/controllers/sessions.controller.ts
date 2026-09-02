@@ -60,6 +60,7 @@ interface SessionResponseItem {
 export class SessionsController {
   // Явный @Inject: esbuild (vitest) не эмитит `design:paramtypes` — см. DTJ-001,
   // тот же приём, что и в `HealthController`.
+  // eslint-disable-next-line max-params -- 4 DI-инъекции, NestJS constructor injection резолвит по позиции; единый options-объект не идиоматичен для Nest DI
   constructor(
     @Inject(LogoutUseCase) private readonly logoutUseCase: LogoutUseCase,
     @Inject(LogoutAllUseCase) private readonly logoutAllUseCase: LogoutAllUseCase,
@@ -77,13 +78,13 @@ export class SessionsController {
     @Body(new ZodValidationPipe(logoutDtoSchema)) body: LogoutDto,
     @CurrentUser() user: JwtClaims,
   ): Promise<SuccessEnvelope<null> | ErrorEnvelope> {
-    const result = await this.logoutUseCase.execute({
+    // `LogoutResult = Result<void, never>` — use case НИКОГДА не возвращает
+    // ошибку (все нештатные пути идемпотентно `ok`, см. JSDoc LogoutUseCase),
+    // поэтому err-ветка здесь была недостижимым мёртвым кодом.
+    await this.logoutUseCase.execute({
       refreshToken: body.refreshToken,
       currentUserId: user.sub,
     })
-    if (isErr(result)) {
-      throw result.error
-    }
     return ok(null)
   }
 
