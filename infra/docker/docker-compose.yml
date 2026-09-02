@@ -46,6 +46,10 @@ services:
     secrets: [db_password]
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # Тестовая роль/БД dorutj_test для интеграционных тестов apps/api (DTJ-181, DTJ-185,
+      # AGENTS.md Ж13) — применяется автоматически ТОЛЬКО на пустом volume, см. комментарий
+      # в infra/docker/postgres-init/01-test-database.sql.
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U dorutj_migrator -d dorutj']
       interval: 5s

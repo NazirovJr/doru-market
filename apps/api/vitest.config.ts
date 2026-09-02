@@ -25,7 +25,17 @@ export default defineConfig({
     // `dist/**` может содержать скомпилированные `*.spec.js` (см. tsconfig.json `files` —
     // спек-файлы явно включены в компиляцию ради `tsc --noEmit`), их не нужно запускать
     // повторно как отдельный набор тестов поверх `src/**/*.spec.ts`.
-    exclude: ['**/node_modules/**', 'dist/**'],
+    //
+    // `test/integration/**` исключён НАМЕРЕННО: у интеграционного набора есть свой конфиг
+    // (`vitest.integration.config.ts`) с `pool: 'forks'` + `fileParallelism: false`, потому
+    // что его файлы делят ОДНУ реальную Postgres-БД без изоляции схемы и делают
+    // `TRUNCATE`/`INSERT` по общим таблицам (`categories`, `medicines`). Дефолтный `include`
+    // Vitest ловит `**/*.spec.ts` по всему пакету, то есть без этой строки `pnpm test`
+    // запускал интеграционные спеки ЕЩЁ РАЗ, но уже параллельно и без сериализации — что
+    // давало ровно те гонки, от которых защищается интеграционный конфиг: посторонние строки
+    // в выборках, `medicines_category_id_fkey` при вставке в вычищенную соседом таблицу.
+    // Наборы обязаны быть непересекающимися: unit — `src/**`, integration — `test/integration/**`.
+    exclude: ['**/node_modules/**', 'dist/**', 'test/integration/**'],
     env: {
       NODE_ENV: 'test',
       DATABASE_URL: 'postgres://test:test@localhost:5432/dorutj_test',

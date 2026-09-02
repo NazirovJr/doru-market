@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "dev": "nest start --watch",
-    "build": "nest build",
+    "build": "node scripts/clean-build-cache.mjs && nest build && node scripts/rewrite-dist-aliases.mjs",
     "start:prod": "node dist/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",

@@ -39,6 +39,13 @@ export default tseslint.config(
       '**/test-results/**',
       '**/*.gen.ts',
       '**/drizzle/**',
+      // Локальное состояние инструментов, уже перечисленное в .gitignore. ESLint во flat-config
+      // .gitignore НЕ читает, а `.claude/worktrees/**` содержит ПОЛНЫЕ копии репозитория от
+      // агентских worktree — без этой строки `pnpm lint` линтит проект трижды, выдаёт 998
+      // дублирующихся ошибок поверх 69 настоящих и падает с «JavaScript heap out of memory»
+      // на 4 ГБ куче, то есть гейт физически не может завершиться.
+      '.claude/**',
+      '.serena/**',
       'apps/*_mobile/**',
       // Канвас Claude Design и его рантайм — сторонний артефакт, не наш продуктовый код.
       // Является обязательной визуальной ссылкой (docs/spec/32-design-reference.md), но не собирается.

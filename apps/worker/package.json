@@ -6,7 +6,7 @@
   "description": "DoruTJ — apps/worker: фоновый процесс (BullMQ), релей outbox → доменные события.",
   "scripts": {
     "dev": "nest start --watch",
-    "build": "nest build",
+    "build": "node scripts/clean-build-cache.mjs && nest build",
     "start:prod": "node dist/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
