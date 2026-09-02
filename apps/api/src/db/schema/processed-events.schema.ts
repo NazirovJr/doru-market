@@ -19,7 +19,5 @@ export const processedEvents = pgTable(
     eventId: uuid('event_id').notNull(),
     processedAt: timestamp('processed_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => ({
-    pk: primaryKey({ columns: [table.consumerName, table.eventId] }),
-  }),
+  (table) => [primaryKey({ columns: [table.consumerName, table.eventId] })],
 )

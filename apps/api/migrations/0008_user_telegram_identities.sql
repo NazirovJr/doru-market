@@ -8,10 +8,10 @@
 -- для `idempotency_keys` в DTJ-017 и `auth_sessions` в DTJ-015).
 -- Реализация — по прямой цитате SRS без додумывания сверх сказанного.
 --
--- ОТЛОЖЕННЫЙ FK (конвенция EP-01, см. 0013_users_base.sql):
+-- ОТЛОЖЕННЫЙ FK (конвенция EP-01, см. 0003_users_base.sql):
 --   - tenant_id REFERENCES tenants(id) — добавляется EP-02 (DTJ-052).
 --
--- FK на users(id) — НЕ отложенный (users уже существует, 0013_users_base.sql).
+-- FK на users(id) — НЕ отложенный (users уже существует, 0003_users_base.sql).
 -- ON DELETE CASCADE — при удалении пользователя все его Telegram-identity
 -- удаляются (GDPR-право на удаление ПДн, SRS-DB-004).
 --

@@ -33,11 +33,7 @@ export const idempotencyKeys = pgTable(
     responseBody: jsonb('response_body'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => ({
-    uniqueUserEndpointKey: unique('unique_user_endpoint_key').on(
-      table.userId,
-      table.endpoint,
-      table.key,
-    ),
-  }),
+  (table) => [
+    unique('unique_user_endpoint_key').on(table.userId, table.endpoint, table.key),
+  ],
 )

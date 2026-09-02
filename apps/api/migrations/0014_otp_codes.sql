@@ -4,7 +4,7 @@
 -- Хранит ХЕШИ OTP-кодов, не сами коды (SRS-API-021). Сырой код существует только
 -- в стеке RequestOtpUseCase и передаётся в SmsProvider, после чего забывается.
 --
--- ОТЛОЖЕННЫЙ FK (по конвенции EP-01, см. 0013_users_base.sql §«ОТЛОЖЕННЫЕ FK»):
+-- ОТЛОЖЕННЫЙ FK (по конвенции EP-01, см. 0003_users_base.sql §«ОТЛОЖЕННЫЕ FK»):
 --   - tenant_id REFERENCES tenants(id) — добавляется EP-02 (DTJ-052).
 --
 -- HOT-PATH индекс (SRS-DB-008):

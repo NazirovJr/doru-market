@@ -13,9 +13,17 @@
 -- `status='processing'` создаётся СРАЗУ при получении заголовка, не постфактум
 -- (SRS-API-010 «запрос с K ещё обрабатывается → 409 немедленно»).
 
-CREATE TYPE "idempotency_key_status" AS ENUM ('processing', 'completed');
+-- Идемпотентность (часть 3 задания по починке дедлока на свежей БД): `CREATE TYPE`
+-- не поддерживает `IF NOT EXISTS` — оборачиваем в DO-блок, глушим только
+-- `duplicate_object`. `CREATE TABLE`/`CREATE UNIQUE INDEX` ниже получают `IF NOT EXISTS`.
+-- Повторный прогон становится no-op, схема не меняется ни на байт.
+DO $$ BEGIN
+  CREATE TYPE "idempotency_key_status" AS ENUM ('processing', 'completed');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TABLE "idempotency_keys" (
+CREATE TABLE IF NOT EXISTS "idempotency_keys" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
   "endpoint" varchar(255) NOT NULL,
@@ -29,4 +37,4 @@ CREATE TABLE "idempotency_keys" (
 
 -- UNIQUE(user_id, endpoint, key) — физический механизм детекции гонки
 -- (SRS-API-010): конкурентный дубль ловит конфликт этого индекса.
-CREATE UNIQUE INDEX "unique_user_endpoint_key" ON "idempotency_keys" ("user_id", "endpoint", "key");
+CREATE UNIQUE INDEX IF NOT EXISTS "unique_user_endpoint_key" ON "idempotency_keys" ("user_id", "endpoint", "key");

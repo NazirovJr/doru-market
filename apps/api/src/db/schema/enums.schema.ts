@@ -82,23 +82,10 @@ export const inventorySyncTypeEnum = pgEnum('inventory_sync_type', ['delta', 'fu
  */
 
 /**
- * Код ошибки строки синхронизации (EP-05, DTJ-142, SRS-INV-014/028/034/035).
- * Используется в `inventory_sync_errors.error_code` для диагностики
- * воркером конкретной причины отклонения строки.
- *
- * Расширение `processing_failed` добавлено в миграции
- * `0015b_inventory_sync_enum_extension.sql` ВНЕ транзакции
- * (PostgreSQL запрещает использовать новое значение enum в той же
- * транзакции, где оно добавлено — см. `11-database-schema.md` SRS-DB-009/049).
- *
- * Порядок значений НЕ переименовывать, только дописывать в конец.
+ * Источник истины по кодам ошибок строк синхронизации — TS-юнион
+ * `InventorySyncRowError['errorCode']` в
+ * `inventory-sync-batch.repository.port.ts`. Таблица `inventory_sync_errors`
+ * появится вместе с drizzle-адаптером `appendErrors` (DTJ-145) и должна
+ * следовать конвенции `0012_inventory_foundation.sql` — `VARCHAR` + `CHECK`,
+ * а не `pgEnum`.
  */
-export const inventorySyncRowErrorCodeEnum = pgEnum('inventory_sync_row_error_code', [
-  'barcode_invalid',
-  'medicine_not_found',
-  'price_negative',
-  'quantity_negative',
-  'expires_at_invalid',
-  'duplicate_in_batch',
-  'processing_failed',
-])

@@ -5,10 +5,10 @@
 -- sha256-hash, SRS-API-025). `auth_sessions.id` упоминается в JWT-claim'е
 -- `sessionId` (SRS-API-024) — используется для revoke (DTJ-026) и аудита.
 --
--- ОТЛОЖЕННЫЙ FK (по конвенции EP-01, см. 0013_users_base.sql):
+-- ОТЛОЖЕННЫЙ FK (по конвенции EP-01, см. 0003_users_base.sql):
 --   - tenant_id REFERENCES tenants(id) — добавляется EP-02 (DTJ-052).
 --
--- FK на users(id) — НЕ отложенный (users уже существует, 0013_users_base.sql).
+-- FK на users(id) — НЕ отложенный (users уже существует, 0003_users_base.sql).
 -- ON DELETE CASCADE — при удалении пользователя все его сессии удаляются
 -- (GDPR-право на удаление ПДн, SRS-DB-004).
 --

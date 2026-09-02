@@ -22,74 +22,74 @@
     },
     {
       "idx": 3,
+      "when": 1700000025000,
+      "tag": "0003_users_base",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
       "when": 1700000030000,
       "tag": "0005_outbox",
       "breakpoints": true
     },
     {
-      "idx": 4,
+      "idx": 5,
       "when": 1700000040000,
       "tag": "0006_catalog_core",
       "breakpoints": true
     },
     {
-      "idx": 5,
+      "idx": 6,
       "when": 1700000050000,
       "tag": "0006_idempotency_keys",
       "breakpoints": true
     },
     {
-      "idx": 6,
+      "idx": 7,
       "when": 1700000060000,
       "tag": "0007_catalog_normalize_dosage_form_class",
       "breakpoints": true
     },
     {
-      "idx": 7,
+      "idx": 8,
       "when": 1700000070000,
       "tag": "0007_users_phone_nullable",
       "breakpoints": true
     },
     {
-      "idx": 8,
+      "idx": 9,
       "when": 1700000080000,
       "tag": "0008_onboarding_foundation",
       "breakpoints": true
     },
     {
-      "idx": 9,
+      "idx": 10,
       "when": 1700000090000,
       "tag": "0008_user_telegram_identities",
       "breakpoints": true
     },
     {
-      "idx": 10,
+      "idx": 11,
       "when": 1700000100000,
       "tag": "0009_verification_status_add_revoked",
       "breakpoints": true
     },
     {
-      "idx": 11,
+      "idx": 12,
       "when": 1700000110000,
       "tag": "0010_otp_purpose_add_onboarding_contact",
       "breakpoints": true
     },
     {
-      "idx": 12,
+      "idx": 13,
       "when": 1700000120000,
       "tag": "0011_pharmacy_chains_add_contact_phone_verified",
       "breakpoints": true
     },
     {
-      "idx": 13,
+      "idx": 14,
       "when": 1700000130000,
       "tag": "0012_inventory_foundation",
-      "breakpoints": true
-    },
-    {
-      "idx": 14,
-      "when": 1700000140000,
-      "tag": "0013_users_base",
       "breakpoints": true
     },
     {
@@ -112,38 +112,50 @@
     },
     {
       "idx": 18,
-      "when": 1700000180000,
-      "tag": "0015b_inventory_sync_enum_extension",
-      "breakpoints": true
-    },
-    {
-      "idx": 19,
       "when": 1700000190000,
       "tag": "0016_auth_sessions_rotated_at",
       "breakpoints": true
     },
     {
-      "idx": 20,
+      "idx": 19,
       "when": 1700000200000,
       "tag": "0016_pharmacy_sku_mapping",
       "breakpoints": true
     },
     {
-      "idx": 21,
+      "idx": 20,
       "when": 1700000210000,
       "tag": "0017_auth_sessions_last_seen_at",
       "breakpoints": true
     },
     {
-      "idx": 22,
+      "idx": 21,
       "when": 1700000220000,
       "tag": "0018_search_schema_additions",
       "breakpoints": true
     },
     {
-      "idx": 23,
+      "idx": 22,
       "when": 1700000230000,
       "tag": "0019_search_ranking_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "when": 1700000240000,
+      "tag": "0020_inventory_sync_errors",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "when": 1700000250000,
+      "tag": "0021_seed_neutral_tenant",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "when": 1700000260000,
+      "tag": "0022_pharmacies_lat_lon_index",
       "breakpoints": true
     }
   ]

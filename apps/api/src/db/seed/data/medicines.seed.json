@@ -7584,5 +7584,2065 @@
         "strengthUnit": "mg"
       }
     ]
+  },
+  {
+    "tradeName": "Ибуклин",
+    "innName": "Ибупрофен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки",
+    "dosageStrength": "400 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Dr.Reddy",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000002",
+        "strengthValue": 400,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 325,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Ибуклин",
+    "innName": "Ибупрофен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки",
+    "dosageStrength": "400 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Cipla",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000002",
+        "strengthValue": 400,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 325,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Ибуклин",
+    "innName": "Ибупрофен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки",
+    "dosageStrength": "400 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Aurobindo",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000002",
+        "strengthValue": 400,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 325,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Ибуклин",
+    "innName": "Ибупрофен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки",
+    "dosageStrength": "400 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Hemofarm",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000002",
+        "strengthValue": 400,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 325,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Ибуклин",
+    "innName": "Ибупрофен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки",
+    "dosageStrength": "400 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Polpharma",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000002",
+        "strengthValue": 400,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 325,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Ибуклин",
+    "innName": "Ибупрофен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки",
+    "dosageStrength": "400 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Glenmark",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000002",
+        "strengthValue": 400,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 325,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Ибуклин",
+    "innName": "Ибупрофен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки",
+    "dosageStrength": "400 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Lupin",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000002",
+        "strengthValue": 400,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 325,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Ибуклин",
+    "innName": "Ибупрофен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки",
+    "dosageStrength": "400 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Actavis",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000002",
+        "strengthValue": 400,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 325,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Ибуклин",
+    "innName": "Ибупрофен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки",
+    "dosageStrength": "400 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Sandoz",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000002",
+        "strengthValue": 400,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 325,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Ибуклин",
+    "innName": "Ибупрофен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки",
+    "dosageStrength": "400 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Teva",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000002",
+        "strengthValue": 400,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 325,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Некст",
+    "innName": "Напроксен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки покрытые оболочкой",
+    "dosageStrength": "250 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "STADA",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000011",
+        "strengthValue": 250,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Некст",
+    "innName": "Напроксен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки покрытые оболочкой",
+    "dosageStrength": "250 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Bayer",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000011",
+        "strengthValue": 250,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Некст",
+    "innName": "Напроксен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки покрытые оболочкой",
+    "dosageStrength": "250 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Sanofi",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000011",
+        "strengthValue": 250,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Некст",
+    "innName": "Напроксен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки покрытые оболочкой",
+    "dosageStrength": "250 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Novartis",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000011",
+        "strengthValue": 250,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Некст",
+    "innName": "Напроксен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки покрытые оболочкой",
+    "dosageStrength": "250 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Gedeon Richter",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000011",
+        "strengthValue": 250,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Некст",
+    "innName": "Напроксен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки покрытые оболочкой",
+    "dosageStrength": "250 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Berlin-Chemie",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000011",
+        "strengthValue": 250,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Некст",
+    "innName": "Напроксен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки покрытые оболочкой",
+    "dosageStrength": "250 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "KRKA",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000011",
+        "strengthValue": 250,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Некст",
+    "innName": "Напроксен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки покрытые оболочкой",
+    "dosageStrength": "250 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Teva",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000011",
+        "strengthValue": 250,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Некст",
+    "innName": "Напроксен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки покрытые оболочкой",
+    "dosageStrength": "250 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Sandoz",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000011",
+        "strengthValue": 250,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Некст",
+    "innName": "Напроксен + Парацетамол",
+    "categorySlug": "nesteroidnye-protivovospalitelnye",
+    "dosageForm": "таблетки покрытые оболочкой",
+    "dosageStrength": "250 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Actavis",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000011",
+        "strengthValue": 250,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Панадол Экстра",
+    "innName": "Парацетамол + Кофеин",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Хумофарм",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 65,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Панадол Экстра",
+    "innName": "Парацетамол + Кофеин",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Фармстандарт",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 65,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Панадол Экстра",
+    "innName": "Парацетамол + Кофеин",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Дармонд",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 65,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Панадол Экстра",
+    "innName": "Парацетамол + Кофеин",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "STADA",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 65,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Панадол Экстра",
+    "innName": "Парацетамол + Кофеин",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Bayer",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 65,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Панадол Экстра",
+    "innName": "Парацетамол + Кофеин",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Sanofi",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 65,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Панадол Экстра",
+    "innName": "Парацетамол + Кофеин",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Novartis",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 65,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Панадол Экстра",
+    "innName": "Парацетамол + Кофеин",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Gedeon Richter",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 65,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Панадол Экстра",
+    "innName": "Парацетамол + Кофеин",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Berlin-Chemie",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 65,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Панадол Экстра",
+    "innName": "Парацетамол + Кофеин",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "KRKA",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 65,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Аскофен-П",
+    "innName": "Ацетилсалициловая кислота + Кофеин + Парацетамол",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "200 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "KRKA",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000003",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 40,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Аскофен-П",
+    "innName": "Ацетилсалициловая кислота + Кофеин + Парацетамол",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "200 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Teva",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000003",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 40,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Аскофен-П",
+    "innName": "Ацетилсалициловая кислота + Кофеин + Парацетамол",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "200 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Actavis",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000003",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 40,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Аскофен-П",
+    "innName": "Ацетилсалициловая кислота + Кофеин + Парацетамол",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "200 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Lupin",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000003",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 40,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Аскофен-П",
+    "innName": "Ацетилсалициловая кислота + Кофеин + Парацетамол",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "200 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Dr.Reddy",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000003",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 40,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Аскофен-П",
+    "innName": "Ацетилсалициловая кислота + Кофеин + Парацетамол",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "200 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Cipla",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000003",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 40,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Аскофен-П",
+    "innName": "Ацетилсалициловая кислота + Кофеин + Парацетамол",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "200 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Aurobindo",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000003",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 40,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Аскофен-П",
+    "innName": "Ацетилсалициловая кислота + Кофеин + Парацетамол",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "200 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Hemofarm",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000003",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 40,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Аскофен-П",
+    "innName": "Ацетилсалициловая кислота + Кофеин + Парацетамол",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "200 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Polpharma",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000003",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 40,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Аскофен-П",
+    "innName": "Ацетилсалициловая кислота + Кофеин + Парацетамол",
+    "categorySlug": "obezbolivayushchie",
+    "dosageForm": "таблетки",
+    "dosageStrength": "200 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Sandoz",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000003",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000004",
+        "strengthValue": 40,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000001",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Магне В6",
+    "innName": "Магний + Пиридоксин",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "470 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Sanofi",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000081",
+        "strengthValue": 470,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 5,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Магне В6",
+    "innName": "Магний + Пиридоксин",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "470 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Novartis",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000081",
+        "strengthValue": 470,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 5,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Магне В6",
+    "innName": "Магний + Пиридоксин",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "470 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Gedeon Richter",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000081",
+        "strengthValue": 470,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 5,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Магне В6",
+    "innName": "Магний + Пиридоксин",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "470 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Berlin-Chemie",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000081",
+        "strengthValue": 470,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 5,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Магне В6",
+    "innName": "Магний + Пиридоксин",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "470 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "KRKA",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000081",
+        "strengthValue": 470,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 5,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Магне В6",
+    "innName": "Магний + Пиридоксин",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "470 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Teva",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000081",
+        "strengthValue": 470,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 5,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Магне В6",
+    "innName": "Магний + Пиридоксин",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "470 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Sandoz",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000081",
+        "strengthValue": 470,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 5,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Магне В6",
+    "innName": "Магний + Пиридоксин",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "470 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Actavis",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000081",
+        "strengthValue": 470,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 5,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Магне В6",
+    "innName": "Магний + Пиридоксин",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "470 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Lupin",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000081",
+        "strengthValue": 470,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 5,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Магне В6",
+    "innName": "Магний + Пиридоксин",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "470 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Bayer",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000081",
+        "strengthValue": 470,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 5,
+        "strengthUnit": "mg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Кальций-Д3 Никомед",
+    "innName": "Кальций + Витамин D3",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки жевательные",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Novartis",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000082",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000077",
+        "strengthValue": 200,
+        "strengthUnit": "iu"
+      }
+    ]
+  },
+  {
+    "tradeName": "Кальций-Д3 Никомед",
+    "innName": "Кальций + Витамин D3",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки жевательные",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Bayer",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000082",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000077",
+        "strengthValue": 200,
+        "strengthUnit": "iu"
+      }
+    ]
+  },
+  {
+    "tradeName": "Кальций-Д3 Никомед",
+    "innName": "Кальций + Витамин D3",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки жевательные",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "STADA",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000082",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000077",
+        "strengthValue": 200,
+        "strengthUnit": "iu"
+      }
+    ]
+  },
+  {
+    "tradeName": "Кальций-Д3 Никомед",
+    "innName": "Кальций + Витамин D3",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки жевательные",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Хумофарм",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000082",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000077",
+        "strengthValue": 200,
+        "strengthUnit": "iu"
+      }
+    ]
+  },
+  {
+    "tradeName": "Кальций-Д3 Никомед",
+    "innName": "Кальций + Витамин D3",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки жевательные",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Фармстандарт",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000082",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000077",
+        "strengthValue": 200,
+        "strengthUnit": "iu"
+      }
+    ]
+  },
+  {
+    "tradeName": "Кальций-Д3 Никомед",
+    "innName": "Кальций + Витамин D3",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки жевательные",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Дармонд",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000082",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000077",
+        "strengthValue": 200,
+        "strengthUnit": "iu"
+      }
+    ]
+  },
+  {
+    "tradeName": "Кальций-Д3 Никомед",
+    "innName": "Кальций + Витамин D3",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки жевательные",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Dr.Reddy",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000082",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000077",
+        "strengthValue": 200,
+        "strengthUnit": "iu"
+      }
+    ]
+  },
+  {
+    "tradeName": "Кальций-Д3 Никомед",
+    "innName": "Кальций + Витамин D3",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки жевательные",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Cipla",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000082",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000077",
+        "strengthValue": 200,
+        "strengthUnit": "iu"
+      }
+    ]
+  },
+  {
+    "tradeName": "Кальций-Д3 Никомед",
+    "innName": "Кальций + Витамин D3",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки жевательные",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Aurobindo",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000082",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000077",
+        "strengthValue": 200,
+        "strengthUnit": "iu"
+      }
+    ]
+  },
+  {
+    "tradeName": "Кальций-Д3 Никомед",
+    "innName": "Кальций + Витамин D3",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки жевательные",
+    "dosageStrength": "500 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Polpharma",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000082",
+        "strengthValue": 500,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000077",
+        "strengthValue": 200,
+        "strengthUnit": "iu"
+      }
+    ]
+  },
+  {
+    "tradeName": "Нейромультивит",
+    "innName": "Витамин B1 + Витамин B6 + Витамин B12",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "100 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Gedeon Richter",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000078",
+        "strengthValue": 100,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000080",
+        "strengthValue": 200,
+        "strengthUnit": "mcg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Нейромультивит",
+    "innName": "Витамин B1 + Витамин B6 + Витамин B12",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "100 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Berlin-Chemie",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000078",
+        "strengthValue": 100,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000080",
+        "strengthValue": 200,
+        "strengthUnit": "mcg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Нейромультивит",
+    "innName": "Витамин B1 + Витамин B6 + Витамин B12",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "100 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "KRKA",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000078",
+        "strengthValue": 100,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000080",
+        "strengthValue": 200,
+        "strengthUnit": "mcg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Нейромультивит",
+    "innName": "Витамин B1 + Витамин B6 + Витамин B12",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "100 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Teva",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000078",
+        "strengthValue": 100,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000080",
+        "strengthValue": 200,
+        "strengthUnit": "mcg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Нейромультивит",
+    "innName": "Витамин B1 + Витамин B6 + Витамин B12",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "100 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Sandoz",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000078",
+        "strengthValue": 100,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000080",
+        "strengthValue": 200,
+        "strengthUnit": "mcg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Нейромультивит",
+    "innName": "Витамин B1 + Витамин B6 + Витамин B12",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "100 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Actavis",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000078",
+        "strengthValue": 100,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000080",
+        "strengthValue": 200,
+        "strengthUnit": "mcg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Нейромультивит",
+    "innName": "Витамин B1 + Витамин B6 + Витамин B12",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "100 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Lupin",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000078",
+        "strengthValue": 100,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000080",
+        "strengthValue": 200,
+        "strengthUnit": "mcg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Нейромультивит",
+    "innName": "Витамин B1 + Витамин B6 + Витамин B12",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "100 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Glenmark",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000078",
+        "strengthValue": 100,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000080",
+        "strengthValue": 200,
+        "strengthUnit": "mcg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Нейромультивит",
+    "innName": "Витамин B1 + Витамин B6 + Витамин B12",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "100 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Polpharma",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000078",
+        "strengthValue": 100,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000080",
+        "strengthValue": 200,
+        "strengthUnit": "mcg"
+      }
+    ]
+  },
+  {
+    "tradeName": "Нейромультивит",
+    "innName": "Витамин B1 + Витамин B6 + Витамин B12",
+    "categorySlug": "vitaminy",
+    "dosageForm": "таблетки",
+    "dosageStrength": "100 мг",
+    "dosageFormClass": "tablet",
+    "manufacturerCountry": "Россия",
+    "manufacturerName": "Hemofarm",
+    "isPrescriptionRequired": false,
+    "controlCategory": "none",
+    "requiresColdChain": false,
+    "imageUrl": null,
+    "descriptionTj": null,
+    "descriptionRu": null,
+    "substances": [
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000078",
+        "strengthValue": 100,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000079",
+        "strengthValue": 200,
+        "strengthUnit": "mg"
+      },
+      {
+        "substanceId": "00000000-0000-0000-0000-000000000080",
+        "strengthValue": 200,
+        "strengthUnit": "mcg"
+      }
+    ]
   }
 ]

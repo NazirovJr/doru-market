@@ -17,6 +17,17 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS unaccent;
 -- unaccent: нормализация диакритики в поисковых запросах (EP-06).
 
+-- immutable_unaccent: IMMUTABLE-обёртка над unaccent() с явным regdictionary.
+-- unaccent(text) объявлена STABLE (зависит от текущего search_path/словаря по умолчанию),
+-- поэтому недопустима в GENERATED ALWAYS AS ... STORED и в индексах по выражению
+-- (Postgres требует IMMUTABLE — код ошибки 42P17). Явное указание словаря
+-- 'public.unaccent'::regdictionary делает результат детерминированным для
+-- фиксированного словаря — тот же словарь, что и раньше, просто без неявного резолвинга.
+CREATE OR REPLACE FUNCTION immutable_unaccent(text)
+RETURNS text
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS
+$$ SELECT public.unaccent('public.unaccent'::regdictionary, $1) $$;
+
 CREATE EXTENSION IF NOT EXISTS btree_gin;
 -- btree_gin: композитные GIN-индексы для составных условий
 -- (например, поиск по `tenant_id` + `is_active` в одном индексе).

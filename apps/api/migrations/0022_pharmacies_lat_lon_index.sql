@@ -1,0 +1,22 @@
+-- =====================================================================================
+-- 0022_pharmacies_lat_lon_index.sql — DEFECT-FIX (карта аптек, DTJ-195 постмортем)
+-- =====================================================================================
+-- КОНТЕКСТ: `GET /api/v1/pharmacies/map` падал 500 на живой БД — `PostgresPharmacyMapAdapter`
+-- (`postgres-pharmacy-map.adapter.ts`) был написан «по целевой схеме» из
+-- `docs/spec/11-database-schema.md` (`ph.geo_point && ST_MakeEnvelope(...)`, GiST), но
+-- `pharmacies.geo_point`/расширение `postgis` НЕ существуют ни в одной фактической миграции,
+-- а образ `postgres:16` не может поставить `postgis` (`pg_available_extensions` — 0 строк).
+-- Ошибка не была видна ни одним тестом, т.к. интеграционный тест контроллера подменяет
+-- `PHARMACY_MAP_REPOSITORY` фейком (см. `pharmacies-map-controller.integration.spec.ts`).
+--
+-- РЕШЕНИЕ (CTO): та же линия, что уже принята в этом модуле для DTJ-185
+-- (`postgres-search.sql.ts` — гаверсинус на `latitude`/`longitude` вместо `ST_DWithin`,
+-- т.к. PostGIS нет): bbox — прямоугольник, обычное `BETWEEN` по `latitude`/`longitude`
+-- полностью выражает семантику без GiST/geometry. Этот индекс — обычный составной btree,
+-- не геоиндекс: он покрывает диапазонный предикат
+-- `latitude BETWEEN :latMin AND :latMax AND longitude BETWEEN :lonMin AND :lonMax`.
+--
+-- Идемпотентна (`IF NOT EXISTS`) — прогоняется повторно без ошибки.
+-- =====================================================================================
+
+CREATE INDEX IF NOT EXISTS ix_pharmacies_lat_lon ON pharmacies (latitude, longitude);

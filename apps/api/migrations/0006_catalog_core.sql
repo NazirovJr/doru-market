@@ -89,9 +89,9 @@ CREATE TABLE IF NOT EXISTS medicines (
   is_published BOOLEAN NOT NULL DEFAULT false,
   requires_cold_chain BOOLEAN NOT NULL DEFAULT false,
   search_vector tsvector GENERATED ALWAYS AS (
-    setweight(to_tsvector('russian', unaccent(coalesce(trade_name, ''))), 'A') ||
-    setweight(to_tsvector('russian', unaccent(coalesce(inn_name, ''))), 'A') ||
-    setweight(to_tsvector('russian', unaccent(coalesce(manufacturer_name, ''))), 'C')
+    setweight(to_tsvector('russian', immutable_unaccent(coalesce(trade_name, ''))), 'A') ||
+    setweight(to_tsvector('russian', immutable_unaccent(coalesce(inn_name, ''))), 'A') ||
+    setweight(to_tsvector('russian', immutable_unaccent(coalesce(manufacturer_name, ''))), 'C')
   ) STORED,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT chk_medicines_control_category_requires_rx

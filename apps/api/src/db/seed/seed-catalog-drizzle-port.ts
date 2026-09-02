@@ -42,7 +42,7 @@ import { Pool } from 'pg'
 import pino from 'pino'
 import type { DosageUnit } from '@dorutj/domain-kernel'
 
-import type { SeedCatalogPort } from './seed-catalog.run.js'
+import type { SeedCatalogPort } from './seed-catalog.port.js'
 import type { CategoryRow, MedicineRow, SubstanceRow } from '@/db/schema/index.js'
 import { categories, substances, medicines, medicineSubstances } from '@/db/schema/index.js'
 
@@ -262,6 +262,3 @@ export async function createDrizzleSeedCatalogPort(): Promise<{
     },
   }
 }
-
-/** Re-export, чтобы не дублировать схемы. */
-export type { SeedCatalogPort }

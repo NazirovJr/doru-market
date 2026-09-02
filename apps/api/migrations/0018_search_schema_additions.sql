@@ -64,5 +64,5 @@ COMMENT ON TABLE search_query_log IS
 -- используется планировщиком для запросов без такого же условия в `WHERE` — см. AC2
 -- тикета DTJ-181 (частичный индекс, ожидаемое поведение, не дефект).
 CREATE INDEX IF NOT EXISTS ix_medicines_trade_name_prefix
-    ON medicines (lower(unaccent(trade_name)) text_pattern_ops)
+    ON medicines (lower(immutable_unaccent(trade_name)) text_pattern_ops)
     WHERE is_published = true;

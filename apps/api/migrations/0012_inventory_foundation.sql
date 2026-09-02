@@ -12,6 +12,15 @@
 --
 -- Тенантный скоуп будет добавлен в EP-15 (RLS). FK на `users` для будущей
 -- `received_by_user_id` — TODO(EP-01).
+--
+-- FEFO-инвариант (ux_pharmacy_inventory_fefo): PostgreSQL не допускает
+-- выражение (COALESCE) внутри table-level UNIQUE — это уникальность по СТОЛБЦАМ,
+-- не по произвольному выражению (syntax error at or near "("). Уникальность по
+-- выражению выражается ОТДЕЛЬНЫМ CREATE UNIQUE INDEX (ниже, после CREATE TABLE).
+-- Семантика не меняется: одна позиция на (аптека, препарат, партия, срок
+-- годности), где отсутствующая партия (NULL) приравнена к пустой строке —
+-- иначе несколько строк с batch_number IS NULL не конфликтовали бы между собой
+-- (Postgres по умолчанию считает NULL различными в UNIQUE).
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS pharmacy_inventory (
@@ -24,13 +33,14 @@ CREATE TABLE IF NOT EXISTS pharmacy_inventory (
     batch_number    VARCHAR(64),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT ux_pharmacy_inventory_fefo
-        UNIQUE (pharmacy_id, medicine_id, COALESCE(batch_number, ''), expires_at),
     CONSTRAINT chk_pharmacy_inventory_price_nonneg
         CHECK (price >= 0),
     CONSTRAINT chk_pharmacy_inventory_quantity_nonneg
         CHECK (quantity >= 0)
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_pharmacy_inventory_fefo
+    ON pharmacy_inventory (pharmacy_id, medicine_id, COALESCE(batch_number, ''), expires_at);
 
 CREATE INDEX IF NOT EXISTS ix_pharmacy_inventory_by_medicine
     ON pharmacy_inventory (pharmacy_id, medicine_id);

@@ -16,7 +16,8 @@
  * `process.env.DORUTJ_SEED_SKIP_MAIN = '1'` (см. `seed-catalog.run.ts:main()`).
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { runSeedCatalog, type SeedCatalogPort } from './seed-catalog.run.js'
+import { runSeedCatalog } from './seed-catalog.run.js'
+import type { SeedCatalogPort } from './seed-catalog.port.js'
 import type { CategoryRow, MedicineRow, SubstanceRow } from '@/db/schema/index.js'
 import type { DosageUnit } from '@dorutj/domain-kernel'
 

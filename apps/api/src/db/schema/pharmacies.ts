@@ -5,8 +5,16 @@
  *
  * Инвариант SRS-DOM-048 (доменный): `status='active'` требует
  * `parentChain.status ∈ {approved,active}`. FK на `pharmacy_chains` с
- * `ON DELETE CASCADE` (как в спецификации). `geo_point` опущен на этом шаге
- * (PostGIS-колонка, миграция 0008_postgis.sql — владение инфраструктуры, не EP-03).
+ * `ON DELETE CASCADE` (как в спецификации).
+ *
+ * **`geo_point` НЕ будет добавлен** (пересмотр решения, DEFECT-FIX постмортем
+ * `postgres-pharmacy-map.adapter.ts`, DTJ-195): расширение `postgis`, которое
+ * специфицирует `docs/spec/11-database-schema.md`, НЕ ставится в образ `postgres:16`
+ * (`pg_available_extensions` не содержит `postgis*`) — колонка `GEOGRAPHY(POINT,4326)`
+ * недостижима на этом окружении. Гео-запросы модуля `catalog` (bbox-фильтр карты аптек,
+ * гаверсинус-поиск DTJ-185, `postgres-search.sql.ts`) работают напрямую по `latitude`/
+ * `longitude` ниже; составной btree `ix_pharmacies_lat_lon`
+ * (`migrations/0022_pharmacies_lat_lon_index.sql`) покрывает диапазонный bbox-предикат.
  */
 import { sql } from 'drizzle-orm'
 import {

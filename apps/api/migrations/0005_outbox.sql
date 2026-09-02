@@ -10,9 +10,17 @@
 -- `processed_events` — составной PK `(consumer_name, event_id)`, конфликт вставки
 -- = «уже обработано» (SRS-DOM-152).
 
-CREATE TYPE "outbox_status" AS ENUM ('pending', 'published', 'failed');
+-- Идемпотентность (часть 3 задания по починке дедлока на свежей БД): `CREATE TYPE`
+-- не поддерживает `IF NOT EXISTS` — оборачиваем в DO-блок, глушим только
+-- `duplicate_object`. `CREATE TABLE`/`CREATE INDEX` ниже получают `IF NOT EXISTS`.
+-- Повторный прогон становится no-op, схема не меняется ни на байт.
+DO $$ BEGIN
+  CREATE TYPE "outbox_status" AS ENUM ('pending', 'published', 'failed');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TABLE "outbox" (
+CREATE TABLE IF NOT EXISTS "outbox" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "event_type" varchar(100) NOT NULL,
   "aggregate_type" varchar(50) NOT NULL,
@@ -27,9 +35,9 @@ CREATE TABLE "outbox" (
 
 -- Partial index — оптимизация `WHERE status='pending' ORDER BY created_at`
 -- (используется в `OutboxRelayWorker`).
-CREATE INDEX "outbox_pending_created_at_idx" ON "outbox" ("created_at") WHERE "status" = 'pending';
+CREATE INDEX IF NOT EXISTS "outbox_pending_created_at_idx" ON "outbox" ("created_at") WHERE "status" = 'pending';
 
-CREATE TABLE "processed_events" (
+CREATE TABLE IF NOT EXISTS "processed_events" (
   "consumer_name" varchar(100) NOT NULL,
   "event_id" uuid NOT NULL,
   "processed_at" timestamptz NOT NULL DEFAULT now(),

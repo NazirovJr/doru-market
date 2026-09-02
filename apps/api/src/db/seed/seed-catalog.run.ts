@@ -20,7 +20,8 @@ import { fileURLToPath } from 'node:url'
 import { DosageForm, isOk, type DosageFormClass, type DosageUnit } from '@dorutj/domain-kernel'
 import type { ControlCategory } from '@/modules/catalog/domain/medicine.enums.js'
 import { Medicine } from '@/modules/catalog/domain/medicine.entity.js'
-import type { CategoryRow, MedicineRow, SubstanceRow } from '@/db/schema/index.js'
+import type { MedicineRow } from '@/db/schema/index.js'
+import type { SeedCatalogPort } from './seed-catalog.port.js'
 
 const FILE_URL_PATH = fileURLToPath(import.meta.url)
 const MODULE_DIR = dirname(FILE_URL_PATH)
@@ -67,16 +68,8 @@ interface SeedData {
   readonly medicines: readonly SeedMedicine[]
 }
 
-/** Минимальный порт БД для seed (in-memory мок, продакшен-путь — через репозиторий). */
-export interface SeedCatalogPort {
-  insertCategory(row: Omit<CategoryRow, 'id'>): Promise<number>
-  insertSubstance(row: Omit<SubstanceRow, 'createdAt'>): Promise<void>
-  insertMedicine(
-    row: Omit<MedicineRow, 'createdAt' | 'updatedAt' | 'searchVector'>,
-    substances: readonly { substanceId: string; strengthValue: number; strengthUnit: DosageUnit }[],
-  ): Promise<void>
-  countMedicines(): Promise<number>
-}
+/** Re-export, чтобы не дублировать схемы. */
+export type { SeedCatalogPort } from './seed-catalog.port.js'
 
 function readSeedData(): SeedData {
   const categories = JSON.parse(readFileSync(join(DATA_DIR, 'categories.seed.json'), 'utf8')) as SeedCategory[]
@@ -199,19 +192,26 @@ export async function runSeedCatalog(port: SeedCatalogPort): Promise<{ medicines
   const idBySlug = await insertCategories(port, data.categories)
   await insertSubstances(port, data.substances)
 
-  let medicinesInserted = 0
+  // Счётчик медикаментов, реально добавленных ЭТИМ запуском. Само `insertMedicine`
+  // молча no-op'ает на дубликате по логическому ключу (см. `DrizzleSeedCatalogPort`
+  // и in-memory мок в тестах) — инкремент на каждой итерации цикла считал бы
+  // «попыток вставки», а не фактических вставок, и расходился бы с реальным
+  // состоянием порта при повторном запуске или при дублирующихся natural key
+  // в самих seed-данных. `countMedicines()` до/после даёт честную разницу
+  // независимо от причины no-op.
+  const before = await port.countMedicines()
   for (const seed of data.medicines) {
     const categoryId = idBySlug.get(seed.categorySlug)
     if (categoryId === undefined) {
       throw new Error(`Unknown category slug: ${seed.categorySlug}`)
     }
-     
+
     // параллельная вставка может упереться в ещё-не-вставленную категорию того же slug-пространства.
     // eslint-disable-next-line no-await-in-loop -- порядок medicines не критичен сам по себе, но sequence проще для отладки seed
     await insertOneMedicine(port, seed, categoryId)
-    medicinesInserted += 1
   }
-  return { medicinesInserted }
+  const after = await port.countMedicines()
+  return { medicinesInserted: after - before }
 }
 
 export const _RESET_MARKER = 'EP-04/DTJ-098'

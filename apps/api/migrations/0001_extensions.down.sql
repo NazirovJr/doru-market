@@ -4,6 +4,7 @@
 -- расширениями, но симметрия с up-миграцией упрощает аудит.
 
 DROP EXTENSION IF EXISTS btree_gin;
+DROP FUNCTION IF EXISTS immutable_unaccent(text);
 DROP EXTENSION IF EXISTS unaccent;
 DROP EXTENSION IF EXISTS pg_trgm;
 DROP EXTENSION IF EXISTS pgcrypto;

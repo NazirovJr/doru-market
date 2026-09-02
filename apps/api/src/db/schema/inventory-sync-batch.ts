@@ -1,7 +1,8 @@
 /**
  * Drizzle-схема `inventory_sync_batch` (EP-05, DTJ-144, DTJ-142). Аудит-лог
- * принятых синхронизаций остатков. State machine:
- * `received` → `processing` → (`completed`|`failed`).
+ * принятых синхронизаций остатков. State machine (см. `domain/inventory-sync-batch.entity.ts`,
+ * SRS-DOM-145..150): `queued` → `processing` → (`completed_full_success` |
+ * `completed_partial_success` | `failed_validation`).
  *
  * Хранит:
  *   - `pharmacy_id` — кто прислал.
@@ -71,14 +72,19 @@ export const inventorySyncBatch = pgTable(
       table.fullSyncSessionId,
       table.pageNumber,
     ),
-    // CHECK: channel ∈ {'manual','excel','rest'}, status ∈ {'received','processing','completed','failed'}.
+    // CHECK: channel ∈ {'manual','excel','rest'}, status ∈ {'queued','processing',
+    // 'completed_full_success','completed_partial_success','failed_validation'} — те же
+    // значения, что в FSM `domain/inventory-sync-batch.entity.ts` (SRS-DOM-145..150) и в
+    // реальной миграции 0012 (`chk_inventory_sync_batch_status`). Проверено дословным
+    // SQL-запросом к живой БД (`pg_get_constraintdef`) — источник правды миграция, а не
+    // прежний список TS-литералов здесь.
     channelCheck: check(
       'chk_inventory_sync_batch_channel',
       sql`${table.channel} IN ('manual','excel','rest')`,
     ),
     statusCheck: check(
       'chk_inventory_sync_batch_status',
-      sql`${table.status} IN ('received','processing','completed','failed')`,
+      sql`${table.status} IN ('queued','processing','completed_full_success','completed_partial_success','failed_validation')`,
     ),
     // DTJ-142, SRS-INV-005: `full_sync_session_id` заполняется ТОЛЬКО для
     // full-синхронизаций. Delta-пакеты это поле НЕ заполняют (для них пагинация

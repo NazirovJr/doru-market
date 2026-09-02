@@ -10,7 +10,11 @@
  */
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 
-const NEUTRAL_TENANT_ID = '00000000-0000-0000-0000-000000000001'
+// Валидный UUID v4: `TenantId.from()` валидирует вход через `uuid.validate()`, и
+// нулевой version-ниббл (`0000-0000-...`, как было раньше) её не проходит — Postgres
+// такое значение принимает, а домен на чтении бросает ValidationError. Тот же id
+// зашит в `migrations/0021_seed_neutral_tenant.sql` — значения обязаны совпадать.
+const NEUTRAL_TENANT_ID = '00000000-0000-4000-8000-000000000001'
 const BRAND_NAME = 'DoruTJ'
 
 /** Дефолты per-tenant SLA/лимитов для нейтрального тенанта. Должны совпадать с

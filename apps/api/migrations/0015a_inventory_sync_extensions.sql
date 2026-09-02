@@ -24,10 +24,15 @@
 --   5. Дополнительный CHECK `chk_pharmacy_api_keys_exactly_one_scope` —
 --      «ровно один скоуп заполнен» (pharmacy XOR chain).
 --
--- 0015b (отдельный файл) — `ALTER TYPE inventory_sync_row_error_code ADD VALUE
--- 'processing_failed'` — НЕ внутри этой транзакции (SRS-DB-009/049,
--- PostgreSQL запрещает использовать новое значение enum в той же
--- транзакции, где оно добавлено).
+-- [ИЗМЕНЕНО] 0015b удалена: она делала `ALTER TYPE inventory_sync_row_error_code
+-- ADD VALUE 'processing_failed'`, но `CREATE TYPE` для этого типа не существует
+-- ни в одной миграции (таблица `inventory_sync_errors` тоже нигде не создаётся,
+-- drizzle-адаптера для неё нет — appendErrors реализован только in-memory).
+-- Источник истины по кодам ошибок строк — TS-юнион
+-- InventorySyncRowError['errorCode'] (inventory-sync-batch.repository.port.ts).
+-- Таблица inventory_sync_errors появится вместе с drizzle-адаптером (DTJ-145)
+-- по конвенции соседней 0012_inventory_foundation.sql — VARCHAR + CHECK, а не
+-- pg enum.
 --
 -- Применяется ПОСЛЕ `0007_inventory.sql` (DTJ-141) и после создания
 -- `pharmacy_chains` (0008_onboarding_foundation.sql) — оба этих файла
