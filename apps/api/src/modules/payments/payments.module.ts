@@ -139,6 +139,11 @@ import { PaymentsWebhookController } from './presentation/webhook/payments-webho
 import { PAYOUT_SCHEDULE_REPOSITORY_PROVIDER } from './infrastructure/repositories/payout-schedule.repository.js'
 import { RefundOrderUseCase } from './application/use-cases/refund-order.use-case.js'
 import { RefundFacadeAdapter } from './infrastructure/adapters/refund-facade.adapter.js'
+// DTJ-243 — AuditLogPort/SupportTicketPort (сырой SQL, см. JSDoc адаптеров про DISPUTED
+// отношение к DTJ-270) + LatePaymentRefundService, оба потребляются HandlePaymentWebhookUseCase.
+import { AUDIT_LOG_PORT_PROVIDER } from './infrastructure/repositories/raw-sql-audit-log.repository.js'
+import { SUPPORT_TICKET_PORT_PROVIDER } from './infrastructure/repositories/raw-sql-support-ticket.repository.js'
+import { LatePaymentRefundService } from './application/services/late-payment-refund.service.js'
 
 type PaymentDriver = 'mock_bank' | 'alif_mobi' | 'dc_next'
 
@@ -255,6 +260,10 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
     PAYOUT_SCHEDULE_REPOSITORY_PROVIDER,
     RefundOrderUseCase,
     RefundFacadeAdapter,
+    // DTJ-243 — пограничные случаи вебхука (см. JSDoc блока providers выше).
+    AUDIT_LOG_PORT_PROVIDER,
+    SUPPORT_TICKET_PORT_PROVIDER,
+    LatePaymentRefundService,
   ],
   exports: [PaymentInvoiceAdapter, RefundFacadeAdapter],
 })

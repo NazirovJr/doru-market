@@ -13,7 +13,7 @@
  * конфликт ⇒ дубликат события (`false`), непустой ⇒ новая строка (`true`).
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { eq } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { paymentOperations } from '@/db/schema/payments.js'
 import { orders } from '@/db/schema/orders.js'
@@ -28,6 +28,8 @@ import { resolveDrizzleClient } from '../drizzle-tx.util.js'
 
 const OPERATION_STATUS_SUCCEEDED = 'succeeded'
 const OPERATION_STATUS_FAILED = 'failed'
+/** DTJ-243, SRS-PAY-025 — см. JSDoc `findRefundOperationRef` в порте про отступление от `status='pending'`. */
+const REFUND_OPERATION_TYPES = ['refund', 'partial_refund'] as const
 
 @Injectable()
 export class DrizzlePaymentWebhookOperationsRepository implements PaymentWebhookOperationsPort {
@@ -39,7 +41,27 @@ export class DrizzlePaymentWebhookOperationsRepository implements PaymentWebhook
       .select({ orderId: paymentOperations.orderId, tenantId: orders.tenantId })
       .from(paymentOperations)
       .innerJoin(orders, eq(paymentOperations.orderId, orders.id))
-      .where(eq(paymentOperations.providerRef, providerRef))
+      // DTJ-243, SRS-PAY-040: soft-deleted заказ трактуется как неизвестный платёж — фильтр
+      // ЗДЕСЬ (не отдельной веткой в use case), т.к. это ТА ЖЕ проверка "найден ли заказ".
+      .where(and(eq(paymentOperations.providerRef, providerRef), isNull(orders.deletedAt)))
+      .limit(1)
+    const row = rows[0]
+    return row === undefined ? null : { orderId: row.orderId, tenantId: row.tenantId }
+  }
+
+  public async findRefundOperationRef(providerRef: string, tx?: PaymentsUnitOfWorkTx): Promise<OriginalPaymentOperationRef | null> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const rows = await client
+      .select({ orderId: paymentOperations.orderId, tenantId: orders.tenantId })
+      .from(paymentOperations)
+      .innerJoin(orders, eq(paymentOperations.orderId, orders.id))
+      .where(
+        and(
+          eq(paymentOperations.providerRef, providerRef),
+          inArray(paymentOperations.operationType, REFUND_OPERATION_TYPES),
+          isNull(orders.deletedAt),
+        ),
+      )
       .limit(1)
     const row = rows[0]
     return row === undefined ? null : { orderId: row.orderId, tenantId: row.tenantId }

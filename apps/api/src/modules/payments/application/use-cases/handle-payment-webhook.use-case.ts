@@ -61,6 +61,7 @@ import {
 import type { VerifiedWebhookPayload } from '@/modules/payments/application/ports/bank-webhook-verifier.port.js'
 import {
   PAYMENT_WEBHOOK_OPERATIONS_REPOSITORY,
+  type OriginalPaymentOperationRef,
   type PaymentWebhookOperationsPort,
 } from '@/modules/payments/application/ports/payment-webhook-operations.port.js'
 import {
@@ -80,14 +81,25 @@ import {
 import { EscrowLedgerEntry } from '@/modules/payments/domain/escrow-ledger-entry.value-object.js'
 import type { OrderPaidEvent } from '@/modules/payments/domain/payment-domain-event.js'
 import { Money } from '@/shared-kernel/domain/value-objects/money.vo.js'
+import { AUDIT_LOG_PORT, type AuditLogPort } from '@/modules/payments/application/ports/audit-log.port.js'
+import {
+  LatePaymentRefundService,
+  type LatePaymentRefundInput,
+} from '@/modules/payments/application/services/late-payment-refund.service.js'
 import { WebhookProviderUnknownError } from './errors/webhook-provider-unknown.error.js'
+import { hashWebhookPayload } from './webhook-payload-hash.util.js'
 
 const PAYMENT_CONFIRMED: VerifiedWebhookPayload['type'] = 'payment_confirmed'
+const REFUND_CONFIRMED: VerifiedWebhookPayload['type'] = 'refund_confirmed'
+const REFUND_FAILED: VerifiedWebhookPayload['type'] = 'refund_failed'
 const SUCCEEDED_TYPES: readonly VerifiedWebhookPayload['type'][] = ['payment_confirmed', 'refund_confirmed']
+const CANCELLED_STATUS = 'cancelled'
+const UNKNOWN_PAYMENT_ACTION = 'unknown_payment_webhook'
+const OUT_OF_ORDER_REFUND_ACTION = 'out_of_order_refund_webhook'
 
 @Injectable()
 export class HandlePaymentWebhookUseCase {
-  // eslint-disable-next-line max-params -- 7 DI-инъекций NestJS constructor injection (6 портов + pino-логгер), см. JSDoc файла для разбивки ответственности каждого.
+  // eslint-disable-next-line max-params -- 9 DI-инъекций (7 портов + сервис + pino-логгер), см. JSDoc файла для разбивки ответственности каждого. Дальнейшее дробление конструктора уменьшило бы явность графа зависимостей use case'а сильнее, чем экономит строк.
   public constructor(
     @Inject(BANK_WEBHOOK_VERIFIER_REGISTRY) private readonly verifiers: BankWebhookVerifierRegistryPort,
     @Inject(PAYMENT_WEBHOOK_OPERATIONS_REPOSITORY) private readonly webhookOperations: PaymentWebhookOperationsPort,
@@ -95,6 +107,8 @@ export class HandlePaymentWebhookUseCase {
     @Inject(PAYMENTS_ORDERS_PORT) private readonly ordersPort: PaymentsOrdersPort,
     @Inject(PAYMENTS_OUTBOX) private readonly outbox: PaymentsOutboxPort,
     @Inject(PAYMENTS_UNIT_OF_WORK) private readonly unitOfWork: PaymentsUnitOfWorkPort,
+    @Inject(AUDIT_LOG_PORT) private readonly auditLog: AuditLogPort,
+    @Inject(LatePaymentRefundService) private readonly latePaymentRefund: LatePaymentRefundService,
     @Inject(PINO_LOGGER) private readonly logger: Logger,
   ) {}
 
@@ -112,15 +126,51 @@ export class HandlePaymentWebhookUseCase {
   }
 
   private async processVerifiedPayload(providerName: string, payload: VerifiedWebhookPayload): Promise<void> {
-    const original = await this.webhookOperations.findOrderByProviderRef(payload.providerRef)
+    const original = await this.resolveOriginal(payload)
     if (original === null) {
-      // SRS-PAY-028 (вне srs_refs этого тикета) — «неизвестный платёж»: 200 OK, без мутации,
-      // без спекулятивной payment_operations-строки (order_id NOT NULL, некуда вставить).
-      this.logger.warn({ providerName, providerRef: payload.providerRef, bankEventId: payload.bankEventId }, 'payments.webhook.unknown_provider_ref')
+      await this.handleUnknownPayment(payload)
       return
     }
     const ctx: WebhookContext = { providerName, payload, orderId: original.orderId, tenantId: original.tenantId }
     await this.unitOfWork.run((tx) => this.processWithinTransaction(ctx, tx))
+  }
+
+  /** DTJ-243, SRS-PAY-025 — refund-события резолвятся ЧЕРЕЗ РАНЕЕ созданную операцию рефанда
+   * (`findRefundOperationRef`), НЕ через `findOrderByProviderRef` напрямую — см. JSDoc обоих
+   * методов порта про разницу и про DISPUTED-отступление от `status='pending'`. */
+  private resolveOriginal(payload: VerifiedWebhookPayload): Promise<OriginalPaymentOperationRef | null> {
+    if (payload.type === REFUND_CONFIRMED || payload.type === REFUND_FAILED) {
+      return this.webhookOperations.findRefundOperationRef(payload.providerRef)
+    }
+    return this.webhookOperations.findOrderByProviderRef(payload.providerRef)
+  }
+
+  /**
+   * DTJ-243, SRS-PAY-028/040/025 — «неизвестный платёж» (общая ветка для ВСЕХ трёх пограничных
+   * случаев: неизвестный `providerRef`, soft-deleted заказ — уже отфильтрован адаптером,
+   * out-of-order refund): `200 OK` без мутации, `audit_log(category='payment_override')`.
+   *
+   * `support_ticket` СОЗНАТЕЛЬНО НЕ создаётся здесь (отступление от буквального текста тикета,
+   * зафиксировано в отчёте сдачи DTJ-243, `assumptions`) — `support_tickets.tenant_id UUID
+   * NOT NULL`, а `POST /api/v1/payments/webhook` — `@SkipTenantResolution()` (см. JSDoc
+   * `payments-webhook.controller.ts`): тенант ФИЗИЧЕСКИ не резолвится для события, чей
+   * `providerRef` не связан ни с одним заказом. `pino.warn` (ниже) + `audit_log` (nullable
+   * `tenant_id`) — единственные доступные каналы алерта для этого конкретного под-случая.
+   */
+  private async handleUnknownPayment(payload: VerifiedWebhookPayload): Promise<void> {
+    const isRefundEvent = payload.type === REFUND_CONFIRMED || payload.type === REFUND_FAILED
+    const action = isRefundEvent ? OUT_OF_ORDER_REFUND_ACTION : UNKNOWN_PAYMENT_ACTION
+    this.logger.warn({ providerRef: payload.providerRef, bankEventId: payload.bankEventId, action }, 'payments.webhook.unknown_payment')
+    await this.auditLog.appendPaymentOverride({
+      tenantId: null,
+      entityId: null,
+      action,
+      metadata: {
+        providerRef: payload.providerRef,
+        bankEventId: payload.bankEventId,
+        rawPayloadHash: hashWebhookPayload(payload),
+      },
+    })
   }
 
   private async processWithinTransaction(ctx: WebhookContext, tx: PaymentsUnitOfWorkTx): Promise<void> {
@@ -139,17 +189,30 @@ export class HandlePaymentWebhookUseCase {
       tx,
     )
     if (!inserted) return // AC2 — дубликат bankEventId, бизнес-логика не повторяется.
-    if (payload.type !== PAYMENT_CONFIRMED) return // TODO(DTJ-245): payment_failed/refund_* — см. JSDoc файла п.5.
-    await this.applyPaymentConfirmed(ctx, tx)
+    if (payload.type !== PAYMENT_CONFIRMED) return // payment_failed/refund_* — идемпотентная строка достаточна, доп. логики не требуется (DTJ-242 AC, сохранено).
+    await this.applyPaymentConfirmedOrLateRefund(ctx, tx)
   }
 
-  /** AC1 — `markPaidEscrow`/`EscrowLedger.append`/`outbox.append` в ОДНОЙ транзакции (`tx`). */
-  private async applyPaymentConfirmed(ctx: WebhookContext, tx: PaymentsUnitOfWorkTx): Promise<void> {
+  /** DTJ-243, SRS-PAY-027 — заказ может быть `cancelled` к моменту прихода `payment_confirmed`
+   * (например, `UnpaidOrderTimeoutJob`, DTJ-253, обогнал банк) — тогда `markPaidEscrow` НЕ
+   * вызывается (SRS-DOM-102, `cancelled` терминален), а `LatePaymentRefundService` берёт след. */
+  private async applyPaymentConfirmedOrLateRefund(ctx: WebhookContext, tx: PaymentsUnitOfWorkTx): Promise<void> {
     const { tenantId, orderId, payload } = ctx
     const order = await this.ordersPort.getOrderById(tenantId, orderId, tx)
     if (order === null) {
       throw new Error(`HandlePaymentWebhookUseCase: order ${orderId} vanished within its own transaction — data integrity violation`)
     }
+    if (order.status === CANCELLED_STATUS) {
+      const input: LatePaymentRefundInput = { tenantId, orderId, amountDiram: payload.amountDiram, providerRef: payload.providerRef }
+      await this.latePaymentRefund.handle(input, tx)
+      return
+    }
+    await this.applyPaymentConfirmed(ctx, tx, order.paymentMethod)
+  }
+
+  /** AC1 — `markPaidEscrow`/`EscrowLedger.append`/`outbox.append` в ОДНОЙ транзакции (`tx`). */
+  private async applyPaymentConfirmed(ctx: WebhookContext, tx: PaymentsUnitOfWorkTx, paymentMethod: string): Promise<void> {
+    const { tenantId, orderId, payload } = ctx
     await this.ordersPort.markPaidEscrow(tenantId, orderId, payload.providerRef, payload.occurredAt, tx)
     await this.ledgerRepository.append(
       EscrowLedgerEntry.create({
@@ -163,7 +226,7 @@ export class HandlePaymentWebhookUseCase {
       }),
       tx,
     )
-    await this.outbox.append(tenantId, buildOrderPaidEvent(ctx, order.paymentMethod), tx)
+    await this.outbox.append(tenantId, buildOrderPaidEvent(ctx, paymentMethod), tx)
   }
 }
 
