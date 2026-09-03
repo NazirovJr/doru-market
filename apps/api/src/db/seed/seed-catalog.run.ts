@@ -234,6 +234,33 @@ export const _RESET_MARKER = 'EP-04/DTJ-098'
  *   4. Закрывает пул в `finally`.
  *   5. Возвращает код 0 при успехе, 1 при ошибке.
  */
+/**
+ * DTJ-103 (EP-07): сидит 5 ключей блока аналогов (`catalog.analogs.*`) × 3 локали в
+ * `i18n_overrides` — той же командой `pnpm db:seed` (правило 2 AGENTS.md, «написал
+ * npm-скрипт → подключи и запусти», не отдельная незапускаемая команда). Вынесено в
+ * отдельную функцию (не инлайн в `main()`), чтобы не раздувать `main()` за C1
+ * (`02-CLEAN-ARCHITECTURE-AND-CODE.md`, ≤40 строк/метод).
+ *
+ * Отдельный pg.Pool/drizzle: `DrizzleSeedCatalogPort` не отдаёт наружу свой `db`
+ * (закрытый конструктор порта, `seed-catalog-drizzle-port.ts`) — проще открыть
+ * короткоживущее второе соединение на тот же `DATABASE_URL`, чем менять чужой
+ * контракт порта ради одного дополнительного вызова.
+ */
+async function seedI18nOverridesCatalogViaCli(dbUrl: string): Promise<number> {
+  const { drizzle } = await import('drizzle-orm/node-postgres')
+  const { Pool } = await import('pg')
+  const { seedI18nOverridesCatalog } = await import('./i18n-overrides-catalog.seed.js')
+
+  const pool = new Pool({ connectionString: dbUrl })
+  try {
+    const db = drizzle(pool)
+    const result = await seedI18nOverridesCatalog(db)
+    return result.upserted
+  } finally {
+    await pool.end().catch(() => undefined)
+  }
+}
+
 async function main(): Promise<void> {
   // Защита от двойного запуска при импорте из тестов.
   if (process.env.DORUTJ_SEED_SKIP_MAIN === '1') return
@@ -258,6 +285,9 @@ async function main(): Promise<void> {
     console.log(
       `[db:seed] OK — inserted ${String(result.medicinesInserted)} medicines (idempotent re-runs keep count stable)`,
     )
+    const i18nUpserted = await seedI18nOverridesCatalogViaCli(dbUrl)
+    // eslint-disable-next-line no-console -- CLI-скрипт.
+    console.log(`[db:seed] OK — upserted ${String(i18nUpserted)} catalog.analogs.* i18n_overrides rows (DTJ-103)`)
     process.exitCode = 0
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)

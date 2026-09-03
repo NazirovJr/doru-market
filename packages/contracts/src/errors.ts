@@ -64,8 +64,13 @@ export enum ErrorCode {
   OTP_REQUEST_RATE_LIMITED = 'OTP_REQUEST_RATE_LIMITED',
   RATE_LIMITED = 'RATE_LIMITED',
 
-  // ---- Сервер (500/502/503) ----
+  // ---- Сервер (500/501/502/503) ----
   INTERNAL_ERROR = 'INTERNAL_ERROR',
+  // NOT_IMPLEMENTED — DTJ-233 (EP-09): заглушка GET /orders/:id/payment-status до готовности
+  // EP-10 (DTJ-242) — маршрут существует с первого дня для фронтенда (DTJ-235), но реальных
+  // данных ещё нет. Новый код в конец каталога (D-27), тот же класс добавления, что
+  // PRICE_OR_STOCK_CHANGED/NO_ORDERABLE_ITEMS (D-EP09-9).
+  NOT_IMPLEMENTED = 'NOT_IMPLEMENTED',
   BAD_GATEWAY = 'BAD_GATEWAY',
   SERVICE_UNAVAILABLE = 'SERVICE_UNAVAILABLE',
 
@@ -73,6 +78,9 @@ export enum ErrorCode {
   INVALID_PHONE_FORMAT = 'INVALID_PHONE_FORMAT',
   INVALID_COORDINATES = 'INVALID_COORDINATES',
   ORDER_TOTAL_MISMATCH = 'ORDER_TOTAL_MISMATCH',
+  // ORDER_PHARMACY_MISMATCH — DTJ-221 (EP-09), SRS-DOM-002: defensive-проверка «все позиции
+  // заказа одной аптеки», ошибка в конец каталога (D-27), не найдена среди уже существующих кодов.
+  ORDER_PHARMACY_MISMATCH = 'ORDER_PHARMACY_MISMATCH',
   INVALID_RESTOCK_QUANTITY = 'INVALID_RESTOCK_QUANTITY',
   INVALID_PRICE = 'INVALID_PRICE',
   MISSING_RESOLUTION_REASON = 'MISSING_RESOLUTION_REASON',
@@ -84,6 +92,17 @@ export enum ErrorCode {
   RETURN_ALREADY_ACTIVE = 'RETURN_ALREADY_ACTIVE',
   DISPUTE_ALREADY_ACTIVE = 'DISPUTE_ALREADY_ACTIVE',
   LEDGER_IMBALANCE = 'LEDGER_IMBALANCE',
+  // PRICE_OR_STOCK_CHANGED — DTJ-231 (EP-09), SRS-ORD-023: цена/остаток на момент checkout
+  // разошлись с `expectedTotalDiram`, который клиент подтвердил на экране — эта ГРУППА не
+  // оформляется, живёт внутри `failedGroups`, не как транспортный код всего ответа
+  // (`21-module-orders-payments-escrow.md` §2.2). Новый код в конец каталога (D-27), тот же
+  // класс добавления, что NO_ORDERABLE_ITEMS/PAYMENT_METHOD_NOT_ENABLED (D-EP09-9).
+  PRICE_OR_STOCK_CHANGED = 'PRICE_OR_STOCK_CHANGED',
+  // ORDER_NOT_RETRYABLE — DTJ-241 (EP-10), SRS-PAY-041: POST /orders/:id/retry-payment на
+  // заказе, который НЕ в pending_payment без payment_transaction_id (уже оплачен/отменён/
+  // наличный) — новый код в конец каталога (D-27), тот же класс добавления, что
+  // PRICE_OR_STOCK_CHANGED (D-EP09-9).
+  ORDER_NOT_RETRYABLE = 'ORDER_NOT_RETRYABLE',
 
   // ---- Доменные: ForbiddenTransitionError (409) ----
   INVALID_STATE_TRANSITION = 'INVALID_STATE_TRANSITION',
@@ -98,6 +117,14 @@ export enum ErrorCode {
   RESTOCK_CONDITIONS_NOT_MET = 'RESTOCK_CONDITIONS_NOT_MET',
   CONTROLLED_SUBSTANCE_MUST_BE_DESTROYED = 'CONTROLLED_SUBSTANCE_MUST_BE_DESTROYED',
   PARENT_CHAIN_NOT_ACTIVE = 'PARENT_CHAIN_NOT_ACTIVE',
+  // NO_ORDERABLE_ITEMS — DTJ-227 (EP-09), SRS-ORD-016: после исключения неактивных
+  // аптек/непокрытых Rx-позиций/провалов резерва не осталось ни одной группы для оформления —
+  // ошибка в конец каталога (D-27), «новый код этого документа» по 21-module-orders-payments-escrow.md.
+  NO_ORDERABLE_ITEMS = 'NO_ORDERABLE_ITEMS',
+  // PAYMENT_METHOD_NOT_ENABLED — DTJ-229 (EP-09), SRS-ORD-025 п.2: `paymentMethod` не входит в
+  // `tenantSettings.enabledPaymentMethods` — «новый код» по 21-module-orders-payments-escrow.md:336,
+  // тот же класс добавления, что NO_ORDERABLE_ITEMS/ORDER_PHARMACY_MISMATCH (D-EP09-9).
+  PAYMENT_METHOD_NOT_ENABLED = 'PAYMENT_METHOD_NOT_ENABLED',
   PHARMACY_SUSPENDED = 'PHARMACY_SUSPENDED', // 403
   CASH_AMOUNT_MISMATCH = 'CASH_AMOUNT_MISMATCH',
   COURIER_TENANT_MISMATCH = 'COURIER_TENANT_MISMATCH', // 403
@@ -120,9 +147,15 @@ export enum ErrorCode {
   PAYMENT_PROVIDER_UNAVAILABLE = 'PAYMENT_PROVIDER_UNAVAILABLE',
   OCR_PROVIDER_UNAVAILABLE = 'OCR_PROVIDER_UNAVAILABLE',
   SMS_PROVIDER_UNAVAILABLE = 'SMS_PROVIDER_UNAVAILABLE',
+
+  // WEBHOOK_PROVIDER_UNKNOWN — DTJ-242 (EP-10), SRS-PAY-019: `X-Payment-Provider` заголовок
+  // `POST /api/v1/payments/webhook` не зарегистрирован ни одним `BankWebhookVerifierPort`-
+  // адаптером — тело НЕ обрабатывается вовсе (ни HMAC, ни JSON.parse). Новый код в конец
+  // каталога (D-27), тот же класс добавления, что ORDER_NOT_RETRYABLE (D-EP09-9).
+  WEBHOOK_PROVIDER_UNKNOWN = 'WEBHOOK_PROVIDER_UNKNOWN',
 }
 
-/** HTTP-статус для каждого `ErrorCode` (`TransportExceptionFilter`/`DomainExceptionFilter`, DTJ-018). */
+/** HTTP-статус для каждого `ErrorCode` (`AllExceptionsFilter`, DTJ-018 — единственный фильтр приложения). */
 export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   [ErrorCode.VALIDATION_ERROR]: 400,
   [ErrorCode.IDEMPOTENCY_KEY_REQUIRED]: 400,
@@ -166,12 +199,14 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   [ErrorCode.RATE_LIMITED]: 429,
 
   [ErrorCode.INTERNAL_ERROR]: 500,
+  [ErrorCode.NOT_IMPLEMENTED]: 501,
   [ErrorCode.BAD_GATEWAY]: 502,
   [ErrorCode.SERVICE_UNAVAILABLE]: 503,
 
   [ErrorCode.INVALID_PHONE_FORMAT]: 400,
   [ErrorCode.INVALID_COORDINATES]: 400,
   [ErrorCode.ORDER_TOTAL_MISMATCH]: 400,
+  [ErrorCode.ORDER_PHARMACY_MISMATCH]: 400,
   [ErrorCode.INVALID_RESTOCK_QUANTITY]: 400,
   [ErrorCode.INVALID_PRICE]: 400,
   [ErrorCode.MISSING_RESOLUTION_REASON]: 400,
@@ -182,6 +217,8 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   [ErrorCode.RETURN_ALREADY_ACTIVE]: 409,
   [ErrorCode.DISPUTE_ALREADY_ACTIVE]: 409,
   [ErrorCode.LEDGER_IMBALANCE]: 409,
+  [ErrorCode.PRICE_OR_STOCK_CHANGED]: 409,
+  [ErrorCode.ORDER_NOT_RETRYABLE]: 409,
 
   [ErrorCode.INVALID_STATE_TRANSITION]: 409,
 
@@ -194,6 +231,8 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   [ErrorCode.RESTOCK_CONDITIONS_NOT_MET]: 422,
   [ErrorCode.CONTROLLED_SUBSTANCE_MUST_BE_DESTROYED]: 422,
   [ErrorCode.PARENT_CHAIN_NOT_ACTIVE]: 422,
+  [ErrorCode.NO_ORDERABLE_ITEMS]: 422,
+  [ErrorCode.PAYMENT_METHOD_NOT_ENABLED]: 422,
   [ErrorCode.PHARMACY_SUSPENDED]: 403,
   [ErrorCode.CASH_AMOUNT_MISMATCH]: 422,
   [ErrorCode.COURIER_TENANT_MISMATCH]: 403,
@@ -213,4 +252,6 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   [ErrorCode.PAYMENT_PROVIDER_UNAVAILABLE]: 503,
   [ErrorCode.OCR_PROVIDER_UNAVAILABLE]: 503,
   [ErrorCode.SMS_PROVIDER_UNAVAILABLE]: 503,
+
+  [ErrorCode.WEBHOOK_PROVIDER_UNKNOWN]: 400,
 }

@@ -14,6 +14,23 @@ describe('validateWorkerEnv', () => {
     expect(result.DATABASE_URL).toBe(VALID_ENV.DATABASE_URL)
     expect(result.WORKER_HEALTH_PORT).toBe(3001)
     expect(result.LOG_LEVEL).toBe('info')
+    expect(result.API_INTERNAL_URL).toBe('http://localhost:3000')
+    expect(result.MOCK_BANK_WEBHOOK_SECRET).toBeUndefined()
+  })
+
+  it('DTJ-238: уважает явно заданные API_INTERNAL_URL/MOCK_BANK_WEBHOOK_SECRET', () => {
+    const result = validateWorkerEnv({
+      ...VALID_ENV,
+      API_INTERNAL_URL: 'http://api:3000',
+      MOCK_BANK_WEBHOOK_SECRET: 'test-secret',
+    })
+
+    expect(result.API_INTERNAL_URL).toBe('http://api:3000')
+    expect(result.MOCK_BANK_WEBHOOK_SECRET).toBe('test-secret')
+  })
+
+  it('DTJ-238: бросает на невалидный API_INTERNAL_URL', () => {
+    expect(() => validateWorkerEnv({ ...VALID_ENV, API_INTERNAL_URL: 'not-a-url' })).toThrow(/API_INTERNAL_URL/)
   })
 
   it('уважает явно заданные WORKER_HEALTH_PORT и LOG_LEVEL', () => {

@@ -3,3 +3,4 @@ export {}
 
 export type { Locale, TranslateFunction, TranslationParams } from './use-t.js'
 export { useT } from './use-t.js'
+export { toIntlLocale } from './intl-locale.js'

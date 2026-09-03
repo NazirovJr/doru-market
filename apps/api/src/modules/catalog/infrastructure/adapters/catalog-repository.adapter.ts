@@ -12,8 +12,9 @@
  *      дерева в памяти через `CategoryTreeService.buildTree` (≤200 узлов
  *      ожидаемо, SRS-CAT-004).
  *
- *   3. `findSubstancesByMedicineIds` — ОДИН SELECT с JOIN на `medicine_substances`,
- *      группировка результатов в JS по `medicineId`.
+ *   3. `findSubstancesByMedicineIds` — ОДИН SELECT с `INNER JOIN medicine_substances ⋈
+ *      substances` (за названием вещества, `innName` — правка DTJ-234, было `''`
+ *      хардкодом), группировка результатов в JS по `medicineId`.
  *
  *   4. `save` — `INSERT ... ON CONFLICT (id) DO UPDATE` для `medicines` +
  *      DELETE/INSERT для `medicine_substances` (композитный PK не имеет
@@ -42,11 +43,12 @@ import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.pr
 import { categories } from '@/db/schema/categories.js'
 import { medicines } from '@/db/schema/medicines.js'
 import { medicineSubstances } from '@/db/schema/medicine-substances.js'
+import { substances } from '@/db/schema/substances.js'
 import { CategoryTreeService } from '@/modules/catalog/domain/services/category-tree.service.js'
 import { Medicine } from '@/modules/catalog/domain/medicine.entity.js'
 import type { CategoryNode, MedicineRecord, SubstanceRef } from '@/modules/catalog/domain/medicine.types.js'
 import { type CatalogRepository } from '@/modules/catalog/application/ports/catalog-repository.port.js'
-import { toDomain, toRecord, type SubstanceRowLike } from '../mappers/medicine.mapper.js'
+import { toDomain, toRecord, type SubstanceNameRowLike, type SubstanceRowLike } from '../mappers/medicine.mapper.js'
 
 @Injectable()
 export class CatalogRepositoryAdapter implements CatalogRepository {
@@ -124,7 +126,7 @@ export class CatalogRepositoryAdapter implements CatalogRepository {
   ): Promise<ReadonlyMap<string, readonly SubstanceRef[]>> {
     if (ids.length === 0) return new Map()
     const uniqueIds = uniqueStringArray(ids)
-    const joins = await this.loadSubstanceJoins(uniqueIds)
+    const joins = await this.loadSubstanceNameJoins(uniqueIds)
     const out = new Map<string, readonly SubstanceRef[]>()
     for (const id of uniqueIds) {
       const list = joins.get(id) ?? []
@@ -133,7 +135,7 @@ export class CatalogRepositoryAdapter implements CatalogRepository {
         list.map(
           (row): SubstanceRef => ({
             substanceId: row.substanceId,
-            innName: '',
+            innName: row.innName,
             strengthValue: toNumberLike(row.strengthValue),
             strengthUnit: row.strengthUnit,
           }),
@@ -240,6 +242,48 @@ export class CatalogRepositoryAdapter implements CatalogRepository {
       const list = out.get(row.medicineId) ?? []
       list.push({
         substanceId: row.substanceId,
+        strengthValue: row.strengthValue,
+        strengthUnit: row.strengthUnit,
+      })
+      out.set(row.medicineId, list)
+    }
+    return out
+  }
+
+  /**
+   * Дефект приёмки DTJ-234 (найден живым интеграционным прогоном исполнителем EP-09,
+   * см. отчёт сдачи): `findSubstancesByMedicineIds` возвращал `innName: ''` — JOIN был
+   * ТОЛЬКО на `medicine_substances`, без JOIN на `substances` за самим названием.
+   * `CatalogFacade.getSubstances()` поэтому никогда не отдавал реальное название вещества.
+   *
+   * Отдельный метод, не расширение `loadSubstanceJoins` — тот путь обслуживает
+   * `findMedicineById`/`findMedicinesByIds` (реконструкция `Medicine`, которой имя вещества
+   * не нужно, см. `MedicineSubstanceRecord`), лишний JOIN туда добавлять незачем.
+   * `INNER JOIN` безопасен: `medicine_substances.substance_id` несёт FK на `substances(id)`
+   * (`11-database-schema.md`), потерять валидную строку он не может.
+   */
+  private async loadSubstanceNameJoins(
+    medicineIds: readonly string[],
+  ): Promise<ReadonlyMap<string, readonly SubstanceNameRowLike[]>> {
+    if (medicineIds.length === 0) return new Map()
+    const rows = await this.db
+      .select({
+        medicineId: medicineSubstances.medicineId,
+        substanceId: medicineSubstances.substanceId,
+        innName: substances.innName,
+        strengthValue: medicineSubstances.strengthValue,
+        strengthUnit: medicineSubstances.strengthUnit,
+      })
+      .from(medicineSubstances)
+      .innerJoin(substances, eq(medicineSubstances.substanceId, substances.id))
+      .where(inArray(medicineSubstances.medicineId, medicineIds as string[]))
+
+    const out = new Map<string, SubstanceNameRowLike[]>()
+    for (const row of rows) {
+      const list = out.get(row.medicineId) ?? []
+      list.push({
+        substanceId: row.substanceId,
+        innName: row.innName,
         strengthValue: row.strengthValue,
         strengthUnit: row.strengthUnit,
       })

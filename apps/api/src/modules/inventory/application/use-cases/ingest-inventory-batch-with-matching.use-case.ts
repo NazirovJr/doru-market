@@ -9,9 +9,9 @@
  * entity-персистенция (DTJ-143).
  *
  * **Алгоритм (шаги 1-6, по тикету):**
- *   1. Загрузить `InventorySyncBatch` по `cmd.batchId`, `markProcessing()`.
- *   2. Разделить `cmd.rows` на `resolved: true` (готовы к применению) и
+ *   1. Разделить `cmd.rows` на `resolved: true` (готовы к применению) и
  *      `resolved: false` (матчинг через `CompositeInventoryMatcherService`).
+ *   2. Загрузить `InventorySyncBatch` по `cmd.batchId`, `markProcessing()`.
  *   3. Для каждой резолвленной строки — найти/создать `PharmacyInventory`
  *      (батчево), применить `applyDelta`. Ошибки валидации → построчные
  *      `inventory_sync_errors(error_code)`.
@@ -20,7 +20,37 @@
  *   6. `markCompletedFullSuccess()` (0 ошибок) или
  *      `markCompletedPartialSuccess(accepted, rejected)`.
  *
- * Всё в одной `unitOfWork.run(...)` (правило `02` §3 п.3).
+ * **Границы `unitOfWork.run(...)` (волна 6, исправлено — было self-deadlock
+ * пула соединений, найдено при исправлении ТОЧНО ТАКОГО ЖЕ дефекта в
+ * checkout DTJ-231/233, подтверждено аудитом).** Раньше ВЕСЬ execute() (шаги
+ * 1-6 целиком, включая матчинг) шёл `this.uow.run(async () => {...})` —
+ * параметр транзакции даже не был назван, ни один из ~7 вызовов репозиториев
+ * внутри не получал `tx`, JSDoc при этом утверждал «Всё в одной
+ * unitOfWork.run(...)» — ложная гарантия (откат внешней транзакции НЕ
+ * откатывал ничего из перечисленного, каждый вызов шёл своим соединением
+ * пула). Хуже того: `matchUnresolvedRows` (шаг 1) вызывает
+ * `CompositeInventoryMatcherService`, который ходит в `CatalogFacade` —
+ * МЕЖМОДУЛЬНЫЙ порт (`catalog`), тянуть его в транзакцию `inventory`
+ * архитектурно неверно (та же причина, что в `checkout.use-case.ts::processGroup`,
+ * см. её JSDoc за полным разбором). При конкурентной обработке нескольких
+ * аптек ≥ `DEFAULT_POOL_MAX` (`infrastructure/database/drizzle.provider.ts`)
+ * это тот же self-deadlock: `tx` держит соединение, `CatalogFacade`
+ * (и остальные вызовы без `tx`) просят у ТОГО ЖЕ пула ВТОРОЕ — пул исчерпан
+ * навсегда, не «медленно».
+ *
+ * Исправлено ТЕМ ЖЕ приёмом, что checkout: матчинг (шаг 1,
+ * `matchUnresolvedRows` — межмодульный `CatalogFacade` + идемпотентный
+ * upsert-кэш `PharmacySkuMappingRepository`, не требует атомарности с
+ * персистенцией остатков) вынесен ДО `unitOfWork.run`. ВСЁ остальное (шаги
+ * 2-6 — загрузка/лок батча, персистенция остатков, построчные ошибки,
+ * full-sync zero-out, финальный статус батча) — ОДНА `unitOfWork.run(tx =>
+ * ...)`, и КАЖДЫЙ вызов внутри теперь ДЕЙСТВИТЕЛЬНО получает `tx`
+ * (`PharmacyInventoryRepository`/`InventorySyncBatchRepository`/
+ * `FullSyncCompletionPort` — порты расширены опциональным `tx?`, см. их
+ * JSDoc) — атомарность здесь реальна: провал на любом шаге 2-6 откатывает
+ * ВСЕ изменения этой персистентной фазы целиком. Доказано
+ * `ingest-inventory-race-conditions.integration.spec.ts` (rollback-тест +
+ * конкурентный прогон ≥ `DEFAULT_POOL_MAX` без зависаний пула).
  */
 import { Inject, Injectable } from '@nestjs/common'
 import { CLOCK, type Clock } from '@/shared-kernel/application/ports/clock.port.js'
@@ -29,7 +59,7 @@ import { CLOCK, type Clock } from '@/shared-kernel/application/ports/clock.port.
 // внутренности чужого модуля напрямую. Полный перенос порта в
 // `shared-kernel/` (он не auth-специфичен) остаётся будущим улучшением,
 // не блокером: фасад уже соблюдает границу контекста.
-import { UNIT_OF_WORK, type UnitOfWorkPort } from '@/modules/auth/index.js'
+import { UNIT_OF_WORK, type UnitOfWorkPort, type UnitOfWorkTx } from '@/modules/auth/index.js'
 import { InventorySyncBatch } from '../../domain/inventory-sync-batch.entity.js'
 import type { PharmacyInventory } from '../../domain/pharmacy-inventory.entity.js'
 import {
@@ -98,30 +128,36 @@ export class IngestInventoryBatchWithMatchingUseCase {
   ) {}
 
   async execute(cmd: IngestInventoryBatchCommand): Promise<IngestInventoryBatchResult> {
-    return this.uow.run(async () => {
-      const batch = await this.loadBatchOrThrow(cmd.batchId)
+    // ШАГ 1 — ВНЕ транзакции (см. JSDoc класса, «Границы unitOfWork.run»):
+    // матчинг ходит в межмодульный `CatalogFacade` и не требует атомарности
+    // с персистенцией остатков ниже.
+    const errors: InventorySyncRowError[] = []
+    const { resolvedRows, fuzzyRows } = this.splitRows(cmd.rows)
+    const matchedFuzzyRows = await this.matchUnresolvedRows({
+      batchId: cmd.batchId,
+      pharmacyId: cmd.pharmacyId,
+      allRows: cmd.rows,
+      fuzzyRows,
+      errors,
+    })
+    const allResolved = [...resolvedRows, ...matchedFuzzyRows]
+    // ШАГИ 2-6 — ОДНА транзакция: загрузка/лок батча, персистенция остатков,
+    // построчные ошибки, full-sync zero-out, финальный статус — атомарно.
+    return this.uow.run(async (tx) => {
+      const batch = await this.loadBatchOrThrow(cmd.batchId, tx)
       batch.markProcessing()
-      const errors: InventorySyncRowError[] = []
-      const { resolvedRows, fuzzyRows } = this.splitRows(cmd.rows)
-      const matchedFuzzyRows = await this.matchUnresolvedRows({
-        batchId: cmd.batchId,
-        pharmacyId: cmd.pharmacyId,
-        allRows: cmd.rows,
-        fuzzyRows,
-        errors,
-      })
-      const allResolved = [...resolvedRows, ...matchedFuzzyRows]
       const acceptedRows = await this.applyResolvedRows({
         batchId: cmd.batchId,
         pharmacyId: cmd.pharmacyId,
         rows: allResolved,
         errors,
+        tx,
       })
       const rejectedRows = errors.length
-      await this.recordRowErrors(errors)
-      await this.handleFullSyncCompletion(batch, cmd)
+      await this.recordRowErrors(errors, tx)
+      await this.handleFullSyncCompletion(batch, cmd, tx)
       this.finalizeBatchStatus(batch, acceptedRows, rejectedRows)
-      await this.syncBatchRepository.save(batch)
+      await this.syncBatchRepository.save(batch, tx)
       return {
         batchId: batch.id,
         status: rejectedRows === 0 ? 'completed_full_success' : 'completed_partial_success',
@@ -131,8 +167,8 @@ export class IngestInventoryBatchWithMatchingUseCase {
     })
   }
 
-  private async loadBatchOrThrow(batchId: string): Promise<InventorySyncBatch> {
-    const batch = await this.syncBatchRepository.findById(batchId)
+  private async loadBatchOrThrow(batchId: string, tx: UnitOfWorkTx): Promise<InventorySyncBatch> {
+    const batch = await this.syncBatchRepository.findById(batchId, tx)
     if (batch === null) {
       throw new Error(`InventorySyncBatch ${batchId} not found`)
     }
@@ -254,8 +290,9 @@ export class IngestInventoryBatchWithMatchingUseCase {
     pharmacyId: string
     rows: readonly IngestRowInput[]
     errors: InventorySyncRowError[]
+    tx: UnitOfWorkTx
   }): Promise<number> {
-    const { batchId, pharmacyId, rows, errors } = input
+    const { batchId, pharmacyId, rows, errors, tx } = input
     if (rows.length === 0) return 0
     const medicineIds = Array.from(
       new Set(rows.map((row) => row.resolvedMedicineId).filter((id): id is string => id !== null)),
@@ -263,7 +300,7 @@ export class IngestInventoryBatchWithMatchingUseCase {
     const aggregatesByMedicineId = await this.inventoryRepository.findOrCreateManyByMedicineIds({
       pharmacyId,
       medicineIds,
-    })
+    }, tx)
     const now = this.clock.now()
     let accepted = 0
     for (const row of rows) {
@@ -271,7 +308,7 @@ export class IngestInventoryBatchWithMatchingUseCase {
         accepted += 1
       }
     }
-    await this.inventoryRepository.saveMany(Array.from(aggregatesByMedicineId.values()))
+    await this.inventoryRepository.saveMany(Array.from(aggregatesByMedicineId.values()), tx)
     return accepted
   }
 
@@ -313,23 +350,25 @@ export class IngestInventoryBatchWithMatchingUseCase {
     return false
   }
 
-  private async recordRowErrors(errors: readonly InventorySyncRowError[]): Promise<void> {
+  private async recordRowErrors(errors: readonly InventorySyncRowError[], tx: UnitOfWorkTx): Promise<void> {
     if (errors.length === 0) return
-    await this.syncBatchRepository.appendErrors(errors)
+    await this.syncBatchRepository.appendErrors(errors, tx)
   }
 
   private async handleFullSyncCompletion(
     batch: InventorySyncBatch,
     cmd: IngestInventoryBatchCommand,
+    tx: UnitOfWorkTx,
   ): Promise<void> {
     if (cmd.syncType !== 'full') return
     if (!cmd.isLastPage) return
     if (cmd.fullSyncSessionId === null) return
-    await this.fullSyncCompletion.zeroOutMissing(
-      batch.pharmacyId,
-      cmd.fullSyncSessionId,
-      batch.receivedAt,
-    )
+    await this.fullSyncCompletion.zeroOutMissing({
+      pharmacyId: batch.pharmacyId,
+      fullSyncSessionId: cmd.fullSyncSessionId,
+      fullSyncTimestamp: batch.receivedAt,
+      tx,
+    })
   }
 
   private finalizeBatchStatus(

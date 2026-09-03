@@ -10,7 +10,7 @@
  *   4. Ожидается `403 CROSS_TENANT_ACCESS_DENIED` — cross-tenant доступ блокируется.
  *
  * Это integration-тест: реальный HTTP → AuthGuard (с cross-tenant check)
- * → use case → InMemory-репозитории. Никаких моков бизнес-логики.
+ * → use case → Drizzle-репозитории (реальный Postgres, волна 5 блок A). Никаких моков бизнес-логики.
  *
  * @see docs/STATE-AND-RESUME-POINT.md §11.4 задача 2.4
  * @see docs/CLAUDE-CTO.md устав §3.4 «Тест на утечку между тенантами — обязателен»
@@ -63,7 +63,7 @@ describe('auth.cross-tenant-leakage (устав §3.4, волна 3.5 задач
   })
 
   /**
-   * Создаёт пользователя напрямую в InMemory репозитории и возвращает JWT.
+   * Создаёт пользователя напрямую через `USERS_REPOSITORY` (Drizzle, реальный Postgres) и возвращает JWT.
    * Имитирует пользователя, который уже прошёл OTP-верификацию.
    */
   async function seedUserAndGetToken(
@@ -150,7 +150,7 @@ describe('auth.cross-tenant-leakage (устав §3.4, волна 3.5 задач
     // - AuthGuard сравнивает claims.tenantId (TENANT_B) !== resolvedTenantId (TENANT_A)
     // - → 403 CROSS_TENANT_ACCESS_DENIED
     //
-    // В текущем InMemory тесте TenantResolutionMiddleware НЕ работает (нет реального
+    // В этом изолированном auth-harness TenantResolutionMiddleware НЕ подключён (нет реального
     // поддомена/хедера). Поэтому мы тестируем cross-tenant check, МОКАЯ TenantContext
     // через TenantContext.run с tenantId = TENANT_A, но токен от TENANT_B.
 

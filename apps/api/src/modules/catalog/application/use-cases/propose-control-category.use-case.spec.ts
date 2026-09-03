@@ -7,7 +7,11 @@
  *   2. Несуществующий `medicineId` → `NotFoundError` (`ErrorCode.NOT_FOUND`, маппится в 404).
  *   3. Предложенная категория равна текущей → `ControlCategoryChangeRequiresModerationError`.
  *
- * Репозиторий и UnitOfWork замокированы in-memory — unit-тест без БД.
+ * Репозиторий замокирован in-memory — unit-тест без БД. `UnitOfWork` (волна 6, найдено аудитом
+ * того же дефекта, что чинили в checkout DTJ-231/233) БОЛЬШЕ НЕ ИНЖЕКТИРУЕТСЯ — прежняя
+ * `unitOfWork.run(async (_tx) => {...})` была декоративной (`_tx` не использовался ни одним
+ * вызовом), убрана целиком (см. JSDoc use case'а). Тест «5. UnitOfWork.run вызывается» удалён —
+ * он проверял поведение, которое теперь намеренно отсутствует.
  *
  * @see docs/tickets/ep03-catalog-analogs/DTJ-096.md
  */
@@ -17,7 +21,6 @@ import { ControlCategory } from '@/modules/catalog/domain/medicine.enums.js'
 import { DosageUnit } from '@dorutj/domain-kernel'
 import type { MedicineRecord } from '@/modules/catalog/domain/medicine.types.js'
 import type { CatalogRepository } from '@/modules/catalog/application/ports/catalog-repository.port.js'
-import type { UnitOfWorkPort } from '@/modules/auth/application/ports/unit-of-work.port.js'
 import { ProposeControlCategoryUseCase } from '@/modules/catalog/application/use-cases/propose-control-category.use-case.js'
 import { ControlCategoryChangeRequiresModerationError } from '@/modules/catalog/domain/errors/control-category-change-requires-moderation.error.js'
 
@@ -47,13 +50,6 @@ class FakeCatalogRepository implements CatalogRepository {
 
   save(): Promise<void> {
     return Promise.resolve()
-  }
-}
-
-/** Минимальный in-memory `UnitOfWorkPort` для теста — выполняет колбэк синхронно. */
-class FakeUnitOfWork implements UnitOfWorkPort {
-  async run<T>(callback: (tx: never) => Promise<T>): Promise<T> {
-    return callback(undefined as never)
   }
 }
 
@@ -88,21 +84,17 @@ function makeRecord(overrides: Partial<MedicineRecord> = {}): MedicineRecord {
   return { ...base, ...overrides }
 }
 
-function makeUseCase(
-  repo: FakeCatalogRepository,
-  uow: FakeUnitOfWork,
-): ProposeControlCategoryUseCase {
-  return new ProposeControlCategoryUseCase(repo, uow)
+function makeUseCase(repo: FakeCatalogRepository): ProposeControlCategoryUseCase {
+  return new ProposeControlCategoryUseCase(repo)
 }
 
 describe('ProposeControlCategoryUseCase (DTJ-096, SRS-DOM-014, SRS-CAT-064)', () => {
   it('1. успешное предложение смены категории: препарат найден, категория отличается → возвращается событие', async () => {
     const repo = new FakeCatalogRepository()
-    const uow = new FakeUnitOfWork()
     const record = makeRecord({ controlCategory: ControlCategory.none })
     repo.setRecord(record)
 
-    const useCase = makeUseCase(repo, uow)
+    const useCase = makeUseCase(repo)
 
     const result = await useCase.execute({
       medicineId: record.id,
@@ -121,8 +113,7 @@ describe('ProposeControlCategoryUseCase (DTJ-096, SRS-DOM-014, SRS-CAT-064)', ()
 
   it('2. несуществующий medicineId → NotFoundError (404)', async () => {
     const repo = new FakeCatalogRepository()
-    const uow = new FakeUnitOfWork()
-    const useCase = makeUseCase(repo, uow)
+    const useCase = makeUseCase(repo)
 
     await expect(
       useCase.execute({
@@ -135,11 +126,10 @@ describe('ProposeControlCategoryUseCase (DTJ-096, SRS-DOM-014, SRS-CAT-064)', ()
 
   it('3. предложенная категория равна текущей → ControlCategoryChangeRequiresModerationError', async () => {
     const repo = new FakeCatalogRepository()
-    const uow = new FakeUnitOfWork()
     const record = makeRecord({ controlCategory: ControlCategory.prescriptionOnly })
     repo.setRecord(record)
 
-    const useCase = makeUseCase(repo, uow)
+    const useCase = makeUseCase(repo)
 
     await expect(
       useCase.execute({
@@ -152,13 +142,12 @@ describe('ProposeControlCategoryUseCase (DTJ-096, SRS-DOM-014, SRS-CAT-064)', ()
 
   it('4. вызывает CatalogRepository.save после успешного предложения', async () => {
     const repo = new FakeCatalogRepository()
-    const uow = new FakeUnitOfWork()
     const record = makeRecord({ controlCategory: ControlCategory.none })
     repo.setRecord(record)
 
     const saveSpy = vi.spyOn(repo, 'save')
 
-    const useCase = makeUseCase(repo, uow)
+    const useCase = makeUseCase(repo)
 
     await useCase.execute({
       medicineId: record.id,
@@ -169,35 +158,15 @@ describe('ProposeControlCategoryUseCase (DTJ-096, SRS-DOM-014, SRS-CAT-064)', ()
     expect(saveSpy).toHaveBeenCalledOnce()
   })
 
-  it('5. UnitOfWork.run вызывается (транзакционность)', async () => {
-    const repo = new FakeCatalogRepository()
-    const uow = new FakeUnitOfWork()
-    const record = makeRecord({ controlCategory: ControlCategory.none })
-    repo.setRecord(record)
-
-    const runSpy = vi.spyOn(uow, 'run')
-
-    const useCase = makeUseCase(repo, uow)
-
-    await useCase.execute({
-      medicineId: record.id,
-      proposedCategory: ControlCategory.prescriptionOnly,
-      actorId: 'actor-123',
-    })
-
-    expect(runSpy).toHaveBeenCalledOnce()
-  })
-
   it('6. можно предложить potent (требует isPrescriptionRequired=true)', async () => {
     const repo = new FakeCatalogRepository()
-    const uow = new FakeUnitOfWork()
     const record = makeRecord({
       controlCategory: ControlCategory.none,
       isPrescriptionRequired: true,
     })
     repo.setRecord(record)
 
-    const useCase = makeUseCase(repo, uow)
+    const useCase = makeUseCase(repo)
 
     const result = await useCase.execute({
       medicineId: record.id,
@@ -210,14 +179,13 @@ describe('ProposeControlCategoryUseCase (DTJ-096, SRS-DOM-014, SRS-CAT-064)', ()
 
   it('7. можно предложить psychotropic (требует isPrescriptionRequired=true)', async () => {
     const repo = new FakeCatalogRepository()
-    const uow = new FakeUnitOfWork()
     const record = makeRecord({
       controlCategory: ControlCategory.none,
       isPrescriptionRequired: true,
     })
     repo.setRecord(record)
 
-    const useCase = makeUseCase(repo, uow)
+    const useCase = makeUseCase(repo)
 
     const result = await useCase.execute({
       medicineId: record.id,
@@ -230,14 +198,13 @@ describe('ProposeControlCategoryUseCase (DTJ-096, SRS-DOM-014, SRS-CAT-064)', ()
 
   it('8. можно предложить narcotic (требует isPrescriptionRequired=true)', async () => {
     const repo = new FakeCatalogRepository()
-    const uow = new FakeUnitOfWork()
     const record = makeRecord({
       controlCategory: ControlCategory.none,
       isPrescriptionRequired: true,
     })
     repo.setRecord(record)
 
-    const useCase = makeUseCase(repo, uow)
+    const useCase = makeUseCase(repo)
 
     const result = await useCase.execute({
       medicineId: record.id,

@@ -12,6 +12,9 @@
  */
 import type { InventoryBatchUpsertRow } from '../../domain/value-objects/inventory-batch-upsert-row.vo.js'
 import type { PharmacyInventory } from '../../domain/pharmacy-inventory.entity.js'
+// `UnitOfWorkTx` — через публичный фасад модуля `auth` (D-27, `no-cross-module-deep-import`):
+// inventory не имеет собственного UoW-порта, использует чужой через фасад (см. use case JSDoc).
+import type { UnitOfWorkTx } from '@/modules/auth/index.js'
 
 export const PHARMACY_INVENTORY_REPOSITORY = Symbol.for('@dorutj/inventory/pharmacy-inventory-repository')
 
@@ -39,16 +42,23 @@ export interface PharmacyInventoryRepository {
    * аптеке. Отсутствующие — создаются в `queued`-статусе (без лотов).
    * Возвращает `Map<medicineId, aggregate>`, ВСЕ агрегаты — мутабельные
    * копии, изменения сохраняются через `saveMany`.
+   *
+   * `tx?` (волна 6, self-deadlock пула соединений, тот же дефект, что чинили
+   * в checkout DTJ-231/233): `IngestInventoryBatchWithMatchingUseCase.execute`
+   * вызывает этот метод ВНУТРИ `uow.run(tx => ...)` — без `tx` метод просил
+   * бы у пула ВТОРОЕ соединение поверх уже удержанного, при конкурентности
+   * ≥ размера пула тупик навсегда (см. JSDoc use case'а).
    */
   findOrCreateManyByMedicineIds(input: {
     readonly pharmacyId: string
     readonly medicineIds: readonly string[]
-  }): Promise<ReadonlyMap<string, PharmacyInventory>>
+  }, tx?: UnitOfWorkTx): Promise<ReadonlyMap<string, PharmacyInventory>>
 
   /**
    * `saveMany` (DTJ-148/154) — set-based `UPDATE`/`INSERT` для всех изменённых
    * агрегатов. Вызывающий код накопил deltas через `aggregate.applyDelta(...)`
-   * и теперь персистирует их одной транзакцией.
+   * и теперь персистирует их одной транзакцией. `tx?` — см. JSDoc
+   * `findOrCreateManyByMedicineIds` выше, тот же self-deadlock-риск.
    */
-  saveMany(aggregates: readonly PharmacyInventory[]): Promise<void>
+  saveMany(aggregates: readonly PharmacyInventory[], tx?: UnitOfWorkTx): Promise<void>
 }

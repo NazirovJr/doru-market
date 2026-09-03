@@ -3,7 +3,7 @@
  * `force-cancel-incomplete-orders`. `Idempotency-Key` обязателен для
  * force-cancel (SRS-ADM-016), проверяется общим механизмом EP-01.
  */
-import { Body, Controller, Headers, Param, ParseUUIDPipe, Post, UseGuards, UsePipes } from '@nestjs/common'
+import { Body, Controller, Headers, Inject, Param, ParseUUIDPipe, Post, UseGuards, UsePipes } from '@nestjs/common'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
 import {
   ForceCancelOrdersRequestSchema,
@@ -24,9 +24,11 @@ const IDEMPOTENCY_HEADER = 'idempotency-key'
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('super_admin')
 export class PharmacySuspensionController {
+  // Явный @Inject: esbuild (vitest) не эмитит `design:paramtypes` — см. DTJ-001,
+  // тот же приём, что и в `CategoriesController`.
   constructor(
-    private readonly suspendPharmacy: SuspendPharmacyUseCase,
-    private readonly forceCancelIncompleteOrders: ForceCancelIncompleteOrdersUseCase,
+    @Inject(SuspendPharmacyUseCase) private readonly suspendPharmacy: SuspendPharmacyUseCase,
+    @Inject(ForceCancelIncompleteOrdersUseCase) private readonly forceCancelIncompleteOrders: ForceCancelIncompleteOrdersUseCase,
   ) {}
 
   @Post(':id/suspend')

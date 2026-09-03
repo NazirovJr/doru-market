@@ -19,6 +19,7 @@
  */
 import { type UserRole } from '@dorutj/contracts'
 import { type User } from '../../domain/user.js'
+import { type UnitOfWorkTx } from './unit-of-work.port.js'
 
 export const USERS_REPOSITORY = Symbol.for('@dorutj/auth/users-repository')
 
@@ -50,10 +51,18 @@ export interface UpdateUserPatch {
 }
 
 export interface UsersRepository {
-  findByTenantAndPhone(tenantId: string, phoneNumber: string): Promise<User | null>
-  findById(id: string): Promise<User | null>
-  create(input: CreateUserInput): Promise<User>
-  findOrCreateByTenantAndPhone(input: CreateUserInput): Promise<User>
+  /**
+   * `tx?` (волна 6, self-deadlock пула соединений — найдено при сдаче checkout,
+   * DTJ-231/233, тот же класс дефекта воспроизведён и здесь: `VerifyOtpUseCase`/
+   * `TelegramAuthUseCase` открывают `uow.run(tx => ...)`, а вызовы репозитория
+   * внутри шли своим `@Inject(DRIZZLE_DB)` — второе соединение пула поверх уже
+   * удержанного, при конкурентности ≥ размера пула тупик навсегда). Опционален —
+   * вызов вне транзакции (например, guard'ы/`GetMeUseCase`) не обязан его знать.
+   */
+  findByTenantAndPhone(tenantId: string, phoneNumber: string, tx?: UnitOfWorkTx): Promise<User | null>
+  findById(id: string, tx?: UnitOfWorkTx): Promise<User | null>
+  create(input: CreateUserInput, tx?: UnitOfWorkTx): Promise<User>
+  findOrCreateByTenantAndPhone(input: CreateUserInput, tx?: UnitOfWorkTx): Promise<User>
   /**
    * [Task 5, handoff §6] Глобальный поиск пользователя по `phoneNumber`.
    * Используется ТОЛЬКО в `VerifyOtpUseCase` для логина — после verify OTP
@@ -68,6 +77,6 @@ export interface UsersRepository {
    * НЕ использовать вне `VerifyOtpUseCase` — этот порт нарушает
    * tenant-isolation и обязан быть оправдан identity-claim'ом (OTP-код).
    */
-  findActiveByPhone(phoneNumber: string): Promise<User | null>
+  findActiveByPhone(phoneNumber: string, tx?: UnitOfWorkTx): Promise<User | null>
   update(id: string, patch: UpdateUserPatch): Promise<User>
 }

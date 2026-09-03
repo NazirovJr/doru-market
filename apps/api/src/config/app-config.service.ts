@@ -108,4 +108,64 @@ export class AppConfigService {
   get searchQueryTimeoutMs(): number {
     return this.configService.get('SEARCH_QUERY_TIMEOUT_MS', { infer: true })
   }
+
+  /** [DTJ-224, SRS-ORD-005] TTL мягкого Redis-резерва количества в корзине (секунды). */
+  get cartHoldTtlSeconds(): number {
+    return this.configService.get('CART_HOLD_TTL_SECONDS', { infer: true })
+  }
+
+  /** [DTJ-227, SRS-DOM-166] Таймаут `PaymentInvoicePort.createInvoice` (мс), см. `env.schema.ts`. */
+  get paymentProviderTimeoutMs(): number {
+    return this.configService.get('PAYMENT_PROVIDER_TIMEOUT_MS', { infer: true })
+  }
+
+  /** [DTJ-238, SRS-PAY-009] Активный адаптер `PaymentProvider` (`payments.module.ts` DI-ветка). */
+  get paymentDriver(): EnvConfig['PAYMENT_DRIVER'] {
+    return this.configService.get('PAYMENT_DRIVER', { infer: true })
+  }
+
+  /** [DTJ-238, SRS-PAY-005] HMAC-секрет мок-банка. `undefined` — не настроено (см. `env.schema.ts`). */
+  get mockBankWebhookSecret(): string | undefined {
+    return this.configService.get('MOCK_BANK_WEBHOOK_SECRET', { infer: true })
+  }
+
+  /** [DTJ-238, SRS-PAY-004] Задержка (мс) авто-вебхука `MockBankProvider`; `0` — выключен. */
+  get mockBankAutoPayDelayMs(): number {
+    return this.configService.get('MOCK_BANK_AUTO_PAY_DELAY_MS', { infer: true })
+  }
+
+  /** [DTJ-239, SRS-PAY-006] ASSUMPTION base URL Alif Mobi (research 03 §2.1) — `undefined` в R1 (не вызывается). */
+  get alifMobiApiBaseUrl(): string | undefined {
+    return this.configService.get('ALIF_MOBI_API_BASE_URL', { infer: true })
+  }
+
+  /** [DTJ-239, SRS-PAY-006] ASSUMPTION `Token`-заголовок авторизации Alif Mobi (research 03 §2.1). */
+  get alifMobiApiToken(): string | undefined {
+    return this.configService.get('ALIF_MOBI_API_TOKEN', { infer: true })
+  }
+
+  /** [DTJ-239, SRS-PAY-006] ASSUMPTION HMAC-секрет вебхука Alif Mobi (research 03 §2.7), СВОЙ, не `MOCK_BANK_WEBHOOK_SECRET`. */
+  get alifMobiWebhookSecret(): string | undefined {
+    return this.configService.get('ALIF_MOBI_WEBHOOK_SECRET', { infer: true })
+  }
+
+  /** [DTJ-239, SRS-PAY-006] ASSUMPTION base URL DC Next (нет публичного API — смоделировано по Alifpay, research 03 §3). */
+  get dcNextApiBaseUrl(): string | undefined {
+    return this.configService.get('DC_NEXT_API_BASE_URL', { infer: true })
+  }
+
+  /** [DTJ-239, SRS-PAY-006] ASSUMPTION `Token`-заголовок авторизации DC Next. */
+  get dcNextApiToken(): string | undefined {
+    return this.configService.get('DC_NEXT_API_TOKEN', { infer: true })
+  }
+
+  /** [DTJ-239, SRS-PAY-006] ASSUMPTION HMAC-секрет вебхука DC Next, СВОЙ, не `MOCK_BANK_WEBHOOK_SECRET`. */
+  get dcNextWebhookSecret(): string | undefined {
+    return this.configService.get('DC_NEXT_WEBHOOK_SECRET', { infer: true })
+  }
+
+  /** [DTJ-239, SRS-PAY-006/007] ASSUMPTION `maxInvoiceValidityMinutes` Alif Mobi/DC Next (§«Технический контекст» DTJ-239). */
+  get bankInvoiceValidityMinutes(): number {
+    return this.configService.get('BANK_INVOICE_VALIDITY_MINUTES', { infer: true })
+  }
 }

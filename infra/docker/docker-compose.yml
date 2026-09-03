@@ -22,7 +22,13 @@ x-api-env: &api-env
   NODE_ENV: ${NODE_ENV:-development}
   PORT: ${PORT:-3000}
   WORKER_HEALTH_PORT: ${WORKER_HEALTH_PORT:-3001}
-  DATABASE_URL: postgres://dorutj_migrator:${POSTGRES_PASSWORD:-dorutj_dev_only_password}@postgres:5432/dorutj
+  # SRS-DB-024/030 (оба Must): прикладной пул ОБЯЗАН ходить под `app_role` — ролью без
+  # UPDATE/DELETE на `escrow_ledger` (и на `audit_log`, когда он появится с EP-16).
+  # Раньше здесь стоял `dorutj_migrator`, и это сводило гарантию на нет полностью:
+  # он суперпользователь, а суперпользователь ИГНОРИРУЕТ REVOKE. То есть append-only
+  # финансового журнала не действовал бы даже после создания роли и всех грантов.
+  # Роль и права заводит миграция `0031_app_role_privileges.sql`.
+  DATABASE_URL: postgres://app_role:${APP_ROLE_PASSWORD:-dorutj_dev_app_role_password}@postgres:5432/dorutj
   REDIS_URL: redis://:${REDIS_PASSWORD:-dorutj_dev_redis_password}@redis:6379/0
   CORS_STATIC_ORIGINS: ${CORS_STATIC_ORIGINS:-http://localhost}
   STORAGE_DRIVER: ${STORAGE_DRIVER:-s3}
@@ -97,7 +103,13 @@ services:
       target: migrator
     depends_on:
       postgres: { condition: service_healthy }
-    environment: *api-env
+    environment:
+      # ЕДИНСТВЕННЫЙ сервис, которому нужны права DDL, — он и только он ходит под ролью
+      # мигратора. Прикладные `api`/`worker`/`seed` остаются на `app_role` (см. x-api-env):
+      # если пустить их под суперпользователем, REVOKE UPDATE/DELETE на `escrow_ledger`
+      # перестаёт действовать — суперпользователь его игнорирует.
+      <<: *api-env
+      DATABASE_URL: postgres://dorutj_migrator:${POSTGRES_PASSWORD:-dorutj_dev_only_password}@postgres:5432/dorutj
     restart: 'no' # одноразовый init-контейнер, не демон
 
   seed:

@@ -28,6 +28,7 @@ import { Reflector } from '@nestjs/core'
 import { ErrorCode } from '@dorutj/contracts'
 import { PUBLIC_METADATA_KEY } from '@/common/decorators/public.decorator.js'
 import { TenantContext } from '@/common/context/tenant-context.js'
+import { RequestContext } from '@/common/context/request-context.js'
 import { JWT_SIGNER, type JwtClaims, type JwtSignerPort } from '@/modules/auth/application/ports/jwt-signer.port.js'
 
 @Injectable()
@@ -96,6 +97,19 @@ export class AuthGuard implements CanActivate {
 
     // eslint-disable-next-line no-param-reassign -- request — это объект, выданный Fastify, прямая мутация отражения claims (SRS-API-024); переписывать через return невозможно, т.к. контракт canActivate — boolean.
     request.authClaims = claims
+    // foundIssue (DTJ-233, обнаружено живым прогоном): JSDoc файла с момента DTJ-022 обещал
+    // «пробрасывает в RequestContext через DI-плагин», но код никогда не вызывал
+    // `RequestContext.patch(...)` — `RequestContextStore.userId`/`role` оставались `null`
+    // НАВСЕГДА для ЛЮБОГО аутентифицированного запроса. Не замечено ни одним потребителем ДО
+    // этого тикета: первый реальный consumer, читающий `RequestContext.userId` — фолбэк
+    // `IdempotencyInterceptor.readUserId()` (`common/idempotency/idempotency.interceptor.ts`,
+    // используется, когда `req.user` не заполнен — а `req.user` не заполняет вообще никто в
+    // проекте, только `req.authClaims`) — до сих пор `@Idempotent()` НИ РАЗУ не комбинировался с
+    // `AuthGuard` ни в одном контроллере (первый — `CheckoutController`, DTJ-233), поэтому дефект
+    // был недостижим. Живой прогон против `POST /api/v1/orders` с валидным JWT + валидным
+    // `Idempotency-Key` давал `401 UNAUTHENTICATED` («Cannot resolve userId… no auth context»)
+    // ДО этой правки — воспроизведено, не домыслено. Дописывает ровно то, что JSDoc уже обещал.
+    RequestContext.patch({ userId: claims.sub, role: claims.role })
     return true
   }
 

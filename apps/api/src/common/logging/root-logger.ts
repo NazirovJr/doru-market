@@ -10,7 +10,13 @@ import { RequestContext } from '../context/request-context.js'
  * SRS-API-068: заголовки, которые никогда не должны попасть в лог целиком — секреты
  * сессии/доступа. `remove: true` полностью убирает поле, а не маскирует.
  */
-const REDACTED_PATHS = ['req.headers.authorization', 'req.headers["x-pharmacy-api-key"]'] as const
+// 'x-cart-session-token' (EP-09, DTJ-226, D-EP09-23) — гостевой bearer-секрет корзины,
+// та же категория, что 'x-pharmacy-api-key': полностью опускается, не маскируется частично.
+const REDACTED_PATHS = [
+  'req.headers.authorization',
+  'req.headers["x-pharmacy-api-key"]',
+  'req.headers["x-cart-session-token"]',
+] as const
 
 /** Плоские поля SRS-NFR-038, подмешиваемые в каждую лог-запись внутри активного запроса. */
 function mixinRequestContextFields(): Record<string, unknown> {

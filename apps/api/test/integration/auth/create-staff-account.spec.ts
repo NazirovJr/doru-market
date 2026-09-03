@@ -18,9 +18,9 @@
  *   F. invalid phone → 400 INVALID_PHONE_FORMAT.
  *
  * Все тесты идут через `Test.createTestingModule` + `supertest` — без моков
- * use case'ов (т.к. InMemory-репозитории уже дают реальный «БД»-уровень).
+ * use case'ов (Drizzle-репозитории — волна 5 блок A — уже дают реальный БД-уровень).
  * `pharmacy_admin` actor создаётся вручную через прямой INSERT в
- * InMemoryUsersRepository (см. `seedPharmacyAdmin`), минуя OTP-путь,
+ * `USERS_REPOSITORY` (Drizzle, см. `seedPharmacyAdmin`), минуя OTP-путь,
  * чтобы тест был компактным.
  */
 import type { Server } from 'node:http'
@@ -84,7 +84,7 @@ describe('auth.create-staff-account (DTJ-030, SRS-API-035/036)', () => {
   })
 
   /**
-   * Создаёт в InMemory `users` запись напрямую (минуя HTTP) и возвращает
+   * Создаёт в реальной таблице `users` (Drizzle) запись напрямую (минуя HTTP) и возвращает
    * `accessToken` этого пользователя, выписанный `JWT_SIGNER`. Это позволяет
    * тесту не идти по полному OTP-циклу для actor'а, и сразу проверять
    * `POST /api/v1/staff-accounts` с правильным `Authorization: Bearer`.

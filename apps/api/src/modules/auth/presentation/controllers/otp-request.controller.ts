@@ -8,14 +8,19 @@
  * Zod-валидация тела — `ZodValidationPipe` с `requestOtpDtoSchema`. Дальнейшая
  * валидация формата (`+992XXX...`) и rate-limit — внутри use case.
  *
- * `tenantId` берётся из `RequestContext` (D-23, DTJ-054); для R1 без полного
- * `TenantResolutionMiddleware` — `null`, use case работает с пустой строкой.
- * (см. DTJ-023 §«Риски» — дефолт на `neutral` заменяется в EP-02 без изменения
- * сигнатуры use case.)
+ * `tenantId` резолвится из `TenantContext` (см. `resolveTenantIdForRequest()`
+ * ниже) — тот же приём, что `OtpVerifyController.resolveTenantIdForVerify()`
+ * (волна 5, блок A, возврат): раньше здесь стоял литерал `'neutral'`, не-UUID
+ * строка, тихо утекавшая в `otp_codes.tenant_id UUID NOT NULL` и роняющая
+ * ЛЮБОЙ `POST /auth/otp/request` c `22P02 invalid input syntax for type uuid`
+ * после перевода `OTP_CODES_REPOSITORY` на Drizzle. CTO-решение (то же, что
+ * для verify): молчаливая подстановка невалидного UUID недопустима — падаем
+ * громко, а не портим данные.
  */
 import { Body, Controller, HttpCode, Inject, Post } from '@nestjs/common'
 import { ok, type ErrorEnvelope, type SuccessEnvelope } from '@dorutj/contracts'
 import { Public } from '@/common/decorators/public.decorator.js'
+import { TenantContext } from '@/common/context/tenant-context.js'
 // Внутренние импорты — ПРЯМО из файла, не через barrel `@/modules/auth/index.ts`
 // (D-27: barrel — только для межмодульного использования; иначе цикл
 // `auth.module.ts → otp-request.controller.ts → barrel → auth.module.ts`,
@@ -45,11 +50,27 @@ export class OtpRequestController {
   async request(
     @Body(REQUEST_OTP_DTO_PIPE) body: RequestOtpDto,
   ): Promise<SuccessEnvelope<{ otpRequestId: string; expiresInSeconds: number }> | ErrorEnvelope> {
-    // Временный `tenantId`: в R1 без EP-02 — `neutral`. EP-02 заменит этот
-    // блок без изменения сигнатуры use case (DTJ-023 §«Риски»).
-    const tenantId = 'neutral'
+    const tenantId = resolveTenantIdForRequest()
     const ipAddress = '0.0.0.0' // Real IP извлекается в EP-19 из Fastify request
     const result = await this.requestOtp.execute({ phone: body.phone, ipAddress, tenantId })
     return ok(result)
   }
+}
+
+/**
+ * Резолв `tenantId` для request-флоу — зеркало `resolveTenantIdForVerify()`
+ * из `otp-verify.controller.ts` (тот же приём, см. JSDoc там для полного
+ * контракта `TenantContext`). `RequestOtpInput.tenantId` едет в колонку
+ * `otp_codes.tenant_id UUID NOT NULL` — молчаливый fallback на slug/литерал
+ * недопустим, падаем громко.
+ */
+function resolveTenantIdForRequest(): string {
+  const store = TenantContext.get()
+  if (store !== undefined && store.tenantId !== null) {
+    return store.tenantId
+  }
+  throw new Error(
+    'OtpRequestController: TenantContext не резолвлен (tenantId === null) или отсутствует — ' +
+      'убедитесь, что TenantResolutionMiddleware зарегистрирован перед этим роутом',
+  )
 }

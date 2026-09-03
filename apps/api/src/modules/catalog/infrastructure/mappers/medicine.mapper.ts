@@ -60,6 +60,16 @@ export interface SubstanceRowLike {
   readonly strengthUnit: string
 }
 
+/**
+ * `SubstanceRowLike` + `innName` — форма строки JOIN `medicine_substances` ⋈ `substances`
+ * (DTJ-234, дефект приёмки: `findSubstancesByMedicineIds` раньше не джойнился на `substances`
+ * и терял название вещества). Отдельный тип, не расширение `SubstanceRowLike` в маппере
+ * `toDomain` — тому пути имя вещества не нужно (`MedicineSubstanceRecord` его не несёт).
+ */
+export interface SubstanceNameRowLike extends SubstanceRowLike {
+  readonly innName: string
+}
+
 /** Восстановление доменной сущности `Medicine` из плоской записи БД. */
 export function toDomain(row: MedicineRowLike, substances: readonly SubstanceRowLike[]): Medicine {
   const dosageFormClass = parseDosageFormClass(row.dosageFormClass)

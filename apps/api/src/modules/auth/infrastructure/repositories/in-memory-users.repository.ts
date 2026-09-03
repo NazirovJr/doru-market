@@ -19,6 +19,7 @@ export class InMemoryUsersRepository implements UsersRepository {
   private readonly byId = new Map<string, User>()
   private readonly tenantPhoneIndex = new Map<string, string>()
 
+  // `tx?` игнорируется — InMemory-режим атомарен по синхронности `Map` (см. JSDoc порта).
   async findByTenantAndPhone(tenantId: string, phoneNumber: string): Promise<User | null> {
     const id = this.tenantPhoneIndex.get(`${tenantId}|${phoneNumber}`)
     if (id === undefined) {

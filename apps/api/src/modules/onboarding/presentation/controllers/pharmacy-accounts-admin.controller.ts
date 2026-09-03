@@ -3,7 +3,7 @@
  * фильтром `filter[licenseExpiryDate][lte]` для `apps/admin` (список
  * истекающих лицензий). `super_admin` only.
  */
-import { Controller, Get, Query, UseGuards } from '@nestjs/common'
+import { Controller, Get, Inject, Query, UseGuards } from '@nestjs/common'
 import { ok } from '@dorutj/contracts'
 import { AuthGuard, Roles, RolesGuard } from '@/modules/auth/index.js'
 import { ListExpiringLicensesUseCase } from '@/modules/onboarding/application/use-cases/list-expiring-licenses.use-case.js'
@@ -14,7 +14,9 @@ const DEFAULT_WITHIN_DAYS = 30
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('super_admin')
 export class PharmacyAccountsAdminController {
-  constructor(private readonly listExpiringLicenses: ListExpiringLicensesUseCase) {}
+  // Явный @Inject: esbuild (vitest) не эмитит `design:paramtypes` — см. DTJ-001,
+  // тот же приём, что и в `CategoriesController`.
+  constructor(@Inject(ListExpiringLicensesUseCase) private readonly listExpiringLicenses: ListExpiringLicensesUseCase) {}
 
   @Get()
   async listExpiring(

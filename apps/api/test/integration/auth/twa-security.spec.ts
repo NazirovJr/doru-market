@@ -30,10 +30,11 @@
  *   9. **`user` — невалидный JSON**: подпись валидна, но `user` — не JSON →
  *      401 INVALID_TELEGRAM_INIT_DATA.
  *
- * Платформенное требование: InMemory-режим (как в `test-app.ts`) — реальный
- * Redis/Postgres не требуются. Подпись `initData` считается по тому же
- * алгоритму, что и в production-адаптере (SRS-API-031 шаги 3-5); см. helper
- * `signInitData()` ниже (зеркало `telegram-init-data-verifier.adapter.spec.ts`).
+ * Платформенное требование: реальные `dorutj_test` Postgres/Redis (волна 5
+ * блок A, `test-app.ts` → `AuthModule` на Drizzle/Redis-адаптерах). Подпись
+ * `initData` считается по тому же алгоритму, что и в production-адаптере
+ * (SRS-API-031 шаги 3-5); см. helper `signInitData()` ниже (зеркало
+ * `telegram-init-data-verifier.adapter.spec.ts`).
  *
  * Каждый тест ссылается на конкретный шаг SRS-API-031 / код ошибки — это
  * упрощает ревью «какие ветки покрыты» без перечитывания теста.

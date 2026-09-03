@@ -7,10 +7,16 @@
  *   - `upsert` — `INSERT ... ON CONFLICT (pharmacy_id, internal_sku) DO UPDATE SET medicine_id=excluded.medicine_id, matched_via=excluded.matched_via, matched_at=now()`
  *     (SRS-INV-023).
  *
- * Зависит от Drizzle-инстанса, передаваемого извне (см.
- * `infrastructure/database/drizzle.provider.ts`).
+ * DI: `@Inject(DRIZZLE_DB)` явный (esbuild/vitest не эмитит
+ * `design:paramtypes`, DTJ-001, тот же приём, что в
+ * `DrizzleFullSyncCompletionAdapter`) — без него, до волны 5, класс не был
+ * подключён как провайдер DI вообще (`inventory.module.ts` продолжал
+ * биндить `PHARMACY_SKU_MAPPING_REPOSITORY` на InMemory), поэтому
+ * написанный код никогда не резолвился Nest'ом.
  */
-import { and, eq, inArray, sql, type SQL } from 'drizzle-orm'
+import { Inject, Injectable } from '@nestjs/common'
+import { and, eq, inArray, sql } from 'drizzle-orm'
+import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { pharmacySkuMapping } from '@/db/schema/pharmacy-sku-mapping.js'
 import {
   PHARMACY_SKU_MAPPING_REPOSITORY,
@@ -18,36 +24,9 @@ import {
   type PharmacySkuMappingRepository,
 } from '@/modules/inventory/application/ports/pharmacy-sku-mapping.repository.port.js'
 
-/**
- * Минимальный контракт Drizzle, который мы используем. Заменим на
- * `import { type DrizzleDb } from 'drizzle-orm/...'` при появлении
- * публичного алиаса в проекте (типизация `drizzle-orm` пока не
- * экспортирует единый `DrizzleDb` тип).
- */
-interface DrizzleLike {
-  select: (args: unknown) => {
-    from: (table: unknown) => {
-      where: (condition: SQL) => Promise<
-        readonly {
-          internalSku: string
-          medicineId: string
-          matchedVia: string
-        }[]
-      >
-    }
-  }
-  insert: (table: unknown) => {
-    values: (values: Record<string, unknown>) => {
-      onConflictDoUpdate: (config: {
-        target: readonly unknown[]
-        set: Record<string, unknown>
-      }) => Promise<void>
-    }
-  }
-}
-
+@Injectable()
 export class DrizzlePharmacySkuMappingRepository implements PharmacySkuMappingRepository {
-  constructor(private readonly db: DrizzleLike) {}
+  constructor(@Inject(DRIZZLE_DB) private readonly db: DrizzleDb) {}
 
   async findManyByPharmacyAndSkus(
     pharmacyId: string,

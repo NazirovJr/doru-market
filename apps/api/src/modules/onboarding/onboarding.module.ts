@@ -90,6 +90,11 @@ import { PharmacyAccountsAdminController } from './presentation/controllers/phar
     PharmacyVerificationRevocationController,
     PharmacyAccountsAdminController,
   ],
+  // DTJ-227 (EP-09 checkout) — первый межмодульный DI-потребитель `OnboardingFacade`
+  // (`orders.module.ts` импортирует `OnboardingModule`, инжектит `OnboardingFacade` напрямую
+  // через `CatalogFacadeAdapter`-подобный адаптер). Без `exports` Nest не резолвит провайдер
+  // за пределами этого модуля даже при наличии `imports: [OnboardingModule]` у потребителя.
+  exports: [OnboardingFacade],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.
 export class OnboardingModule {}

@@ -70,7 +70,12 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({ bodyLimit: DEFAULT_JSON_BODY_LIMIT_BYTES }),
-    { bufferLogs: true },
+    // `rawBody: true` (DTJ-242, `PaymentsWebhookController`) — Nest/Fastify сохраняет СЫРЫЕ
+    // байты тела запроса в `request.rawBody` ДО JSON-парсинга, не заменяя обычный `req.body`
+    // ни для одного другого маршрута (аддитивный флаг, см. риски тикета DTJ-242: HMAC-подпись
+    // банковского вебхука покрывает байты, как они пришли по проводу — `JSON.stringify(req.body)`
+    // НЕ те же байты, подпись не совпадёт с реальным банком).
+    { bufferLogs: true, rawBody: true },
   )
   const config = app.get(AppConfigService)
 

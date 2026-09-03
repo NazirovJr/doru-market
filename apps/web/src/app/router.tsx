@@ -33,9 +33,8 @@ const routes: RouteObject[] = [
       {
         path: 'pharmacy-application',
         lazy: async () => {
-          const { PharmacyApplicationForm: Component } = await import(
-            '@/features/onboarding-application/pharmacy-application-form'
-          )
+          const { PharmacyApplicationForm: Component } =
+            await import('@/features/onboarding-application/pharmacy-application-form')
           return { Component }
         },
       },
@@ -52,6 +51,31 @@ const routes: RouteObject[] = [
         path: 'search',
         lazy: async () => {
           const { default: Component } = await import('@/pages/search-results/search-results-page')
+          return { Component }
+        },
+      },
+      {
+        // DTJ-104: минимальный хост-стаб карточки товара для `AnalogsBlock` — см. JSDoc
+        // `pages/medicine/medicine-page.tsx` (полноценного экрана `Medicine` пока нет отдельным тикетом).
+        path: 'medicines/:id',
+        lazy: async () => {
+          const { default: Component } = await import('@/pages/medicine/medicine-page')
+          return { Component }
+        },
+      },
+      {
+        // DTJ-234: экран корзины, сгруппированной по аптекам (REQ-UX-4).
+        path: 'cart',
+        lazy: async () => {
+          const { default: Component } = await import('@/pages/cart/cart-page')
+          return { Component }
+        },
+      },
+      {
+        // DTJ-235: экран оформления заказа — пункт назначения CTA «Перейти к оформлению» (`/cart`).
+        path: 'checkout',
+        lazy: async () => {
+          const { default: Component } = await import('@/pages/checkout/checkout-page')
           return { Component }
         },
       },

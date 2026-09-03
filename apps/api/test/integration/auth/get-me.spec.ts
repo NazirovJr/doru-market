@@ -15,6 +15,7 @@ import type { Server } from 'node:http'
 import { randomUUID } from 'node:crypto'
 import type { INestApplication } from '@nestjs/common'
 import request from 'supertest'
+import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   JWT_SIGNER,
@@ -25,6 +26,8 @@ import {
   USERS_REPOSITORY,
   type UsersRepository,
 } from '@/modules/auth/application/ports/users.repository.port.js'
+import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
+import { users as usersTable } from '@/db/schema/users.js'
 import { createTestApp, type TestApp } from './__tests__/test-app.js'
 
 const TENANT_ID = '33333333-3333-4333-8333-333333333333'
@@ -60,6 +63,7 @@ describe('auth.me (DTJ-028 follow-up, SRS-API-025)', () => {
   let sms: SmsProviderPort & { peekLast: () => { code: string } | null }
   let users: UsersRepository
   let jwtSigner: JwtSignerPort
+  let db: DrizzleDb
 
   beforeEach(async () => {
     ctx = await createTestApp()
@@ -70,6 +74,7 @@ describe('auth.me (DTJ-028 follow-up, SRS-API-025)', () => {
     }
     users = app.get(USERS_REPOSITORY)
     jwtSigner = app.get(JWT_SIGNER)
+    db = app.get<DrizzleDb>(DRIZZLE_DB)
   })
 
   afterEach(async () => {
@@ -128,13 +133,11 @@ describe('auth.me (DTJ-028 follow-up, SRS-API-025)', () => {
       chainId: created.chainId,
       sessionId: randomUUID(),
     })
-    // 3) Симулируем soft-delete: подменяем user в InMemory на `deletedAt !== null`.
-    // findById фильтрует их, поэтому GetMeUseCase не найдёт.
-    const byId = (users as unknown as { byId: Map<string, { deletedAt: Date | null }> }).byId
-    const stored = byId.get(created.id)
-    if (stored !== undefined) {
-      ;(stored).deletedAt = new Date()
-    }
+    // 3) Симулируем soft-delete: обновляем строку напрямую через Drizzle
+    // (DrizzleUsersRepository — реальный Postgres, волна 5 блок A; `UpdateUserPatch`
+    // порта не несёт `deletedAt` — это R2 профиль-редактирование, не soft-delete).
+    // findById фильтрует `deletedAt IS NOT NULL`, поэтому GetMeUseCase не найдёт.
+    await db.update(usersTable).set({ deletedAt: new Date() }).where(eq(usersTable.id, created.id))
     // 4) Запрос /auth/me → 401 TOKEN_INVALID.
     const me = await request(httpServer)
       .get('/api/v1/auth/me')

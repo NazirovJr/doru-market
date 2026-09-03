@@ -89,3 +89,79 @@ export const inventorySyncTypeEnum = pgEnum('inventory_sync_type', ['delta', 'fu
  * следовать конвенции `0012_inventory_foundation.sql` — `VARCHAR` + `CHECK`,
  * а не `pgEnum`.
  */
+
+/**
+ * Статус заказа (EP-09, DTJ-220, SRS-DB-008/009, D-25). Создан миграцией
+ * `0023_orders_cart.sql` (enum `order_status` не существовал в БД ни в одной
+ * предыдущей миграции — проверено CTO, `reports/EP09-CTO-BRIEF.md` D-EP09-2).
+ * Порядок значений — 1:1 с каноническим DDL (`11-database-schema.md`
+ * строки 107-116). `confirmed` [D-25]: `cash_courier`-заказ переходит сюда
+ * СИНХРОННО из `Order.create()`, НЕ в `paid_escrow` — `paid_escrow` достижим
+ * только из `pending_payment` по подписанному вебхуку банка (EP-10).
+ * Порядок значений НЕ переименовывать, только дописывать в конец.
+ */
+export const orderStatusEnum = pgEnum('order_status', [
+  'pending_payment',
+  'confirmed',
+  'paid_escrow',
+  'processing',
+  'picked_up',
+  'delivered',
+  'cancelled',
+  'refunded',
+  'return_in_progress',
+])
+
+/**
+ * Escrow-ledger — тип проводки двойной записи (EP-10, DTJ-236, D-02, SRS-DOM-031..035,
+ * SRS-PAY-010). Создан миграцией `0029_payments.sql`, DDL 1:1 `11-database-schema.md`
+ * строки 824-827. `cash_courier`-заказы НИКОГДА не порождают строк этой таблицы (§4.6
+ * `21-module-orders-payments-escrow.md`, REQ-PAY-14) — enum существует независимо от того,
+ * достижим ли он для конкретного заказа.
+ * Порядок значений НЕ переименовывать, только дописывать в конец.
+ */
+export const escrowEntryTypeEnum = pgEnum('escrow_entry_type', [
+  'hold_created',
+  'platform_fee_captured',
+  'captured_to_pharmacy',
+  'refunded_to_customer',
+  'partially_refunded',
+  'adjustment',
+])
+
+/** Знак проводки эскроу-ledger (EP-10, DTJ-236, SRS-DOM-067) — знак вне `Money`, отдельным полем. */
+export const escrowEntryDirectionEnum = pgEnum('escrow_entry_direction', ['debit', 'credit'])
+
+/**
+ * Статус строки `payout_schedule` (EP-10, DTJ-236, D-02/D-03/D-24, REQ-PAY-6). `disputed`
+ * исключает строку из выборки `PayoutSchedulerJob`/`PayoutExecutionJob` самим фактом другого
+ * значения `status` (REQ-DISPUTE-4, §6.2 `21-module-orders-payments-escrow.md`) — без
+ * дополнительного `WHERE status != 'disputed'`.
+ * Порядок значений НЕ переименовывать, только дописывать в конец.
+ */
+export const payoutStatusEnum = pgEnum('payout_status', ['pending', 'due', 'disputed', 'paid', 'reversed'])
+
+/**
+ * Тип операции `payment_operations` (EP-10, DTJ-236, REQ-PAY-8) — идемпотентность вызовов
+ * `PaymentProvider` (createInvoice/refund/partialRefund/capturePreauth/voidPreauth).
+ * Порядок значений НЕ переименовывать, только дописывать в конец.
+ */
+export const paymentOperationTypeEnum = pgEnum('payment_operation_type', [
+  'create_bill',
+  'refund',
+  'partial_refund',
+  'capture_preauth',
+  'void_preauth',
+  // ДОБАВЛЕНО (DTJ-242, миграция `0033_payment_operations_webhook_event_types.sql`) —
+  // идемпотентность ВХОДЯЩЕГО вебхука (`payment_operations.idempotency_key = bankEventId`,
+  // SRS-DOM-164/SRS-PAY-022) — ДРУГАЯ строка, чем `create_bill`/`refund` (исходящий вызов
+  // `PaymentProvider`, DTJ-238/239): значения 1:1 `VerifiedWebhookPayload.type`
+  // (`bank-webhook-verifier.port.ts`), дописаны В КОНЕЦ (комментарий выше — не переименовывать).
+  'payment_confirmed',
+  'payment_failed',
+  'refund_confirmed',
+  'refund_failed',
+])
+
+/** Статус строки `payment_operations` (EP-10, DTJ-236, REQ-PAY-8). */
+export const paymentOperationStatusEnum = pgEnum('payment_operation_status', ['pending', 'succeeded', 'failed'])

@@ -20,7 +20,7 @@
  *   5. `medicineId`-uuid пробрасывается в use case → репозиторий получает его в query.
  *   6. Слишком большой `bbox` (вся территория Таджикистана, `SRS-CAT-054`) → ошибка
  *      use case (`BboxTooLargeError`) корректно долетает наружу как `400 VALIDATION_ERROR
- *      details.field='bbox'` через глобальный `DomainExceptionFilter`.
+ *      details.field='bbox'` через глобальный `AllExceptionsFilter`.
  *
  * @see docs/spec/20-module-catalog-search.md (SRS-CAT-052, SRS-CAT-054, TC-CAT-024)
  */
@@ -44,7 +44,7 @@ import { SharedKernelModule } from '@/shared-kernel/shared-kernel.module.js'
 import { LoggerModule } from '@/common/logging/logger.module.js'
 import { DatabaseModule } from '@/infrastructure/database/database.module.js'
 import { RedisModule } from '@/infrastructure/redis/redis.module.js'
-import { DomainExceptionFilter } from '@/common/http/filters/domain-exception.filter.js'
+import { AllExceptionsFilter } from '@/common/filters/all-exceptions.filter.js'
 import { TenantContext, type TenantContextStore } from '@/common/context/tenant-context.js'
 import { CatalogModule } from '@/modules/catalog/catalog.module.js'
 import {
@@ -225,9 +225,11 @@ async function createTestApp(pins: readonly PharmacyMapPin[] = [makePin()]): Pro
   // без `/api/v1`, супертест получит 404 вместо проверки реального контракта.
   app.setGlobalPrefix('api', { exclude: ['health', 'ready'] })
   app.enableVersioning({ type: VersioningType.URI })
-  // `BboxTooLargeError` (`ValidationError extends DomainError`) — нужен реальный
-  // `DomainExceptionFilter`, иначе Nest вернёт 500 на непойманное доменное исключение.
-  app.useGlobalFilters(new DomainExceptionFilter())
+  // `BboxTooLargeError` (`ValidationError extends DomainError`) — нужен реальный фильтр,
+  // иначе Nest вернёт 500 на непойманное доменное исключение. `AllExceptionsFilter` —
+  // единственный фильтр приложения (волна 6): `DomainExceptionFilter` был зарегистрирован
+  // рядом, но недостижим, и удалён; маскировка 500 перенесена в этот.
+  app.useGlobalFilters(new AllExceptionsFilter())
   const config = app.get(AppConfigService)
   app.getHttpAdapter().getInstance().server.setTimeout(config.requestTimeoutMs)
   await app.init()

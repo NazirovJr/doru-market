@@ -1,9 +1,10 @@
 /**
  * `otp-brute-force.spec.ts` (EP-01, DTJ-029) — сквозной интеграционный тест
  * защиты auth-flow от брутфорса. Полный путь: HTTP → guard → use case →
- * InMemory-репозиторий + InMemory-rate-limiter → HTTP-ответ. Без мока use
- * case; вся цепочка `OtpRequestController` + `OtpVerifyController` +
- * `VerifyOtpUseCase` (DTJ-024) реальная.
+ * Drizzle-репозиторий (Postgres) + Redis rate-limiter → HTTP-ответ (волна 5
+ * блок A — `reports/CTO-DECISION-WAVE5.md` §3, реальные `dorutj_test`/Redis,
+ * не InMemory). Без мока use case; вся цепочка `OtpRequestController` +
+ * `OtpVerifyController` + `VerifyOtpUseCase` (DTJ-024) реальная.
  *
  * Сценарии (из DTJ-029 «Что сделать» п.1):
  *   1. `POST /auth/otp/request` для нового номера → 202 + `otpRequestId`.
@@ -17,10 +18,11 @@
  *      номер → 429 `OTP_REQUEST_RATE_LIMITED` (rate-limit-окно,
  *      `OTP_REQUEST_MAX_PER_10MIN=3` в тест-окружении).
  *
- * Платформенное требование: реальный Redis НЕ используется — InMemory
- * rate-limiter (DTJ-020) с тем же контрактом, чтобы тест был повторяем
- * в песочнице без docker-compose. Проверка САМОЙ защиты (Redis атомарность
- * INCR) — зона EP-19, не DTJ-029.
+ * Изоляция: `createTestApp()` (`__tests__/test-app.ts`) чистит auth-таблицы
+ * И Redis-ключи rate-limit'а ПЕРЕД каждым тестом (`resetAuthState`) — иначе
+ * общий литерал `PHONE` (4 файла) и хардкод `ipAddress = '0.0.0.0'`
+ * (`OtpRequestController`, EP-19 ещё не даёт реальный IP) делят ОДИН
+ * Redis-бакет с реальным TTL между тестами/файлами/прогонами.
  */
 import type { Server } from 'node:http'
 import type { INestApplication } from '@nestjs/common'

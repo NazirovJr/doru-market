@@ -58,6 +58,10 @@ import {
 } from '../ports/user-telegram-identities.repository.port.js'
 import { TelegramAuthUseCase } from './telegram-auth.use-case.js'
 
+// Резолвится presentation-слоем (`TelegramAuthController.resolveTenantIdForTelegram()`)
+// из `TenantContext` в проде; здесь — фиксированный UUID, use case сам tenantId не решает.
+const TEST_TENANT_ID = '00000000-0000-4000-8000-000000000099'
+
 // ==================== Stubs ====================
 
 class StubClock implements Clock {
@@ -289,6 +293,7 @@ describe('TelegramAuthUseCase (DTJ-027, SRS-API-031 шаги 9-10)', () => {
       initData: 'fake',
       ipAddress: '1.2.3.4',
       userAgent: 'TWA',
+      tenantId: TEST_TENANT_ID,
     })
     expect(isOk(result)).toBe(true)
     if (!isOk(result)) return
@@ -313,7 +318,7 @@ describe('TelegramAuthUseCase (DTJ-027, SRS-API-031 шаги 9-10)', () => {
       authDate: new Date(),
       user: { id: '111', firstName: 'Иван', lastName: 'Иванов', username: null, languageCode: 'ru' },
     }
-    const result = await useCase.execute({ initData: 'fake', ipAddress: '1.2.3.4', userAgent: 'TWA' })
+    const result = await useCase.execute({ initData: 'fake', ipAddress: '1.2.3.4', userAgent: 'TWA', tenantId: TEST_TENANT_ID })
     expect(isOk(result)).toBe(true)
     if (!isOk(result)) return
     expect(result.value.user.fullName).toBe('Иван Иванов')
@@ -326,7 +331,7 @@ describe('TelegramAuthUseCase (DTJ-027, SRS-API-031 шаги 9-10)', () => {
       authDate: new Date(),
       user: { id: '222', firstName: 'А', lastName: null, username: null, languageCode: null },
     }
-    await useCase.execute({ initData: 'fake', ipAddress: '1.2.3.4', userAgent: 'TWA' })
+    await useCase.execute({ initData: 'fake', ipAddress: '1.2.3.4', userAgent: 'TWA', tenantId: TEST_TENANT_ID })
     const firstUserId = users.byId.values().next().value?.id
     expect(identities.createCalls).toHaveLength(1)
     expect(sessions.createCalls).toHaveLength(1)
@@ -337,7 +342,7 @@ describe('TelegramAuthUseCase (DTJ-027, SRS-API-031 шаги 9-10)', () => {
       authDate: new Date(),
       user: { id: '222', firstName: 'А', lastName: null, username: null, languageCode: null },
     }
-    const result2 = await useCase.execute({ initData: 'fake2', ipAddress: '1.2.3.4', userAgent: 'TWA' })
+    const result2 = await useCase.execute({ initData: 'fake2', ipAddress: '1.2.3.4', userAgent: 'TWA', tenantId: TEST_TENANT_ID })
     expect(isOk(result2)).toBe(true)
     if (!isOk(result2)) return
     // User не пересоздан — тот же id
@@ -351,7 +356,7 @@ describe('TelegramAuthUseCase (DTJ-027, SRS-API-031 шаги 9-10)', () => {
 
   it('3. verify() провалился → error, User НЕ создаётся', async () => {
     verifier.nextError = new InvalidTelegramInitDataError()
-    const result = await useCase.execute({ initData: 'fake', ipAddress: '1.2.3.4', userAgent: 'TWA' })
+    const result = await useCase.execute({ initData: 'fake', ipAddress: '1.2.3.4', userAgent: 'TWA', tenantId: TEST_TENANT_ID })
     expect(isErr(result)).toBe(true)
     if (isOk(result)) throw new Error('expected err result')
     expect(result.error).toBeInstanceOf(InvalidTelegramInitDataError)
@@ -362,7 +367,7 @@ describe('TelegramAuthUseCase (DTJ-027, SRS-API-031 шаги 9-10)', () => {
 
   it('4. TELEGRAM_BOT_TOKEN_NEUTRAL пустой → TelegramBotNotConfiguredError', async () => {
     config.telegramBotTokenNeutral = undefined
-    const result = await useCase.execute({ initData: 'fake', ipAddress: '1.2.3.4', userAgent: 'TWA' })
+    const result = await useCase.execute({ initData: 'fake', ipAddress: '1.2.3.4', userAgent: 'TWA', tenantId: TEST_TENANT_ID })
     expect(isErr(result)).toBe(true)
     if (isOk(result)) throw new Error('expected err result')
     expect(result.error).toBeInstanceOf(TelegramBotNotConfiguredError)
@@ -370,7 +375,7 @@ describe('TelegramAuthUseCase (DTJ-027, SRS-API-031 шаги 9-10)', () => {
 
   it('5. TELEGRAM_BOT_TOKEN_NEUTRAL = "" → TelegramBotNotConfiguredError (защита от пустого ENV)', async () => {
     config.telegramBotTokenNeutral = ''
-    const result = await useCase.execute({ initData: 'fake', ipAddress: '1.2.3.4', userAgent: 'TWA' })
+    const result = await useCase.execute({ initData: 'fake', ipAddress: '1.2.3.4', userAgent: 'TWA', tenantId: TEST_TENANT_ID })
     expect(isErr(result)).toBe(true)
     if (isOk(result)) throw new Error('expected err result')
     expect(result.error).toBeInstanceOf(TelegramBotNotConfiguredError)
@@ -384,7 +389,7 @@ describe('TelegramAuthUseCase (DTJ-027, SRS-API-031 шаги 9-10)', () => {
       verifierCalled = true
       return originalVerify()
     }
-    await useCase.execute({ initData: 'fake', ipAddress: '1.2.3.4', userAgent: 'TWA' })
+    await useCase.execute({ initData: 'fake', ipAddress: '1.2.3.4', userAgent: 'TWA', tenantId: TEST_TENANT_ID })
     expect(verifierCalled).toBe(false)
   })
 })

@@ -15,6 +15,18 @@ describe('validateEnv', () => {
     expect(config.REQUEST_TIMEOUT_MS).toBe(30_000)
     expect(config.DATABASE_URL).toBe(VALID_ENV.DATABASE_URL)
     expect(config.LOG_LEVEL).toBeUndefined()
+    expect(config.PAYMENT_DRIVER).toBe('mock_bank')
+    expect(config.MOCK_BANK_AUTO_PAY_DELAY_MS).toBe(2_000)
+    expect(config.MOCK_BANK_WEBHOOK_SECRET).toBeUndefined()
+  })
+
+  it('DTJ-238: PAYMENT_DRIVER отвергает значение вне допустимого набора', () => {
+    expect(() => validateEnv({ ...VALID_ENV, PAYMENT_DRIVER: 'sberbank' })).toThrow(/PAYMENT_DRIVER/)
+  })
+
+  it('DTJ-238: MOCK_BANK_AUTO_PAY_DELAY_MS=0 — допустимо (авто-вебхук выключен)', () => {
+    const config = validateEnv({ ...VALID_ENV, MOCK_BANK_AUTO_PAY_DELAY_MS: '0' })
+    expect(config.MOCK_BANK_AUTO_PAY_DELAY_MS).toBe(0)
   })
 
   it('принимает явно заданный LOG_LEVEL из допустимого набора', () => {

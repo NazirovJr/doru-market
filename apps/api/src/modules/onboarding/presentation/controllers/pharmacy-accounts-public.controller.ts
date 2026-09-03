@@ -6,7 +6,7 @@
  * - `POST /api/v1/pharmacy-accounts` — `SubmitPharmacyApplicationUseCase`
  * - `POST /api/v1/pharmacy-accounts/:id/submit` — DTJ-066, `submitForReview`
  */
-import { Body, Controller, Param, ParseUUIDPipe, Post, UsePipes } from '@nestjs/common'
+import { Body, Controller, Inject, Param, ParseUUIDPipe, Post, UsePipes } from '@nestjs/common'
 import { Public } from '@/common/decorators/public.decorator.js'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
 import {
@@ -24,10 +24,12 @@ const ID_PARSE_UUID = new ParseUUIDPipe({ version: '4' })
 @Controller({ path: 'pharmacy-accounts', version: '1' })
 @Public()
 export class PharmacyAccountsPublicController {
+  // Явный @Inject: esbuild (vitest) не эмитит `design:paramtypes` — см. DTJ-001,
+  // тот же приём, что и в `CategoriesController`.
   constructor(
-    private readonly submitPharmacyApplication: SubmitPharmacyApplicationUseCase,
-    private readonly submitPharmacyForReview: SubmitPharmacyForReviewUseCase,
-    private readonly requestReactivation: RequestReactivationUseCase,
+    @Inject(SubmitPharmacyApplicationUseCase) private readonly submitPharmacyApplication: SubmitPharmacyApplicationUseCase,
+    @Inject(SubmitPharmacyForReviewUseCase) private readonly submitPharmacyForReview: SubmitPharmacyForReviewUseCase,
+    @Inject(RequestReactivationUseCase) private readonly requestReactivation: RequestReactivationUseCase,
   ) {}
 
   @Post()

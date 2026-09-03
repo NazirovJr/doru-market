@@ -25,6 +25,17 @@
  * уронит FK-constraint'ом каждый реальный `POST /inventory/batch-update`.
  * См. JSDoc `drizzle-inventory-sync-errors.repository.ts`.
  */
+/**
+ * ОБНОВЛЕНО — волна 5, блок C (`reports/CTO-DECISION-WAVE5.md` §3): DTJ-154
+ * закрыт, блокер FK из абзаца выше СНЯТ. Все шесть портов ниже переведены
+ * с `InMemory*` на Drizzle-реализации (персистентность переживает рестарт
+ * процесса — приёмочный критерий волны 5). Абзацы выше про
+ * `InMemoryFullSyncCompletion`/недоступность `INVENTORY_SYNC_BATCH_REPOSITORY`
+ * — ИСТОРИЯ (как решение появилось), не текущее состояние; текущее —
+ * `providers` ниже. `InMemory*`-классы НЕ удалены (используются в
+ * unit-тестах контроллера/гварда — конструируются напрямую `new`, не через
+ * DI) и остаются доступны как отдельные провайдеры.
+ */
 import { Module } from '@nestjs/common'
 import { AuthModule } from '@/modules/auth/auth.module.js'
 import { RedisModule } from '@/infrastructure/redis/redis.module.js'
@@ -51,17 +62,25 @@ import { FullSyncSessionWatchdogCron } from './infrastructure/jobs/full-sync-ses
 import { BullmqInventorySyncQueueAdapter } from './infrastructure/adapters/bullmq-inventory-sync-queue.adapter.js'
 import { DrizzleFullSyncCompletionAdapter } from './infrastructure/adapters/drizzle-full-sync-completion.adapter.js'
 import { DrizzleInventorySyncErrorsRepository } from './infrastructure/adapters/drizzle-inventory-sync-errors.repository.js'
+import { DrizzlePharmacyInventoryRepository } from './infrastructure/adapters/drizzle-pharmacy-inventory.repository.js'
+import { DrizzlePharmacySkuMappingRepository } from './infrastructure/adapters/drizzle-pharmacy-sku-mapping.repository.js'
+import { DrizzleInventoryOutboxAdapter } from './infrastructure/adapters/drizzle-inventory-outbox.adapter.js'
+import { DrizzleInventorySyncBatchRepository } from './infrastructure/adapters/drizzle-inventory-sync-batch.repository.js'
+import { DrizzlePharmacyApiKeyVerificationAdapter } from './infrastructure/adapters/drizzle-pharmacy-api-key-verification.adapter.js'
 
 @Module({
   imports: [AuthModule, RedisModule],
   providers: [
-    { provide: PHARMACY_INVENTORY_REPOSITORY, useClass: InMemoryPharmacyInventoryRepository },
-    { provide: INVENTORY_SYNC_BATCH_REPOSITORY, useClass: InMemoryInventorySyncBatchRepository },
-    { provide: PHARMACY_SKU_MAPPING_REPOSITORY, useClass: InMemoryPharmacySkuMappingRepository },
-    { provide: INVENTORY_OUTBOX, useClass: InMemoryInventoryOutbox },
-    { provide: FULL_SYNC_COMPLETION, useClass: InMemoryFullSyncCompletion },
+    // Волна 5, блок C: все шесть портов ниже — Drizzle/Redis, не InMemory
+    // (см. addendum в JSDoc модуля выше). `InMemory*`-классы остаются
+    // отдельными провайдерами (следующий блок) для unit-тестов.
+    { provide: PHARMACY_INVENTORY_REPOSITORY, useClass: DrizzlePharmacyInventoryRepository },
+    { provide: INVENTORY_SYNC_BATCH_REPOSITORY, useClass: DrizzleInventorySyncBatchRepository },
+    { provide: PHARMACY_SKU_MAPPING_REPOSITORY, useClass: DrizzlePharmacySkuMappingRepository },
+    { provide: INVENTORY_OUTBOX, useClass: DrizzleInventoryOutboxAdapter },
+    { provide: FULL_SYNC_COMPLETION, useClass: DrizzleFullSyncCompletionAdapter },
     { provide: INVENTORY_SYNC_QUEUE, useClass: BullmqInventorySyncQueueAdapter },
-    { provide: PHARMACY_API_KEY_VERIFICATION, useClass: InMemoryPharmacyApiKeyVerificationAdapter },
+    { provide: PHARMACY_API_KEY_VERIFICATION, useClass: DrizzlePharmacyApiKeyVerificationAdapter },
     InMemoryPharmacyApiKeyVerificationAdapter,
     PharmacyApiKeyGuard,
     InMemoryPharmacyInventoryRepository,
@@ -75,13 +94,13 @@ import { DrizzleInventorySyncErrorsRepository } from './infrastructure/adapters/
     DetectStuckFullSyncSessionsUseCase,
     FullSyncSessionWatchdogCron,
     BullmqInventorySyncQueueAdapter,
-    // DrizzleFullSyncCompletionAdapter зарегистрирован для инжекции
-    // через `DrizzleDb`-провайдер, но как `FULL_SYNC_COMPLETION` активен
-    // InMemory-вариант (TODO: переключить при наличии БД).
+    // Волна 5, блок C: активен как `FULL_SYNC_COMPLETION` (см. binding выше).
     DrizzleFullSyncCompletionAdapter,
-    // DTJ-145: реальная Postgres-запись `inventory_sync_errors`. НЕ активна
-    // как `INVENTORY_SYNC_BATCH_REPOSITORY` — см. JSDoc модуля выше и
-    // JSDoc класса (блокер: FK на `inventory_sync_batch`, DTJ-154).
+    // DTJ-145: реальная Postgres-запись `inventory_sync_errors`. Волна 5,
+    // блок C: FK-блокер снят (DTJ-154), теперь используется И напрямую
+    // (was: только этим классом), И как зависимость
+    // `DrizzleInventorySyncBatchRepository.appendErrors` (делегирование,
+    // см. JSDoc `drizzle-inventory-sync-batch.repository.ts`).
     DrizzleInventorySyncErrorsRepository,
   ],
   controllers: [InventoryBatchUpdateController],

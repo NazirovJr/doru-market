@@ -22,6 +22,7 @@ import type { CatalogRepository } from '@/modules/catalog/application/ports/cata
 import { categories } from '@/db/schema/categories.js'
 import { medicines } from '@/db/schema/medicines.js'
 import { medicineSubstances } from '@/db/schema/medicine-substances.js'
+import { substances } from '@/db/schema/substances.js'
 
 /** Минимальный контракт Drizzle-операций, нужных адаптеру. */
 interface DrizzleMock {
@@ -31,7 +32,7 @@ interface DrizzleMock {
 }
 
 /** Тег, по которому мок различает таблицы (Drizzle не раскрывает символ). */
-type TableName = 'medicines' | 'medicine_substances' | 'categories'
+type TableName = 'medicines' | 'medicine_substances' | 'categories' | 'substances'
 
 /** Подсказки для упрощённой интерпретации `eq(...)` в моке (единственный различаемый фильтр — `isActive = 1`). */
 const activeFilterHints = new Set<TableName>()
@@ -91,6 +92,7 @@ function makeDrizzleMock(): {
   medicines: Map<string, Record<string, unknown>>
   medicineSubstances: Record<string, unknown>[]
   categories: Record<string, unknown>[]
+  substances: Record<string, unknown>[]
   selectCalls: { table: TableName; args: unknown[] }[]
   insertCalls: { table: TableName; values: unknown }[]
   deleteCalls: { table: TableName; where: unknown }[]
@@ -98,6 +100,7 @@ function makeDrizzleMock(): {
   const medicinesStore = new Map<string, Record<string, unknown>>()
   const medicineSubstancesStore: Record<string, unknown>[] = []
   const categoriesStore: Record<string, unknown>[] = []
+  const substancesStore: Record<string, unknown>[] = []
   const selectCalls: { table: TableName; args: unknown[] }[] = []
   const insertCalls: { table: TableName; values: unknown }[] = []
   const deleteCalls: { table: TableName; where: unknown }[] = []
@@ -106,6 +109,7 @@ function makeDrizzleMock(): {
     if (table === medicines) return 'medicines'
     if (table === medicineSubstances) return 'medicine_substances'
     if (table === categories) return 'categories'
+    if (table === substances) return 'substances'
     throw new Error(`Unknown table in mock: ${String(table)}`)
   }
 
@@ -140,6 +144,33 @@ function makeDrizzleMock(): {
             orderBy(_o: unknown) {
               return selfOrderChain
             },
+            /**
+             * `.innerJoin(substances, eq(...))` — DTJ-234: `findSubstancesByMedicineIds`
+             * джойнится на `substances` за `innName`. Мок склеивает `medicine_substances` с
+             * `substances` по `substanceId === id` в памяти — тот же уровень упрощения, что
+             * остальной мок (условие `.where()` не разбирается посимвольно, кроме `isActive`
+             * hint'а выше; тесты сами скоупят seed-данные под конкретный кейс).
+             */
+            innerJoin(joinTable: unknown, _cond: unknown) {
+              tableName(joinTable) // валидирует, что джойнимся именно на замоканную `substances`
+              const joined: Row[] = []
+              for (const row of medicineSubstancesStore) {
+                const match = substancesStore.find((s) => s.id === row.substanceId)
+                if (match === undefined) continue
+                joined.push({ ...row, innName: match.innName })
+              }
+              return {
+                where(_c: unknown) {
+                  selectCalls.push({ table: name, args: [cols] })
+                  return {
+                    then(resolve: (rows: unknown[]) => void) {
+                      resolve(joined)
+                      return Promise.resolve()
+                    },
+                  }
+                },
+              }
+            },
           }
           const selfOrderChain = {
             where(_cond: unknown) {
@@ -168,6 +199,7 @@ function makeDrizzleMock(): {
           function selfResolveAll(n: TableName): Row[] {
             if (n === 'medicines') return [...medicinesStore.values()]
             if (n === 'medicine_substances') return medicineSubstancesStore
+            if (n === 'substances') return substancesStore
             return categoriesStore
           }
           return selfWhereChain
@@ -236,6 +268,7 @@ function makeDrizzleMock(): {
     medicines: medicinesStore,
     medicineSubstances: medicineSubstancesStore,
     categories: categoriesStore,
+    substances: substancesStore,
     selectCalls,
     insertCalls,
     deleteCalls,
@@ -324,6 +357,16 @@ function seedSubstances(
       strengthValue: s.strengthValue,
       strengthUnit: s.strengthUnit,
     })
+  }
+}
+
+/** Заполняет справочник `substances` (DTJ-234) — источник `innName` для JOIN-проверки. */
+function seedSubstanceNames(
+  store: { substances: Record<string, unknown>[] },
+  items: { id: string; innName: string }[],
+): void {
+  for (const s of items) {
+    store.substances.push({ id: s.id, innName: s.innName })
   }
 }
 
@@ -422,11 +465,26 @@ describe('CatalogRepositoryAdapter (DTJ-092, SRS-CAT-005)', () => {
     seedSubstances(mock, MEDICINE_ID_2, [
       { substanceId: SUBSTANCE_A, strengthValue: 100, strengthUnit: 'mg' },
     ])
+    seedSubstanceNames(mock, [
+      { id: SUBSTANCE_A, innName: 'Ibuprofen' },
+      { id: SUBSTANCE_B, innName: 'Paracetamol' },
+    ])
 
     const result = await repo.findSubstancesByMedicineIds([MEDICINE_ID, MEDICINE_ID_2])
     expect(result.size).toBe(2)
     expect(result.get(MEDICINE_ID)).toHaveLength(2)
     expect(result.get(MEDICINE_ID_2)).toHaveLength(1)
+  })
+
+  it('findSubstancesByMedicineIds отдаёт РЕАЛЬНОЕ innName из substances, не хардкод "" (дефект приёмки DTJ-234 — JOIN на medicine_substances был без JOIN на substances)', async () => {
+    seedSubstances(mock, MEDICINE_ID, [{ substanceId: SUBSTANCE_A, strengthValue: 500, strengthUnit: 'mg' }])
+    seedSubstanceNames(mock, [{ id: SUBSTANCE_A, innName: 'Ibuprofen' }])
+
+    const result = await repo.findSubstancesByMedicineIds([MEDICINE_ID])
+    const refs = result.get(MEDICINE_ID)
+    expect(refs).toHaveLength(1)
+    expect(refs?.[0]?.innName).toBe('Ibuprofen')
+    expect(refs?.[0]?.innName).not.toBe('')
   })
 
   it('save делает UPSERT (ON CONFLICT DO UPDATE) + перезапись substances', async () => {

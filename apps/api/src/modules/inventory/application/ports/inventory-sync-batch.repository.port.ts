@@ -19,6 +19,9 @@ import type {
   InventorySyncChannel,
   InventorySyncStatus,
 } from '../../domain/inventory-sync.types.js'
+// `UnitOfWorkTx` — через публичный фасад модуля `auth` (D-27, `no-cross-module-deep-import`):
+// inventory не имеет собственного UoW-порта, использует чужой через фасад (см. use case JSDoc).
+import type { UnitOfWorkTx } from '@/modules/auth/index.js'
 
 export const INVENTORY_SYNC_BATCH_REPOSITORY = Symbol.for(
   '@dorutj/inventory/inventory-sync-batch-repository',
@@ -69,18 +72,27 @@ export interface InventorySyncBatchRepository {
   create(input: CreateInventorySyncBatchInput): Promise<{ readonly id: string }>
   markStatus(id: string, status: InventorySyncStatus): Promise<void>
 
-  /** R1-полный: загрузить агрегат по ID (для FSM-переходов в use case). */
-  findById(id: string): Promise<InventorySyncBatch | null>
+  /**
+   * R1-полный: загрузить агрегат по ID (для FSM-переходов в use case).
+   *
+   * `tx?` (волна 6, self-deadlock пула соединений, тот же дефект, что чинили
+   * в checkout DTJ-231/233): `IngestInventoryBatchWithMatchingUseCase.execute`
+   * вызывает `findById`/`save`/`appendErrors` ВНУТРИ `uow.run(tx => ...)` —
+   * без `tx` каждый метод просил бы у пула ВТОРОЕ соединение поверх уже
+   * удержанного, при конкурентности ≥ размера пула тупик навсегда (см. JSDoc
+   * use case'а).
+   */
+  findById(id: string, tx?: UnitOfWorkTx): Promise<InventorySyncBatch | null>
 
-  /** R1-полный: сохранить агрегат (новые счётчики, статус, completedAt). */
-  save(batch: InventorySyncBatch): Promise<void>
+  /** R1-полный: сохранить агрегат (новые счётчики, статус, completedAt). `tx?` — см. `findById`. */
+  save(batch: InventorySyncBatch, tx?: UnitOfWorkTx): Promise<void>
 
   /**
    * R1-полный: записать построчные ошибки в `inventory_sync_errors`
    * (DTJ-145, отдельная таблица, не в `inventory_sync_batch.error_summary`).
-   * Батчевый INSERT, ВНУТРИ `unitOfWork.run(...)` (правило `02` §3).
+   * Батчевый INSERT, ВНУТРИ `unitOfWork.run(...)` (правило `02` §3). `tx?` — см. `findById`.
    */
-  appendErrors(errors: readonly InventorySyncRowError[]): Promise<void>
+  appendErrors(errors: readonly InventorySyncRowError[], tx?: UnitOfWorkTx): Promise<void>
 
   /**
    * R1-полный: прочитать сырые строки из `inventory_sync_raw_items`

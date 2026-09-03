@@ -26,6 +26,21 @@ const DEFAULT_OTP_VERIFY_MAX_ATTEMPTS = 5
 const DEFAULT_TELEGRAM_INIT_DATA_MAX_AGE_SECONDS = 300
 /** [DTJ-185, SRS-CAT-075] `statement_timeout` композитного SQL-запроса поиска (ASSUMPTION спеки). */
 const DEFAULT_SEARCH_QUERY_TIMEOUT_MS = 2_000
+/** [DTJ-224, SRS-ORD-005] TTL мягкого Redis-резерва количества в корзине — ASSUMPTION тикета (900с = 15 мин). */
+const DEFAULT_CART_HOLD_TTL_SECONDS = 900
+/** [DTJ-227, SRS-DOM-166] Таймаут синхронного вызова `PaymentInvoicePort.createInvoice` после
+ * commit транзакции группы — ASSUMPTION тикета (8000мс), см. «Что сделать» п.2.4.d. */
+const DEFAULT_PAYMENT_PROVIDER_TIMEOUT_MS = 8_000
+/** [DTJ-238, SRS-PAY-004] Задержка авто-вебхука MockBankProvider — ASSUMPTION тикета (2000мс). */
+const DEFAULT_MOCK_BANK_AUTO_PAY_DELAY_MS = 2_000
+/**
+ * [DTJ-239, SRS-PAY-006/007] `maxInvoiceValidityMinutes` ASSUMPTION для Alif Mobi/DC Next —
+ * research 03 §2.2 не документирует TTL счёта явно (только `payment_timeout` продуктового
+ * уровня, §7 того же документа, 15 минут) — тот же ASSUMPTION-ориентир, что
+ * `MOCK_BANK_MAX_INVOICE_VALIDITY_MINUTES` (DTJ-238), НЕ гарантированно идентичен реальному
+ * банку РТ (уточняется R3, реальный контракт).
+ */
+const DEFAULT_BANK_INVOICE_VALIDITY_MINUTES = 15
 const MINUTES_PER_HOUR = 60
 const HOURS_PER_DAY = 24
 const SECONDS_PER_MINUTE = 60
@@ -81,6 +96,40 @@ export const envSchema = z.object({
   // НЕ глобальная настройка пула — см. `postgres-search.adapter.ts`). Превышение → 57014
   // query_canceled → `SearchTemporarilyDegradedError` → 503, не generic 500.
   SEARCH_QUERY_TIMEOUT_MS: z.coerce.number().int().positive().default(DEFAULT_SEARCH_QUERY_TIMEOUT_MS),
+  // [DTJ-224, SRS-ORD-005] TTL мягкого резерва Redis (`cart:hold:*`) — независим от
+  // `CART_ABANDONED_TTL_DAYS` (apps/worker, хранение самой корзины) — два разных временных окна.
+  CART_HOLD_TTL_SECONDS: z.coerce.number().int().positive().default(DEFAULT_CART_HOLD_TTL_SECONDS),
+  // [DTJ-227, SRS-DOM-166] Таймаут createInvoice — таймаут/ошибка НЕ откатывает уже
+  // закоммиченный заказ (D-EP09-17), группа помечается `paymentPending: true`.
+  PAYMENT_PROVIDER_TIMEOUT_MS: z.coerce.number().int().positive().default(DEFAULT_PAYMENT_PROVIDER_TIMEOUT_MS),
+  // [DTJ-238, SRS-PAY-009] Единственный переключатель адаптера PaymentProvider на уровне DI
+  // (`{ provide: PAYMENT_PROVIDER_TOKEN, useClass: ... }`, payments.module.ts) — ОДНА
+  // инсталляция API обслуживает ОДИН PAYMENT_DRIVER глобально, не per-tenant в R1. Дефолт
+  // 'mock_bank' — единственный реально включённый провайдер в R1-проде (Charter DoD п.7).
+  PAYMENT_DRIVER: z.enum(['mock_bank', 'alif_mobi', 'dc_next']).default('mock_bank'),
+  // [DTJ-238, SRS-PAY-005] HMAC-секрет мок-банка — ТОТ ЖЕ алгоритм/код-путь верификации, что
+  // реальные адаптеры (§5.2). `optional` (не `.default`): dev-окружение генерирует значение при
+  // первом запуске (`.env.example` — плейсхолдер), тесты подставляют свой. Отсутствие ENV при
+  // фактическом использовании mock_bank — рантайм-ошибка адаптера/верификатора, не Zod-сбой
+  // старта процесса (тот же приём, что `TELEGRAM_BOT_TOKEN_NEUTRAL`).
+  MOCK_BANK_WEBHOOK_SECRET: z.string().optional(),
+  // [DTJ-238, SRS-PAY-004] Задержка (мс) авто-вебхука MockBankProvider после createInvoice/
+  // refund. `0` — авто-вебхук выключен вовсе (нужно тестам, проверяющим именно
+  // `pending_payment`). ASSUMPTION дефолта — 2000 (тикет).
+  MOCK_BANK_AUTO_PAY_DELAY_MS: z.coerce.number().int().nonnegative().default(DEFAULT_MOCK_BANK_AUTO_PAY_DELAY_MS),
+  // [DTJ-239, SRS-PAY-006/008] Alif Mobi/DC Next — заготовки адаптеров (R3 включение).
+  // ASSUMPTION (research 03 §2.1/§2.7): `Token`-заголовок авторизации + base URL API,
+  // HMAC-секрет вебхука отдельно от `MOCK_BANK_WEBHOOK_SECRET` (у каждого банка свой ключ).
+  // `optional` — R1 никогда фактически не вызывает эти адаптеры (PAYMENT_DRIVER=mock_bank по
+  // умолчанию, включение реального трафика физически заблокировано
+  // tenant_settings.enabledPaymentMethods, см. payments.module.ts).
+  ALIF_MOBI_API_BASE_URL: z.string().optional(),
+  ALIF_MOBI_API_TOKEN: z.string().optional(),
+  ALIF_MOBI_WEBHOOK_SECRET: z.string().optional(),
+  DC_NEXT_API_BASE_URL: z.string().optional(),
+  DC_NEXT_API_TOKEN: z.string().optional(),
+  DC_NEXT_WEBHOOK_SECRET: z.string().optional(),
+  BANK_INVOICE_VALIDITY_MINUTES: z.coerce.number().int().positive().default(DEFAULT_BANK_INVOICE_VALIDITY_MINUTES),
 })
 
 /** [DTJ-023] Секунды в N минутах/часах/дне — для use case расчёта rate-limit окон. */

@@ -14,11 +14,19 @@
  * `ipAddress` и `userAgent` берутся из Fastify request, как в `OtpVerifyController`
  * (DTJ-024). `userAgent` особенно важен для TWA — помогает диагностировать
  * проблемы у клиента («старый TWA, новый TWA»).
+ *
+ * `tenantId` резолвится из `TenantContext` (см. `resolveTenantIdForTelegram()`
+ * ниже) — тот же приём, что `OtpVerifyController.resolveTenantIdForVerify()`
+ * и `OtpRequestController.resolveTenantIdForRequest()` (волна 5, блок A,
+ * возврат): раньше `TelegramAuthUseCase` сам подставлял литерал `'neutral'`,
+ * не-UUID строку, тихо утекавшую в `users.tenant_id`/`user_telegram_identities.tenant_id
+ * UUID NOT NULL`. Молчаливый fallback недопустим — падаем громко.
  */
 import { Body, Controller, HttpCode, Inject, Post, Req } from '@nestjs/common'
 import { ok, type ErrorEnvelope, type SuccessEnvelope } from '@dorutj/contracts'
 import { isOk } from '@dorutj/domain-kernel'
 import { Public } from '@/common/decorators/public.decorator.js'
+import { TenantContext } from '@/common/context/tenant-context.js'
 // Внутренние импорты — ПРЯМО из файла (D-27).
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
 import { HTTP_STATUS_OK } from '@/common/http/http-status.constants.js'
@@ -76,6 +84,7 @@ export class TelegramAuthController {
       initData: dto.initData,
       ipAddress,
       userAgent,
+      tenantId: resolveTenantIdForTelegram(),
     })
     if (!isOk(result)) throw result.error
     return ok(toResponseBody(result.value))
@@ -84,6 +93,24 @@ export class TelegramAuthController {
 
 function extractUserAgent(userAgent: string | string[] | undefined): string {
   return Array.isArray(userAgent) ? (userAgent[0] ?? '') : (userAgent ?? '')
+}
+
+/**
+ * Резолв `tenantId` для Telegram-auth-флоу. Зеркало `resolveTenantIdForVerify()`
+ * из `otp-verify.controller.ts` (см. JSDoc там для полного контракта
+ * `TenantContext`). `TelegramAuthInput.tenantId` едет в колонки `UUID NOT NULL`
+ * (`users.tenant_id`, `user_telegram_identities.tenant_id`, `auth_sessions.tenant_id`) —
+ * молчаливый fallback на slug/литерал недопустим, падаем громко.
+ */
+function resolveTenantIdForTelegram(): string {
+  const store = TenantContext.get()
+  if (store !== undefined && store.tenantId !== null) {
+    return store.tenantId
+  }
+  throw new Error(
+    'TelegramAuthController: TenantContext не резолвлен (tenantId === null) или отсутствует — ' +
+      'убедитесь, что TenantResolutionMiddleware зарегистрирован перед этим роутом',
+  )
 }
 
 function toResponseBody(value: TelegramAuthResult): TelegramAuthResponseBody {

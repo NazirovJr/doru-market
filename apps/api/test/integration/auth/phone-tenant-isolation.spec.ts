@@ -4,21 +4,23 @@
  *
  * Сценарий (из DTJ-029 «Что сделать» п.4):
  *   - Один и тот же номер телефона регистрируется через `verify` в ДВУХ
- *     тенантах (в R1 — оба тенанта хардкодятся в `tenantId` поля, см.
- *     DTJ-023/024 «Риски» — `tenantId: 'neutral'`).
- *   - В текущей реализации R1 оба verify попадают в один тенант `'neutral'`,
+ *     тенантах (в R1 — оба запроса без Bearer-токена резолвятся
+ *     `TenantContext`/тестовым harness'ом в ОДИН настоящий нейтральный
+ *     тенант, см. `resolveTenantIdForVerify`/`resolveTenantIdForRequest`,
+ *     волна 5 блок A возврат — реальный UUID, не литерал `'neutral'`).
+ *   - В текущей реализации R1 оба verify попадают в один (нейтральный) тенант,
  *     и `UNIQUE(tenant_id, phone_number)` гарантирует, что в БУДУЩЕМ (после
- *     EP-02) два verify на разные `tenantId` создадут ДВЕ РАЗНЫЕ строки
- *     `users` с разными `id`.
+ *     EP-02, полноценный per-tenant резолвинг по `X-Tenant-Slug`) два verify
+ *     на разные `tenantId` создадут ДВЕ РАЗНЫЕ строки `users` с разными `id`.
  *
- * ОГРАНИЧЕНИЕ R1 (документировано в тикете): в R1 `tenantId` хардкодится
- * в `'neutral'` на бэкенде (DTJ-023/024 «Риски», EP-02 ещё не готов). Этот
- * тест проверяет:
+ * ОГРАНИЧЕНИЕ R1 (документировано в тикете): без `X-Tenant-Slug` резолвинг
+ * всегда даёт нейтральный тенант (EP-02 ещё не даёт per-tenant резолвинг).
+ * Этот тест проверяет:
  *
  *   A. UNIQUE-INDEX на `users(tenant_id, phone_number)` — Postgres-стандарт
- *      «несколько NULL не конфликтуют» (DTJ-027 миграция 0007). С InMemory-
- *      репозиторием проверяем: создание пользователя с ТЕМ ЖЕ `tenantId` и
- *      ТЕМ ЖЕ `phoneNumber` — find-or-create, не дубликат.
+ *      «несколько NULL не конфликтуют» (DTJ-027 миграция 0007). Против
+ *      реального Postgres (волна 5 блок A) проверяем: создание пользователя
+ *      с ТЕМ ЖЕ `tenantId` и ТЕМ ЖЕ `phoneNumber` — find-or-create, не дубликат.
  *
  *   B. `it.todo` для КРОСС-ТЕНАНТНОГО сценария (тикет явно выделяет его
  *      как заглушку, зона EP-02 `CUJ-7'`). Документируем, что
@@ -32,12 +34,11 @@
 import type { Server } from 'node:http'
 import type { INestApplication } from '@nestjs/common'
 import request from 'supertest'
+import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { SMS_PROVIDER, type SmsProviderPort } from '@/modules/auth/application/ports/sms-provider.port.js'
-import {
-  USERS_REPOSITORY,
-  type UsersRepository,
-} from '@/modules/auth/application/ports/users.repository.port.js'
+import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
+import { users as usersTable } from '@/db/schema/users.js'
 import { createTestApp, type TestApp } from './__tests__/test-app.js'
 
 const PHONE = '+992917123456'
@@ -56,9 +57,7 @@ describe('auth.phone-tenant-isolation (DTJ-029, SRS-API-017)', () => {
   let app: INestApplication
   let httpServer: Server
   let sms: SmsProviderPort & { peekLast: () => { code: string } | null }
-  let users: UsersRepository & {
-    byId: Map<string, { id: string; phoneNumber: string | null; tenantId: string }>
-  }
+  let db: DrizzleDb
 
   beforeEach(async () => {
     ctx = await createTestApp()
@@ -67,9 +66,7 @@ describe('auth.phone-tenant-isolation (DTJ-029, SRS-API-017)', () => {
     sms = app.get<unknown>(SMS_PROVIDER) as SmsProviderPort & {
       peekLast: () => { code: string } | null
     }
-    users = app.get<unknown>(USERS_REPOSITORY) as UsersRepository & {
-      byId: Map<string, { id: string; phoneNumber: string | null; tenantId: string }>
-    }
+    db = app.get<DrizzleDb>(DRIZZLE_DB)
   })
 
   afterEach(async () => {
@@ -112,9 +109,10 @@ describe('auth.phone-tenant-isolation (DTJ-029, SRS-API-017)', () => {
     }
 
     expect(userIds.size).toBe(1)
-    // Проверяем, что в InMemory-репозитории РОВНО 1 user с этим phone.
-    const allUsers = Array.from(users.byId.values())
-    const matchingPhone = allUsers.filter((u) => u.phoneNumber === PHONE)
+    // Проверяем, что в реальной таблице `users` (DrizzleUsersRepository, волна 5
+    // блок A) РОВНО 1 строка с этим phone — не InMemory `.byId` (внутренность,
+    // которой у Drizzle-репозитория нет).
+    const matchingPhone = await db.select().from(usersTable).where(eq(usersTable.phoneNumber, PHONE))
     expect(matchingPhone.length).toBe(1)
   })
 

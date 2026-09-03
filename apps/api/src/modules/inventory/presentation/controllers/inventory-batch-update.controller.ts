@@ -31,6 +31,21 @@
  *   - UoW-обёртка вокруг `createIfNotExists` + `appendRawItems` + `append`
  *     (сейчас — 3 отдельных promise; для R1-бутстрапа InMemory это
  *     безопасно, для Drizzle-реализации — критично).
+ *
+ * **DEFECT-FIX (волна 5, блок C, живая приёмка `node dist/main.js` против
+ * реального Postgres/Redis — см. отчёт сдачи).** `batchUpdate(dto, req)` —
+ * второй параметр `req: FastifyRequestWithPrincipal` был БЕЗ декоратора
+ * `@Req()`. NestJS резолвит HTTP-параметры handler'а ТОЛЬКО по декораторам
+ * (`@Body`/`@Param`/`@Query`/`@Req`/...) — недекорированный параметр не
+ * получает вообще НИЧЕГО (не `undefined`-свойство, а сам параметр
+ * `undefined`), и `requirePrincipal(req)` падал `TypeError: Cannot read
+ * properties of undefined (reading 'principal')` на КАЖДОМ реальном запросе
+ * — маршрут не работал НИ РАЗУ ни при каком корректном клиенте. Юнит-тест
+ * (`inventory-batch-update.controller.spec.ts`) этого не ловил: он вызывает
+ * `controller.batchUpdate(dto, req)` НАПРЯМУЮ (обычный вызов метода), минуя
+ * весь HTTP pipeline Nest и его декораторную резолюцию параметров — тот же
+ * класс дефекта, что уже описан в `docs/07-WAVE4-HANDOFF.md` §3.2 (карта
+ * аптек, фейковый DI-путь в тесте).
  */
 import {
   Body,
@@ -39,6 +54,7 @@ import {
   HttpStatus,
   Inject,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common'
 import {
@@ -88,7 +104,7 @@ export class InventoryBatchUpdateController {
   async batchUpdate(
     @Body(new ZodValidationPipe(inventoryBatchUpdateRequestSchema))
     dto: InventoryBatchUpdateRequest,
-    req: FastifyRequestWithPrincipal,
+    @Req() req: FastifyRequestWithPrincipal,
   ): Promise<unknown> {
     const principal = this.requirePrincipal(req)
     this.assertWithinItemLimit(dto)

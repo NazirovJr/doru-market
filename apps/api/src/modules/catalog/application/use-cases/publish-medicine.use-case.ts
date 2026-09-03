@@ -2,9 +2,18 @@
  * `PublishMedicineUseCase` (DTJ-096, EP-04, R1).
  *
  * Публикует препарат: загружает `Medicine` через `CatalogRepository`,
- * вызывает `medicine.publish()` (DTJ-093), при успехе — `CatalogRepository.save()`
- * + запись `MedicinePublishedEvent` в outbox в ТОЙ ЖЕ транзакции
- * (`unitOfWork.run(...)`); при ошибке (`MissingSubstancesError`) — пробрасывает наружу.
+ * вызывает `medicine.publish()` (DTJ-093), при успехе — `CatalogRepository.save()`;
+ * при ошибке (`MissingSubstancesError`) — пробрасывает наружу. Событие
+ * `MedicinePublishedEvent` в outbox пока НЕ пишется (см. TODO(DTJ-096) ниже) —
+ * возвращается вызывающему коду.
+ *
+ * **Убрана декоративная `unitOfWork.run(...)` (волна 6, найдено аудитом того же дефекта, что
+ * чинили в checkout DTJ-231/233, verify-otp, ingest-inventory) — см. полное обоснование в JSDoc
+ * `ProposeControlCategoryUseCase` (идентичная пара use case'ов, идентичный дефект).** Коротко:
+ * `execute()` открывал `unitOfWork.run(async (_tx) => {...})` с НЕИСПОЛЬЗУЕМЫМ `_tx` — ни
+ * `CatalogRepository.findMedicineById`/`save`, ни (несуществующая пока) outbox-запись его не
+ * принимали. Транзакция без единого участника не даёт атомарности, но держит соединение пула и
+ * несёт тот же риск self-deadlock при конкурентности ≥ размера пула — обёртка убрана целиком.
  *
  * Используется админскими эндпоинтами модерации каталога (вне scope EP-04).
  *
@@ -13,10 +22,6 @@
  */
 import { Inject, Injectable } from '@nestjs/common'
 import { Barcode, DosageForm } from '@dorutj/domain-kernel'
-// `UnitOfWorkPort` — через публичный фасад модуля `auth` (D-27,
-// `no-cross-module-deep-import`): catalog не имеет права импортировать
-// внутренности чужого модуля напрямую.
-import { UNIT_OF_WORK, type UnitOfWorkPort } from '@/modules/auth/index.js'
 import { CATALOG_REPOSITORY, type CatalogRepository } from '../ports/catalog-repository.port.js'
 import { Medicine } from '../../domain/medicine.entity.js'
 import { MedicinePublishedEvent } from '../../domain/events/medicine-published.event.js'
@@ -39,8 +44,6 @@ export class PublishMedicineUseCase {
   constructor(
     @Inject(CATALOG_REPOSITORY)
     private readonly catalogRepository: CatalogRepository,
-    @Inject(UNIT_OF_WORK)
-    private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
   /**
@@ -49,39 +52,37 @@ export class PublishMedicineUseCase {
    * Возвращает результат с событием для подтверждения записи в outbox.
    */
   async execute(input: PublishMedicineInput): Promise<PublishMedicineResult> {
-    return this.unitOfWork.run(async (_tx) => {
-      // Загружаем препарат через репозиторий (без фильтра видимости — админское действие)
-      const record = await this.catalogRepository.findMedicineById(input.medicineId)
-      if (record === null) {
-        throw new NotFoundError({ resource: 'medicine' })
-      }
+    // Загружаем препарат через репозиторий (без фильтра видимости — админское действие)
+    const record = await this.catalogRepository.findMedicineById(input.medicineId)
+    if (record === null) {
+      throw new NotFoundError({ resource: 'medicine' })
+    }
 
-      // Реконструируем доменную сущность
-      const medicine = this.recordToMedicine(record)
+    // Реконструируем доменную сущность
+    const medicine = this.recordToMedicine(record)
 
-      // Публикуем — доменная логика валидирует наличие веществ
-      const publishResult = medicine.publish(new Date())
-      if (!publishResult.ok) {
-        // MissingSubstancesError пробрасываем наружу без изменений
-        throw publishResult.error
-      }
+    // Публикуем — доменная логика валидирует наличие веществ
+    const publishResult = medicine.publish(new Date())
+    if (!publishResult.ok) {
+      // MissingSubstancesError пробрасываем наружу без изменений
+      throw publishResult.error
+    }
 
-      // Сохраняем обновлённую сущность (isPublished = true)
-      await this.catalogRepository.save(medicine)
+    // Сохраняем обновлённую сущность (isPublished = true)
+    await this.catalogRepository.save(medicine)
 
-      // Событие уже сгенерировано доменом, возвращаем его для записи в outbox
-      // TODO(DTJ-096): когда общий OutboxPort EP-01 будет доступен (DTJ-016),
-      // здесь должна быть запись в outbox через UnitOfWork:
-      // await this.outbox.append(publishResult.value)
-      // Пока outbox-инфраструктура не стабилизирована — возвращаем событие,
-      // вызывающий код (контроллер/админ) решает что с ним делать.
+    // Событие уже сгенерировано доменом, возвращаем его для записи в outbox
+    // TODO(DTJ-096): когда общий OutboxPort EP-01 будет доступен (DTJ-016),
+    // здесь должна быть запись в outbox через UnitOfWork:
+    // await this.outbox.append(publishResult.value)
+    // Пока outbox-инфраструктура не стабилизирована — возвращаем событие,
+    // вызывающий код (контроллер/админ) решает что с ним делать.
 
-      return {
-        medicineId: input.medicineId,
-        publishedAt: publishResult.value.publishedAt,
-        event: publishResult.value,
-      }
-    })
+    return {
+      medicineId: input.medicineId,
+      publishedAt: publishResult.value.publishedAt,
+      event: publishResult.value,
+    }
   }
 
   /**

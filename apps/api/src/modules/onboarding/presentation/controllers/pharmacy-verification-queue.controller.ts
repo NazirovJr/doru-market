@@ -3,7 +3,7 @@
  * `super_admin` для заявок `pending_review`. Защищён `@Roles('super_admin')` +
  * permission `pharmacy-accounts:approve`.
  */
-import { Controller, Get, Query, UseGuards } from '@nestjs/common'
+import { Controller, Get, Inject, Query, UseGuards } from '@nestjs/common'
 import { ok } from '@dorutj/contracts'
 import { AuthGuard, Roles, RolesGuard } from '@/modules/auth/index.js'
 import {
@@ -18,7 +18,9 @@ const DEFAULT_OFFSET = 0
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('super_admin')
 export class PharmacyVerificationQueueController {
-  constructor(private readonly listPendingVerifications: ListPendingVerificationsUseCase) {}
+  // Явный @Inject: esbuild (vitest) не эмитит `design:paramtypes` — см. DTJ-001,
+  // тот же приём, что и в `CategoriesController`.
+  constructor(@Inject(ListPendingVerificationsUseCase) private readonly listPendingVerifications: ListPendingVerificationsUseCase) {}
 
   @Get('pharmacy-chains')
   async listChains(

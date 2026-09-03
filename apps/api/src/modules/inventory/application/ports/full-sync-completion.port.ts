@@ -12,19 +12,29 @@
  * Этот тикет только ОБЪЯВЛЯЕТ интерфейс порта; use case тестируется с
  * моком, не зависит от наличия реализации.
  */
+// `UnitOfWorkTx` — через публичный фасад модуля `auth` (D-27, `no-cross-module-deep-import`):
+// inventory не имеет собственного UoW-порта, использует чужой через фасад (см. use case JSDoc).
+import type { UnitOfWorkTx } from '@/modules/auth/index.js'
+
 export const FULL_SYNC_COMPLETION = Symbol.for('@dorutj/inventory/full-sync-completion')
 
-export interface FullSyncCompletionPort {
+/** Параметры `zeroOutMissing` — объект-параметр (C5, `max-params` ≤3: 4 позиционных не влезали). */
+export interface ZeroOutMissingInput {
+  readonly pharmacyId: string
+  readonly fullSyncSessionId: string
+  /** Момент старта сессии (для `lastSyncedAt`-фильтра). */
+  readonly fullSyncTimestamp: Date
   /**
-   * Обнулить остатки, не упомянутые в текущей full-sync сессии.
-   *
-   * @param pharmacyId UUID аптеки
-   * @param fullSyncSessionId UUID сессии (для проверки, какие batch'и относятся к сессии)
-   * @param fullSyncTimestamp момент старта сессии (для `lastSyncedAt`-фильтра)
+   * (волна 6, self-deadlock пула соединений, тот же дефект, что чинили в checkout
+   * DTJ-231/233): `IngestInventoryBatchWithMatchingUseCase.execute` вызывает этот метод
+   * ВНУТРИ `uow.run(tx => ...)` — без `tx` метод просил бы у пула ВТОРОЕ соединение
+   * поверх уже удержанного, при конкурентности ≥ размера пула тупик навсегда (см. JSDoc
+   * use case'а).
    */
-  zeroOutMissing(
-    pharmacyId: string,
-    fullSyncSessionId: string,
-    fullSyncTimestamp: Date,
-  ): Promise<{ readonly zeroedLots: number }>
+  readonly tx?: UnitOfWorkTx
+}
+
+export interface FullSyncCompletionPort {
+  /** Обнулить остатки, не упомянутые в текущей full-sync сессии. */
+  zeroOutMissing(input: ZeroOutMissingInput): Promise<{ readonly zeroedLots: number }>
 }

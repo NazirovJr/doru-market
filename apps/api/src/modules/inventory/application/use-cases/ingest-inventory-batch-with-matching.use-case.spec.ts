@@ -7,7 +7,11 @@
  *   3. Невалидная цена одной строки не блокирует остальные.
  *   4. Попытка `execute()` на батче в терминальном статусе бросает
  *      `IllegalBatchStatusTransitionError`.
- *   5. Полный `unitOfWork.run(...)` обёртка — ровно один вызов.
+ *   5. `unitOfWork.run(...)` вызывается ровно один раз (волна 6, после
+ *      исправления self-deadlock пула — ТОЛЬКО персистентная фаза, ШАГИ 2-6;
+ *      матчинг, ШАГ 1, теперь ВНЕ транзакции, см. JSDoc use case'а
+ *      «Границы unitOfWork.run» — заголовок теста намеренно НЕ говорит «вся
+ *      обработка», это больше не так).
  *
  * Локальные Map-based фейки портов (не production `InMemory*`-адаптеры из
  * infrastructure: application не импортирует infrastructure, §1.1).
@@ -18,7 +22,7 @@ import {
   IngestInventoryBatchWithMatchingUseCase,
   type IngestRowInput,
 } from './ingest-inventory-batch-with-matching.use-case.js'
-import { type FullSyncCompletionPort } from '../ports/full-sync-completion.port.js'
+import { type FullSyncCompletionPort, type ZeroOutMissingInput } from '../ports/full-sync-completion.port.js'
 import { type UnitOfWorkPort, type UnitOfWorkTx } from '@/modules/auth/application/ports/unit-of-work.port.js'
 import { type Clock } from '@/shared-kernel/application/ports/clock.port.js'
 import { InventorySyncBatch } from '@/modules/inventory/domain/inventory-sync-batch.entity.js'
@@ -242,11 +246,7 @@ class NoopUnitOfWork implements UnitOfWorkPort {
 
 class NoopFullSyncCompletion implements FullSyncCompletionPort {
   public zeroOutCalls = 0
-  zeroOutMissing(
-    _pharmacyId: string,
-    _sessionId: string,
-    _timestamp: Date,
-  ): Promise<{ readonly zeroedLots: number }> {
+  zeroOutMissing(_input: ZeroOutMissingInput): Promise<{ readonly zeroedLots: number }> {
     this.zeroOutCalls += 1
     return Promise.resolve({ zeroedLots: 0 })
   }
@@ -461,7 +461,7 @@ describe('IngestInventoryBatchWithMatchingUseCase (DTJ-148)', () => {
     ).rejects.toBeInstanceOf(IllegalBatchStatusTransitionError)
   })
 
-  it('вся обработка батча выполняется в одной unitOfWork.run(...)', async () => {
+  it('персистентная фаза (шаги 2-6) выполняется в одной unitOfWork.run(...); матчинг (шаг 1) — вне неё', async () => {
     let calls = 0
     class CountingUnitOfWork implements UnitOfWorkPort {
       async run<T>(callback: Parameters<UnitOfWorkPort['run']>[0]): Promise<T> {

@@ -54,6 +54,11 @@ export {
   type RefreshTokenGeneratorPort,
 } from './application/ports/refresh-token-generator.port.js'
 export { UNIT_OF_WORK, type UnitOfWorkPort } from './application/ports/unit-of-work.port.js'
+// Волна 6 (self-deadlock пула соединений, см. verify-otp/telegram-auth/ingest-inventory
+// use case JSDoc): `UnitOfWorkTx` — непрозрачный дескриптор транзакции, нужен другим
+// модулям (inventory), чтобы прокидывать `tx` в СВОИ репозитории внутри `uow.run(...)`,
+// а не открывать второе соединение пула поверх удержанного.
+export { type UnitOfWorkTx } from './application/ports/unit-of-work.port.js'
 export { PhoneNumber } from './domain/value-objects/phone-number.vo.js'
 export { RequestOtpUseCase, type RequestOtpInput, type RequestOtpResult } from './application/use-cases/request-otp.use-case.js'
 export { VerifyOtpUseCase, type VerifyOtpInput, type VerifyOtpResult, type VerifyOtpError } from './application/use-cases/verify-otp.use-case.js'

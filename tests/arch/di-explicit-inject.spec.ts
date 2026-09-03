@@ -156,7 +156,15 @@ function isUnreferencedInProduction(className: string, ownFile: string): boolean
 function collectViolations(): readonly Violation[] {
   const violations: Violation[] = []
   for (const { file, text } of ALL_SOURCE) {
-    const classRe = /@(?:Injectable|Controller)\s*\([^)]*\)\s*[\r\n]+\s*(?:export\s+)?class\s+(\w+)/gu
+    // Между `@Controller(...)`/`@Injectable()` и `class` может стоять СКОЛЬКО УГОДНО
+    // других декораторов (`@Public()`, `@UseGuards(...)`, `@Roles(...)`). Первая редакция
+    // требовала `class` непосредственно следующей строкой и потому НЕ ВИДЕЛА 17 из 21
+    // контроллера — гейт был зелёным не потому, что нарушений нет, а потому, что он их
+    // не смотрел. Так и пропустил `MedicinesController` с двумя параметрами без
+    // `@Inject`. Правка CTO по итогам приёмки волны 5 (`CLAUDE-CTO.md` §1 — гейты
+    // чинит CTO, это инструмент контроля, а не предмет контроля).
+    const classRe =
+      /@(?:Injectable|Controller)\s*\([^)]*\)(?:\s*@\w+(?:\s*\([^)]*\))?)*\s*(?:export\s+)?class\s+(\w+)/gu
     let m: RegExpExecArray | null
     while ((m = classRe.exec(text)) !== null) {
       const className = m[1]

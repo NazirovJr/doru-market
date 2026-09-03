@@ -45,3 +45,11 @@ export {
   describeTenantIsolationContract,
   type TenantIsolationContractOptions,
 } from './testing/tenant-isolation.contract-test.js'
+
+// DTJ-229 (EP-09) — `orders → tenancy` фасад читает `cod_limit_diram` реального тенанта
+// (`TenancyFacadeAdapter`, `modules/orders/infrastructure/adapters/tenancy-facade.adapter.ts`)
+// через порт репозитория настроек, не копию доступа к БД.
+export {
+  TENANT_SETTINGS_REPOSITORY,
+  type TenantSettingsRepositoryPort,
+} from './application/ports/tenant-settings-repository.port.js'

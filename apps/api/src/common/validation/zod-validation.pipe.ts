@@ -1,7 +1,7 @@
 /**
  * `ZodValidationPipe` — NestJS-pipe, валидирующий тело/params/query через
  * zod-схему. Использует единый формат ошибки `VALIDATION_ERROR` (`12-api-
- * conventions...md` §2.1, DTJ-018 `DomainExceptionFilter`).
+ * conventions...md` §2.1, DTJ-018 `AllExceptionsFilter`).
  *
  * Применяется per-route:
  * `@Body(new ZodValidationPipe(SubmitChainApplicationRequestSchema)) dto: SubmitChainApplicationRequest`.

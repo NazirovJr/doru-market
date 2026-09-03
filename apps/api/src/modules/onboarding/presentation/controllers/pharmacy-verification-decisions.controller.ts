@@ -5,7 +5,7 @@
  * Тела: `approve` — `{ checklist: Record<string,boolean>, notes?: string }`,
  * остальные — `{ reason: string }` (обязательное).
  */
-import { Body, Controller, Param, ParseUUIDPipe, Post, UseGuards, UsePipes } from '@nestjs/common'
+import { Body, Controller, Inject, Param, ParseUUIDPipe, Post, UseGuards, UsePipes } from '@nestjs/common'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
 import {
   ApproveVerificationRequestSchema,
@@ -28,9 +28,11 @@ const ID_PARSE_UUID = new ParseUUIDPipe({ version: '4' })
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('super_admin')
 export class PharmacyVerificationDecisionsController {
+  // Явный @Inject: esbuild (vitest) не эмитит `design:paramtypes` — см. DTJ-001,
+  // тот же приём, что и в `CategoriesController`.
   constructor(
-    private readonly reviewChainApplication: ReviewChainApplicationUseCase,
-    private readonly reviewPharmacyApplication: ReviewPharmacyApplicationUseCase,
+    @Inject(ReviewChainApplicationUseCase) private readonly reviewChainApplication: ReviewChainApplicationUseCase,
+    @Inject(ReviewPharmacyApplicationUseCase) private readonly reviewPharmacyApplication: ReviewPharmacyApplicationUseCase,
   ) {}
 
   // -------- chain decisions --------

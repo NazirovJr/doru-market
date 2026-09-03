@@ -13,24 +13,23 @@
  *
  * Реализация: `VerifyOtpUseCase` использует `SELECT ... FOR UPDATE` через
  * `uow.run` (DTJ-024), что даёт строгую сериализацию двух транзакций на
- * уровне `otp_codes.consumed_at`. В InMemory-режиме `uow` — no-op
- * (Map-операции атомарны в однопоточном Node.js), но ДВА синхронных
- * `await` на одном event-loop тике дают race: второй verify видит
- * `consumedAt !== null` и возвращает `OTP_MISMATCH`.
+ * уровне `otp_codes.consumed_at` — реальный Postgres row-lock (волна 5 блок
+ * A, `DrizzleUnitOfWorkAdapter`/`db.transaction`), не InMemory-эмуляция:
+ * второй verify блокируется на `FOR UPDATE`, видит `consumedAt !== null`
+ * после разблокировки и возвращает `OTP_MISMATCH`.
  *
- * Проверка «ровно одна `auth_sessions`»: через `peekLast` MockSms (это не
- * то), либо через прямой подсчёт `app.get(AUTH_SESSIONS_REPOSITORY)` —
- * см. `InMemoryAuthSessionsRepository.byId.size`.
+ * Проверка «ровно одна `auth_sessions`»: прямой `COUNT(*)` через `DRIZZLE_DB`
+ * (реальная таблица, не `InMemoryAuthSessionsRepository.byId.size` —
+ * `AUTH_SESSIONS_REPOSITORY` теперь резолвит `DrizzleAuthSessionsRepository`,
+ * без публичного `.byId`).
  */
 import type { Server } from 'node:http'
 import type { INestApplication } from '@nestjs/common'
 import request from 'supertest'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { SMS_PROVIDER, type SmsProviderPort } from '@/modules/auth/application/ports/sms-provider.port.js'
-import {
-  AUTH_SESSIONS_REPOSITORY,
-  type AuthSessionsRepository,
-} from '@/modules/auth/application/ports/auth-sessions.repository.port.js'
+import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
+import { authSessions } from '@/db/schema/auth-sessions.js'
 import { createTestApp, type TestApp } from './__tests__/test-app.js'
 
 const PHONE = '+992917123456'
@@ -50,7 +49,7 @@ describe('auth.otp-verify-race (DTJ-029, SRS-API-071)', () => {
   let app: INestApplication
   let httpServer: Server
   let sms: SmsProviderPort & { peekLast: () => { code: string } | null }
-  let sessionsRepo: AuthSessionsRepository & { byId: Map<string, unknown> }
+  let db: DrizzleDb
 
   beforeEach(async () => {
     ctx = await createTestApp()
@@ -59,10 +58,14 @@ describe('auth.otp-verify-race (DTJ-029, SRS-API-071)', () => {
     sms = app.get<unknown>(SMS_PROVIDER) as SmsProviderPort & {
       peekLast: () => { code: string } | null
     }
-    sessionsRepo = app.get<unknown>(AUTH_SESSIONS_REPOSITORY) as AuthSessionsRepository & {
-      byId: Map<string, unknown>
-    }
+    db = app.get<DrizzleDb>(DRIZZLE_DB)
   })
+
+  /** `COUNT(*)` реальных строк `auth_sessions` — таблица чистая на старте каждого теста (`resetAuthState`). */
+  async function countAuthSessions(): Promise<number> {
+    const rows = await db.select().from(authSessions)
+    return rows.length
+  }
 
   afterEach(async () => {
     await ctx.close()
@@ -106,12 +109,12 @@ describe('auth.otp-verify-race (DTJ-029, SRS-API-071)', () => {
     const code = sms.peekLast()?.code
     if (code === undefined) throw new Error('no code')
 
-    const before = sessionsRepo.byId.size
+    const before = await countAuthSessions()
     await Promise.all([
       request(httpServer).post('/api/v1/auth/otp/verify').send({ otpRequestId, code }),
       request(httpServer).post('/api/v1/auth/otp/verify').send({ otpRequestId, code }),
     ])
-    const after = sessionsRepo.byId.size
+    const after = await countAuthSessions()
     // Ровно +1 сессия, не +2.
     expect(after - before).toBe(1)
   })
@@ -132,14 +135,14 @@ describe('auth.otp-verify-race (DTJ-029, SRS-API-071)', () => {
       const code = sms.peekLast()?.code
       if (code === undefined) throw new Error('no code')
 
-      const before = sessionsRepo.byId.size
+      const before = await countAuthSessions()
       const [r1, r2] = await Promise.all([
         request(httpServer).post('/api/v1/auth/otp/verify').send({ otpRequestId, code }),
         request(httpServer).post('/api/v1/auth/otp/verify').send({ otpRequestId, code }),
       ])
       const statuses = [r1.status, r2.status].sort()
       expect(statuses, `iter ${String(i + 1)}/10`).toEqual([200, 400])
-      const after = sessionsRepo.byId.size
+      const after = await countAuthSessions()
       expect(after - before, `iter ${String(i + 1)}/10: sessions created`).toBe(1)
     }
   })

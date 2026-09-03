@@ -2032,7 +2032,7 @@ CREATE POLICY tenant_isolation_orders ON orders
 `escrow_ledger`/`audit_log` (только `SELECT, INSERT`, SRS-DB-024) — `app_role` НЕ является
 суперпользователем и не может выполнить `TRUNCATE`/`DROP` ни на одной таблице (защита от
 случайного/скомпрометированного полного стирания данных из прикладного кода). Миграции выполняются
-отдельной ролью `migrator_role` с правами DDL, используемой ТОЛЬКО раннером `drizzle-kit migrate` в
+отдельной ролью `dorutj_migrator` с правами DDL, используемой ТОЛЬКО раннером `drizzle-kit migrate` в
 CI/деплое, никогда — рантайм-процессом `apps/api`.
 
 ---

@@ -51,12 +51,18 @@ export default defineConfig({
     fileParallelism: false,
     env: {
       NODE_ENV: 'test',
-      DATABASE_URL: 'postgres://test:test@localhost:5432/dorutj_test',
+      // Дефолт — общая `dorutj_test`; переменная окружения ПЕРЕОПРЕДЕЛЯЕТ его, чтобы два
+      // исполнителя могли идти параллельно по разным базам (`dorutj_test2` заведена и
+      // промигрирована). Без этого `test.env` затирал внешний `DATABASE_URL`, и параллельная
+      // работа давала невоспроизводимые падения в чужих файлах — урок §3в решения по волне 5
+      // («сериализовать либо разводить по отдельным базам»). Правка CTO: гейт — инструмент
+      // контроля (`CLAUDE-CTO.md` §1). То же для `REDIS_URL` — разные номера БД Redis (`/0`, `/1`).
+      DATABASE_URL: process.env.DATABASE_URL ?? 'postgres://test:test@localhost:5432/dorutj_test',
       // Redis локально поднят с --requirepass (infra/docker/docker-compose.yml, дефолт
       // REDIS_PASSWORD=dorutj_dev_redis_password — дев-дефолт, заведомо непроизводственный,
       // коммитить можно, Ж13). Без пароля isRedisReachable() даёт false и redis-lock-guard/
       // search-cache integration-сьюты молча пропускались.
-      REDIS_URL: 'redis://:dorutj_dev_redis_password@localhost:6379',
+      REDIS_URL: process.env.REDIS_URL ?? 'redis://:dorutj_dev_redis_password@localhost:6379',
       CORS_STATIC_ORIGINS: 'http://localhost:5173',
       LOG_LEVEL: 'error',
     },

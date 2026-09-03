@@ -159,6 +159,9 @@ Backend — модульный монолит (`apps/api/src/modules/<context>`)
   ровно одной аптеке (`pharmacy_id` едино для заказа); сплит корзины по нескольким аптекам происходит
   на уровне application (`SplitCartByPharmacyUseCase`) ДО вызова `Order.create()` — на входе
   агрегата уже находится корзина одной аптеки.
+  Ошибка при расхождении на входе (defensive-проверка в `Order.create()`, см.
+  `21-module-orders-payments-escrow.md` §«конструктор проверяет ВСЕ инварианты SRS-DOM-002..012»):
+  `OrderPharmacyMismatchError`.
 - **SRS-DOM-003** [Charter §5, D-03] `total_amount = items_total + delivery_fee_diram`, где
   `items_total = Σ(order_item.unit_price × quantity)`. Значение не принимается от клиента — только
   пересчитывается сервером внутри `Order.create()`/`Order.recalculateTotals()`.
@@ -990,6 +993,7 @@ DomainError (abstract)
 │   ├── InvalidPhoneNumberFormatError   → 400 INVALID_PHONE_FORMAT
 │   ├── InvalidCoordinatesError         → 400 INVALID_COORDINATES
 │   ├── OrderTotalMismatchError         → 400 ORDER_TOTAL_MISMATCH
+│   ├── OrderPharmacyMismatchError      → 400 ORDER_PHARMACY_MISMATCH (SRS-DOM-002)
 │   ├── InvalidRestockQuantityError     → 400 INVALID_RESTOCK_QUANTITY
 │   ├── InvalidPriceError               → 400 INVALID_PRICE
 │   ├── MissingResolutionReasonError    → 400 MISSING_RESOLUTION_REASON

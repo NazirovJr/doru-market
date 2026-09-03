@@ -1,21 +1,32 @@
 /**
- * NestJS-модуль `auth` (EP-01, DTJ-022/023/024/025/026/027). Barrel-файл (D-27) — правится ТОЛЬКО
- * добавлением строк.
+ * NestJS-модуль `auth` (EP-01, DTJ-022/023/024/025/026/027; волна 5 блок A —
+ * персистентность, см. `reports/CTO-DECISION-WAVE5.md` §3). Barrel-файл (D-27) —
+ * правится ТОЛЬКО добавлением строк.
  *
  * Поставщики (нарастающий итог по тикетам EP-01):
  *   - `JWT_SIGNER` → `Rs256JwtSignerAdapter`        (DTJ-022)
- *   - `USERS_REPOSITORY` → `InMemoryUsersRepository` (DTJ-022; Drizzle — DTJ-024)
+ *   - `USERS_REPOSITORY` → `DrizzleUsersRepository`  (DTJ-022/024; волна 5 — подключён)
  *   - `OTP_GENERATOR` → `CryptoOtpGeneratorAdapter`  (DTJ-010, DTJ-023)
- *   - `OTP_CODES_REPOSITORY` → `InMemoryOtpCodesRepository` (DTJ-015, DTJ-023, DTJ-024)
+ *   - `OTP_CODES_REPOSITORY` → `DrizzleOtpCodesRepository` (DTJ-015/023/024; волна 5)
  *   - `SMS_PROVIDER` → `MockSmsProviderAdapter`      (DTJ-023, Charter §3.3)
- *   - `RATE_LIMIT_CHECKER` → `InMemoryRateLimitCheckerAdapter` (DTJ-023;
- *     Redis-адаптер появится, когда БД/Redis будут доступны в docker-compose)
- *   - `AUTH_SESSIONS_REPOSITORY` → `InMemoryAuthSessionsRepository` (DTJ-024, DTJ-025)
+ *   - `RATE_LIMIT_CHECKER` → `RedisRateLimitCheckerAdapter` (DTJ-023; волна 5 —
+ *     подключён на общий `REDIS_CLIENT`, см. `RedisModule`)
+ *   - `AUTH_SESSIONS_REPOSITORY` → `DrizzleAuthSessionsRepository` (DTJ-024/025; волна 5)
  *   - `REFRESH_TOKEN_GENERATOR` → `CryptoRefreshTokenGeneratorAdapter` (DTJ-024)
- *   - `UNIT_OF_WORK` → `InMemoryUnitOfWorkAdapter`   (DTJ-024; Drizzle — DTJ-024+)
+ *   - `UNIT_OF_WORK` → `DrizzleUnitOfWorkAdapter`    (DTJ-024; волна 5 — `db.transaction`)
  *   - `TELEGRAM_INIT_DATA_VERIFIER` → `TelegramInitDataVerifierAdapter` (DTJ-027)
- *   - `USER_TELEGRAM_IDENTITIES_REPOSITORY` → `InMemoryUserTelegramIdentitiesRepository` (DTJ-027)
+ *   - `USER_TELEGRAM_IDENTITIES_REPOSITORY` → `DrizzleUserTelegramIdentitiesRepository` (DTJ-027; волна 5)
  *   - `PINO_LOGGER` — глобальный, берётся из `LoggerModule` (DTJ-001, `@Global()`).
+ *
+ * `InMemory*`-адаптеры НЕ удалены — используются юнит/security-тестами
+ * (`*.use-case.spec.ts`, `test/integration/auth/__tests__/test-app.ts`), которые
+ * инстанцируют их напрямую, минуя DI этого модуля.
+ *
+ * `imports: [DatabaseModule, RedisModule]` — оба `@Global()` (их провайдеры и
+ * так видны из `AppModule`), но НАПРЯМУЮ импортированы здесь, чтобы изолированный
+ * тестовый harness (`Test.createTestingModule({ imports: [AuthModule] })`,
+ * без `AppModule`) тоже резолвил `DRIZZLE_DB`/`REDIS_CLIENT` — тот же приём,
+ * что уже применён в `InventoryModule` (`imports: [AuthModule, RedisModule]`).
  *
  * `RefreshTokenUseCase` (DTJ-025) использует `PINO_LOGGER` для security-лога
  * при detect-reuse (SRS-API-027).
@@ -53,12 +64,12 @@ import { UNIT_OF_WORK, type UnitOfWorkPort } from './application/ports/unit-of-w
 import { Rs256JwtSignerAdapter } from './infrastructure/adapters/rs256-jwt-signer.adapter.js'
 import { CryptoOtpGeneratorAdapter } from './infrastructure/adapters/crypto-otp-generator.adapter.js'
 import { MockSmsProviderAdapter } from './infrastructure/adapters/mock-sms-provider.adapter.js'
-import { InMemoryRateLimitCheckerAdapter } from './infrastructure/adapters/in-memory-rate-limit-checker.adapter.js'
+import { RedisRateLimitCheckerAdapter } from './infrastructure/adapters/redis-rate-limit-checker.adapter.js'
 import { CryptoRefreshTokenGeneratorAdapter } from './infrastructure/adapters/crypto-refresh-token-generator.adapter.js'
-import { InMemoryUnitOfWorkAdapter } from './infrastructure/adapters/in-memory-unit-of-work.adapter.js'
-import { InMemoryUsersRepository } from './infrastructure/repositories/in-memory-users.repository.js'
-import { InMemoryOtpCodesRepository } from './infrastructure/repositories/in-memory-otp-codes.repository.js'
-import { InMemoryAuthSessionsRepository } from './infrastructure/repositories/in-memory-auth-sessions.repository.js'
+import { DrizzleUnitOfWorkAdapter } from './infrastructure/adapters/drizzle-unit-of-work.adapter.js'
+import { DrizzleUsersRepository } from './infrastructure/repositories/drizzle-users.repository.js'
+import { DrizzleOtpCodesRepository } from './infrastructure/repositories/drizzle-otp-codes.repository.js'
+import { DrizzleAuthSessionsRepository } from './infrastructure/repositories/drizzle-auth-sessions.repository.js'
 import { RequestOtpUseCase } from './application/use-cases/request-otp.use-case.js'
 import { VerifyOtpUseCase } from './application/use-cases/verify-otp.use-case.js'
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token.use-case.js'
@@ -81,36 +92,39 @@ import { RolesGuard } from './presentation/guards/roles.guard.js'
 import { TELEGRAM_INIT_DATA_VERIFIER, TelegramInitDataVerifierAdapter } from './infrastructure/adapters/telegram-init-data-verifier.adapter.js'
 import {
   USER_TELEGRAM_IDENTITIES_REPOSITORY,
-  InMemoryUserTelegramIdentitiesRepository,
-} from './infrastructure/repositories/in-memory-user-telegram-identities.repository.js'
+  DrizzleUserTelegramIdentitiesRepository,
+} from './infrastructure/repositories/drizzle-user-telegram-identities.repository.js'
+import { DatabaseModule } from '@/infrastructure/database/database.module.js'
+import { RedisModule } from '@/infrastructure/redis/redis.module.js'
 // ВАЖНО: внутренние импорты `auth.module.ts` идут ПРЯМО из файлов,
 // не через barrel `./index.ts` — иначе цикл `module → barrel → module`
 // (dependency-cruiser `no-circular` отвергает). Barrel `index.ts` предназначен
 // ТОЛЬКО для межмодульного использования (D-27).
 
 @Module({
+  imports: [DatabaseModule, RedisModule],
   providers: [
     { provide: JWT_SIGNER, useClass: Rs256JwtSignerAdapter },
-    { provide: USERS_REPOSITORY, useClass: InMemoryUsersRepository },
+    { provide: USERS_REPOSITORY, useClass: DrizzleUsersRepository },
     { provide: OTP_GENERATOR, useClass: CryptoOtpGeneratorAdapter },
-    { provide: OTP_CODES_REPOSITORY, useClass: InMemoryOtpCodesRepository },
+    { provide: OTP_CODES_REPOSITORY, useClass: DrizzleOtpCodesRepository },
     { provide: SMS_PROVIDER, useClass: MockSmsProviderAdapter },
-    { provide: RATE_LIMIT_CHECKER, useClass: InMemoryRateLimitCheckerAdapter },
-    { provide: AUTH_SESSIONS_REPOSITORY, useClass: InMemoryAuthSessionsRepository },
+    { provide: RATE_LIMIT_CHECKER, useClass: RedisRateLimitCheckerAdapter },
+    { provide: AUTH_SESSIONS_REPOSITORY, useClass: DrizzleAuthSessionsRepository },
     { provide: REFRESH_TOKEN_GENERATOR, useClass: CryptoRefreshTokenGeneratorAdapter },
-    { provide: UNIT_OF_WORK, useClass: InMemoryUnitOfWorkAdapter },
+    { provide: UNIT_OF_WORK, useClass: DrizzleUnitOfWorkAdapter },
     { provide: TELEGRAM_INIT_DATA_VERIFIER, useClass: TelegramInitDataVerifierAdapter },
-    { provide: USER_TELEGRAM_IDENTITIES_REPOSITORY, useClass: InMemoryUserTelegramIdentitiesRepository },
+    { provide: USER_TELEGRAM_IDENTITIES_REPOSITORY, useClass: DrizzleUserTelegramIdentitiesRepository },
     Rs256JwtSignerAdapter,
     CryptoOtpGeneratorAdapter,
     MockSmsProviderAdapter,
-    InMemoryRateLimitCheckerAdapter,
+    RedisRateLimitCheckerAdapter,
     CryptoRefreshTokenGeneratorAdapter,
-    InMemoryUnitOfWorkAdapter,
-    InMemoryUsersRepository,
-    InMemoryOtpCodesRepository,
-    InMemoryAuthSessionsRepository,
-    InMemoryUserTelegramIdentitiesRepository,
+    DrizzleUnitOfWorkAdapter,
+    DrizzleUsersRepository,
+    DrizzleOtpCodesRepository,
+    DrizzleAuthSessionsRepository,
+    DrizzleUserTelegramIdentitiesRepository,
     TelegramInitDataVerifierAdapter,
     RequestOtpUseCase,
     VerifyOtpUseCase,

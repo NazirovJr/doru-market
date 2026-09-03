@@ -16,14 +16,17 @@ import {
   type UpdateUserPatch,
   type UsersRepository,
 } from '@/modules/auth/application/ports/users.repository.port.js'
+import { type UnitOfWorkTx } from '@/modules/auth/application/ports/unit-of-work.port.js'
 import { type User } from '@/modules/auth/domain/user.js'
+import { resolveDrizzleClient } from './drizzle-tx.util.js'
 
 @Injectable()
 export class DrizzleUsersRepository implements UsersRepository {
   constructor(@Inject(DRIZZLE_DB) private readonly db: DrizzleDb) {}
 
-  async findByTenantAndPhone(tenantId: string, phoneNumber: string): Promise<User | null> {
-    const rows = await this.db
+  async findByTenantAndPhone(tenantId: string, phoneNumber: string, tx?: UnitOfWorkTx): Promise<User | null> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const rows = await client
       .select()
       .from(users)
       .where(
@@ -41,8 +44,9 @@ export class DrizzleUsersRepository implements UsersRepository {
     return Promise.resolve(userRowToDomain(row))
   }
 
-  async findById(id: string): Promise<User | null> {
-    const rows = await this.db
+  async findById(id: string, tx?: UnitOfWorkTx): Promise<User | null> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const rows = await client
       .select()
       .from(users)
       .where(and(eq(users.id, id), isNull(users.deletedAt)))
@@ -63,8 +67,9 @@ export class DrizzleUsersRepository implements UsersRepository {
    * в TENANT_ID через /staff-accounts, не находился бы при логине — verify
    * видел бы только `tenantId='neutral'` placeholder из контроллера.
    */
-  async findActiveByPhone(phoneNumber: string): Promise<User | null> {
-    const rows = await this.db
+  async findActiveByPhone(phoneNumber: string, tx?: UnitOfWorkTx): Promise<User | null> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const rows = await client
       .select()
       .from(users)
       .where(and(eq(users.phoneNumber, phoneNumber), isNull(users.deletedAt)))
@@ -77,8 +82,9 @@ export class DrizzleUsersRepository implements UsersRepository {
     return Promise.resolve(userRowToDomain(row))
   }
 
-  async create(input: CreateUserInput): Promise<User> {
-    const rows = await this.db
+  async create(input: CreateUserInput, tx?: UnitOfWorkTx): Promise<User> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const rows = await client
       .insert(users)
       .values({
         tenantId: input.tenantId,
@@ -106,8 +112,9 @@ export class DrizzleUsersRepository implements UsersRepository {
    * одновременных входов с одного номера. Конфликт → строка уже
    * существует → возвращаем через `findByTenantAndPhone`.
    */
-  async findOrCreateByTenantAndPhone(input: CreateUserInput): Promise<User> {
-    const inserted = await this.db
+  async findOrCreateByTenantAndPhone(input: CreateUserInput, tx?: UnitOfWorkTx): Promise<User> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const inserted = await client
       .insert(users)
       .values({
         tenantId: input.tenantId,
@@ -126,7 +133,7 @@ export class DrizzleUsersRepository implements UsersRepository {
       }
       return Promise.resolve(userRowToDomain(insertedRow))
     }
-    const existing = await this.findByTenantAndPhone(input.tenantId, input.phoneNumber ?? '')
+    const existing = await this.findByTenantAndPhone(input.tenantId, input.phoneNumber ?? '', tx)
     if (existing === null) {
       throw new Error(`findOrCreateByTenantAndPhone: race after conflict for ${input.tenantId}|${String(input.phoneNumber)}`)
     }

@@ -25,6 +25,24 @@
  *   - `Promise.all` для параллельных операций.
  *   - `Clock` + `IdGenerator` через порты shared-kernel (Ж8).
  *   - Канонический текст ошибки — `useT('ru').t('ux.error.otp_locked')` (DTJ-024 DoD).
+ *
+ * **Дефект (волна 6, найден при исправлении self-deadlock пула в checkout,
+ * DTJ-231/233, подтверждён аудитом, исправлено здесь) — «декоративная
+ * транзакция».** `execute()` открывает `uow.run(tx => ...)`, но шаги 4-5
+ * (find-or-create `User`, создание `auth_sessions`) вызывали
+ * `UsersRepository`/`AuthSessionsRepository` через СВОЙ `@Inject(DRIZZLE_DB)`,
+ * игнорируя `tx` — каждый вызов шёл СВОИМ соединением пула И своей неявной
+ * транзакцией. Откат внешней транзакции НЕ откатывал их (атомарность,
+ * которую документ выше подразумевает пунктами 1-7 «та же транзакция», была
+ * ложной), а конкурентность ≥ `DEFAULT_POOL_MAX` (пул держит соединение под
+ * `tx`, репозитории просят ВТОРОЕ поверх него) тупила пул НАВСЕГДА — тот же
+ * механизм, что `checkout.use-case.ts::processGroup` (см. её JSDoc). Это
+ * путь логина по OTP, вероятно самый нагруженный эндпоинт приложения —
+ * приоритет исправления наивысший. Исправлено: `tx` теперь прокидывается в
+ * `UsersRepository.findActiveByPhone/findOrCreateByTenantAndPhone` и
+ * `AuthSessionsRepository.create` (см. `resolveUser`/`createSession` ниже) —
+ * атомарность реальна, доказано `verify-otp-race-conditions.integration.spec.ts`
+ * (rollback-тест + конкурентный прогон ≥ `DEFAULT_POOL_MAX` без зависаний).
  */
 import { createHash } from 'node:crypto'
 import { Inject, Injectable } from '@nestjs/common'
@@ -73,6 +91,7 @@ import {
 import {
   UNIT_OF_WORK,
   type UnitOfWorkPort,
+  type UnitOfWorkTx,
 } from '@/modules/auth/application/ports/unit-of-work.port.js'
 
 const SHA256_HEX_LENGTH = 64
@@ -248,8 +267,8 @@ export class VerifyOtpUseCase {
       return err(new OtpMismatchError())
     }
     const phone = PhoneNumber.parse(record.subjectRef)
-    const user = await this.resolveUser(phone, input.tenantId)
-    const { session, refresh } = await this.createSession(user, input)
+    const user = await this.resolveUser(phone, input.tenantId, tx)
+    const { session, refresh } = await this.createSession(user, input, tx)
     await this.otpCodes.markConsumed(tx, record.id, now)
     const accessToken = this.signAccessToken(user, session)
     return ok({ accessToken, refreshToken: refresh.token, user })
@@ -262,9 +281,19 @@ export class VerifyOtpUseCase {
    * /staff-accounts в конкретном тенанте, теряется: `findOrCreateByTenantAndPhone`
    * с placeholder'ом `tenantId='neutral'` не находит его и создаёт нового
    * customer'а в 'neutral' — цепочка рвётся, роль теряется.
+   *
+   * `tx` (волна 6, self-deadlock пула соединений, тот же дефект, что чинили
+   * в checkout DTJ-231/233) — ПРОКИДЫВАЕТСЯ дальше в оба вызова
+   * `UsersRepository`, а не открывает своё соединение поверх удержанного
+   * `execute()`'ом `tx` группы. Без этого — при конкурентности ≥ размера
+   * пула (`DEFAULT_POOL_MAX`, `infrastructure/database/drizzle.provider.ts`)
+   * ЛЮБОЙ verify-OTP (самый нагруженный эндпоинт, см. JSDoc класса) тупит
+   * пул навсегда, а не «медленно» — см. JSDoc `checkout.use-case.ts::processGroup`
+   * за полным разбором механизма (тот же `pg_stat_activity`-паттерн:
+   * `idle in transaction`/`query='begin'`/`wait_event=ClientRead`).
    */
-  private async resolveUser(phone: PhoneNumber, tenantId: string): Promise<User> {
-    const existingAcrossTenants = await this.users.findActiveByPhone(phone.value)
+  private async resolveUser(phone: PhoneNumber, tenantId: string, tx: UnitOfWorkTx): Promise<User> {
+    const existingAcrossTenants = await this.users.findActiveByPhone(phone.value, tx)
     return (
       existingAcrossTenants
       ?? this.users.findOrCreateByTenantAndPhone({
@@ -272,14 +301,21 @@ export class VerifyOtpUseCase {
         phoneNumber: phone.value,
         role: 'customer' satisfies UserRole,
         fullName: null,
-      } satisfies CreateUserInput)
+      } satisfies CreateUserInput, tx)
     )
   }
 
-  /** Выпускает `AuthSession` + opaque refresh-токен и сохраняет сессию. */
+  /**
+   * Выпускает `AuthSession` + opaque refresh-токен и сохраняет сессию.
+   *
+   * `tx` — см. JSDoc `resolveUser` выше, тот же self-deadlock-дефект:
+   * `AuthSessionsRepository.create` без `tx` просило бы у пула второе
+   * соединение поверх уже удержанного транзакцией `execute()`.
+   */
   private async createSession(
     user: User,
     input: VerifyOtpInput,
+    tx: UnitOfWorkTx,
   ): Promise<{ session: AuthSession; refresh: { readonly token: string; readonly hash: string } }> {
     const refresh = this.refreshGen.generate()
     const sessionId = this.ids.next()
@@ -293,7 +329,7 @@ export class VerifyOtpUseCase {
       ipAddress: input.ipAddress,
       clock: this.clock,
     })
-    await this.authSessions.create(sessionToCreateInput(session))
+    await this.authSessions.create(sessionToCreateInput(session), tx)
     return { session, refresh }
   }
 

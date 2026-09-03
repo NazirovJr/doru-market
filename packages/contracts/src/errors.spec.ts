@@ -46,11 +46,14 @@ const EXPECTED: readonly (readonly [ErrorCode, number])[] = [
   [ErrorCode.OTP_REQUEST_RATE_LIMITED, 429],
   [ErrorCode.RATE_LIMITED, 429],
   [ErrorCode.INTERNAL_ERROR, 500],
+  // NOT_IMPLEMENTED — DTJ-233 (EP-09): заглушка GET /orders/:id/payment-status до EP-10.
+  [ErrorCode.NOT_IMPLEMENTED, 501],
   [ErrorCode.BAD_GATEWAY, 502],
   [ErrorCode.SERVICE_UNAVAILABLE, 503],
   [ErrorCode.INVALID_PHONE_FORMAT, 400],
   [ErrorCode.INVALID_COORDINATES, 400],
   [ErrorCode.ORDER_TOTAL_MISMATCH, 400],
+  [ErrorCode.ORDER_PHARMACY_MISMATCH, 400],
   [ErrorCode.INVALID_RESTOCK_QUANTITY, 400],
   [ErrorCode.INVALID_PRICE, 400],
   [ErrorCode.MISSING_RESOLUTION_REASON, 400],
@@ -60,6 +63,12 @@ const EXPECTED: readonly (readonly [ErrorCode, number])[] = [
   [ErrorCode.RETURN_ALREADY_ACTIVE, 409],
   [ErrorCode.DISPUTE_ALREADY_ACTIVE, 409],
   [ErrorCode.LEDGER_IMBALANCE, 409],
+  // PRICE_OR_STOCK_CHANGED — DTJ-231 (EP-09), SRS-ORD-023 (21-module-orders-payments-escrow.md
+  // §2.2), тот же класс добавления, что NO_ORDERABLE_ITEMS/PAYMENT_METHOD_NOT_ENABLED (D-EP09-9).
+  [ErrorCode.PRICE_OR_STOCK_CHANGED, 409],
+  // ORDER_NOT_RETRYABLE — DTJ-241 (EP-10), SRS-PAY-041 (21-module-orders-payments-escrow.md,
+  // «Что сделать» п.3) — тот же класс добавления, что PRICE_OR_STOCK_CHANGED (D-EP09-9).
+  [ErrorCode.ORDER_NOT_RETRYABLE, 409],
   [ErrorCode.INVALID_STATE_TRANSITION, 409],
   [ErrorCode.PRESCRIPTION_NOT_VERIFIED, 422],
   [ErrorCode.CONTROLLED_SUBSTANCE_FORBIDDEN, 422],
@@ -70,6 +79,14 @@ const EXPECTED: readonly (readonly [ErrorCode, number])[] = [
   [ErrorCode.RESTOCK_CONDITIONS_NOT_MET, 422],
   [ErrorCode.CONTROLLED_SUBSTANCE_MUST_BE_DESTROYED, 422],
   [ErrorCode.PARENT_CHAIN_NOT_ACTIVE, 422],
+  // NO_ORDERABLE_ITEMS — DTJ-227 (EP-09), SRS-ORD-016 (00-SRS-MASTER.md:693) — «новый код
+  // этого документа» по 21-module-orders-payments-escrow.md §«Ошибки» (строка 202-205), тот же
+  // класс добавления, что ORDER_PHARMACY_MISMATCH (D-EP09-9): 10-domain-model.md §«Доменные
+  // ошибки» пока НЕ перечисляет его явно — foundIssue, тот же гап документа, что и там.
+  [ErrorCode.NO_ORDERABLE_ITEMS, 422],
+  // PAYMENT_METHOD_NOT_ENABLED — DTJ-229 (EP-09), SRS-ORD-025 п.2 (21-module-orders-payments-escrow.md:336,
+  // «новый код»), тот же класс добавления, что NO_ORDERABLE_ITEMS выше (D-EP09-9).
+  [ErrorCode.PAYMENT_METHOD_NOT_ENABLED, 422],
   [ErrorCode.PHARMACY_SUSPENDED, 403],
   [ErrorCode.CASH_AMOUNT_MISMATCH, 422],
   [ErrorCode.COURIER_TENANT_MISMATCH, 403],
@@ -86,6 +103,9 @@ const EXPECTED: readonly (readonly [ErrorCode, number])[] = [
   [ErrorCode.PAYMENT_PROVIDER_UNAVAILABLE, 503],
   [ErrorCode.OCR_PROVIDER_UNAVAILABLE, 503],
   [ErrorCode.SMS_PROVIDER_UNAVAILABLE, 503],
+
+  // DTJ-242 (EP-10), SRS-PAY-019 / TC-PAY-005 — docs/spec/21-module-orders-payments-escrow.md.
+  [ErrorCode.WEBHOOK_PROVIDER_UNKNOWN, 400],
 ]
 
 describe('ErrorCode / ERROR_HTTP_STATUS — сверка с источниками', () => {

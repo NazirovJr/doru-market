@@ -26,59 +26,66 @@
  * `design:paramtypes` (DTJ-001), а без `@Injectable()` на классе Nest вообще не
  * видит метаданных конструктора и тихо создаёт инстанс без аргументов (`db`
  * остаётся `undefined`, не бросая ошибку при бутстрапе).
+ *
+ * `zeroOutMissing` принимает ОПЦИОНАЛЬНЫЙ `tx` (волна 6, self-deadlock пула
+ * соединений, тот же дефект, что чинили в checkout DTJ-231/233) — использует
+ * его через `resolveDrizzleClient` (и прокидывает в
+ * `findTouchedBatchNumbersForSession`), чтобы zero-out был частью ТОЙ ЖЕ
+ * транзакции, что и `IngestInventoryBatchWithMatchingUseCase.execute` (см.
+ * её JSDoc).
  */
 import { Inject, Injectable } from '@nestjs/common'
 import { and, eq, isNotNull, lt, notInArray, sql } from 'drizzle-orm'
-import { DRIZZLE_DB } from '@/infrastructure/database/drizzle.provider.js'
+import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { inventorySyncBatch } from '@/db/schema/inventory-sync-batch.js'
 import { inventorySyncRawItems } from '@/db/schema/inventory-sync-raw-items.js'
 import { pharmacyInventory } from '@/db/schema/pharmacy-inventory.js'
-import type { FullSyncCompletionPort } from '@/modules/inventory/application/ports/full-sync-completion.port.js'
-
-/** Минимальный контракт Drizzle, который мы используем. */
-interface DrizzleLike {
-  update: (table: unknown) => {
-    set: (values: Record<string, unknown>) => {
-      where: (condition: ReturnType<typeof and>) => {
-        returning: (cols: { quantity: unknown }) => Promise<readonly unknown[]>
-      }
-    }
-  }
-  select: (cols: unknown) => {
-    from: (table: unknown) => {
-      innerJoin: (
-        b: unknown,
-        cond: ReturnType<typeof eq>,
-      ) => {
-        where: (cond: ReturnType<typeof and>) => Promise<readonly { batchNumber: string }[]>
-      }
-    }
-  }
-}
+import type {
+  FullSyncCompletionPort,
+  ZeroOutMissingInput,
+} from '@/modules/inventory/application/ports/full-sync-completion.port.js'
+import type { UnitOfWorkTx } from '@/modules/auth/index.js'
+import { resolveDrizzleClient } from './drizzle-tx.util.js'
 
 @Injectable()
 export class DrizzleFullSyncCompletionAdapter implements FullSyncCompletionPort {
-  constructor(@Inject(DRIZZLE_DB) private readonly db: DrizzleLike) {}
+  constructor(@Inject(DRIZZLE_DB) private readonly db: DrizzleDb) {}
 
   /**
    * Шаг 1: собрать `touchedBatchNumbers` — все `batch_number`, которые
    * были применены в любой странице текущей full-sync сессии (читаем
-   * из `inventory_sync_raw_items.payload->>'batchNumber'`).
+   * из `inventory_sync_raw_items.payload->>'batch_number'`).
    * Возвращает ПУСТОЙ массив, если ни одна страница не применена.
+   *
+   * **ИСПРАВЛЕНО — волна 5, блок C.** Ключ JSONB был `'batchNumber'`
+   * (camelCase) — не совпадал НИ С ОДНОЙ реальной строкой: контроллер
+   * (`InventoryBatchUpdateController.rowToPayload`) пишет payload со
+   * snake_case-ключами (`batch_number`, как и остальные поля —
+   * `internal_sku`, `raw_barcode`, ...). При camelCase-ключе
+   * `payload->>'batchNumber'` был `NULL` для каждой строки →
+   * `isNotNull(...)` отфильтровывал ВСЁ → `touched` всегда пустой массив →
+   * `zeroOutMissing` (см. ниже) пропускал условие `NOT IN (:touched)`
+   * ЦЕЛИКОМ и обнулял ВСЕ лоты аптеки старше `fullSyncTimestamp`,
+   * ВКЛЮЧАЯ только что применённые в текущей full-sync сессии. Найдено
+   * при подключении этого адаптера как активного `FULL_SYNC_COMPLETION`
+   * (до волны 5 — `InMemoryFullSyncCompletion`, баг был невидим), не
+   * покрыто ни одним тестом до `drizzle-full-sync-completion.adapter.integration.spec.ts`.
    */
   async findTouchedBatchNumbersForSession(
     fullSyncSessionId: string,
+    tx?: UnitOfWorkTx,
   ): Promise<readonly string[]> {
-    const rows = await this.db
+    const client = resolveDrizzleClient(this.db, tx)
+    const rows = await client
       .select({
-        batchNumber: sql<string>`${inventorySyncRawItems.payload}->>'batchNumber'`,
+        batchNumber: sql<string>`${inventorySyncRawItems.payload}->>'batch_number'`,
       })
       .from(inventorySyncBatch)
       .innerJoin(inventorySyncRawItems, eq(inventorySyncRawItems.batchId, inventorySyncBatch.id))
       .where(
         and(
           eq(inventorySyncBatch.fullSyncSessionId, fullSyncSessionId),
-          isNotNull(sql`${inventorySyncRawItems.payload}->>'batchNumber'`),
+          isNotNull(sql`${inventorySyncRawItems.payload}->>'batch_number'`),
         ),
       )
     const unique = new Set<string>()
@@ -94,12 +101,10 @@ export class DrizzleFullSyncCompletionAdapter implements FullSyncCompletionPort 
    * ШАГ 2: обнулить партии, не упомянутые в `touchedBatchNumbers`,
    * с защитой от гонки (SRS-INV-042).
    */
-  async zeroOutMissing(
-    pharmacyId: string,
-    fullSyncSessionId: string,
-    fullSyncTimestamp: Date,
-  ): Promise<{ readonly zeroedLots: number }> {
-    const touched = await this.findTouchedBatchNumbersForSession(fullSyncSessionId)
+  async zeroOutMissing(input: ZeroOutMissingInput): Promise<{ readonly zeroedLots: number }> {
+    const { pharmacyId, fullSyncSessionId, fullSyncTimestamp, tx } = input
+    const client = resolveDrizzleClient(this.db, tx)
+    const touched = await this.findTouchedBatchNumbersForSession(fullSyncSessionId, tx)
     // Условия (SRS-INV-041/042):
     //   - `pharmacy_id = :pharmacyId` — только эта аптека;
     //   - `updatedAt < :fullSyncTimestamp` — партии, обновлённые
@@ -119,7 +124,7 @@ export class DrizzleFullSyncCompletionAdapter implements FullSyncCompletionPort 
     if (touched.length > 0) {
       conditions.push(notInArray(pharmacyInventory.batchNumber, touched as string[]))
     }
-    const result = await this.db
+    const result = await client
       .update(pharmacyInventory)
       .set({
         quantity: 0,

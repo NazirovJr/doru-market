@@ -10,14 +10,22 @@
  * компилятором, что статус указан для КАЖДОГО кода.
  *
  * Не-`DomainError` исключения (`TypeError`, `Error` от плохого use case'а)
- * маппятся в `500 INTERNAL_ERROR` с каноническим `t('ux.error.generic_500')`
- * НЕ показывается (на client — `INTERNAL_ERROR` без details, чтобы не
- * утекали stack traces). `pino.fatal` логирует полный stack для ops.
+ * маппятся в `500 INTERNAL_ERROR`: наружу уходит только `requestId` (по нему ops
+ * находит запись в логе), stack trace в HTTP не попадает никогда.
+ *
+ * **Это ЕДИНСТВЕННЫЙ фильтр приложения.** Раньше рядом были зарегистрированы ещё два —
+ * `DomainExceptionFilter` (`@Catch(DomainError)`) и `TransportExceptionFilter` (`@Catch()`)
+ * через `APP_FILTER` в `app.module.ts`. Оба были НЕДОСТИЖИМЫ: NestJS отдаёт исключение первому
+ * подходящему фильтру, и им всегда оказывался этот. Доказано интеграционно —
+ * `test/integration/auth/cross-tenant-leakage.spec.ts` получает `403 CROSS_TENANT_ACCESS_DENIED`,
+ * тогда как `TransportExceptionFilter` на том же исключении отдал бы `401 UNAUTHENTICATED`.
+ * Их юнит-тесты при этом были зелёными и описывали поведение, которого не видел ни один клиент, —
+ * то есть работали ловушкой: правка «фильтра ошибок» ничего не меняла в проде. Удалены
+ * (решение CTO, волна 6); из `DomainExceptionFilter` сюда перенесена маскировка статуса 500.
  *
  * Регистрация:
- *   `app.useGlobalFilters(new AllExceptionsFilter(pinoLogger))` в main.ts
- *   (DTJ-001) — НЕ через APP_FILTER provider, т.к. фильтр зависит от
- *   PINO_LOGGER (resolved из `LoggerModule`, DTJ-001).
+ *   `app.useGlobalFilters(new AllExceptionsFilter())` в main.ts и в тестовых харнессах
+ *   (`test/integration/.../test-app.ts`) — НЕ через `APP_FILTER`.
  */
 import {
   ArgumentsHost,
@@ -29,6 +37,7 @@ import {
 import { ERROR_HTTP_STATUS, ErrorCode, type ErrorEnvelope } from '@dorutj/contracts'
 import { DomainError } from '@dorutj/contracts'
 import { type FastifyReply } from 'fastify'
+import { RequestContext } from '@/common/context/request-context.js'
 import {
   HTTP_STATUS_BAD_REQUEST,
   HTTP_STATUS_CONFLICT,
@@ -41,6 +50,10 @@ import {
 } from '../http/http-status.constants.js'
 
 const FALLBACK_HTTP_STATUS = HTTP_STATUS_INTERNAL_SERVER_ERROR
+/** Статус, чьи `code`/`details` маскируются (SRS-API-014, DTJ-193) — РОВНО 500, не весь 5xx:
+ *  503 — намеренная деградация, её `code`/`details.reason` обязаны дойти до клиента. */
+const MASKED_INTERNAL_ERROR_STATUS = HTTP_STATUS_INTERNAL_SERVER_ERROR
+const INTERNAL_ERROR_MESSAGE = 'Internal server error'
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -51,15 +64,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const reply = ctx.getResponse<FastifyReply>()
 
     if (exception instanceof DomainError) {
-      const status = resolveHttpStatus(exception.code)
-      const envelope: ErrorEnvelope = {
-        error: {
-          code: exception.code,
-          message: exception.message,
-          ...(exception.details !== undefined ? { details: exception.details } : {}),
-        },
-      }
-      reply.status(status).send(envelope)
+      this.sendDomainError(exception, reply)
       return
     }
 
@@ -72,13 +77,30 @@ export class AllExceptionsFilter implements ExceptionFilter {
     this.logger.error(
       `Неожиданное исключение в request handler: ${exception instanceof Error ? (exception.stack ?? exception.message) : String(exception)}`,
     )
+    const details = maskedDetails()
     const envelope: ErrorEnvelope = {
       error: {
         code: ErrorCode.INTERNAL_ERROR,
-        message: 'Internal server error',
+        message: INTERNAL_ERROR_MESSAGE,
+        ...(Object.keys(details).length > 0 ? { details } : {}),
       },
     }
     reply.status(FALLBACK_HTTP_STATUS).send(envelope)
+  }
+
+  /** Доменная ошибка: статус и код — из `ERROR_HTTP_STATUS`, с маскировкой ровно на 500. */
+  private sendDomainError(exception: DomainError, reply: FastifyReply): void {
+    const status = resolveHttpStatus(exception.code)
+    const isMasked = status === MASKED_INTERNAL_ERROR_STATUS
+    const details = isMasked ? maskedDetails() : exception.details
+    const envelope: ErrorEnvelope = {
+      error: {
+        code: isMasked ? ErrorCode.INTERNAL_ERROR : exception.code,
+        message: isMasked ? INTERNAL_ERROR_MESSAGE : exception.message,
+        ...(details !== undefined && Object.keys(details).length > 0 ? { details } : {}),
+      },
+    }
+    reply.status(status).send(envelope)
   }
 
   /**
@@ -99,25 +121,22 @@ export class AllExceptionsFilter implements ExceptionFilter {
    * 403, но кидается через `UnauthorizedException`, у которой `getStatus() === 401`).
    */
   private sendHttpException(exception: HttpException, reply: FastifyReply): void {
-    const status = exception.getStatus()
     // `getResponse()` типизирован как `string | object`, но исключение сюда приходит из
     // произвольного места приложения — типизирован намеренно как `unknown`, чтобы не
     // терять runtime-проверку `body !== null` (защита от `HttpException`, созданных в обход
     // штатного конструктора, напр. сторонним кодом через `as any`).
-    const body: unknown = exception.getResponse()
-    const message =
-      typeof body === 'object' && body !== null && 'message' in body
-        ? String((body).message)
-        : exception.message
-    const explicitCode = extractErrorCode(body)
-    if (explicitCode !== null) {
-      const canonicalStatus = ERROR_HTTP_STATUS[explicitCode]
-      const envelope: ErrorEnvelope = { error: { code: explicitCode, message } }
-      reply.status(canonicalStatus).send(envelope)
-      return
-    }
+    const source = readErrorSource(exception.getResponse())
+    const message = source !== null && 'message' in source ? String(source.message) : exception.message
+    const explicitCode = extractErrorCode(source)
+    const status = explicitCode !== null ? ERROR_HTTP_STATUS[explicitCode] : exception.getStatus()
+    const isMasked = status === MASKED_INTERNAL_ERROR_STATUS
+    const details = isMasked ? maskedDetails() : readDetails(source)
     const envelope: ErrorEnvelope = {
-      error: { code: mapHttpStatusToCode(status), message },
+      error: {
+        code: isMasked ? ErrorCode.INTERNAL_ERROR : (explicitCode ?? mapHttpStatusToCode(status)),
+        message: isMasked ? INTERNAL_ERROR_MESSAGE : message,
+        ...(details !== undefined && Object.keys(details).length > 0 ? { details } : {}),
+      },
     }
     reply.status(status).send(envelope)
   }
@@ -141,12 +160,47 @@ function resolveHttpStatus(code: string): number {
  * доменного кода (`{ statusCode, message, error }` от `BadRequestException`
  * Zod-pipe'а и т.п.) — для них `code` ниже вычисляется из HTTP-статуса.
  */
-function extractErrorCode(body: unknown): ErrorCode | null {
-  if (typeof body !== 'object' || body === null || !('code' in body)) {
+function extractErrorCode(source: Record<string, unknown> | null): ErrorCode | null {
+  const candidate = source?.code
+  return typeof candidate === 'string' && candidate in ERROR_HTTP_STATUS ? (candidate as ErrorCode) : null
+}
+
+/**
+ * Разворачивает тело `HttpException` до объекта, несущего `code`/`message`/`details`.
+ *
+ * В проекте сосуществуют ДВЕ формы, и обе легальны:
+ *   - плоская `{ code, message }` — гварды (`AuthGuard`/`RolesGuard`/`CartIdentityGuard`);
+ *   - полный конверт `{ error: { code, message, details } }` — `ZodValidationPipe`,
+ *     `IdempotencyInterceptor`.
+ * Раньше читалась только плоская: у Zod-пайпа `code`/`details` лежат на уровень глубже, поэтому
+ * `details.issues` (какое поле не прошло валидацию) терялись целиком, а `message` откатывался на
+ * `exception.message`, то есть на строку NestJS «Bad Request Exception». Клиент получал ответ,
+ * по которому невозможно понять, что именно он прислал не так.
+ *
+ * Тело нативного Nest-исключения (`{ statusCode, message, error: 'Bad Request' }`) не
+ * разворачивается: `error` там — строка, а не объект.
+ */
+function readErrorSource(body: unknown): Record<string, unknown> | null {
+  if (typeof body !== 'object' || body === null) {
     return null
   }
-  const candidate = (body as { readonly code: unknown }).code
-  return typeof candidate === 'string' && candidate in ERROR_HTTP_STATUS ? (candidate as ErrorCode) : null
+  const record = body as Record<string, unknown>
+  const nested: unknown = record.error
+  return typeof nested === 'object' && nested !== null ? (nested as Record<string, unknown>) : record
+}
+
+function readDetails(source: Record<string, unknown> | null): Record<string, unknown> | undefined {
+  const details = source?.details
+  if (typeof details !== 'object' || details === null || Array.isArray(details)) {
+    return undefined
+  }
+  return details as Record<string, unknown>
+}
+
+/** Маскировка статуса 500 (SRS-API-014, решение CTO по DTJ-193) — наружу только `requestId`. */
+function maskedDetails(): Record<string, unknown> {
+  const requestId = RequestContext.get()?.requestId
+  return requestId === undefined ? {} : { requestId }
 }
 
 function mapHttpStatusToCode(status: number): ErrorCode {

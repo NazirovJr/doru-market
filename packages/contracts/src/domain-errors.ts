@@ -57,6 +57,13 @@ export class OrderTotalMismatchError extends ValidationError {
   }
 }
 
+/** DTJ-221 (EP-09), SRS-DOM-002 — defensive-проверка «все позиции заказа одной аптеки». */
+export class OrderPharmacyMismatchError extends ValidationError {
+  constructor(details?: Record<string, unknown>) {
+    super('Order items belong to more than one pharmacy', details, ErrorCode.ORDER_PHARMACY_MISMATCH)
+  }
+}
+
 export class InvalidRestockQuantityError extends ValidationError {
   constructor(details?: Record<string, unknown>) {
     super('Invalid restock quantity', details, ErrorCode.INVALID_RESTOCK_QUANTITY)
@@ -213,6 +220,13 @@ export class ControlledSubstanceMustBeDestroyedError extends BusinessRuleViolati
 export class ParentChainNotActiveError extends BusinessRuleViolationError {
   constructor(details?: Record<string, unknown>) {
     super('Parent chain is not active', details, ErrorCode.PARENT_CHAIN_NOT_ACTIVE)
+  }
+}
+
+/** DTJ-227 (EP-09), SRS-ORD-016 — checkout не оставил ни одной заказываемой группы. */
+export class NoOrderableItemsError extends BusinessRuleViolationError {
+  constructor(details?: Record<string, unknown>) {
+    super('No orderable items remain after exclusions', details, ErrorCode.NO_ORDERABLE_ITEMS)
   }
 }
 

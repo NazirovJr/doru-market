@@ -43,6 +43,29 @@ export class OnboardingFacade {
     return account?.suspensionReason ?? null
   }
 
+  /**
+   * РАСШИРЕНИЕ (DTJ-227, EP-09 checkout) — отображаемые имена аптек по батчу id
+   * (`OnboardingFacadePort.getPharmacyNames`, DTJ-225). `PharmacyAccountRepositoryPort` не
+   * несёт батч-метода по id (`findById` — единственный, DTJ-063/070) — `Promise.all` по
+   * одиночным `findById` внутри ЭТОГО модуля, а не N+1 через межмодульную границу (сам вызов
+   * снаружи — ровно один `await facade.getPharmacyNames(ids)`). ПРАГМАТИЧНЫЙ выбор
+   * (foundIssue, отчёт сдачи DTJ-227): реальный batch-SQL (`findByIds`) — улучшение вне
+   * периметра этого тикета (правка `application/ports/pharmacy-account.repository.port.ts` +
+   * Drizzle-реализации, чужой модуль). Несуществующая/удалённая аптека — молча пропускается в
+   * `Map` (тот же приём, что `getMedicineSnapshot`), НЕ подставляется `pharmacyId` вместо
+   * имени.
+   */
+  async getPharmacyNames(pharmacyIds: readonly string[]): Promise<ReadonlyMap<string, string>> {
+    const accounts = await Promise.all(pharmacyIds.map((id) => this.pharmacyAccountRepository.findById(id)))
+    const out = new Map<string, string>()
+    for (const account of accounts) {
+      if (account !== null) {
+        out.set(account.id, account.name)
+      }
+    }
+    return out
+  }
+
   /** Контракт для EP-02 DTJ-057 — провижининг тенанта с правами whitelabel. */
   async getChainEligibilityForWhitelabel(
     chainId: string,

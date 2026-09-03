@@ -21,6 +21,14 @@ import {
 import { CATEGORIES_READ_REPOSITORY } from './application/ports/categories-read.repository.port.js'
 import { InMemoryMedicineReadRepository } from './infrastructure/adapters/in-memory-medicine-read.repository.js'
 import { InMemoryCategoriesReadRepository } from './infrastructure/adapters/in-memory-categories-read.repository.js'
+// Волна 5, блок B (см. reports/CTO-DECISION-WAVE5.md §3): Drizzle-реализации
+// MEDICINE_READ_REPOSITORY/CATEGORIES_READ_REPOSITORY — прод раньше не имел способа
+// заполнить `InMemory*` (initial = []), `/api/v1/medicines`/`/api/v1/categories` читали
+// пусто независимо от содержимого Postgres. InMemory-адаптеры выше НЕ удалены — их
+// использует `in-memory-medicine-read.repository.spec.ts` (прямое конструирование,
+// не через DI), их bare-class провайдеры (см. ниже) сохранены без изменений.
+import { PostgresMedicineReadRepository } from './infrastructure/adapters/postgres-medicine-read.repository.js'
+import { PostgresCategoriesReadRepository } from './infrastructure/adapters/postgres-categories-read.repository.js'
 import { CATALOG_REPOSITORY } from './application/ports/catalog-repository.port.js'
 import { CatalogRepositoryAdapter } from './infrastructure/adapters/catalog-repository.adapter.js'
 import { FUZZY_MEDICINE_MATCHER } from './application/ports/fuzzy-medicine-matcher.port.js'
@@ -38,12 +46,13 @@ import { FindAnalogsUseCase } from './application/use-cases/find-analogs.use-cas
 import { PublishMedicineUseCase } from './application/use-cases/publish-medicine.use-case.js'
 import { ProposeControlCategoryUseCase } from './application/use-cases/propose-control-category.use-case.js'
 import { CATALOG_FACADE, CatalogFacadeImpl } from './index.js'
-// DTJ-096 follow-up (разблокировка волны 4): `PublishMedicineUseCase`/
-// `ProposeControlCategoryUseCase` инжектируют `UNIT_OF_WORK` из `auth` —
-// без импорта `AuthModule` здесь Nest не резолвит эту зависимость
-// (`UnknownDependenciesException` при старте, проверено вручную через
-// `Test.createTestingModule({ imports: [AuthModule, CatalogModule] })`).
-import { AuthModule } from '@/modules/auth/auth.module.js'
+// DTJ-096 follow-up (разблокировка волны 4) — УДАЛЕНО волной 6: `PublishMedicineUseCase`/
+// `ProposeControlCategoryUseCase` инжектировали `UNIT_OF_WORK` из `auth` ради декоративной
+// (ни одним вызовом не используемой) `unitOfWork.run(...)` — self-deadlock-риск без пользы
+// (см. JSDoc обоих use case'ов, тот же дефект, что чинили в checkout/verify-otp/ingest-inventory).
+// Обёртка убрана, `UNIT_OF_WORK` больше не нужен — `AuthModule` здесь СЕЙЧАС не импортируется
+// ничем другим в этом файле (проверено: ни один провайдер/контроллер `catalog.module.ts` не
+// использует `AuthGuard`/`RolesGuard`/иной экспорт `auth` напрямую).
 // DTJ-185: DI-биндинг SEARCH_PROVIDER — реальная развилка 'postgres' → PostgresSearchProvider
 // (было DTJ-180 null-search.provider.ts, всегда NullSearchProvider; та фабрика архитектурно не
 // может знать про infrastructure, см. JSDoc infrastructure/providers/search-provider.factory.ts).
@@ -96,15 +105,23 @@ import { SuggestMedicinesUseCase } from './application/use-cases/suggest-medicin
 // DTJ-190: HTTP-граница поиска/автодополнения — первый реальный потребитель
 // SearchMedicinesUseCase/SuggestMedicinesUseCase (DTJ-188/189) со стороны presentation.
 import { CatalogSearchController } from './presentation/controllers/catalog-search.controller.js'
+// DTJ-103: порт+адаптер чтения `i18n_overrides` (единообразный паттерн, решение CTO
+// D-EP07-5 — не прямой SQL из контроллера).
+import { I18N_OVERRIDES_REPOSITORY_PROVIDER } from './infrastructure/adapters/drizzle-i18n-overrides.repository.js'
+// DTJ-102: HTTP-граница блока аналогов — первый реальный потребитель FindAnalogsUseCase
+// (DTJ-101) со стороны presentation. Маршрут, которого не было ни одного (см. JSDoc контроллера).
+import { AnalogsController } from './presentation/controllers/analogs.controller.js'
 
 /** SRS-CAT-058: TTL кэша поиска/подсказок в секундах (DTJ-187) → миллисекунды для `CacheLockPort`. */
 const MS_PER_SECOND = 1000
 
 @Module({
-  imports: [AuthModule],
   providers: [
-    { provide: MEDICINE_READ_REPOSITORY, useClass: InMemoryMedicineReadRepository },
-    { provide: CATEGORIES_READ_REPOSITORY, useClass: InMemoryCategoriesReadRepository },
+    // Волна 5, блок B: единственная продакшен-реализация — Drizzle, читает `medicines`/
+    // `medicine_substances`/`categories` (см. комментарий у импорта выше и
+    // `postgres-medicine-read.repository.ts`/`postgres-categories-read.repository.ts`).
+    { provide: MEDICINE_READ_REPOSITORY, useClass: PostgresMedicineReadRepository },
+    { provide: CATEGORIES_READ_REPOSITORY, useClass: PostgresCategoriesReadRepository },
     // DTJ-092: единый Drizzle-порт каталога. Не заменяет in-memory read-порты
     // (они используются существующими use case'ами волны 3.5); use case'ы
     // DTJ-094..096 будут постепенно переведены на этот порт в своих тикетах.
@@ -122,6 +139,8 @@ const MS_PER_SECOND = 1000
     { provide: ANALOG_OFFER_LOOKUP_PORT, useClass: NullAnalogOfferLookupAdapter },
     InMemoryMedicineReadRepository,
     InMemoryCategoriesReadRepository,
+    PostgresMedicineReadRepository,
+    PostgresCategoriesReadRepository,
     CatalogRepositoryAdapter,
     FuzzyMedicineMatcherAdapter,
     AnalogCandidatesAdapter,
@@ -190,8 +209,18 @@ const MS_PER_SECOND = 1000
     // DTJ-188/189: оркестраторы поиска и автодополнения.
     SearchMedicinesUseCase,
     SuggestMedicinesUseCase,
+    // DTJ-103: единственная продакшен-реализация I18N_OVERRIDES_REPOSITORY (Drizzle),
+    // первый реальный потребитель — AnalogsController (DTJ-102), резолвит дисклеймер.
+    I18N_OVERRIDES_REPOSITORY_PROVIDER,
   ],
-  controllers: [MedicinesController, CategoriesController, PharmaciesMapController, CatalogSearchController],
+  controllers: [
+    MedicinesController,
+    CategoriesController,
+    PharmaciesMapController,
+    CatalogSearchController,
+    // DTJ-102: GET /api/v1/medicines/:id/analogs.
+    AnalogsController,
+  ],
   exports: [
     MEDICINE_READ_REPOSITORY,
     CATEGORIES_READ_REPOSITORY,

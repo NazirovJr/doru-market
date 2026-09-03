@@ -6,7 +6,11 @@
  *   2. Несуществующий `medicineId` → `NotFoundError` (`ErrorCode.NOT_FOUND`, маппится в 404).
  *   3. Препарат без действующих веществ → `MissingSubstancesError` пробрасывается наружу.
  *
- * Репозиторий и UnitOfWork замокированы in-memory — unit-тест без БД.
+ * Репозиторий замокирован in-memory — unit-тест без БД. `UnitOfWork` (волна 6, найдено аудитом
+ * того же дефекта, что чинили в checkout DTJ-231/233) БОЛЬШЕ НЕ ИНЖЕКТИРУЕТСЯ — прежняя
+ * `unitOfWork.run(async (_tx) => {...})` была декоративной (`_tx` не использовался ни одним
+ * вызовом), убрана целиком (см. JSDoc use case'а). Тест «5. UnitOfWork.run вызывается» удалён —
+ * он проверял поведение, которое теперь намеренно отсутствует.
  *
  * @see docs/tickets/ep03-catalog-analogs/DTJ-096.md
  */
@@ -16,7 +20,6 @@ import { ControlCategory } from '@/modules/catalog/domain/medicine.enums.js'
 import { DosageUnit } from '@dorutj/domain-kernel'
 import type { MedicineRecord } from '@/modules/catalog/domain/medicine.types.js'
 import type { CatalogRepository } from '@/modules/catalog/application/ports/catalog-repository.port.js'
-import type { UnitOfWorkPort } from '@/modules/auth/application/ports/unit-of-work.port.js'
 import { PublishMedicineUseCase } from '@/modules/catalog/application/use-cases/publish-medicine.use-case.js'
 import { MissingSubstancesError } from '@/modules/catalog/domain/errors/missing-substances.error.js'
 
@@ -46,14 +49,6 @@ class FakeCatalogRepository implements CatalogRepository {
 
   save(): Promise<void> {
     return Promise.resolve()
-  }
-}
-
-/** Минимальный in-memory `UnitOfWorkPort` для теста — выполняет колбэк синхронно. */
-class FakeUnitOfWork implements UnitOfWorkPort {
-  async run<T>(callback: (tx: never) => Promise<T>): Promise<T> {
-    // В тестах tx не используется
-    return callback(undefined as never)
   }
 }
 
@@ -89,21 +84,17 @@ function makeRecord(overrides: Partial<MedicineRecord> = {}): MedicineRecord {
   return { ...base, ...overrides }
 }
 
-function makeUseCase(
-  repo: FakeCatalogRepository,
-  uow: FakeUnitOfWork,
-): PublishMedicineUseCase {
-  return new PublishMedicineUseCase(repo, uow)
+function makeUseCase(repo: FakeCatalogRepository): PublishMedicineUseCase {
+  return new PublishMedicineUseCase(repo)
 }
 
 describe('PublishMedicineUseCase (DTJ-096, SRS-DOM-013, SRS-CAT-064)', () => {
   it('1. успешная публикация: препарат найден, есть вещества → сохраняется, возвращается событие', async () => {
     const repo = new FakeCatalogRepository()
-    const uow = new FakeUnitOfWork()
     const record = makeRecord({ isPublished: false })
     repo.setRecord(record)
 
-    const useCase = makeUseCase(repo, uow)
+    const useCase = makeUseCase(repo)
 
     const result = await useCase.execute({
       medicineId: record.id,
@@ -119,8 +110,7 @@ describe('PublishMedicineUseCase (DTJ-096, SRS-DOM-013, SRS-CAT-064)', () => {
 
   it('2. несуществующий medicineId → NotFoundError (404)', async () => {
     const repo = new FakeCatalogRepository()
-    const uow = new FakeUnitOfWork()
-    const useCase = makeUseCase(repo, uow)
+    const useCase = makeUseCase(repo)
 
     await expect(
       useCase.execute({
@@ -132,12 +122,11 @@ describe('PublishMedicineUseCase (DTJ-096, SRS-DOM-013, SRS-CAT-064)', () => {
 
   it('3. препарат без действующих веществ → MissingSubstancesError пробрасывается наружу', async () => {
     const repo = new FakeCatalogRepository()
-    const uow = new FakeUnitOfWork()
     // Препарат БЕЗ веществ
     const record = makeRecord({ substances: [] })
     repo.setRecord(record)
 
-    const useCase = makeUseCase(repo, uow)
+    const useCase = makeUseCase(repo)
 
     await expect(
       useCase.execute({
@@ -149,13 +138,12 @@ describe('PublishMedicineUseCase (DTJ-096, SRS-DOM-013, SRS-CAT-064)', () => {
 
   it('4. вызывает CatalogRepository.save после успешной публикации', async () => {
     const repo = new FakeCatalogRepository()
-    const uow = new FakeUnitOfWork()
     const record = makeRecord({ isPublished: false })
     repo.setRecord(record)
 
     const saveSpy = vi.spyOn(repo, 'save')
 
-    const useCase = makeUseCase(repo, uow)
+    const useCase = makeUseCase(repo)
 
     await useCase.execute({
       medicineId: record.id,
@@ -163,23 +151,5 @@ describe('PublishMedicineUseCase (DTJ-096, SRS-DOM-013, SRS-CAT-064)', () => {
     })
 
     expect(saveSpy).toHaveBeenCalledOnce()
-  })
-
-  it('5. UnitOfWork.run вызывается (транзакционность)', async () => {
-    const repo = new FakeCatalogRepository()
-    const uow = new FakeUnitOfWork()
-    const record = makeRecord({ isPublished: false })
-    repo.setRecord(record)
-
-    const runSpy = vi.spyOn(uow, 'run')
-
-    const useCase = makeUseCase(repo, uow)
-
-    await useCase.execute({
-      medicineId: record.id,
-      actorId: 'actor-123',
-    })
-
-    expect(runSpy).toHaveBeenCalledOnce()
   })
 })

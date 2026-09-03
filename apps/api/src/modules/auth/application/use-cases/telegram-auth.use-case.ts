@@ -18,13 +18,34 @@
  * Drizzle-режим: `INSERT ... ON CONFLICT DO NOTHING` + `SELECT` для
  * find-or-create на identity (см. `UserTelegramIdentitiesRepository`).
  *
+ * **Дефект (волна 6, найден при исправлении self-deadlock пула в checkout,
+ * DTJ-231/233, подтверждён аудитом, исправлено здесь).** Абзац выше
+ * заявлял атомарность, которой не было: `this.users.findById`/`this.users.create`
+ * внутри `findOrCreateUser` шли через СВОЙ `@Inject(DRIZZLE_DB)`, игнорируя
+ * `tx` из `uow.run` — второй путь входа с тем же self-deadlock-риском пула
+ * соединений, что и `VerifyOtpUseCase` (см. её JSDoc за полным разбором
+ * механизма и `checkout.use-case.ts::processGroup` — первое место, где
+ * дефект нашёлся и был доказан). Исправлено: `tx` теперь прокидывается в
+ * оба вызова (см. `findOrCreateUser` ниже) — атомарность реальна.
+ * `issueTokens` (шаг 10, AuthSession) НАМЕРЕННО остаётся ВНЕ этой
+ * транзакции (см. её JSDoc) — это отдельное архитектурное решение, не
+ * часть этого дефекта.
+ *
  * **Телефон** НЕ собирается на этом шаге — DTJ-027 явно решил: «phone
  * запрашивается отдельно при оформлении первого заказа». На момент
  * Telegram-auth `users.phoneNumber = null` (схема разрешает после
  * миграции 0007).
  *
- * **Tenant ID** — placeholder `'neutral'` (R1, см. DTJ-024 §«Риски»). EP-02
- * даст реальный резолвинг.
+ * **Tenant ID** — `input.tenantId` (волна 5, блок A, возврат). Раньше здесь
+ * стоял `const TENANT_ID_PLACEHOLDER = 'neutral'` — не-UUID литерал, тихо
+ * утекавший в `users.tenant_id`/`user_telegram_identities.tenant_id UUID
+ * NOT NULL` и роняющий ЛЮБОЙ `POST /auth/telegram` с `22P02 invalid input
+ * syntax for type uuid` после перевода `USERS_REPOSITORY` на Drizzle. Тот же
+ * класс дефекта, что чинили в `otp-verify.controller.ts`/`otp-request.controller.ts`
+ * (`resolveTenantIdForVerify`/`resolveTenantIdForRequest`) — резолв через
+ * `TenantContext` в presentation-слое (`TelegramAuthController`), передача
+ * готовым полем во `execute()`; application-слой `TenantContext`
+ * (`AsyncLocalStorage`) не импортирует.
  *
  * **Идемпотентность**: повторный `POST /auth/telegram` с тем же
  * `initData` приведёт к `TELEGRAM_AUTH_DATE_EXPIRED` (через 5 минут). С
@@ -84,13 +105,14 @@ import {
 } from '@/modules/auth/application/ports/user-telegram-identities.repository.port.js'
 import { AppConfigService } from '@/config/app-config.service.js'
 
-const TENANT_ID_PLACEHOLDER = 'neutral'
 const DEVICE_LABEL_TELEGRAM_TWA = 'telegram_twa'
 
 export interface TelegramAuthInput {
   readonly initData: string
   readonly ipAddress: string
   readonly userAgent: string
+  /** Реальный UUID тенанта — резолвится `TelegramAuthController` из `TenantContext`. */
+  readonly tenantId: string
 }
 
 export interface TelegramAuthResult {
@@ -165,7 +187,7 @@ export class TelegramAuthUseCase {
     }
 
     // 2) Шаги 9-10: find-or-create User + identity + AuthSession + JWT.
-    const user = await this.findOrCreateUser(verified)
+    const user = await this.findOrCreateUser(verified, input.tenantId)
     const tokens = await this.issueTokens(user, input)
     return ok({
       ...tokens,
@@ -183,16 +205,16 @@ export class TelegramAuthUseCase {
    * Find-or-create User + user_telegram_identities. Атомарно через uow.
    * Шаг 9 SRS-API-031.
    */
-  private async findOrCreateUser(verified: TelegramInitDataVerified): Promise<User> {
+  private async findOrCreateUser(verified: TelegramInitDataVerified, tenantId: string): Promise<User> {
     return this.uow.run(async (tx) => {
       const telegramUserId = BigInt(verified.telegramUserId)
       const existingIdentity = await this.telegramIdentities.findByTenantAndTelegramId(
-        TENANT_ID_PLACEHOLDER,
+        tenantId,
         telegramUserId,
         tx,
       )
       if (existingIdentity !== null) {
-        const user = await this.users.findById(existingIdentity.userId)
+        const user = await this.users.findById(existingIdentity.userId, tx)
         if (user === null) {
           // Не должно случиться (FK CASCADE), но если — fail loud, не silent.
           throw new Error(
@@ -206,15 +228,15 @@ export class TelegramAuthUseCase {
         ? `${verified.user.firstName} ${verified.user.lastName}`
         : verified.user.firstName
       const user = await this.users.create({
-        tenantId: TENANT_ID_PLACEHOLDER,
+        tenantId,
         phoneNumber: null,
         role: 'customer' satisfies UserRole,
         fullName,
-      } satisfies CreateUserInput)
+      } satisfies CreateUserInput, tx)
       await this.telegramIdentities.create(
         {
           userId: user.id,
-          tenantId: TENANT_ID_PLACEHOLDER,
+          tenantId,
           telegramUserId,
         },
         tx,

@@ -1,14 +1,23 @@
 /**
- * `test-app.ts` (EP-01, DTJ-029) — утилита для integration/security-тестов.
+ * `test-app.ts` (EP-01, DTJ-029; волна 5 блок A возврат) — утилита для
+ * integration/security-тестов.
  *
- * Поднимает `NestApplication` с `AuthModule` + InMemory адаптерами +
- * `AllExceptionsFilter`. Никаких реальных Postgres/Redis — `InMemory`-режим
- * достаточно для проверки сценариев из DTJ-023/024/025/026 тикетов end-to-end
- * (HTTP → guard → use case → InMemory-репозиторий → ответ).
+ * Поднимает `NestApplication` с `AuthModule` — Drizzle/Redis-адаптеры
+ * (волна 5, `reports/CTO-DECISION-WAVE5.md` §3) против настоящих
+ * `dorutj_test` Postgres и Redis + `AllExceptionsFilter`.
  *
- * Идемпотентность между тестами: каждый вызов `createTestApp()` создаёт
- * НОВЫЙ `TestingModule` с НОВЫМИ InMemory-репозиториями. Это даёт чистое
- * состояние (SRS-API-022 атомарность не зависит от порядка тестов).
+ * Идемпотентность между тестами: раньше (InMemory-адаптеры) её давал сам
+ * факт НОВОГО `TestingModule` с НОВЫМИ InMemory-репозиториями на каждый
+ * `createTestApp()`. Теперь состояние общее и настоящее (общая `dorutj_test`
+ * БД + общий Redis), поэтому `createTestApp()` САМ восстанавливает то же
+ * свойство — `resetAuthState()` ниже чистит auth-таблицы и auth-специфичные
+ * Redis-ключи ПЕРЕД возвратом `TestApp`. Без этого сквозные security-спеки
+ * (`test/integration/auth/**`) делят один Redis rate-limit-бакет с реальным
+ * TTL (`OtpRequestController` хардкодит `ipAddress = '0.0.0.0'` для ВСЕХ
+ * запросов, EP-19 ещё не даёт реальный IP) и один `otp_codes`/`users` набор
+ * строк на общий литерал `PHONE = '+992917123456'`, используемый в 4 файлах
+ * — отсюда `429` вместо `202`/`200` независимо от порядка запуска файлов
+ * (см. CTO-разбор волны 5 блок A возврат).
  *
  * `process.env` настройка ДО `Test.createTestingModule` обязательна —
  * Zod-схема в `env.schema.ts` валидирует ENV при первом обращении через
@@ -18,6 +27,8 @@ import { type Server } from 'node:http'
 import { type INestApplication, VersioningType } from '@nestjs/common'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import { Test } from '@nestjs/testing'
+import type Redis from 'ioredis'
+import type { Pool } from 'pg'
 import { AppConfigService } from '@/config/app-config.service.js'
 import { AllExceptionsFilter } from '@/common/filters/all-exceptions.filter.js'
 import { AuthModule } from '@/modules/auth/auth.module.js'
@@ -25,6 +36,16 @@ import { SharedKernelModule } from '@/shared-kernel/shared-kernel.module.js'
 import { LoggerModule } from '@/common/logging/logger.module.js'
 import { TenantContext } from '@/common/context/tenant-context.js'
 import { JWT_SIGNER, type JwtSignerPort } from '@/modules/auth/application/ports/jwt-signer.port.js'
+import {
+  USER_TELEGRAM_IDENTITIES_REPOSITORY,
+  type UserTelegramIdentitiesRepository,
+} from '@/modules/auth/application/ports/user-telegram-identities.repository.port.js'
+import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
+import { REDIS_CLIENT } from '@/infrastructure/redis/redis.token.js'
+import { authSessions } from '@/db/schema/auth-sessions.js'
+import { userTelegramIdentities } from '@/db/schema/user-telegram-identities.js'
+import { otpCodes } from '@/db/schema/otp-codes.js'
+import { users } from '@/db/schema/users.js'
 
 /**
  * Тестовая пара RS256 (Ж13, DTJ-022 `Rs256JwtSignerAdapter`). Сгенерирована локально
@@ -120,20 +141,51 @@ export interface TestApp {
 }
 
 /**
- * Создаёт изолированный `NestApplication` поверх `AuthModule` + InMemory
- * адаптеров. `supertest(httpServer)` может делать реальные HTTP-запросы
- * против контроллеров auth-зоны.
+ * Опции `createTestApp` (волна 6, self-deadlock пула соединений — доказательство
+ * атомарности `VerifyOtpUseCase`/`TelegramAuthUseCase` на живом Postgres,
+ * `verify-otp-race-conditions.integration.spec.ts`/`telegram-auth-race-conditions.integration.spec.ts`).
+ * Единственные намеренные `overrideProvider` этого harness'а — оба нужны РОВНО для
+ * rollback-доказательства (форсируют исключение ПОСЛЕДНИМ шагом ВНУТРИ `uow.run(tx =>
+ * ...)`, ПЕРЕД commit, чтобы проверить: откат транзакции откатывает ВСЕ вложенные записи):
+ *   - `overrideJwtSigner` — подменяет `JWT_SIGNER`; `signAccessToken` в `VerifyOtpUseCase`
+ *     вызывается ПОСЛЕДНИМ внутри её `uow.run` (после create user/session/markConsumed).
+ *   - `overrideUserTelegramIdentitiesRepository` — подменяет `USER_TELEGRAM_IDENTITIES_REPOSITORY`;
+ *     `telegramIdentities.create` в `TelegramAuthUseCase.findOrCreateUser` вызывается
+ *     ПОСЛЕДНИМ внутри её `uow.run` (после `users.create`).
  */
-export async function createTestApp(): Promise<TestApp> {
+export interface CreateTestAppOptions {
+  readonly overrideJwtSigner?: JwtSignerPort
+  readonly overrideUserTelegramIdentitiesRepository?: UserTelegramIdentitiesRepository
+}
+
+/**
+ * Создаёт изолированный `NestApplication` поверх `AuthModule` — Drizzle/Redis
+ * адаптеры против настоящих `dorutj_test` Postgres/Redis. `supertest(httpServer)`
+ * может делать реальные HTTP-запросы против контроллеров auth-зоны.
+ *
+ * Перед возвратом чистит auth-состояние (`resetAuthState`) — см. JSDoc файла
+ * выше: каждый вызов обязан начинать с того же пустого состояния, которое
+ * раньше давал НОВЫЙ InMemory-репозиторий.
+ */
+export async function createTestApp(options?: CreateTestAppOptions): Promise<TestApp> {
   applyTestEnv()
   // `SharedKernelModule` (`CLOCK`/`ID_GENERATOR`) и `LoggerModule` (`PINO_LOGGER`) — оба
   // `@Global()`, но это не делает их доступными без явного импорта хотя бы в одном модуле
   // дерева: в проде их один раз импортирует `AppModule`, а этот тестовый harness строит
   // дерево ТОЛЬКО из `AuthModule` (Ж13 — без них `RequestOtpUseCase`/`VerifyOtpUseCase`/
   // `TelegramAuthUseCase` не резолвят `@Inject(CLOCK)`, а `RefreshTokenUseCase` — `PINO_LOGGER`).
-  const moduleRef = await Test.createTestingModule({
+  const builder = Test.createTestingModule({
     imports: [SharedKernelModule, LoggerModule, AuthModule],
-  }).compile()
+  })
+  if (options?.overrideJwtSigner !== undefined) {
+    builder.overrideProvider(JWT_SIGNER).useValue(options.overrideJwtSigner)
+  }
+  if (options?.overrideUserTelegramIdentitiesRepository !== undefined) {
+    builder
+      .overrideProvider(USER_TELEGRAM_IDENTITIES_REPOSITORY)
+      .useValue(options.overrideUserTelegramIdentitiesRepository)
+  }
+  const moduleRef = await builder.compile()
   const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter())
   const config = app.get(AppConfigService)
   // Зеркалит `main.ts` (Ж13): все контроллеры объявлены с `version: '1'`, все спеки этого
@@ -149,13 +201,87 @@ export async function createTestApp(): Promise<TestApp> {
   installDefaultTenantContextHook(app)
   await app.init()
   await (app).getHttpAdapter().getInstance().ready()
+  await resetAuthState(app, config)
   const httpServer = app.getHttpServer()
   return {
     app,
     httpServer,
     close: async (): Promise<void> => {
+      // `drizzleProvider`/`redisProvider` (`src/infrastructure/{database,redis}/*.provider.ts`,
+      // общая инфраструктура, вне `files_owned` этой задачи) не реализуют
+      // `OnModuleDestroy` — `app.close()` не закрывает лежащие в основе `pg.Pool`/`ioredis`.
+      // Этот harness строит НОВЫЙ `Test.createTestingModule` (⇒ НОВЫЙ Pool/Redis-клиент) на
+      // КАЖДЫЙ тест — без явного закрытия здесь соединения копятся в рамках одного
+      // `vitest run`-процесса и на длинных прогонах (весь `test/integration/**`, несколько
+      // раз подряд) упираются в `max_connections`. Закрываем то, что открыли МЫ, не трогая
+      // сам провайдер (чужой файл, вне границ задачи — см. `foundIssues` отчёта).
+      // `$client` — свойство ТОЛЬКО фактического значения, которое возвращает
+      // `drizzle(pool)` (пересечение типов в `drizzle-orm/node-postgres/driver.d.ts`),
+      // не публичного типа `DrizzleDb = NodePgDatabase` из `drizzle.provider.ts` (тоже
+      // не наш файл — трогать его ради типа не входит в задачу). Каст локален
+      // к этому файлу и не расширяет продовый контракт `DrizzleDb`.
+      const db = app.get<DrizzleDb>(DRIZZLE_DB) as DrizzleDb & { $client: Pool }
+      const redis = app.get<Redis>(REDIS_CLIENT)
       await app.close()
+      await db.$client.end()
+      redis.disconnect()
     },
+  }
+}
+
+/**
+ * [Волна 5, блок A, возврат] Чистит auth-состояние в общей `dorutj_test`
+ * Postgres/Redis ПЕРЕД каждым тестом — восстанавливает свойство «каждый
+ * `createTestApp()` начинает с чистого листа», которое раньше давал НОВЫЙ
+ * `InMemory*`-репозиторий (см. JSDoc файла выше).
+ *
+ * Postgres: `DELETE` (НЕ `TRUNCATE ... CASCADE`) по auth-таблицам, явно, в
+ * порядке потомок→родитель. `TRUNCATE ... CASCADE` от `users` затронул бы
+ * ЛЮБУЮ таблицу вне auth с FK на `users(id)` (например,
+ * `search_query_log.customer_id`, ON DELETE SET NULL) — она была бы
+ * ЦЕЛИКОМ очищена, а не просто отвязана, задев данные каталога/поиска вне
+ * границ этой задачи. `DELETE` уважает FK-политику КАЖДОЙ ссылающейся
+ * таблицы (`ON DELETE CASCADE`/`SET NULL`) штатно, без этого риска — тот же
+ * урок, что и §3.7 `docs/07-WAVE4-HANDOFF.md` («TRUNCATE... CASCADE
+ * зацепил больше, чем предполагалось»), только на уровень раньше: здесь мы
+ * вообще не трогаем `tenants`/`tenant_settings`.
+ *
+ * Redis: точечно удаляет ключи ДВУХ известных префиксов rate-limit'а auth
+ * (`${otpRateLimitKeyPrefix}:*` из `RequestOtpUseCase.buildRateLimitChecks`,
+ * `otp_verify_attempts:*` — литерал `RATE_LIMITER_KEY_PREFIX_VERIFY` в
+ * `VerifyOtpUseCase`, порт-приватный, не экспортируется, поэтому продублирован
+ * здесь текстом с явной ссылкой на источник). НЕ `FLUSHDB` — тот же Redis
+ * используется `test/integration/catalog/{redis-lock-guard,search-cache}.integration.spec.ts`
+ * в ОДНОМ прогоне `vitest run --config vitest.integration.config.ts`
+ * (`fileParallelism: false`, но каталоги идут последовательно в одном
+ * процессе) — полный `FLUSHDB` стёр бы их состояние, что вне границ задачи
+ * (правило 7 AGENTS.md).
+ *
+ * Без этого сброса `OtpRequestController`, вынужденно хардкодящий
+ * `ipAddress = '0.0.0.0'` для ВСЕХ запросов (EP-19 ещё не даёт реальный IP),
+ * копит ОДИН и тот же `ip1h`-бакет на ВСЕ вызовы `/auth/otp/request` из ВСЕХ
+ * 8 auth-security-файлов и из ОБОИХ прогонов подряд (приёмка волны 5 требует
+ * именно двух прогонов без пересоздания БД) — `OTP_REQUEST_MAX_PER_IP_PER_HOUR=20`
+ * в тест-ENV, а только `/auth/otp/request`-вызовов в сьюте 18 за один прогон.
+ */
+async function resetAuthState(app: INestApplication, config: AppConfigService): Promise<void> {
+  const db = app.get<DrizzleDb>(DRIZZLE_DB)
+  await db.delete(authSessions)
+  await db.delete(userTelegramIdentities)
+  await db.delete(otpCodes)
+  await db.delete(users)
+
+  const redis = app.get<Redis>(REDIS_CLIENT)
+  const OTP_VERIFY_ATTEMPTS_KEY_PREFIX = 'otp_verify_attempts' // = RATE_LIMITER_KEY_PREFIX_VERIFY в verify-otp.use-case.ts
+  await deleteKeysMatching(redis, `${config.otpRateLimitKeyPrefix}:*`)
+  await deleteKeysMatching(redis, `${OTP_VERIFY_ATTEMPTS_KEY_PREFIX}:*`)
+}
+
+/** `KEYS` — приемлемо в тесте (низкая кардинальность test-namespace'ов), НЕ для прода. */
+async function deleteKeysMatching(redis: Redis, pattern: string): Promise<void> {
+  const keys = await redis.keys(pattern)
+  if (keys.length > 0) {
+    await redis.del(...keys)
   }
 }
 

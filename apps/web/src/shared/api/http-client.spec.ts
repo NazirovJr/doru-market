@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuthStore } from '@/shared/api/auth-store'
-import { httpGetJson, httpGetJsonWithMeta, HttpError, httpRequest } from '@/shared/api/http-client'
+import {
+  httpGetJson,
+  httpGetJsonWithMeta,
+  HttpError,
+  httpRequest,
+  requestJsonEnvelope,
+} from '@/shared/api/http-client'
 import { getClientEnv } from '@/shared/config/env'
 
 /**
@@ -100,7 +106,10 @@ describe('httpGetJsonWithMeta', () => {
       vi.fn(() =>
         Promise.resolve(
           new Response(
-            JSON.stringify({ data: [{ id: '1' }], meta: { pagination: { nextCursor: 'abc', hasMore: true, limit: 20 } } }),
+            JSON.stringify({
+              data: [{ id: '1' }],
+              meta: { pagination: { nextCursor: 'abc', hasMore: true, limit: 20 } },
+            }),
             { status: 200 },
           ),
         ),
@@ -114,7 +123,10 @@ describe('httpGetJsonWithMeta', () => {
   })
 
   it('meta отсутствует в ответе — meta undefined, не бросает', async () => {
-    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }))))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }))),
+    )
 
     const result = await httpGetJsonWithMeta<readonly unknown[]>('/things')
 
@@ -135,9 +147,12 @@ describe('httpGetJson — статус ответа переживает уре�
       'fetch',
       vi.fn(() =>
         Promise.resolve(
-          new Response(JSON.stringify({ error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } }), {
-            status: 503,
-          }),
+          new Response(
+            JSON.stringify({ error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } }),
+            {
+              status: 503,
+            },
+          ),
         ),
       ),
     )
@@ -154,5 +169,50 @@ describe('httpGetJson — статус ответа переживает уре�
       expect(caught.status).toBe(503)
       expect(caught.code).toBe('INTERNAL_ERROR')
     }
+  })
+})
+
+/**
+ * `onResponse` (DTJ-234, корзина): читает заголовки ответа ДО парсинга тела/`throw HttpError` —
+ * нужен эндпоинтам, ставящим значимые заголовки независимо от успеха тела
+ * (`X-Cart-Session-Token`, `features/cart/api/cart.api.ts`). Существующие вызовы без 3-го
+ * аргумента (`httpRequestJson`/`httpGetJsonWithMeta` выше в этом файле) продолжают работать без
+ * изменений — параметр опционален.
+ */
+describe('requestJsonEnvelope — onResponse (DTJ-234)', () => {
+  it('вызывается на успешном ответе ДО возврата данных', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(new Response(JSON.stringify({ data: { ok: true } }), { status: 200 }))),
+    )
+    const onResponse = vi.fn()
+
+    const result = await requestJsonEnvelope('/whoami', {}, onResponse)
+
+    expect(onResponse).toHaveBeenCalledTimes(1)
+    expect(onResponse.mock.calls[0]?.[0]).toBeInstanceOf(Response)
+    expect(result.data).toEqual({ ok: true })
+  })
+
+  it('вызывается ДАЖЕ когда тело — бизнес-ошибка (throw HttpError после)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(new Response(JSON.stringify({ error: { code: 'CONFLICT' } }), { status: 409 })),
+      ),
+    )
+    const onResponse = vi.fn()
+
+    await expect(requestJsonEnvelope('/whoami', {}, onResponse)).rejects.toBeInstanceOf(HttpError)
+    expect(onResponse).toHaveBeenCalledTimes(1)
+  })
+
+  it('без 3-го аргумента — поведение не меняется (обратная совместимость)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(new Response(JSON.stringify({ data: { ok: true } }), { status: 200 }))),
+    )
+    const result = await requestJsonEnvelope('/whoami')
+    expect(result.data).toEqual({ ok: true })
   })
 })

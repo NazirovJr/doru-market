@@ -296,20 +296,42 @@ export interface JsonEnvelopeResult<T> {
  * реальный `response.status`, — единственный надёжный сигнал для 5xx-состояний вроде
  * `SRS-CAT-075`, где `DomainExceptionFilter` урезает `details`/`code` для ЛЮБОГО статуса `>=500`
  * прежде, чем тело покидает сервер).
+ *
+ * `onResponse` (DTJ-234, корзина) — опциональный callback, вызываемый СРАЗУ после получения
+ * `Response`, ДО чтения/парсинга тела и ДО возможного `throw HttpError`. Нужен эндпоинтам,
+ * которые несут значимые данные в заголовках ответа независимо от успеха/ошибки тела —
+ * `GET/POST/PATCH /api/v1/cart*` ставят `X-Cart-Session-Token` (`cart-identity.guard.ts`,
+ * D-EP09-23) даже когда сам запрос завершается бизнес-ошибкой (`applyIssuedSessionToken`
+ * вызывается в контроллере ДО `throw result.error`) — эта информация была бы потеряна, если
+ * читать заголовки только из успешной ветки. Существующие вызовы без 3-го аргумента не
+ * меняют поведение (опциональный параметр, по умолчанию `undefined`).
  */
-async function requestJsonEnvelope<T>(path: string, init: HttpClientOptions = {}): Promise<JsonEnvelopeResult<T>> {
+/** Вынесено из `requestJsonEnvelope` (DTJ-234 добавил туда `onResponse`-ветку, толкнув
+ *  `complexity` за порог 10) — заодно читаемее: одна ответственность на функцию. */
+function parseResponseBody(text: string, path: string, status: number): unknown {
+  if (text.length === 0) {
+    return null
+  }
+  try {
+    return JSON.parse(text)
+  } catch {
+    throw new HttpError(status, 'INVALID_RESPONSE', { message: `Invalid JSON from ${path}` })
+  }
+}
+
+export async function requestJsonEnvelope<T>(
+  path: string,
+  init: HttpClientOptions = {},
+  onResponse?: (response: Response) => void,
+): Promise<JsonEnvelopeResult<T>> {
   const headers = new Headers(init.headers)
   if (!headers.has('Content-Type') && init.body !== undefined) {
     headers.set('Content-Type', 'application/json')
   }
   const response = await httpRequest(path, { ...init, headers })
+  onResponse?.(response)
   const text = await response.text()
-  let parsed: unknown
-  try {
-    parsed = text.length > 0 ? JSON.parse(text) : null
-  } catch {
-    throw new HttpError(response.status, 'INVALID_RESPONSE', { message: `Invalid JSON from ${path}` })
-  }
+  const parsed = parseResponseBody(text, path, response.status)
   if (response.ok && isSuccessEnvelope<T>(parsed)) {
     return { data: parsed.data, meta: parsed.meta }
   }

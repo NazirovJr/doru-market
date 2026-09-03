@@ -28,7 +28,7 @@
  *
  * @see docs/STATE-AND-RESUME-POINT.md §11.4 задача 3.1/3.2 + §11.6 (Волна 4, EP-04)
  */
-import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common'
+import { Controller, Get, Inject, Param, ParseUUIDPipe, Query } from '@nestjs/common'
 import { ok } from '@dorutj/contracts'
 import { Public } from '@/common/decorators/public.decorator.js'
 import { GetMedicineDetailUseCase } from '@/modules/catalog/application/use-cases/get-medicine-detail.use-case.js'
@@ -50,9 +50,11 @@ const DEFAULT_LOCALE: SupportedLocale = 'tj'
 @Controller({ path: 'medicines', version: '1' })
 @Public()
 export class MedicinesController {
+  // Явный @Inject: esbuild (vitest) не эмитит `design:paramtypes` — см. DTJ-001,
+  // тот же приём, что и в `CategoriesController`.
   constructor(
-    private readonly getMedicineDetail: GetMedicineDetailUseCase,
-    private readonly listMedicines: ListMedicinesUseCase,
+    @Inject(GetMedicineDetailUseCase) private readonly getMedicineDetail: GetMedicineDetailUseCase,
+    @Inject(ListMedicinesUseCase) private readonly listMedicines: ListMedicinesUseCase,
   ) {}
 
   @Get()

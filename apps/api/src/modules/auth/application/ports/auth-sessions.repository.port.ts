@@ -74,7 +74,15 @@ export interface RotateAuthSessionInput {
 export type RevokeReason = 'user_logout' | 'user_logout_all' | 'reuse_detected' | 'admin_force'
 
 export interface AuthSessionsRepository {
-  create(input: CreateAuthSessionInput): Promise<AuthSession>
+  /**
+   * `tx?` (волна 6, self-deadlock пула соединений — тот же дефект, что чинили в
+   * checkout DTJ-231/233): `VerifyOtpUseCase.createSession` вызывается ВНУТРИ
+   * `uow.run(tx => ...)` — без `tx` здесь `create` просило бы у пула ВТОРОЕ
+   * соединение поверх уже удержанного транзакцией группы. Опционален —
+   * `TelegramAuthUseCase.issueTokens` вызывает `create` ВНЕ транзакции
+   * (намеренно, см. JSDoc `telegram-auth.use-case.ts`), там аргумент не передаётся.
+   */
+  create(input: CreateAuthSessionInput, tx?: UnitOfWorkTx): Promise<AuthSession>
   findById(id: string): Promise<AuthSession | null>
   findByRefreshHash(hash: string): Promise<AuthSession | null>
   findActiveByUserId(userId: string, now: Date): Promise<readonly AuthSession[]>
