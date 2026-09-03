@@ -34,8 +34,11 @@ export class RawSqlAuditLogRepository implements AuditLogPort {
     const entityId = input.entityId ?? randomUUID()
     const entityType = input.entityId === null ? WEBHOOK_EVENT_ENTITY_TYPE : ORDER_ENTITY_TYPE
     await this.db.execute(sql`
-      INSERT INTO audit_log (category, entity_type, entity_id, action, metadata, tenant_id)
-      VALUES (${PAYMENT_OVERRIDE_CATEGORY}, ${entityType}, ${entityId}, ${input.action}, ${JSON.stringify(input.metadata)}::jsonb, ${input.tenantId})
+      INSERT INTO audit_log (category, entity_type, entity_id, action, metadata, tenant_id, reason, actor_user_id)
+      VALUES (
+        ${PAYMENT_OVERRIDE_CATEGORY}, ${entityType}, ${entityId}, ${input.action},
+        ${JSON.stringify(input.metadata)}::jsonb, ${input.tenantId}, ${input.reason ?? null}, ${input.actorUserId ?? null}
+      )
     `)
   }
 }
