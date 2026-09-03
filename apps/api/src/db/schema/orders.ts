@@ -87,6 +87,14 @@ export const orders = pgTable(
     // всегда 'single_invoice' (ResolveBillingStrategyService, TODO(DTJ-242/244) — split billing
     // недостижим без payment_operations.billing_component/tenant_settings.useSplitBilling).
     billingStrategy: varchar('billing_strategy', { length: 20 }).notNull().default('single_invoice'),
+    // РАСШИРЕНИЕ (DTJ-253, миграция 0036_orders_payment_window_expires_at.sql): момент
+    // истечения окна на оплату non-cash заказа в pending_payment (SRS-ORD-032/033/034).
+    // Пишет ТОЛЬКО CheckoutUseCase/Order.create() (EP-09, вне владения EP-10/DTJ-253) — эта
+    // колонка здесь для того, чтобы `orders.ts` не разошёлся с физической схемой БД (см.
+    // JSDoc самой миграции). `UnpaidOrderTimeoutJob` (apps/worker) читает поле напрямую через
+    // `pg.Pool` (не через этот Drizzle-схему), поэтому её отсутствие здесь не блокировало бы
+    // джобу — колонка добавлена ради консистентности схемы, не как обязательная зависимость.
+    paymentWindowExpiresAt: timestamp('payment_window_expires_at', { withTimezone: true }),
   },
   (table) => [
     check(

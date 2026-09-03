@@ -130,6 +130,12 @@ export const envSchema = z.object({
   DC_NEXT_API_TOKEN: z.string().optional(),
   DC_NEXT_WEBHOOK_SECRET: z.string().optional(),
   BANK_INVOICE_VALIDITY_MINUTES: z.coerce.number().int().positive().default(DEFAULT_BANK_INVOICE_VALIDITY_MINUTES),
+  // [DTJ-253/254, SRS-ORD-032..036] Общий секрет для `POST /api/v1/internal/orders/:id/
+  // system-cancel` (см. JSDoc `system-cancel-order.controller.ts`) — тот же приём, что
+  // `MOCK_BANK_WEBHOOK_SECRET`: `optional`, не `.default` — отсутствие ENV делает маршрут
+  // недоступным ЛЮБОМУ вызывающему (`InternalServiceGuard` отказывает при `undefined`), это
+  // безопасный дефолт для секрета (в отличие от небезопасного дефолта для самого таймаута).
+  INTERNAL_API_KEY: z.string().optional(),
 })
 
 /** [DTJ-023] Секунды в N минутах/часах/дне — для use case расчёта rate-limit окон. */

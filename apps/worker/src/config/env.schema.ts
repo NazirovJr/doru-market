@@ -28,6 +28,9 @@ const DEFAULT_API_INTERNAL_URL = 'http://localhost:3000'
 const DEFAULT_RECONCILIATION_CRON = '0 3 * * *'
 // DTJ-247, SRS-PAY-042, ticket «Что сделать» п.2: ASSUMPTION буквально из тикета.
 const DEFAULT_RECONCILIATION_DEDUP_DAYS = 7
+// DTJ-253, SRS-ORD-032, ticket «Что сделать» п.2: ASSUMPTION буквально из тикета — каждые
+// 2 минуты (короче минимального разумного платёжного окна на оплату).
+const DEFAULT_UNPAID_ORDER_TIMEOUT_CRON = '*/2 * * * *'
 
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const
 
@@ -74,6 +77,13 @@ export const envSchema = z.object({
     .union([z.literal('true'), z.literal('false')])
     .default('false')
     .transform((v) => v === 'true'),
+  // DTJ-253, DoD «UNPAID_ORDER_TIMEOUT_CRON — именованная ENV-константа».
+  UNPAID_ORDER_TIMEOUT_CRON: z.string().min(1).default(DEFAULT_UNPAID_ORDER_TIMEOUT_CRON),
+  // DTJ-253/254: общий секрет `apps/worker → POST /api/v1/internal/orders/:id/system-cancel`
+  // (`apps/api`, см. JSDoc `system-order-cancel.client.ts`). `optional`, ТОТ ЖЕ приём, что
+  // `MOCK_BANK_WEBHOOK_SECRET` — отсутствие ENV даёт рантайм-ошибку джобы при попытке вызова
+  // (см. `requestSystemOrderCancel`), не Zod-сбой старта процесса.
+  INTERNAL_API_KEY: z.string().optional(),
 })
 
 export type WorkerEnv = z.infer<typeof envSchema>

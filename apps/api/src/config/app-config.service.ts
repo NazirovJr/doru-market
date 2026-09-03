@@ -168,4 +168,9 @@ export class AppConfigService {
   get bankInvoiceValidityMinutes(): number {
     return this.configService.get('BANK_INVOICE_VALIDITY_MINUTES', { infer: true })
   }
+
+  /** [DTJ-253/254] Общий секрет `apps/worker → POST /api/v1/internal/orders/:id/system-cancel`. `undefined` — маршрут недоступен (см. `env.schema.ts`). */
+  get internalApiKey(): string | undefined {
+    return this.configService.get('INTERNAL_API_KEY', { infer: true })
+  }
 }
