@@ -11,6 +11,8 @@
   "auth.login.telegram_hint": "Быстрый вход без SMS — бот пришлёт код автоматически",
   "auth.login.telegram_unavailable": "Telegram-вход недоступен. Откройте эту страницу в Telegram Mini App.",
   "auth.login.telegram_auth_failed": "Не удалось войти через Telegram. Попробуйте ещё раз или используйте SMS.",
+  "auth.login.pharmacy_heading": "Кабинет аптеки",
+  "auth.login.pharmacy_role_denied": "У вас нет доступа к кабинету аптеки. Обратитесь к администратору сети.",
   "ux.error.otp_expired": "Код устарел. Запросите новый.",
   "ux.error.otp_locked": "Слишком много неверных попыток. Запросите новый код через SMS/Telegram.",
   "ux.error.otp_mismatch": "Неверный код. Осталось попыток: {attemptsLeft}",
@@ -93,5 +95,6 @@
   "checkout.failed_group.price_or_stock_changed": "Цена или наличие товара изменились, пока вы оформляли заказ.",
   "checkout.failed_group.insufficient_stock": "Недостаточно товара на складе.",
   "checkout.failed_group.controlled_substance_forbidden": "Препарат подлежит специальному учёту — заказ онлайн недоступен.",
-  "checkout.failed_group.generic": "Не удалось оформить заказ для этой аптеки."
+  "checkout.failed_group.generic": "Не удалось оформить заказ для этой аптеки.",
+  "pharmacy.page.coming_soon": "Экран в разработке"
 }

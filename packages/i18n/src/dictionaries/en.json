@@ -11,6 +11,8 @@
   "auth.login.telegram_hint": "Quick sign-in without SMS — the bot sends the code automatically",
   "auth.login.telegram_unavailable": "Telegram sign-in is unavailable. Open this page in the Telegram Mini App.",
   "auth.login.telegram_auth_failed": "Telegram sign-in failed. Try again or use SMS.",
+  "auth.login.pharmacy_heading": "Pharmacy dashboard",
+  "auth.login.pharmacy_role_denied": "You don't have access to the pharmacy dashboard. Contact your network administrator.",
   "ux.error.otp_expired": "Code expired. Request a new one.",
   "ux.error.otp_locked": "Too many wrong attempts. Request a new code.",
   "ux.error.otp_mismatch": "Wrong code. Attempts left: {attemptsLeft}",
@@ -93,5 +95,6 @@
   "checkout.failed_group.price_or_stock_changed": "The price or availability changed while you were checking out.",
   "checkout.failed_group.insufficient_stock": "Not enough stock available.",
   "checkout.failed_group.controlled_substance_forbidden": "This medicine is controlled and cannot be ordered online.",
-  "checkout.failed_group.generic": "This pharmacy's order could not be placed."
+  "checkout.failed_group.generic": "This pharmacy's order could not be placed.",
+  "pharmacy.page.coming_soon": "Screen coming soon"
 }
