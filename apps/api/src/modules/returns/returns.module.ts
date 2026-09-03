@@ -25,10 +25,11 @@
  * появления первого потребителя.
  */
 import { Module } from '@nestjs/common'
+import { ReturnFinancialOutcomeResolver } from './application/policies/return-financial-outcome.policy.js'
 
 @Module({
   controllers: [],
-  providers: [],
+  providers: [ReturnFinancialOutcomeResolver],
 })
 // NestJS module marker class: Nest требует класс-носитель декоратора @Module, providers
 // регистрируются декоратором, а не телом класса (тот же приём, что modules/payments/orders).
