@@ -36,6 +36,7 @@ function snapshot(overrides: Partial<PaymentsOrderSnapshot> = {}): PaymentsOrder
     paymentMethod: 'alif_mobi',
     totalAmountDiram: HOLD_AMOUNT_DIRAM,
     pharmacyChainId: null,
+    items: [],
     ...overrides,
   }
 }
@@ -104,7 +105,8 @@ function makeHarness(overrides: HarnessOverrides = {}): Harness {
   const escrowLedger: EscrowLedgerRepository = { append, findByOrderId, sumByType }
 
   const reverseIfExists = vi.fn<PayoutScheduleRepository['reverseIfExists']>().mockResolvedValue(overrides.reverseIfExistsResult ?? false)
-  const payoutScheduleRepo: PayoutScheduleRepository = { reverseIfExists }
+  const insertPending = vi.fn<PayoutScheduleRepository['insertPending']>().mockResolvedValue(undefined)
+  const payoutScheduleRepo: PayoutScheduleRepository = { reverseIfExists, insertPending }
 
   const useCase = new RefundOrderUseCase(ordersPort, paymentProvider, escrowLedger, payoutScheduleRepo, SILENT_LOGGER)
   return { useCase, getOrderById, refund, sumByType, findByOrderId, append, reverseIfExists }

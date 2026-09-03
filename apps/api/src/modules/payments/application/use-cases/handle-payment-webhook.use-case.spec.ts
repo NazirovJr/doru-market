@@ -45,6 +45,7 @@ function makeOrderSnapshot(overrides: Partial<PaymentsOrderSnapshot> = {}): Paym
     paymentMethod: 'alif_mobi',
     totalAmountDiram: 15_000n,
     pharmacyChainId: null,
+    items: [],
     ...overrides,
   }
 }

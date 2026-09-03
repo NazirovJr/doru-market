@@ -21,6 +21,19 @@ export const PAYOUT_SCHEDULE_REPOSITORY = Symbol.for('@dorutj/payments/payout-sc
 /** Непрозрачный дескриптор активной транзакции (см. JSDoc файла). */
 export type PayoutScheduleUnitOfWorkTx = unknown
 
+/** ДОБАВЛЕНО (DTJ-244) — вход `insertPending` (SRS-PAY-031). `orderId UNIQUE` (DDL) — конфликт
+ * (заказ уже имеет строку, двойная доставка `OrderDeliveredEvent`) → `ON CONFLICT DO NOTHING`,
+ * не ошибка (идемпотентность здесь — на уровне `ProcessedEventsPort`, ЭТА защита вторична). */
+export interface InsertPendingPayoutInput {
+  readonly orderId: string
+  readonly pharmacyId: string
+  readonly grossAmountDiram: bigint
+  readonly commissionDiram: bigint
+  readonly netAmountDiram: bigint
+  /** Снэпшот `tenant_settings.hold_period_days` НА МОМЕНТ `delivered` (не пересчитывается позже). */
+  readonly holdPeriodDays: number
+}
+
 export interface PayoutScheduleRepository {
   /**
    * Given для заказа уже существует строка `payout_schedule` (пост-`delivered` случай, AC4
@@ -30,4 +43,7 @@ export interface PayoutScheduleRepository {
    * уже реверснутой строке не пишет вторую мутацию впустую).
    */
   reverseIfExists(tenantId: string, orderId: string, tx?: PayoutScheduleUnitOfWorkTx): Promise<boolean>
+
+  /** (DTJ-244) — создаёт строку `status='pending'` при `OrderDeliveredEvent` (SRS-PAY-031). */
+  insertPending(input: InsertPendingPayoutInput, tx?: PayoutScheduleUnitOfWorkTx): Promise<void>
 }

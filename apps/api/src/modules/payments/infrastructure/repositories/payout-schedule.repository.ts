@@ -17,11 +17,13 @@ import { payoutSchedule } from '@/db/schema/payments.js'
 import { orders } from '@/db/schema/orders.js'
 import {
   PAYOUT_SCHEDULE_REPOSITORY,
+  type InsertPendingPayoutInput,
   type PayoutScheduleRepository,
   type PayoutScheduleUnitOfWorkTx,
 } from '@/modules/payments/application/ports/payout-schedule-repository.port.js'
 
 const REVERSED_STATUS = 'reversed'
+const PENDING_STATUS = 'pending'
 
 @Injectable()
 export class DrizzlePayoutScheduleRepository implements PayoutScheduleRepository {
@@ -41,6 +43,23 @@ export class DrizzlePayoutScheduleRepository implements PayoutScheduleRepository
       )
       .returning({ id: payoutSchedule.id })
     return updated.length > 0
+  }
+
+  /** (DTJ-244) — см. JSDoc порта: `ON CONFLICT (order_id) DO NOTHING`, не ошибка на двойной доставке. */
+  public async insertPending(input: InsertPendingPayoutInput, tx?: PayoutScheduleUnitOfWorkTx): Promise<void> {
+    const client = resolveDrizzleClient(this.db, tx)
+    await client
+      .insert(payoutSchedule)
+      .values({
+        orderId: input.orderId,
+        pharmacyId: input.pharmacyId,
+        status: PENDING_STATUS,
+        grossAmountDiram: input.grossAmountDiram,
+        commissionDiram: input.commissionDiram,
+        netAmountDiram: input.netAmountDiram,
+        holdPeriodDays: input.holdPeriodDays,
+      })
+      .onConflictDoNothing({ target: payoutSchedule.orderId })
   }
 }
 

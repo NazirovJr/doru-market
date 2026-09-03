@@ -144,6 +144,15 @@ import { RefundFacadeAdapter } from './infrastructure/adapters/refund-facade.ada
 import { AUDIT_LOG_PORT_PROVIDER } from './infrastructure/repositories/raw-sql-audit-log.repository.js'
 import { SUPPORT_TICKET_PORT_PROVIDER } from './infrastructure/repositories/raw-sql-support-ticket.repository.js'
 import { LatePaymentRefundService } from './application/services/late-payment-refund.service.js'
+// DTJ-244 — CaptureEscrowUseCase/OrderDeliveredSubscriber (см. JSDoc блока providers выше).
+// TenancyModule — PaymentsTenancyAdapter инжектит TENANT_SETTINGS_REPOSITORY (holdPeriodDays).
+import { TenancyModule } from '@/modules/tenancy/tenancy.module.js'
+import { PROCESSED_EVENTS_PORT_PROVIDER } from './infrastructure/repositories/drizzle-processed-events.repository.js'
+import { PAYMENTS_TENANCY_PORT_PROVIDER } from './infrastructure/adapters/payments-tenancy.adapter.js'
+import { CaptureEscrowUseCase } from './application/use-cases/capture-escrow.use-case.js'
+import { OrderDeliveredSubscriber } from './infrastructure/subscribers/order-delivered.subscriber.js'
+import { PaymentsInternalServiceGuard } from './presentation/internal/payments-internal-service.guard.js'
+import { OrderDeliveredController } from './presentation/internal/order-delivered.controller.js'
 
 type PaymentDriver = 'mock_bank' | 'alif_mobi' | 'dc_next'
 
@@ -197,8 +206,13 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
 }
 
 @Module({
-  imports: [AuthModule],
-  controllers: [MockBankSimulatePaymentController, GetOrderLedgerController, PaymentsWebhookController],
+  imports: [AuthModule, TenancyModule],
+  controllers: [
+    MockBankSimulatePaymentController,
+    GetOrderLedgerController,
+    PaymentsWebhookController,
+    OrderDeliveredController,
+  ],
   providers: [
     MOCK_BANK_AUTO_PAY_QUEUE_PROVIDER,
     MockBankProvider,
@@ -264,6 +278,12 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
     AUDIT_LOG_PORT_PROVIDER,
     SUPPORT_TICKET_PORT_PROVIDER,
     LatePaymentRefundService,
+    // DTJ-244 — захват комиссии/выплаты при доставке (см. JSDoc блока providers выше).
+    PROCESSED_EVENTS_PORT_PROVIDER,
+    PAYMENTS_TENANCY_PORT_PROVIDER,
+    CaptureEscrowUseCase,
+    OrderDeliveredSubscriber,
+    PaymentsInternalServiceGuard,
   ],
   exports: [PaymentInvoiceAdapter, RefundFacadeAdapter],
 })

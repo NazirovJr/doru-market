@@ -130,6 +130,7 @@ function toSnapshot(row: OrderRow): PaymentsOrderSnapshot {
     paymentMethod: row.paymentMethod,
     totalAmountDiram: Money.fromDbDecimalTjs(row.totalAmountTjs).diram,
     pharmacyChainId: null,
+    items: [], // DTJ-244 — не нужно RefundOrderUseCase (не читает .items).
   }
 }
 

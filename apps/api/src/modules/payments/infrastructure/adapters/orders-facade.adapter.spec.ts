@@ -30,6 +30,7 @@ describe('OrdersFacadeAdapter', () => {
         status: 'pending_payment',
         paymentMethod: 'alif_mobi',
         totalAmount: { diram: 15_000n },
+        items: [{ platformFeeDiram: 800n }],
       }),
       markPaidEscrow: vi.fn(),
       cancel: vi.fn(),
@@ -47,6 +48,7 @@ describe('OrdersFacadeAdapter', () => {
       paymentMethod: 'alif_mobi',
       totalAmountDiram: 15_000n,
       pharmacyChainId: null,
+      items: [{ platformFeeDiram: 800n }],
     })
   })
 
