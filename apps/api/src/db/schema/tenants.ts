@@ -38,6 +38,9 @@ const DEFAULT_DELIVERY_SLA_REMOTE_MINUTES = 1440
 const DEFAULT_DISPUTE_WINDOW_HOURS = 24
 const DEFAULT_INVENTORY_DELTA_SLA_MINUTES = 5
 const DEFAULT_RETURN_RESTOCK_MIN_REMAINING_DAYS = 30
+// DTJ-278/279 (EP-14, migration 0038_support_ticket_sla_fields.sql, SRS-ADM-075) — ASSUMPTION
+// SUPPORT_FIRST_RESPONSE_SLA_MINUTES=60 из спеки, per-tenant поле, не константа в коде.
+const DEFAULT_SUPPORT_FIRST_RESPONSE_SLA_MINUTES = 60
 
 export const tenants = pgTable('tenants', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
@@ -91,6 +94,10 @@ export const tenantSettings = pgTable('tenant_settings', {
   disputeWindowHours: integer('dispute_window_hours').notNull().default(DEFAULT_DISPUTE_WINDOW_HOURS),
   inventoryDeltaSlaMinutes: integer('inventory_delta_sla_minutes').notNull().default(DEFAULT_INVENTORY_DELTA_SLA_MINUTES),
   returnRestockMinRemainingDays: integer('return_restock_min_remaining_days').notNull().default(DEFAULT_RETURN_RESTOCK_MIN_REMAINING_DAYS),
+  // DTJ-278/279 — читается CreateSupportTicketUseCase (EP-14) через TenantSettingsPort.
+  supportFirstResponseSlaMinutes: integer('support_first_response_sla_minutes')
+    .notNull()
+    .default(DEFAULT_SUPPORT_FIRST_RESPONSE_SLA_MINUTES),
   defaultLocale: varchar('default_locale', { length: 5 }).notNull().default('tj'),
   updatedAt: customType<{ data: Date; driverData: string }>({
     dataType() {

@@ -16,6 +16,11 @@
  * домена/use case поверх них в этом диапазоне тикетов (D-EP11-6) — размещены здесь, а не в
  * `returns.ts`, по буквальному указанию DTJ-270 п.3 (обе принадлежат DDL-группе
  * «споры/поддержка», не «возвраты»).
+ *
+ * `supportTickets.firstResponseDueAt`/`firstRespondedAt`/`priority` — SLA-расширение (EP-14,
+ * DTJ-278, `27-module-admin-moderation-onboarding.md` строки 986-994, SRS-ADM-075/076/078),
+ * миграция `0038_support_ticket_sla_fields.sql` (`ALTER TABLE` поверх этого же `pgTable`, не
+ * отдельный файл — Drizzle требует, чтобы все колонки таблицы были в одном определении).
  */
 import { sql } from 'drizzle-orm'
 import { bigint, boolean, check, pgTable, smallint, text, timestamp, uuid } from 'drizzle-orm/pg-core'
@@ -46,6 +51,10 @@ export const supportTickets = pgTable(SUPPORT_TICKETS_TABLE, {
   description: text('description'),
   createdAt: timestamp('created_at', { withTimezone: true }).default(sql`NOW()`),
   updatedAt: timestamp('updated_at', { withTimezone: true }).default(sql`NOW()`),
+  // DTJ-278 (0038_support_ticket_sla_fields.sql) — SLA первого ответа + приоритет, см. JSDoc файла.
+  firstResponseDueAt: timestamp('first_response_due_at', { withTimezone: true }),
+  firstRespondedAt: timestamp('first_responded_at', { withTimezone: true }),
+  priority: smallint('priority').notNull().default(0),
 })
 
 export type SupportTicketRow = typeof supportTickets.$inferSelect

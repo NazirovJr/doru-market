@@ -68,6 +68,10 @@ function makeSettingsRow(overrides: Partial<TenantSettingsRow> = {}): TenantSett
     disputeWindowHours: 24,
     inventoryDeltaSlaMinutes: 5,
     returnRestockMinRemainingDays: 30,
+    // DTJ-278 (EP-14, migration 0038_support_ticket_sla_fields.sql) добавил NOT NULL-колонку
+    // в tenant_settings — фикстура этого файла (чужой files_owned, EP-02) обновлена ОДНОЙ
+    // строкой, иначе typecheck красный для всего репозитория (см. отчёт DTJ-278, foundIssues).
+    supportFirstResponseSlaMinutes: 60,
     defaultLocale: 'tj',
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     ...overrides,
