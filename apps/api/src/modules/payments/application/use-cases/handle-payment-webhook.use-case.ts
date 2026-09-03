@@ -12,10 +12,19 @@
  *   2. `verifier.verify(rawBody, headers)` — HMAC ПЕРВЫМ, JSON.parse — ВНУТРИ verify() (адаптер
  *      сам делает `JSON.parse` ТОЛЬКО ПОСЛЕ подтверждения подписи, см. JSDoc
  *      `MockBankWebhookVerifierAdapter`) — несовпадение → `401 INVALID_WEBHOOK_SIGNATURE`,
- *      `pino.warn` security-событие (НЕ `audit_log` — таблицы `audit_log` физически не
- *      существует до EP-16, `migrations/0031_app_role_privileges.sql` JSDoc; тот же приём,
- *      что `RefreshTokenUseCase.detectReuse`, DTJ-025), НЕ создаёт `support_ticket`
- *      автоматически (SRS-PAY-020 п.3 — частота ложных срабатываний сканеров).
+ *      `pino.warn` security-событие (НЕ `audit_log` — ИСПРАВЛЕНО при ревью DTJ-242 волны 7:
+ *      таблица `audit_log` СУЩЕСТВУЕТ с миграции `0034_support_tickets_audit_log.sql`
+ *      (заведена для DTJ-247, ПОСЛЕ того как был написан этот комментарий) — прежняя
+ *      формулировка «таблицы не существует до EP-16» устарела. Реальная причина не писать
+ *      сюда `audit_log` — структурная, не temporal: (а) `audit_log.entity_id UUID NOT NULL`,
+ *      а на этом шаге `orderId` ЕЩЁ НЕ известен — `providerRef`/`orderId` резолвятся ТОЛЬКО
+ *      из тела ПОСЛЕ успешной проверки подписи (см. п.3 ниже), подделанный вебхук до этого шага
+ *      не доходит; (б) `audit_action_category` (та же миграция) не содержит значения,
+ *      подходящего под «неаутентифицированная попытка без известной сущности» — только
+ *      `payment_override`/`return_override`/`dispute_resolution`/`prescription_access`/
+ *      `control_category_change`/`onboarding_decision`/`force_cancel_order`/`ledger_adjustment`.
+ *      `pino.warn` — тот же приём, что `RefreshTokenUseCase.detectReuse`, DTJ-025), НЕ создаёт
+ *      `support_ticket` автоматически (SRS-PAY-020 п.3 — частота ложных срабатываний сканеров).
  *   3. Резолвинг `orderId`/`tenantId` по `providerRef` (`PaymentWebhookOperationsPort.
  *      findOrderByProviderRef`) — ДО идемпотентной вставки: `payment_operations.order_id`
  *      (FK, NOT NULL) обязан быть известен заранее. `providerRef` неизвестен → SRS-PAY-028
