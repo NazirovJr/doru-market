@@ -10,6 +10,8 @@
 //   файлом владеет соответствующий эпик, не EP-01.
 export * from './errors.js'
 export * from './domain-errors.js'
+// DTJ-300 (EP-12) — НЕ реэкспортируется из domain-errors.js (циклический импорт, см. JSDoc файла).
+export * from './domain-errors-pharmacy-terminal.js'
 export * from './permissions.js'
 export * from './pagination.js'
 export * from './envelope.js'
@@ -20,3 +22,6 @@ export * from './pharmacies-map.js'
 export * from './search.js'
 export * from './orders.js'
 export * from './payments.js'
+// DTJ-300 (EP-12) — тела запросов терминала фармацевта, отдельный плоский файл (не './orders/'
+// директория — избегает коллизии с существующим './orders.js', см. отчёт сдачи тикета).
+export * from './orders-pharmacy-terminal.contracts.js'

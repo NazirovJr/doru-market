@@ -132,10 +132,23 @@ export class LedgerImbalanceError extends ConflictError {
 
 // ==================== NotFoundError → 404 NOT_FOUND ====================
 
-/** Конкретизация (`MedicineNotFoundError` и т.п.) — на уровне application каждого модуля. */
+/**
+ * Конкретизация (`MedicineNotFoundError` и т.п.) — как правило, на уровне application каждого
+ * модуля (generic `NotFoundError({ resource: '...' })`, код всегда `NOT_FOUND`). `code`/`message`
+ * — опциональные 2-й/3-й параметры (DTJ-300, модуль 24, `02` §2.5): presentation-мапперам
+ * терминала фармацевта нужен СВОЙ различимый код на 404 (`ORDER_ITEM_NOT_FOUND`,
+ * `HANDOVER_OTP_NOT_FOUND` — см. `domain-errors-pharmacy-terminal.ts`), а не общий `NOT_FOUND`.
+ * Сигнатура `(details, code, message)`, НЕ `(message, details, code)` как у
+ * `ValidationError`/`ConflictError`/`BusinessRuleViolationError` — 1-й параметр не переставлен,
+ * чтобы не сломать ~15 существующих вызовов `new NotFoundError({...})` по всему `apps/api`.
+ */
 export class NotFoundError extends DomainError {
-  constructor(details?: Record<string, unknown>) {
-    super(ErrorCode.NOT_FOUND, 'Resource not found', details)
+  constructor(
+    details?: Record<string, unknown>,
+    code: ErrorCode = ErrorCode.NOT_FOUND,
+    message = 'Resource not found',
+  ) {
+    super(code, message, details)
   }
 }
 
@@ -271,7 +284,6 @@ export class DisputeHoldViolationError extends BusinessRuleViolationError {
     super('Payout is on hold due to an open dispute', details, ErrorCode.PAYOUT_ON_HOLD)
   }
 }
-
 
 // Продолжение каталога (Security/Forbidden/Telegram/Otp/ExternalIntegration) — вынесено
 // в отдельный файл по max-lines (L2 линтер). Публичный API не меняется.

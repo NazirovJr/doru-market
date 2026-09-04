@@ -153,6 +153,18 @@ export enum ErrorCode {
   // адаптером — тело НЕ обрабатывается вовсе (ни HMAC, ни JSON.parse). Новый код в конец
   // каталога (D-27), тот же класс добавления, что ORDER_NOT_RETRYABLE (D-EP09-9).
   WEBHOOK_PROVIDER_UNKNOWN = 'WEBHOOK_PROVIDER_UNKNOWN',
+
+  // ---- Доменные: модуль 24 «Терминал фармацевта» (DTJ-300, EP-12) — новые коды в конец
+  // каталога (D-27), тот же класс добавления, что PRICE_OR_STOCK_CHANGED/ORDER_NOT_RETRYABLE
+  // (D-EP09-9). Источник — `docs/spec/24-module-pharmacy-terminal.md` §«Дополнения к схеме
+  // БД», таблица «Новые доменные ошибки». ----
+  ORDER_ALREADY_CLAIMED = 'ORDER_ALREADY_CLAIMED', // 409, SRS-PHT-009
+  ORDER_ITEM_NOT_FOUND = 'ORDER_ITEM_NOT_FOUND', // 404, SRS-PHT-012
+  ITEM_ALREADY_SCANNED = 'ITEM_ALREADY_SCANNED', // 409, SRS-PHT-013
+  BATCH_NOT_AVAILABLE = 'BATCH_NOT_AVAILABLE', // 422, SRS-PHT-014
+  SEAL_CONFIRMATION_REQUIRED = 'SEAL_CONFIRMATION_REQUIRED', // 400, SRS-PHT-025
+  PARTIAL_FULFILLMENT_PENDING = 'PARTIAL_FULFILLMENT_PENDING', // 409, SRS-PHT-026
+  HANDOVER_OTP_NOT_FOUND = 'HANDOVER_OTP_NOT_FOUND', // 404, SRS-PHT-028
 }
 
 /** HTTP-статус для каждого `ErrorCode` (`AllExceptionsFilter`, DTJ-018 — единственный фильтр приложения). */
@@ -254,4 +266,12 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   [ErrorCode.SMS_PROVIDER_UNAVAILABLE]: 503,
 
   [ErrorCode.WEBHOOK_PROVIDER_UNKNOWN]: 400,
+
+  [ErrorCode.ORDER_ALREADY_CLAIMED]: 409,
+  [ErrorCode.ORDER_ITEM_NOT_FOUND]: 404,
+  [ErrorCode.ITEM_ALREADY_SCANNED]: 409,
+  [ErrorCode.BATCH_NOT_AVAILABLE]: 422,
+  [ErrorCode.SEAL_CONFIRMATION_REQUIRED]: 400,
+  [ErrorCode.PARTIAL_FULFILLMENT_PENDING]: 409,
+  [ErrorCode.HANDOVER_OTP_NOT_FOUND]: 404,
 }

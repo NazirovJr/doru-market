@@ -64,7 +64,10 @@ describe.skipIf(!postgresAvailable)('0023_orders_cart.sql — структура
     return result.rows
   }
 
-  async function constraintNamesOf(table: string, contype: 'c' | 'f' | 'p' | 'u'): Promise<readonly string[]> {
+  async function constraintNamesOf(
+    table: string,
+    contype: 'c' | 'f' | 'p' | 'u',
+  ): Promise<readonly string[]> {
     const result = await pool.query<ConstraintNameRow>(
       `SELECT con.conname AS constraint_name
          FROM pg_constraint con
@@ -115,8 +118,11 @@ describe.skipIf(!postgresAvailable)('0023_orders_cart.sql — структура
     )
 
     const foreignKeys = await constraintNamesOf('orders', 'f')
-    // Ровно эти 5 FK — courier_id/prescription_id сознательно БЕЗ FK на этом шаге (D-EP09-3,
-    // раздел «ОТЛОЖЕНО» миграции); handover_otp_id получает FK сразу (D-EP09-7).
+    // Ровно эти 5 FK на момент 0023 — courier_id/prescription_id сознательно БЕЗ FK на этом шаге
+    // (D-EP09-3, раздел «ОТЛОЖЕНО» миграции); handover_otp_id получает FK сразу (D-EP09-7).
+    // + orders_assigned_pharmacist_id_fkey — DTJ-300 (EP-12, модуль 24, миграция
+    // 0037_pharmacy_terminal_schema.sql), аддитивное расширение чужой таблицы orders,
+    // одобренное архитектором (Charter §5 «расширения допускаются», см. отчёт сдачи DTJ-300).
     expect([...foreignKeys].sort()).toEqual(
       [
         'orders_customer_id_fkey',
@@ -124,6 +130,7 @@ describe.skipIf(!postgresAvailable)('0023_orders_cart.sql — структура
         'orders_tenant_id_fkey',
         'orders_cancelled_by_fkey',
         'orders_handover_otp_id_fkey',
+        'orders_assigned_pharmacist_id_fkey',
       ].sort(),
     )
 

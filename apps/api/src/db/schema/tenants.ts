@@ -13,7 +13,18 @@
  * raw SQL для partial UNIQUE — Drizzle DSL это поддерживает через
  * `.unique().where(...)` начиная с `0.31`, но надёжнее ручной DDL).
  */
-import { pgTable, uuid, varchar, boolean, jsonb, bigint, integer, text, customType } from 'drizzle-orm/pg-core'
+import {
+  pgTable,
+  uuid,
+  varchar,
+  boolean,
+  jsonb,
+  bigint,
+  integer,
+  text,
+  customType,
+  check,
+} from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 /**
@@ -38,9 +49,15 @@ const DEFAULT_DELIVERY_SLA_REMOTE_MINUTES = 1440
 const DEFAULT_DISPUTE_WINDOW_HOURS = 24
 const DEFAULT_INVENTORY_DELTA_SLA_MINUTES = 5
 const DEFAULT_RETURN_RESTOCK_MIN_REMAINING_DAYS = 30
+// [РАСШИРЕНИЕ, EP-12, DTJ-300, модуль 24] — параметры терминала фармацевта (SRS-PHT-019/029).
+const DEFAULT_PARTIAL_FULFILLMENT_CONFIRMATION_TIMEOUT_MINUTES = 10
+const DEFAULT_HANDOVER_OTP_MAX_REGENERATIONS_PER_ORDER = 20
+const DEFAULT_HANDOVER_OTP_REGENERATE_MIN_INTERVAL_SECONDS = 60
 
 export const tenants = pgTable('tenants', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid('id')
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
   slug: varchar('slug', { length: 32 }).notNull().unique(),
   chainId: uuid('chain_id'),
   customDomain: varchar('custom_domain', { length: 255 }).unique(),
@@ -65,36 +82,72 @@ export const tenants = pgTable('tenants', {
  * провизионированный тенант стартует с пустой палитрой (SRS-TEN-038, fallback
  * `NEUTRAL_FALLBACK_PALETTE` отдаётся presentation-слоем при `GET /tenant/branding`).
  */
-export const tenantSettings = pgTable('tenant_settings', {
-  tenantId: uuid('tenant_id')
-    .primaryKey()
-    .references(() => tenants.id, { onDelete: 'cascade' }),
-  brandName: varchar('brand_name', { length: 255 }).notNull(),
-  brandLogoUrl: text('brand_logo_url'),
-  brandLogoSquareUrl: text('brand_logo_square_url'),
-  brandFaviconUrl: text('brand_favicon_url'),
-  brandPalette: jsonb('brand_palette').notNull().default(sql`'{}'::jsonb`),
-  telegramBotUsername: varchar('telegram_bot_username', { length: 64 }),
-  telegramBotTokenRef: text('telegram_bot_token_ref'),
-  merchantCredentialsRef: text('merchant_credentials_ref'),
-  merchantCredentialsStatus: varchar('merchant_credentials_status', { length: 20 })
-    .notNull()
-    .default('not_configured'),
-  supportPhone: varchar('support_phone', { length: 20 }),
-  supportEmail: varchar('support_email', { length: 255 }),
-  codLimitDiram: bigint('cod_limit_diram', { mode: 'bigint' }).notNull().default(DEFAULT_COD_LIMIT_DIRAM_SQL),
-  holdPeriodDays: integer('hold_period_days').notNull().default(DEFAULT_HOLD_PERIOD_DAYS),
-  pickupSlaMinutes: integer('pickup_sla_minutes').notNull().default(DEFAULT_PICKUP_SLA_MINUTES),
-  pickupSlaBufferMinutes: integer('pickup_sla_buffer_minutes').notNull().default(DEFAULT_PICKUP_SLA_BUFFER_MINUTES),
-  deliverySlaCityMinutes: integer('delivery_sla_city_minutes').notNull().default(DEFAULT_DELIVERY_SLA_CITY_MINUTES),
-  deliverySlaRemoteMinutes: integer('delivery_sla_remote_minutes').notNull().default(DEFAULT_DELIVERY_SLA_REMOTE_MINUTES),
-  disputeWindowHours: integer('dispute_window_hours').notNull().default(DEFAULT_DISPUTE_WINDOW_HOURS),
-  inventoryDeltaSlaMinutes: integer('inventory_delta_sla_minutes').notNull().default(DEFAULT_INVENTORY_DELTA_SLA_MINUTES),
-  returnRestockMinRemainingDays: integer('return_restock_min_remaining_days').notNull().default(DEFAULT_RETURN_RESTOCK_MIN_REMAINING_DAYS),
-  defaultLocale: varchar('default_locale', { length: 5 }).notNull().default('tj'),
-  updatedAt: customType<{ data: Date; driverData: string }>({
-    dataType() {
-      return 'timestamp with time zone'
-    },
-  })('updated_at').default(sql`NOW()`),
-})
+export const tenantSettings = pgTable(
+  'tenant_settings',
+  {
+    tenantId: uuid('tenant_id')
+      .primaryKey()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    brandName: varchar('brand_name', { length: 255 }).notNull(),
+    brandLogoUrl: text('brand_logo_url'),
+    brandLogoSquareUrl: text('brand_logo_square_url'),
+    brandFaviconUrl: text('brand_favicon_url'),
+    brandPalette: jsonb('brand_palette')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    telegramBotUsername: varchar('telegram_bot_username', { length: 64 }),
+    telegramBotTokenRef: text('telegram_bot_token_ref'),
+    merchantCredentialsRef: text('merchant_credentials_ref'),
+    merchantCredentialsStatus: varchar('merchant_credentials_status', { length: 20 })
+      .notNull()
+      .default('not_configured'),
+    supportPhone: varchar('support_phone', { length: 20 }),
+    supportEmail: varchar('support_email', { length: 255 }),
+    codLimitDiram: bigint('cod_limit_diram', { mode: 'bigint' })
+      .notNull()
+      .default(DEFAULT_COD_LIMIT_DIRAM_SQL),
+    holdPeriodDays: integer('hold_period_days').notNull().default(DEFAULT_HOLD_PERIOD_DAYS),
+    pickupSlaMinutes: integer('pickup_sla_minutes').notNull().default(DEFAULT_PICKUP_SLA_MINUTES),
+    pickupSlaBufferMinutes: integer('pickup_sla_buffer_minutes')
+      .notNull()
+      .default(DEFAULT_PICKUP_SLA_BUFFER_MINUTES),
+    deliverySlaCityMinutes: integer('delivery_sla_city_minutes')
+      .notNull()
+      .default(DEFAULT_DELIVERY_SLA_CITY_MINUTES),
+    deliverySlaRemoteMinutes: integer('delivery_sla_remote_minutes')
+      .notNull()
+      .default(DEFAULT_DELIVERY_SLA_REMOTE_MINUTES),
+    disputeWindowHours: integer('dispute_window_hours').notNull().default(DEFAULT_DISPUTE_WINDOW_HOURS),
+    inventoryDeltaSlaMinutes: integer('inventory_delta_sla_minutes')
+      .notNull()
+      .default(DEFAULT_INVENTORY_DELTA_SLA_MINUTES),
+    returnRestockMinRemainingDays: integer('return_restock_min_remaining_days')
+      .notNull()
+      .default(DEFAULT_RETURN_RESTOCK_MIN_REMAINING_DAYS),
+    defaultLocale: varchar('default_locale', { length: 5 }).notNull().default('tj'),
+    // [РАСШИРЕНИЕ, EP-12, DTJ-300, модуль 24] — параметры терминала фармацевта (SRS-PHT-019/029).
+    // Миграция 0037_pharmacy_terminal_schema.sql. Добавлены В ЭТОТ ЖЕ pgTable (НЕ отдельный файл
+    // tenant-settings.ts — его не существует, tenant_settings всегда была таблицей внутри
+    // tenants.ts, см. отчёт сдачи тикета).
+    partialFulfillmentConfirmationTimeoutMinutes: integer('partial_fulfillment_confirmation_timeout_minutes')
+      .notNull()
+      .default(DEFAULT_PARTIAL_FULFILLMENT_CONFIRMATION_TIMEOUT_MINUTES),
+    handoverOtpMaxRegenerationsPerOrder: integer('handover_otp_max_regenerations_per_order')
+      .notNull()
+      .default(DEFAULT_HANDOVER_OTP_MAX_REGENERATIONS_PER_ORDER),
+    handoverOtpRegenerateMinIntervalSeconds: integer('handover_otp_regenerate_min_interval_seconds')
+      .notNull()
+      .default(DEFAULT_HANDOVER_OTP_REGENERATE_MIN_INTERVAL_SECONDS),
+    updatedAt: customType<{ data: Date; driverData: string }>({
+      dataType() {
+        return 'timestamp with time zone'
+      },
+    })('updated_at').default(sql`NOW()`),
+  },
+  (table) => [
+    check(
+      'chk_tenant_settings_pht_ranges',
+      sql`${table.partialFulfillmentConfirmationTimeoutMinutes} > 0 AND ${table.handoverOtpMaxRegenerationsPerOrder} > 0`,
+    ),
+  ],
+)

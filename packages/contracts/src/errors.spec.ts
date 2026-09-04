@@ -106,6 +106,16 @@ const EXPECTED: readonly (readonly [ErrorCode, number])[] = [
 
   // DTJ-242 (EP-10), SRS-PAY-019 / TC-PAY-005 — docs/spec/21-module-orders-payments-escrow.md.
   [ErrorCode.WEBHOOK_PROVIDER_UNKNOWN, 400],
+
+  // DTJ-300 (EP-12), docs/spec/24-module-pharmacy-terminal.md §«Дополнения к схеме БД»,
+  // таблица «Новые доменные ошибки».
+  [ErrorCode.ORDER_ALREADY_CLAIMED, 409],
+  [ErrorCode.ORDER_ITEM_NOT_FOUND, 404],
+  [ErrorCode.ITEM_ALREADY_SCANNED, 409],
+  [ErrorCode.BATCH_NOT_AVAILABLE, 422],
+  [ErrorCode.SEAL_CONFIRMATION_REQUIRED, 400],
+  [ErrorCode.PARTIAL_FULFILLMENT_PENDING, 409],
+  [ErrorCode.HANDOVER_OTP_NOT_FOUND, 404],
 ]
 
 describe('ErrorCode / ERROR_HTTP_STATUS — сверка с источниками', () => {

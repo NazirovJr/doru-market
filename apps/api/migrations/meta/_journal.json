@@ -229,6 +229,12 @@
       "when": 1700000390000,
       "tag": "0035_escrow_ledger_refund_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "when": 1700000400000,
+      "tag": "0037_pharmacy_terminal_schema",
+      "breakpoints": true
     }
   ]
 }

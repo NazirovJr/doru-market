@@ -65,13 +65,25 @@ import {
   UnauthorizedAdjustmentError,
   ValidationError,
 } from './domain-errors.js'
+import {
+  BatchNotAvailableForSubstitutionError,
+  HandoverOtpNotFoundError,
+  ItemAlreadyScannedError,
+  ItemNotInOrderError,
+  OrderAlreadyClaimedError,
+  PendingCustomerConfirmationError,
+  SealConfirmationRequiredError,
+} from './domain-errors-pharmacy-terminal.js'
 
 /**
- * Полный список concrete-классов из `./domain-errors.ts` (на момент фикса Блока 1.2 — 57 штук).
- * Используется тестом ниже, чтобы гарантировать, что каждый concrete-класс покрыт
- * ровно одним кейсом в {@link CASES}. При добавлении новой concrete-ошибки в
- * `domain-errors.ts` — добавить её сюда и соответствующий кейс в CASES; иначе тест
- * упадёт. Так закрывается рассинхрон «выросло дерево — вырос список тестов».
+ * Полный список concrete-классов публичного каталога ошибок — `./domain-errors.ts` +
+ * `./domain-errors-security.ts` (реэкспортирован через `domain-errors.js`) +
+ * `./domain-errors-pharmacy-terminal.ts` (DTJ-300, реэкспортируется отдельной строкой из
+ * `index.ts`, НЕ через `domain-errors.js` — см. JSDoc файла). Используется тестом ниже, чтобы
+ * гарантировать, что каждый concrete-класс покрыт ровно одним кейсом в {@link CASES}. При
+ * добавлении новой concrete-ошибки в любой из этих файлов — добавить её сюда и соответствующий
+ * кейс в CASES; иначе тест упадёт. Так закрывается рассинхрон «выросло дерево — вырос список
+ * тестов».
  *
  * Это замена прежнего магического `toHaveLength(53)`, который был зафиксирован
  * архитектором до волн 2-3 и устарел с добавлением новых классов.
@@ -136,6 +148,14 @@ const EXPECTED_CONCRETE_CLASSES: ReadonlySet<string> = new Set<string>([
   'PaymentProviderUnavailableError',
   'OcrProviderUnavailableError',
   'SmsProviderUnavailableError',
+  // DTJ-300 (EP-12) — domain-errors-pharmacy-terminal.ts.
+  'OrderAlreadyClaimedError',
+  'ItemNotInOrderError',
+  'ItemAlreadyScannedError',
+  'BatchNotAvailableForSubstitutionError',
+  'SealConfirmationRequiredError',
+  'PendingCustomerConfirmationError',
+  'HandoverOtpNotFoundError',
 ])
 
 /** [конструктор, ожидаемый ErrorCode] — 1:1 дерево `10-domain-model.md` §«Доменные ошибки». */
@@ -199,6 +219,15 @@ const CASES: readonly (readonly [() => DomainError, ErrorCode])[] = [
   [() => new PaymentProviderUnavailableError(), ErrorCode.PAYMENT_PROVIDER_UNAVAILABLE],
   [() => new OcrProviderUnavailableError(), ErrorCode.OCR_PROVIDER_UNAVAILABLE],
   [() => new SmsProviderUnavailableError(), ErrorCode.SMS_PROVIDER_UNAVAILABLE],
+  // DTJ-300 (EP-12) — domain-errors-pharmacy-terminal.ts, 1:1 с таблицей «Новые доменные
+  // ошибки» модуля 24.
+  [() => new OrderAlreadyClaimedError(), ErrorCode.ORDER_ALREADY_CLAIMED],
+  [() => new ItemNotInOrderError(), ErrorCode.ORDER_ITEM_NOT_FOUND],
+  [() => new ItemAlreadyScannedError(), ErrorCode.ITEM_ALREADY_SCANNED],
+  [() => new BatchNotAvailableForSubstitutionError(), ErrorCode.BATCH_NOT_AVAILABLE],
+  [() => new SealConfirmationRequiredError(), ErrorCode.SEAL_CONFIRMATION_REQUIRED],
+  [() => new PendingCustomerConfirmationError(), ErrorCode.PARTIAL_FULFILLMENT_PENDING],
+  [() => new HandoverOtpNotFoundError(), ErrorCode.HANDOVER_OTP_NOT_FOUND],
 ]
 
 describe('domain-errors — иерархия 1:1 с 10-domain-model.md', () => {
@@ -238,5 +267,37 @@ describe('domain-errors — иерархия 1:1 с 10-domain-model.md', () => {
   it('name инстанса совпадает с именем класса (для логов/трассировки)', () => {
     const error = new InsufficientStockError()
     expect(error.name).toBe('InsufficientStockError')
+  })
+})
+
+describe('domain-errors-pharmacy-terminal — иерархия (DTJ-300, наследование от подходящего промежуточного класса)', () => {
+  it('OrderAlreadyClaimedError/ItemAlreadyScannedError/PendingCustomerConfirmationError — instanceof ConflictError', () => {
+    expect(new OrderAlreadyClaimedError()).toBeInstanceOf(ConflictError)
+    expect(new ItemAlreadyScannedError()).toBeInstanceOf(ConflictError)
+    expect(new PendingCustomerConfirmationError()).toBeInstanceOf(ConflictError)
+  })
+
+  it('ItemNotInOrderError/HandoverOtpNotFoundError — instanceof NotFoundError, но с собственным (не NOT_FOUND) кодом', () => {
+    const itemNotInOrder = new ItemNotInOrderError({ orderId: 'o1', itemId: 'i1' })
+    expect(itemNotInOrder).toBeInstanceOf(NotFoundError)
+    expect(itemNotInOrder.code).toBe(ErrorCode.ORDER_ITEM_NOT_FOUND)
+    expect(itemNotInOrder.details).toEqual({ orderId: 'o1', itemId: 'i1' })
+
+    const handoverOtpNotFound = new HandoverOtpNotFoundError({ orderId: 'o1' })
+    expect(handoverOtpNotFound).toBeInstanceOf(NotFoundError)
+    expect(handoverOtpNotFound.code).toBe(ErrorCode.HANDOVER_OTP_NOT_FOUND)
+  })
+
+  it('NotFoundError() без аргументов — обратная совместимость: код по умолчанию остаётся NOT_FOUND', () => {
+    expect(new NotFoundError().code).toBe(ErrorCode.NOT_FOUND)
+    expect(new NotFoundError().message).toBe('Resource not found')
+  })
+
+  it('BatchNotAvailableForSubstitutionError — instanceof BusinessRuleViolationError', () => {
+    expect(new BatchNotAvailableForSubstitutionError()).toBeInstanceOf(BusinessRuleViolationError)
+  })
+
+  it('SealConfirmationRequiredError — instanceof ValidationError', () => {
+    expect(new SealConfirmationRequiredError()).toBeInstanceOf(ValidationError)
   })
 })
