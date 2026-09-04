@@ -40,6 +40,13 @@ const DEFAULT_CASH_COMMISSION_AGGREGATION_DAILY_CRON = '30 0 * * *'
 // DTJ-251, ticket «Что сделать» п.3: ASSUMPTION — воскресенье 23:50 Asia/Dushanbe (буквальный
 // текст тикета «23:59», округлено на 10 минут раньше — запас на выполнение тика до смены дня).
 const DEFAULT_CASH_COMMISSION_AGGREGATION_WEEKLY_ISSUE_CRON = '50 23 * * 0'
+// DTJ-252, ticket «Что сделать» п.1: ASSUMPTION буквально из тикета — «ежедневно»; 01:00
+// Asia/Dushanbe, ПОСЛЕ ежедневного тика CashCommissionAggregationJob (00:30) и weekly-issue
+// (воскресенье 23:50) — просроченный инвойс уже гарантированно issued к моменту проверки, не
+// гонка с ещё формируемым draft/только что issued инвойсом того же тика.
+const DEFAULT_BILLING_INVOICE_OVERDUE_CRON = '0 1 * * *'
+// DTJ-252, ticket «Что сделать» п.1: ASSUMPTION буквально из тикета — `GRACE_PERIOD_DAYS=3`.
+const DEFAULT_BILLING_INVOICE_OVERDUE_GRACE_PERIOD_DAYS = 3
 
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const
 
@@ -98,6 +105,9 @@ export const envSchema = z.object({
   // DTJ-251, ticket «Что сделать» п.2/3: два раздельных расписания одной джобы.
   CASH_COMMISSION_AGGREGATION_DAILY_CRON: z.string().min(1).default(DEFAULT_CASH_COMMISSION_AGGREGATION_DAILY_CRON),
   CASH_COMMISSION_AGGREGATION_WEEKLY_ISSUE_CRON: z.string().min(1).default(DEFAULT_CASH_COMMISSION_AGGREGATION_WEEKLY_ISSUE_CRON),
+  // DTJ-252, DoD «GRACE_PERIOD_DAYS — именованная ENV-константа»/«BillingInvoiceOverdueJob (BullMQ repeatable, ежедневно)».
+  BILLING_INVOICE_OVERDUE_CRON: z.string().min(1).default(DEFAULT_BILLING_INVOICE_OVERDUE_CRON),
+  BILLING_INVOICE_OVERDUE_GRACE_PERIOD_DAYS: z.coerce.number().int().positive().default(DEFAULT_BILLING_INVOICE_OVERDUE_GRACE_PERIOD_DAYS),
 })
 
 export type WorkerEnv = z.infer<typeof envSchema>

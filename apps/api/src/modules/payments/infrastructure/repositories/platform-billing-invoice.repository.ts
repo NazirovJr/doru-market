@@ -11,11 +11,14 @@
  * теряют инкременты друг друга.
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, lt, or, sql } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { platformBillingInvoices } from '@/db/schema/payments.js'
 import {
   PLATFORM_BILLING_INVOICE_REPOSITORY,
+  type BillingInvoiceReportRow,
+  type FindInvoicesByChainInput,
+  type FindInvoicesByChainResult,
   type IssueInvoiceInput,
   type PlatformBillingInvoiceRepository,
   type PlatformBillingInvoiceRow,
@@ -82,6 +85,51 @@ export class DrizzlePlatformBillingInvoiceRepository implements PlatformBillingI
         totalDiram: input.totalDiram,
       })
       .where(and(eq(platformBillingInvoices.id, input.invoiceId), eq(platformBillingInvoices.status, DRAFT_STATUS)))
+  }
+
+  /** (DTJ-252) — см. JSDoc порта. `LIMIT input.limit + 1` — `hasMore` без второй `COUNT`-круговой поездки (тот же приём, что `PayoutScheduleRepository.findByPharmacy`). */
+  public async findByChain(input: FindInvoicesByChainInput): Promise<FindInvoicesByChainResult> {
+    const conditions = [eq(platformBillingInvoices.chainId, input.chainId)]
+    if (input.cursor !== null) {
+      const cursorCreatedAtValue = new Date(input.cursor.v)
+      const keysetCondition = or(
+        lt(platformBillingInvoices.createdAt, cursorCreatedAtValue),
+        and(eq(platformBillingInvoices.createdAt, cursorCreatedAtValue), lt(platformBillingInvoices.id, input.cursor.id)),
+      )
+      if (keysetCondition !== undefined) {
+        conditions.push(keysetCondition)
+      }
+    }
+    const rows = await this.db
+      .select()
+      .from(platformBillingInvoices)
+      .where(and(...conditions))
+      .orderBy(desc(platformBillingInvoices.createdAt), desc(platformBillingInvoices.id))
+      .limit(input.limit + 1)
+    const hasMore = rows.length > input.limit
+    const page = hasMore ? rows.slice(0, input.limit) : rows
+    const last = page[page.length - 1]
+    return {
+      items: page.map(toBillingInvoiceReportRow),
+      nextCursor: hasMore && last !== undefined ? { v: (last.createdAt ?? new Date(0)).toISOString(), id: last.id } : null,
+      hasMore,
+    }
+  }
+}
+
+function toBillingInvoiceReportRow(row: typeof platformBillingInvoices.$inferSelect): BillingInvoiceReportRow {
+  return {
+    id: row.id,
+    invoiceType: row.invoiceType,
+    status: row.status,
+    periodStart: row.periodStart,
+    periodEnd: row.periodEnd,
+    subtotalDiram: row.subtotalDiram,
+    vatDiram: row.vatDiram,
+    totalDiram: row.totalDiram,
+    issuedAt: row.issuedAt,
+    dueAt: row.dueAt,
+    paidAt: row.paidAt,
   }
 }
 

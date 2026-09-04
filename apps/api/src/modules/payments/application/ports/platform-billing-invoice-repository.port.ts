@@ -65,4 +65,48 @@ export interface PlatformBillingInvoiceRepository {
 
   /** `draft → issued`. Given инвойс уже НЕ `draft` (повторный вызов) → no-op, не бросает. */
   issue(input: IssueInvoiceInput): Promise<void>
+
+  /**
+   * РАСШИРЕНИЕ (DTJ-252, REQ-MON-6/7, SRS-API-004..007) — `GET /api/v1/pharmacy-accounts/:id/
+   * billing-invoices`, курсорная (keyset) страница ВСЕХ инвойсов сети (не только
+   * `cash_courier_commission` — DoD тикета не сужает список по типу, в отличие от
+   * `findDraftForPeriod`/`upsertDraft` выше, которые СВОЙ `invoice_type` фиксируют неявно, см.
+   * их JSDoc). Сортировка `created_at DESC, id DESC` — тот же приём, что
+   * `PayoutScheduleRepository.findByPharmacy` (DTJ-252).
+   */
+  findByChain(input: FindInvoicesByChainInput): Promise<FindInvoicesByChainResult>
+}
+
+/** Строка отчёта `findByChain` (DTJ-252). */
+export interface BillingInvoiceReportRow {
+  readonly id: string
+  readonly invoiceType: string
+  readonly status: string
+  readonly periodStart: Date
+  readonly periodEnd: Date
+  readonly subtotalDiram: bigint
+  readonly vatDiram: bigint
+  readonly totalDiram: bigint
+  readonly issuedAt: Date | null
+  readonly dueAt: Date | null
+  readonly paidAt: Date | null
+}
+
+/** Декодированный курсор `findByChain` — `v` ISO-строка `created_at`, `id` — `platform_billing_invoices.id`. */
+export interface BillingInvoiceCursor {
+  readonly v: string
+  readonly id: string
+}
+
+/** Вход `findByChain` — объект-параметр (C5, `max-params` ≤3). */
+export interface FindInvoicesByChainInput {
+  readonly chainId: string
+  readonly limit: number
+  readonly cursor: BillingInvoiceCursor | null
+}
+
+export interface FindInvoicesByChainResult {
+  readonly items: readonly BillingInvoiceReportRow[]
+  readonly nextCursor: BillingInvoiceCursor | null
+  readonly hasMore: boolean
 }

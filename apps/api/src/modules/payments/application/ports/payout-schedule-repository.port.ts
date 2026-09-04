@@ -65,6 +65,24 @@ export interface PayoutScheduleRepository {
    * контракт зафиксирован как лучшее понимание на момент EP-10).
    */
   holdIfPending(input: HoldIfPendingInput, tx?: PayoutScheduleUnitOfWorkTx): Promise<{ held: boolean }>
+
+  /**
+   * РАСШИРЕНИЕ (DTJ-252, SRS-API-004..007) — `GET /api/v1/pharmacy-accounts/:id/payouts`,
+   * курсорная (keyset) страница `payout_schedule` ОДНОЙ аптеки, с `orderNumber` (JOIN `orders`,
+   * тот же приём межмодульного чтения таблицы, что `orderBelongsToTenant` в этом файле).
+   * Сортировка `created_at DESC, id DESC` (свежие выплаты первыми — типичный порядок для
+   * финансового отчёта); `cursor` — значение/id ПОСЛЕДНЕЙ строки предыдущей страницы
+   * (`packages/contracts/pagination`, keyset, не offset).
+   */
+  findByPharmacy(input: FindPayoutsByPharmacyInput): Promise<FindPayoutsByPharmacyResult>
+
+  /**
+   * РАСШИРЕНИЕ (DTJ-252) — ВСЕ строки `payout_schedule` аптеки, БЕЗ пагинации (DoD: «CSV —
+   * полным потоком, не курсорная пагинация»), тот же фильтр/сортировка, что `findByPharmacy`.
+   * Отдельный метод, не `findByPharmacy` с завышенным `limit` — явная граница «список»/«экспорт»
+   * (C11, explicit over implicit): вызывающий код читает из сигнатуры, что здесь НЕТ страницы.
+   */
+  findAllByPharmacy(pharmacyId: string, statuses?: readonly string[]): Promise<readonly PayoutReportRow[]>
 }
 
 /** Вход `holdIfPending` (см. её JSDoc про C5). */
@@ -72,4 +90,37 @@ export interface HoldIfPendingInput {
   readonly tenantId: string
   readonly orderId: string
   readonly disputeId: string
+}
+
+/** Строка отчёта `findByPharmacy`/`findAllByPharmacy` (DTJ-252) — поля буквально из АС3 тикета. */
+export interface PayoutReportRow {
+  readonly orderId: string
+  readonly orderNumber: string
+  readonly grossAmountDiram: bigint
+  readonly commissionDiram: bigint
+  readonly netAmountDiram: bigint
+  readonly status: string
+  readonly dueAt: Date | null
+  readonly paidAt: Date | null
+}
+
+/** Декодированный курсор `findByPharmacy` — `v` ISO-строка `created_at`, `id` — `payout_schedule.id` (tie-break). */
+export interface PayoutCursor {
+  readonly v: string
+  readonly id: string
+}
+
+/** Вход `findByPharmacy` — объект-параметр (C5, `max-params` ≤3). */
+export interface FindPayoutsByPharmacyInput {
+  readonly pharmacyId: string
+  readonly statuses?: readonly string[] | undefined
+  readonly limit: number
+  readonly cursor: PayoutCursor | null
+}
+
+export interface FindPayoutsByPharmacyResult {
+  readonly items: readonly PayoutReportRow[]
+  /** Курсор последней строки страницы — `null`, если страница пуста (нет следующей). */
+  readonly nextCursor: PayoutCursor | null
+  readonly hasMore: boolean
 }

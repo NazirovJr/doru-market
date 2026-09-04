@@ -107,6 +107,20 @@
  * `CashCommissionAggregationJob`, но он живёт в `apps/worker` и физически не может использовать
  * этот Drizzle-репозиторий, см. JSDoc порта — у джобы СВОЙ раздельный raw-SQL адаптер над той
  * же таблицей). Провайдер резолвится в DI-графе заранее, задел для DTJ-252.
+ *
+ * **DTJ-252 (авто-блокировка сети за неоплаченный B2B-инвойс + отчёты аптеке) — РЕАЛИЗОВАНО.**
+ * `imports: [OnboardingModule]` — НОВОЕ: `OnboardingFacade` (публичный фасад `onboarding`,
+ * экспортирован её модулем) нужен `OnboardingFacadeAdapter` этого модуля (СВОЙ узкий порт
+ * `ONBOARDING_FACADE_PORT`, `payments/application/ports/onboarding-facade.port.ts` — НЕ импорт
+ * чужого `orders/.../onboarding-facade.port.ts`, `02` §1.2). Цикла нет: `OnboardingModule`
+ * импортирует только `AuthModule` (см. её собственный `@Module`), не `payments`.
+ * `SuspendChainForUnpaidInvoiceController` — `POST /api/v1/internal/pharmacy-chains/:id/
+ * suspend-for-unpaid-invoice`, ТОТ ЖЕ `PaymentsInternalServiceGuard`, что `OrderDeliveredController`
+ * (DTJ-244) — HTTP-мост для `BillingInvoiceOverdueJob` (`apps/worker`, физически не может вызвать
+ * DI-порт `apps/api` напрямую, другой процесс). `PHARMACY_CHAIN_LOOKUP`/`GetPharmacyPayoutsQuery`/
+ * `ExportPayoutsCsvQuery`/`GetBillingInvoicesQuery`/`GetPayoutsController`/
+ * `GetBillingInvoicesController` — курсорные отчёты `GET /api/v1/pharmacy-accounts/:id/payouts`
+ * `.../payouts/export`/`.../billing-invoices` (АС3/АС4/АС5 тикета).
  */
 import { Inject, Injectable, Module, type OnModuleDestroy } from '@nestjs/common'
 import type { Queue } from 'bullmq'
@@ -175,6 +189,16 @@ import { HoldPayoutUseCase } from './application/use-cases/hold-payout.use-case.
 import { PAYMENTS_FACADE, type PaymentsFacade } from './index.js'
 // DTJ-251 — PlatformBillingInvoiceRepository, задел для DTJ-252 (см. JSDoc блока providers выше).
 import { PLATFORM_BILLING_INVOICE_REPOSITORY_PROVIDER } from './infrastructure/repositories/platform-billing-invoice.repository.js'
+// DTJ-252 — авто-блокировка сети за неоплаченный B2B-инвойс + отчёты аптеке (см. JSDoc блока providers выше).
+import { OnboardingModule } from '@/modules/onboarding/onboarding.module.js'
+import { ONBOARDING_FACADE_PORT_PROVIDER } from './infrastructure/adapters/onboarding-facade.adapter.js'
+import { SuspendChainForUnpaidInvoiceController } from './presentation/internal/suspend-chain-for-unpaid-invoice.controller.js'
+import { PHARMACY_CHAIN_LOOKUP_PROVIDER } from './infrastructure/adapters/pharmacy-chain-lookup.adapter.js'
+import { GetPharmacyPayoutsQuery } from './application/queries/get-pharmacy-payouts.query.js'
+import { ExportPayoutsCsvQuery } from './application/queries/export-payouts-csv.query.js'
+import { GetBillingInvoicesQuery } from './application/queries/get-billing-invoices.query.js'
+import { GetPayoutsController } from './presentation/pharmacy-accounts-reports/get-payouts.controller.js'
+import { GetBillingInvoicesController } from './presentation/pharmacy-accounts-reports/get-billing-invoices.controller.js'
 
 type PaymentDriver = 'mock_bank' | 'alif_mobi' | 'dc_next'
 
@@ -228,13 +252,16 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
 }
 
 @Module({
-  imports: [AuthModule, TenancyModule],
+  imports: [AuthModule, TenancyModule, OnboardingModule],
   controllers: [
     MockBankSimulatePaymentController,
     GetOrderLedgerController,
     PaymentsWebhookController,
     OrderDeliveredController,
     AdminPaymentOverrideController,
+    SuspendChainForUnpaidInvoiceController,
+    GetPayoutsController,
+    GetBillingInvoicesController,
   ],
   providers: [
     MOCK_BANK_AUTO_PAY_QUEUE_PROVIDER,
@@ -321,6 +348,12 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
     },
     // DTJ-251 — см. JSDoc блока providers выше (нет вызывающего use case в ЭТОМ тикете, задел для DTJ-252).
     PLATFORM_BILLING_INVOICE_REPOSITORY_PROVIDER,
+    // DTJ-252 — авто-блокировка сети + отчёты аптеке (см. JSDoc блока providers выше).
+    ONBOARDING_FACADE_PORT_PROVIDER,
+    PHARMACY_CHAIN_LOOKUP_PROVIDER,
+    GetPharmacyPayoutsQuery,
+    ExportPayoutsCsvQuery,
+    GetBillingInvoicesQuery,
   ],
   exports: [PaymentInvoiceAdapter, RefundFacadeAdapter],
 })

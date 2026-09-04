@@ -217,6 +217,24 @@ export class PharmacyChain {
     return new PharmacyChain({ ...this.props, status: 'terminated' })
   }
 
+  /**
+   * `active → suspended` (DTJ-252, REQ-MON-9, SRS-DOM-161) — неоплаченный B2B-инвойс за
+   * `cash_courier`-комиссию (`BillingInvoiceOverdueJob`, `apps/worker`). Симметрично
+   * `terminate()` выше: тот же приём (`assertTransitionAllowed`, `_reason` без строгого enum —
+   * `PharmacySuspensionReason` в этом файле принадлежит ДРУГОЙ сущности, `PharmacyAccount`, но
+   * уже содержит ТО ЖЕ значение `'unpaid_invoice'`, переиспользуемое строкой вызывающим кодом).
+   * Идемпотентность конкретного use-case'а (уже `suspended` → no-op) — ответственность
+   * вызывающего (`OnboardingFacade.suspendChainForUnpaidInvoice`), не этого метода: `PharmacyChain.
+   * terminate()` тоже не проверяет собственную идемпотентность, а полагается на
+   * `assertTransitionAllowed` (самопереход `suspended→suspended` и так недопустим, `isTransitionAllowed`
+   * возвращает `false` при `from === to`).
+   */
+  suspend(actor: { readonly id: string }, _reason: string): PharmacyChain {
+    assertTransitionAllowed(this.status, 'suspended')
+    void actor
+    return new PharmacyChain({ ...this.props, status: 'suspended' })
+  }
+
   /** `suspended → pending_review` (SRS-ADM-019, DTJ-074) — `requestReactivation` для сети. */
   requestReactivation(): PharmacyChain {
     assertTransitionAllowed(this.status, 'pending_review')
