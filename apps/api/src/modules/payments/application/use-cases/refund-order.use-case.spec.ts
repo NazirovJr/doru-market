@@ -106,7 +106,10 @@ function makeHarness(overrides: HarnessOverrides = {}): Harness {
 
   const reverseIfExists = vi.fn<PayoutScheduleRepository['reverseIfExists']>().mockResolvedValue(overrides.reverseIfExistsResult ?? false)
   const insertPending = vi.fn<PayoutScheduleRepository['insertPending']>().mockResolvedValue(undefined)
-  const payoutScheduleRepo: PayoutScheduleRepository = { reverseIfExists, insertPending }
+  // holdIfPending — не используется RefundOrderUseCase (DTJ-249), заглушка нужна только чтобы
+  // удовлетворить полную форму интерфейса PayoutScheduleRepository.
+  const holdIfPending = vi.fn<PayoutScheduleRepository['holdIfPending']>().mockResolvedValue({ held: false })
+  const payoutScheduleRepo: PayoutScheduleRepository = { reverseIfExists, insertPending, holdIfPending }
 
   const useCase = new RefundOrderUseCase(ordersPort, paymentProvider, escrowLedger, payoutScheduleRepo, SILENT_LOGGER)
   return { useCase, getOrderById, refund, sumByType, findByOrderId, append, reverseIfExists }

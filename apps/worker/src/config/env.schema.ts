@@ -31,6 +31,9 @@ const DEFAULT_RECONCILIATION_DEDUP_DAYS = 7
 // DTJ-253, SRS-ORD-032, ticket «Что сделать» п.2: ASSUMPTION буквально из тикета — каждые
 // 2 минуты (короче минимального разумного платёжного окна на оплату).
 const DEFAULT_UNPAID_ORDER_TIMEOUT_CRON = '*/2 * * * *'
+// DTJ-249, SRS-PAY-030, ticket «Технический контекст»: ASSUMPTION буквально из тикета —
+// ежечасно (pending→due — единственный переход payout, управляемый временем, D-19).
+const DEFAULT_PAYOUT_SCHEDULER_CRON = '0 * * * *'
 
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const
 
@@ -84,6 +87,8 @@ export const envSchema = z.object({
   // `MOCK_BANK_WEBHOOK_SECRET` — отсутствие ENV даёт рантайм-ошибку джобы при попытке вызова
   // (см. `requestSystemOrderCancel`), не Zod-сбой старта процесса.
   INTERNAL_API_KEY: z.string().optional(),
+  // DTJ-249, DoD «PAYOUT_SCHEDULER_CRON — именованная ENV-константа».
+  PAYOUT_SCHEDULER_CRON: z.string().min(1).default(DEFAULT_PAYOUT_SCHEDULER_CRON),
 })
 
 export type WorkerEnv = z.infer<typeof envSchema>

@@ -46,4 +46,30 @@ export interface PayoutScheduleRepository {
 
   /** (DTJ-244) — создаёт строку `status='pending'` при `OrderDeliveredEvent` (SRS-PAY-031). */
   insertPending(input: InsertPendingPayoutInput, tx?: PayoutScheduleUnitOfWorkTx): Promise<void>
+
+  /**
+   * ДОБАВЛЕНО (DTJ-249, SRS-DOM-058/105) — контракт заморозки выплаты по спору, нужен ТОЛЬКО
+   * `HoldPayoutUseCase` (PaymentsFacade.holdPayout, публичный контракт для EP-14). Тот же приём,
+   * что `reverseIfExists`/DTJ-245 выше: заведён ЭТИМ тикетом, не буквальным `files_owned`
+   * DTJ-249 (`hold-payout.use-case.ts`) — интерфейс порта живёт при своём репозитории, не при
+   * use case'е (`02` §1.3).
+   *
+   * Объект-параметр `HoldIfPendingInput` (не 3 отдельных строковых аргумента) — `max-params`
+   * ≤3 (C5): с опциональным `tx` это было бы 4 позиционных параметра.
+   *
+   * `UPDATE ... WHERE status IN ('pending','due')` — одна круговая поездка, не
+   * check-then-write. `held=false` (0 строк затронуто) — см. JSDoc `HoldPayoutUseCase` про
+   * контракт `alreadyPaid`: единственный СЕГОДНЯ достижимый случай 0 строк — `status='paid'`
+   * (пост-payout, AC3 тикета); `disputed`/`reversed`/несуществующая строка — тот же
+   * ноль-эффект код-путь, EP-14 различит причину при необходимости (см. «Риски» тикета —
+   * контракт зафиксирован как лучшее понимание на момент EP-10).
+   */
+  holdIfPending(input: HoldIfPendingInput, tx?: PayoutScheduleUnitOfWorkTx): Promise<{ held: boolean }>
+}
+
+/** Вход `holdIfPending` (см. её JSDoc про C5). */
+export interface HoldIfPendingInput {
+  readonly tenantId: string
+  readonly orderId: string
+  readonly disputeId: string
 }

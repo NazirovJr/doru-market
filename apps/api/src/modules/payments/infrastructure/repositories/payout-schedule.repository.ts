@@ -11,12 +11,13 @@
  * без отдельного `SELECT`-проверки перед записью (одна круговая поездка, не check-then-write).
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { and, eq, ne, sql } from 'drizzle-orm'
+import { and, eq, inArray, ne, sql } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { payoutSchedule } from '@/db/schema/payments.js'
 import { orders } from '@/db/schema/orders.js'
 import {
   PAYOUT_SCHEDULE_REPOSITORY,
+  type HoldIfPendingInput,
   type InsertPendingPayoutInput,
   type PayoutScheduleRepository,
   type PayoutScheduleUnitOfWorkTx,
@@ -24,6 +25,10 @@ import {
 
 const REVERSED_STATUS = 'reversed'
 const PENDING_STATUS = 'pending'
+const DUE_STATUS = 'due'
+const DISPUTED_STATUS = 'disputed'
+/** (DTJ-249) — статусы, из которых `holdIfPending` разрешает переход в `disputed`. */
+const HOLDABLE_STATUSES = [PENDING_STATUS, DUE_STATUS] as const
 
 @Injectable()
 export class DrizzlePayoutScheduleRepository implements PayoutScheduleRepository {
@@ -60,6 +65,23 @@ export class DrizzlePayoutScheduleRepository implements PayoutScheduleRepository
         holdPeriodDays: input.holdPeriodDays,
       })
       .onConflictDoNothing({ target: payoutSchedule.orderId })
+  }
+
+  /** (DTJ-249) — см. JSDoc порта `holdIfPending`. */
+  public async holdIfPending(input: HoldIfPendingInput, tx?: PayoutScheduleUnitOfWorkTx): Promise<{ held: boolean }> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const updated = await client
+      .update(payoutSchedule)
+      .set({ status: DISPUTED_STATUS, heldByDisputeId: input.disputeId, updatedAt: sql`NOW()` })
+      .where(
+        and(
+          eq(payoutSchedule.orderId, input.orderId),
+          inArray(payoutSchedule.status, HOLDABLE_STATUSES),
+          orderBelongsToTenant(input.tenantId, input.orderId),
+        ),
+      )
+      .returning({ id: payoutSchedule.id })
+    return { held: updated.length > 0 }
   }
 }
 

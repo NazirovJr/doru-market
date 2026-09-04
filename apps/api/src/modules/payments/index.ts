@@ -25,8 +25,18 @@
  * появится первая реализация.
  */
 
-/** DI-токен для будущего провайдера `PaymentsFacade` (`{ provide: PAYMENTS_FACADE, useClass: ... }`). */
+/** DI-токен провайдера `PaymentsFacade` (`{ provide: PAYMENTS_FACADE, useFactory: ... }`, см. `payments.module.ts`). */
 export const PAYMENTS_FACADE = Symbol.for('@dorutj/payments/payments-facade')
+
+/**
+ * ДОБАВЛЕНО (DTJ-249) — интерфейс `PaymentsFacade` прибыл первым реальным методом
+ * (`holdPayout`), как и предсказывал JSDoc выше (DTJ-236). Форма живёт в `application/ports/
+ * payments-facade.port.ts` (тот же приём, что `orders-facade.port.ts`/`tenancy-facade.port.ts`
+ * — порт объявляется в `application/`, `index.ts` лишь ре-экспортирует тип); реализация —
+ * `HoldPayoutUseCase` через `useFactory` в `payments.module.ts` (метод `execute`, не
+ * `holdPayout` — см. её JSDoc про несовпадение имён метода use case'а и метода фасада).
+ */
+export type { PaymentsFacade, HoldPayoutResult } from './application/ports/payments-facade.port.js'
 
 /**
  * `PaymentInvoiceAdapter` (DTJ-241) — реализация `orders`-контракта `PaymentInvoicePort`

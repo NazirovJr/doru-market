@@ -94,6 +94,12 @@
  * (`DrizzlePayoutScheduleRepository`, AC4 DTJ-245 — реверс `payout_schedule` для
  * пост-`delivered` рефанда) биндится напрямую, без ветвления по драйверу — та же логика, что
  * `ESCROW_LEDGER_REPOSITORY` (DTJ-240).
+ *
+ * **DTJ-249 (`HoldPayoutUseCase`) — РЕАЛИЗОВАНО.** Первый реальный провайдер токена
+ * `PAYMENTS_FACADE` (объявлен `index.ts` ещё DTJ-236, пустым до сих пор) — `useFactory`
+ * оборачивает `HoldPayoutUseCase.execute` в форму `PaymentsFacade.holdPayout` (разные имена
+ * метода, см. JSDoc `hold-payout.use-case.ts`), тот же приём, что `BANK_WEBHOOK_VERIFIER_
+ * REGISTRY` выше (`useFactory`, возвращающий объектный литерал, реализующий чужой интерфейс).
  */
 import { Inject, Injectable, Module, type OnModuleDestroy } from '@nestjs/common'
 import type { Queue } from 'bullmq'
@@ -157,6 +163,9 @@ import { OrderDeliveredController } from './presentation/internal/order-delivere
 import { AdminPaymentOverrideUseCase } from './application/use-cases/admin-payment-override.use-case.js'
 import { AdjustLedgerUseCase } from './application/use-cases/adjust-ledger.use-case.js'
 import { AdminPaymentOverrideController } from './presentation/admin-payment-override.controller.js'
+// DTJ-249 — HoldPayoutUseCase/PAYMENTS_FACADE (см. JSDoc блока providers выше).
+import { HoldPayoutUseCase } from './application/use-cases/hold-payout.use-case.js'
+import { PAYMENTS_FACADE, type PaymentsFacade } from './index.js'
 
 type PaymentDriver = 'mock_bank' | 'alif_mobi' | 'dc_next'
 
@@ -292,6 +301,15 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
     // DTJ-246 — контролируемые исключения (см. JSDoc блока providers выше).
     AdminPaymentOverrideUseCase,
     AdjustLedgerUseCase,
+    // DTJ-249 — заморозка выплаты по спору, первый провайдер PAYMENTS_FACADE (см. JSDoc блока providers выше).
+    HoldPayoutUseCase,
+    {
+      provide: PAYMENTS_FACADE,
+      useFactory: (useCase: HoldPayoutUseCase): PaymentsFacade => ({
+        holdPayout: (tenantId: string, orderId: string, disputeId: string) => useCase.execute({ tenantId, orderId, disputeId }),
+      }),
+      inject: [HoldPayoutUseCase],
+    },
   ],
   exports: [PaymentInvoiceAdapter, RefundFacadeAdapter],
 })
