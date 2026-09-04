@@ -22,10 +22,23 @@
  * `disputes_workflow_enabled`.
  */
 import { Module } from '@nestjs/common'
+import { CreateSupportTicketUseCase } from './application/use-cases/create-support-ticket.use-case.js'
+import { SUPPORT_TICKETS_REPOSITORY_PROVIDER } from './infrastructure/repositories/drizzle-support-tickets.repository.js'
+import { SUPPORT_ORDERS_FACADE_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-support-orders-facade.adapter.js'
+import { SUPPORT_TENANT_SETTINGS_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-support-tenant-settings.adapter.js'
+import { SUPPORT_UNIT_OF_WORK_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-support-unit-of-work.adapter.js'
+import { SUPPORT_OUTBOX_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-support-outbox.adapter.js'
 
 @Module({
   controllers: [],
-  providers: [],
+  providers: [
+    SUPPORT_TICKETS_REPOSITORY_PROVIDER,
+    SUPPORT_ORDERS_FACADE_DRIZZLE_PROVIDER,
+    SUPPORT_TENANT_SETTINGS_DRIZZLE_PROVIDER,
+    SUPPORT_UNIT_OF_WORK_DRIZZLE_PROVIDER,
+    SUPPORT_OUTBOX_DRIZZLE_PROVIDER,
+    CreateSupportTicketUseCase,
+  ],
 })
 // NestJS module marker class: Nest требует класс-носитель декоратора @Module, providers
 // регистрируются декоратором, а не телом класса (тот же приём, что modules/payments/orders).
