@@ -6,6 +6,19 @@
  * `apps/api/test/integration/payments/hold-payout.integration.spec.ts` (apps/api владеет
  * `PayoutScheduleRepository`/Drizzle, apps/worker сюда не имеет доступа, см. JSDoc
  * `payout-scheduler.job.ts`).
+ *
+ * ИСПРАВЛЕНО (найдено при реализации DTJ-251, не собственный дефект этого тикета в момент
+ * первого написания — тот же баг класс скопирован из прецедента `unpaid-order-timeout.job.
+ * integration.spec.ts`): `order_number` строился как литеральный `DTJ-260904-NNNNN` с
+ * ЛОКАЛЬНЫМ счётчиком файла — `apps/worker`'s `vitest run` (в отличие от `apps/api`'s
+ * `vitest.integration.config.ts`) НЕ сериализует файлы (`fileParallelism` не отключён), а
+ * `orders.order_number` глобально `UNIQUE` — несколько `*.integration.spec.ts`-файлов,
+ * стартующих счётчик с 1 с ОДНИМ и тем же литеральным префиксом, конкурентно вставляют
+ * `DTJ-260904-00001` и получают `duplicate key value violates unique constraint
+ * "orders_order_number_key"` (найдено живым прогоном `pnpm verify` при добавлении ТРЕТЬЕГО
+ * такого файла, `cash-commission-aggregation.job.integration.spec.ts`, DTJ-251). Решение —
+ * `uniqueOrderNumber()` на `randomUUID()`, коллизия между процессами astronomически
+ * маловероятна вне зависимости от количества параллельных файлов.
  */
 import { randomUUID } from 'node:crypto'
 import { Pool } from 'pg'
@@ -16,6 +29,12 @@ import { PgPayoutSchedulerAdapter } from './pg-payout-scheduler.adapter.js'
 const TEST_DATABASE_URL = process.env.DATABASE_URL ?? 'postgres://test:test@localhost:5432/dorutj_test3'
 const PROBE_TIMEOUT_MS = 1_500
 const MS_PER_DAY = 24 * 60 * 60 * 1000
+const ORDER_NUMBER_HEX_LENGTH = 16
+
+/** `varchar(20)`, `UNIQUE` (без формата на уровне БД) — см. JSDoc файла про гонку между конкурентными `*.integration.spec.ts`. */
+function uniqueOrderNumber(): string {
+  return `DTJ-${randomUUID().replace(/-/g, '').slice(0, ORDER_NUMBER_HEX_LENGTH).toUpperCase()}`
+}
 
 async function isPostgresReachable(url: string): Promise<boolean> {
   const pool = new Pool({ connectionString: url, connectionTimeoutMillis: PROBE_TIMEOUT_MS })
@@ -37,7 +56,6 @@ describe.skipIf(!postgresAvailable)('PayoutSchedulerJob — integration (DTJ-249
   let customerId: string
   let pharmacyId: string
   const createdOrderIds: string[] = []
-  let orderNumberSeq = 0
 
   beforeAll(async () => {
     pool = new Pool({ connectionString: TEST_DATABASE_URL })
@@ -67,14 +85,13 @@ describe.skipIf(!postgresAvailable)('PayoutSchedulerJob — integration (DTJ-249
 
   async function seedOrderWithPayout(input: { deliveredDaysAgo: number; holdPeriodDays: number; payoutStatus: string }): Promise<string> {
     const orderId = randomUUID()
-    orderNumberSeq += 1
     const deliveredAt = new Date(Date.now() - input.deliveredDaysAgo * MS_PER_DAY)
     await pool.query(
       `INSERT INTO orders
          (id, order_number, customer_id, pharmacy_id, status, payment_method, delivered_at,
           items_total_tjs, delivery_fee_tjs, total_amount_tjs, delivery_address, tenant_id, checkout_attempt_id)
        VALUES ($1, $2, $3, $4, 'delivered', 'alif_mobi', $5, 200.00, 0.00, 200.00, 'Dushanbe, Rudaki 1', $6, $7)`,
-      [orderId, `DTJ-260904-${String(orderNumberSeq).padStart(5, '0')}`, customerId, pharmacyId, deliveredAt, tenantId, randomUUID()],
+      [orderId, uniqueOrderNumber(), customerId, pharmacyId, deliveredAt, tenantId, randomUUID()],
     )
     await pool.query(
       `INSERT INTO payout_schedule
