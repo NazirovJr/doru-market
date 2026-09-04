@@ -94,6 +94,20 @@
  * (`DrizzlePayoutScheduleRepository`, AC4 DTJ-245 — реверс `payout_schedule` для
  * пост-`delivered` рефанда) биндится напрямую, без ветвления по драйверу — та же логика, что
  * `ESCROW_LEDGER_REPOSITORY` (DTJ-240).
+ *
+ * **DTJ-250 (`BankPayoutTransferPort`/`MockBankPayoutTransferProvider` + HTTP-мост для
+ * `PayoutExecutionJob`) — РЕАЛИЗОВАНО.** `PAYOUT_DRIVER` — переключатель ТОГО ЖЕ духа, что
+ * `PAYMENT_DRIVER` (см. `resolvePayoutDriverAdapter` ниже), но с ОДНИМ значением в R1 (`'mock'`,
+ * реальный банковский адаптер — R3, вне периметра). `TransferPayoutBatchUseCase`/
+ * `PayoutTransferBatchController` (`POST /api/v1/internal/payouts/transfer-batch`) — НЕ в
+ * буквальном `files_owned` тикета, но необходимый МОСТ МЕЖДУ ПРОЦЕССАМИ (тот же класс решения,
+ * что `SystemCancelOrderUseCase`, DTJ-253/254): `PayoutExecutionJob` (`apps/worker`) физически не
+ * может вызвать `BankPayoutTransferPort` напрямую (`apps/worker` не зависит от `@dorutj/api`), а
+ * тикет явно требует регистрации адаптера ИМЕННО в этом DI-графе — полное обоснование в JSDoc
+ * `transfer-payout-batch.use-case.ts`. `payout_schedule` (скан `WHERE status='due'` и финальный
+ * `UPDATE ... SET status='paid'`) этот use case НЕ трогает — обе операции остаются на стороне
+ * `apps/worker` (симметрично тому, как `PayoutSchedulerJob`/DTJ-249 мутирует ту же таблицу
+ * напрямую, без моста) — здесь только сам вызов провайдера.
  */
 import { Inject, Injectable, Module, type OnModuleDestroy } from '@nestjs/common'
 import type { Queue } from 'bullmq'
@@ -157,8 +171,15 @@ import { OrderDeliveredController } from './presentation/internal/order-delivere
 import { AdminPaymentOverrideUseCase } from './application/use-cases/admin-payment-override.use-case.js'
 import { AdjustLedgerUseCase } from './application/use-cases/adjust-ledger.use-case.js'
 import { AdminPaymentOverrideController } from './presentation/admin-payment-override.controller.js'
+// DTJ-250 — BankPayoutTransferPort/MockBankPayoutTransferProvider + HTTP-мост (см. JSDoc блока providers выше).
+import { BANK_PAYOUT_TRANSFER_PORT, type BankPayoutTransferPort } from './application/ports/bank-payout-transfer.port.js'
+import { MockBankPayoutTransferProvider } from './infrastructure/adapters/mock-bank-payout-transfer.provider.js'
+import { TransferPayoutBatchUseCase } from './application/use-cases/transfer-payout-batch.use-case.js'
+import { PayoutTransferBatchController } from './presentation/internal/payout-transfer-batch.controller.js'
 
 type PaymentDriver = 'mock_bank' | 'alif_mobi' | 'dc_next'
+/** DTJ-250 — единственное R1-значение (`'mock'`); реальный банковский адаптер — R3 (см. JSDoc файла). */
+type PayoutDriver = 'mock'
 
 /**
  * DTJ-239 (SRS-PAY-009) — переключатель адаптера НА УРОВНЕ DI, не влияет на `application`/
@@ -168,6 +189,18 @@ type PaymentDriver = 'mock_bank' | 'alif_mobi' | 'dc_next'
  * `tenant_settings.enabledPaymentMethods`, не этой функцией.
  */
 function resolvePaymentDriverAdapter<T>(driver: PaymentDriver, adapters: Readonly<Record<PaymentDriver, T>>): T {
+  return adapters[driver]
+}
+
+/**
+ * DTJ-250 — симметричный `resolvePaymentDriverAdapter`, но для `BankPayoutTransferPort`. Один
+ * реальный branch в R1 (`PayoutDriver` = `'mock'` целиком) — `Record<PayoutDriver, T>` всё равно
+ * держит форму диспетчера, а не `if`, чтобы R3-адаптер добавлялся тем же способом, что
+ * `alif_mobi`/`dc_next` были добавлены DTJ-239 сюда же (единообразие паттерна, не преждевременная
+ * абстракция: сама ФОРМА диспетчера — не лишняя ради одного значения, `if` пришлось бы полностью
+ * переписывать при добавлении R3, `Record`-форма — только дополнить).
+ */
+function resolvePayoutDriverAdapter<T>(driver: PayoutDriver, adapters: Readonly<Record<PayoutDriver, T>>): T {
   return adapters[driver]
 }
 
@@ -217,6 +250,7 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
     PaymentsWebhookController,
     OrderDeliveredController,
     AdminPaymentOverrideController,
+    PayoutTransferBatchController,
   ],
   providers: [
     MOCK_BANK_AUTO_PAY_QUEUE_PROVIDER,
@@ -292,6 +326,15 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
     // DTJ-246 — контролируемые исключения (см. JSDoc блока providers выше).
     AdminPaymentOverrideUseCase,
     AdjustLedgerUseCase,
+    // DTJ-250 — BankPayoutTransferPort/MockBankPayoutTransferProvider + мост (см. JSDoc блока providers выше).
+    MockBankPayoutTransferProvider,
+    {
+      provide: BANK_PAYOUT_TRANSFER_PORT,
+      useFactory: (mock: MockBankPayoutTransferProvider, config: AppConfigService): BankPayoutTransferPort =>
+        resolvePayoutDriverAdapter<BankPayoutTransferPort>(config.payoutDriver, { mock }),
+      inject: [MockBankPayoutTransferProvider, AppConfigService],
+    },
+    TransferPayoutBatchUseCase,
   ],
   exports: [PaymentInvoiceAdapter, RefundFacadeAdapter],
 })

@@ -10,6 +10,7 @@ import { MockBankAutoPayModule } from './jobs/escrow-timeouts/mock-bank-auto-pay
 import { EscrowReconciliationModule } from './jobs/payout/escrow-reconciliation.module.js'
 import { UnpaidOrderTimeoutModule } from './jobs/escrow-timeouts/unpaid-order-timeout.module.js'
 import { PickupSlaTimeoutModule } from './jobs/escrow-timeouts/pickup-sla-timeout.module.js'
+import { PayoutExecutionModule } from './jobs/payout/payout-execution.module.js'
 
 /**
  * Барабанный модуль (D-27) — корневой `AppModule` apps/worker. Каждый новый тикет,
@@ -29,6 +30,7 @@ import { PickupSlaTimeoutModule } from './jobs/escrow-timeouts/pickup-sla-timeou
     EscrowReconciliationModule,
     UnpaidOrderTimeoutModule,
     PickupSlaTimeoutModule,
+    PayoutExecutionModule,
   ],
 })
 // Класс существует только как носитель декоратора @Module для графа DI NestJS — штатный паттерн.

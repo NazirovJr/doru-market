@@ -38,6 +38,8 @@ const BASE_ENV: EnvConfig = {
   PAYMENT_DRIVER: 'mock_bank',
   MOCK_BANK_AUTO_PAY_DELAY_MS: 2_000,
   BANK_INVOICE_VALIDITY_MINUTES: 15,
+  PAYOUT_DRIVER: 'mock',
+  MOCK_PAYOUT_DELAY_MS: 0,
 }
 
 describe('AppConfigService', () => {
@@ -56,6 +58,8 @@ describe('AppConfigService', () => {
     expect(config.paymentDriver).toBe('mock_bank')
     expect(config.mockBankAutoPayDelayMs).toBe(2_000)
     expect(config.mockBankWebhookSecret).toBeUndefined()
+    expect(config.payoutDriver).toBe('mock')
+    expect(config.mockPayoutDelayMs).toBe(0)
   })
 
   it('mockBankWebhookSecret — прокидывает значение из ENV, когда задано (DTJ-238)', () => {
