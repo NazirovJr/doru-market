@@ -87,6 +87,17 @@ export const orders = pgTable(
     // всегда 'single_invoice' (ResolveBillingStrategyService, TODO(DTJ-242/244) — split billing
     // недостижим без payment_operations.billing_component/tenant_settings.useSplitBilling).
     billingStrategy: varchar('billing_strategy', { length: 20 }).notNull().default('single_invoice'),
+    // [cross-module, EP-13 DTJ-313] D.8 `25-module-courier-delivery.md` — паритет с
+    // `user_addresses` (REQ-GEO-3, SRS-DELIV-010/041): курьерский экран навигации (CUJ-4) не может
+    // показать подъезд/этаж/фото без этих полей. Заполняются use case'ом чекаута модуля `orders`
+    // (вне периметра ЭТОГО тикета — только колонки); читаются модулем `delivery` ИСКЛЮЧИТЕЛЬНО
+    // через `OrdersFacade.getDeliverySnapshot(orderId)`, не напрямую из таблицы (минимизация
+    // связности). Согласование владельца `orders` — см. отчёт DTJ-313 «Открытые вопросы».
+    deliveryEntrance: varchar('delivery_entrance', { length: 20 }),
+    deliveryFloor: varchar('delivery_floor', { length: 20 }),
+    deliveryApartment: varchar('delivery_apartment', { length: 20 }),
+    deliveryComment: text('delivery_comment'),
+    deliveryLandmarkPhotoUrl: text('delivery_landmark_photo_url'),
   },
   (table) => [
     check(
