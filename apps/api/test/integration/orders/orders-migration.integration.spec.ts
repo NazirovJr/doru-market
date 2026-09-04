@@ -115,8 +115,11 @@ describe.skipIf(!postgresAvailable)('0023_orders_cart.sql — структура
     )
 
     const foreignKeys = await constraintNamesOf('orders', 'f')
-    // Ровно эти 5 FK — courier_id/prescription_id сознательно БЕЗ FK на этом шаге (D-EP09-3,
-    // раздел «ОТЛОЖЕНО» миграции); handover_otp_id получает FK сразу (D-EP09-7).
+    // Изначально ровно 5 FK — courier_id/prescription_id сознательно БЕЗ FK на этом шаге
+    // (D-EP09-3, раздел «ОТЛОЖЕНО» миграции 0023); handover_otp_id получает FK сразу (D-EP09-7).
+    // orders_courier_id_fkey ДОБАВЛЕН миграцией 0037_delivery_module_schema.sql (EP-13, DTJ-313)
+    // — TODO(DTJ-313) из 0023 закрыт: couriers физически создана этим тикетом (Группа H), FK
+    // достижима. prescription_id остаётся БЕЗ FK — prescriptions ещё не существует (TODO(R2-4)).
     expect([...foreignKeys].sort()).toEqual(
       [
         'orders_customer_id_fkey',
@@ -124,6 +127,7 @@ describe.skipIf(!postgresAvailable)('0023_orders_cart.sql — структура
         'orders_tenant_id_fkey',
         'orders_cancelled_by_fkey',
         'orders_handover_otp_id_fkey',
+        'orders_courier_id_fkey',
       ].sort(),
     )
 
