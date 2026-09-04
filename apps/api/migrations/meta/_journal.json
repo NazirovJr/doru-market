@@ -241,6 +241,12 @@
       "when": 1700000410000,
       "tag": "0037_payout_schedule_status_index",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "when": 1700000420000,
+      "tag": "0038_platform_billing_invoices",
+      "breakpoints": true
     }
   ]
 }

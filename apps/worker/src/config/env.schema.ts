@@ -34,6 +34,12 @@ const DEFAULT_UNPAID_ORDER_TIMEOUT_CRON = '*/2 * * * *'
 // DTJ-249, SRS-PAY-030, ticket «Технический контекст»: ASSUMPTION буквально из тикета —
 // ежечасно (pending→due — единственный переход payout, управляемый временем, D-19).
 const DEFAULT_PAYOUT_SCHEDULER_CRON = '0 * * * *'
+// DTJ-251, SRS-PAY-036: ASSUMPTION — 00:30 Asia/Dushanbe (после полуночи, период [вчера,сегодня)
+// уже закрыт к моменту запуска, см. JSDoc cash-commission-aggregation.scheduler.ts).
+const DEFAULT_CASH_COMMISSION_AGGREGATION_DAILY_CRON = '30 0 * * *'
+// DTJ-251, ticket «Что сделать» п.3: ASSUMPTION — воскресенье 23:50 Asia/Dushanbe (буквальный
+// текст тикета «23:59», округлено на 10 минут раньше — запас на выполнение тика до смены дня).
+const DEFAULT_CASH_COMMISSION_AGGREGATION_WEEKLY_ISSUE_CRON = '50 23 * * 0'
 
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const
 
@@ -89,6 +95,9 @@ export const envSchema = z.object({
   INTERNAL_API_KEY: z.string().optional(),
   // DTJ-249, DoD «PAYOUT_SCHEDULER_CRON — именованная ENV-константа».
   PAYOUT_SCHEDULER_CRON: z.string().min(1).default(DEFAULT_PAYOUT_SCHEDULER_CRON),
+  // DTJ-251, ticket «Что сделать» п.2/3: два раздельных расписания одной джобы.
+  CASH_COMMISSION_AGGREGATION_DAILY_CRON: z.string().min(1).default(DEFAULT_CASH_COMMISSION_AGGREGATION_DAILY_CRON),
+  CASH_COMMISSION_AGGREGATION_WEEKLY_ISSUE_CRON: z.string().min(1).default(DEFAULT_CASH_COMMISSION_AGGREGATION_WEEKLY_ISSUE_CRON),
 })
 
 export type WorkerEnv = z.infer<typeof envSchema>

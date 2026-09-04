@@ -165,3 +165,25 @@ export const paymentOperationTypeEnum = pgEnum('payment_operation_type', [
 
 /** Статус строки `payment_operations` (EP-10, DTJ-236, REQ-PAY-8). */
 export const paymentOperationStatusEnum = pgEnum('payment_operation_status', ['pending', 'succeeded', 'failed'])
+
+/**
+ * Тип B2B-инвойса `platform_billing_invoices` (EP-10, DTJ-251, REQ-MON-6). Создан миграцией
+ * `0038_platform_billing_invoices.sql` — таблица НЕ входила в базовую схему DTJ-236 вопреки
+ * тексту тикета DTJ-251 (проверено, см. JSDoc миграции). `whitelabel_license`/
+ * `whitelabel_royalty` — заготовки будущих эпиков (R2+), ЭТОТ тикет заполняет ТОЛЬКО
+ * `cash_courier_commission`.
+ * Порядок значений НЕ переименовывать, только дописывать в конец.
+ */
+export const billingInvoiceTypeEnum = pgEnum('billing_invoice_type', [
+  'cash_courier_commission',
+  'whitelabel_license',
+  'whitelabel_royalty',
+])
+
+/**
+ * Статус `platform_billing_invoices` (EP-10, DTJ-251, REQ-MON-6/7). `draft` → `issued`
+ * (`CashCommissionAggregationJob`, конец недели) → `paid`/`overdue` (`BillingInvoiceOverdueJob`,
+ * DTJ-252, ВНЕ периметра этого тикета) → `void` (ручная отмена, вне периметра R1).
+ * Порядок значений НЕ переименовывать, только дописывать в конец.
+ */
+export const billingInvoiceStatusEnum = pgEnum('billing_invoice_status', ['draft', 'issued', 'paid', 'overdue', 'void'])

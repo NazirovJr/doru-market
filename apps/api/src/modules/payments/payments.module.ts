@@ -100,6 +100,13 @@
  * оборачивает `HoldPayoutUseCase.execute` в форму `PaymentsFacade.holdPayout` (разные имена
  * метода, см. JSDoc `hold-payout.use-case.ts`), тот же приём, что `BANK_WEBHOOK_VERIFIER_
  * REGISTRY` выше (`useFactory`, возвращающий объектный литерал, реализующий чужой интерфейс).
+ *
+ * **DTJ-251 (`PlatformBillingInvoiceRepository`) — РЕАЛИЗОВАНО.** `PLATFORM_BILLING_INVOICE_
+ * REPOSITORY` биндится напрямую (без ветвления по драйверу), тот же приём, что `ESCROW_LEDGER_
+ * REPOSITORY` (DTJ-240) — НИ ОДИН use case не вызывает его в ЭТОМ тикете (реальный потребитель —
+ * `CashCommissionAggregationJob`, но он живёт в `apps/worker` и физически не может использовать
+ * этот Drizzle-репозиторий, см. JSDoc порта — у джобы СВОЙ раздельный raw-SQL адаптер над той
+ * же таблицей). Провайдер резолвится в DI-графе заранее, задел для DTJ-252.
  */
 import { Inject, Injectable, Module, type OnModuleDestroy } from '@nestjs/common'
 import type { Queue } from 'bullmq'
@@ -166,6 +173,8 @@ import { AdminPaymentOverrideController } from './presentation/admin-payment-ove
 // DTJ-249 — HoldPayoutUseCase/PAYMENTS_FACADE (см. JSDoc блока providers выше).
 import { HoldPayoutUseCase } from './application/use-cases/hold-payout.use-case.js'
 import { PAYMENTS_FACADE, type PaymentsFacade } from './index.js'
+// DTJ-251 — PlatformBillingInvoiceRepository, задел для DTJ-252 (см. JSDoc блока providers выше).
+import { PLATFORM_BILLING_INVOICE_REPOSITORY_PROVIDER } from './infrastructure/repositories/platform-billing-invoice.repository.js'
 
 type PaymentDriver = 'mock_bank' | 'alif_mobi' | 'dc_next'
 
@@ -310,6 +319,8 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
       }),
       inject: [HoldPayoutUseCase],
     },
+    // DTJ-251 — см. JSDoc блока providers выше (нет вызывающего use case в ЭТОМ тикете, задел для DTJ-252).
+    PLATFORM_BILLING_INVOICE_REPOSITORY_PROVIDER,
   ],
   exports: [PaymentInvoiceAdapter, RefundFacadeAdapter],
 })
