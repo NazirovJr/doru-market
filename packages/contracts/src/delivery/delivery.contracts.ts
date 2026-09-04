@@ -27,6 +27,49 @@ const latitudeSchema = z.number().min(LATITUDE_MIN).max(LATITUDE_MAX)
 const longitudeSchema = z.number().min(LONGITUDE_MIN).max(LONGITUDE_MAX)
 const diramSchema = z.number().int().nonnegative()
 
+// ==================== Enum-типы БД (1:1 db/schema/enums.schema.ts), используются доменом и
+// presentation'ом этого и последующих тикетов (DTJ-314+) — единый источник, не дублируется. ====
+
+/** `delivery_assignment_status` (`10-domain-model.md` §«State machines»/6). */
+export const DELIVERY_ASSIGNMENT_STATUS_VALUES = [
+  'unassigned',
+  'assigned',
+  'en_route_to_pharmacy',
+  'picked_up_from_pharmacy',
+  'en_route_to_customer',
+  'delivered',
+  'delivery_failed',
+] as const
+export type DeliveryAssignmentStatus = (typeof DELIVERY_ASSIGNMENT_STATUS_VALUES)[number]
+
+/** `delivery_offer_status` (D.3, SRS-DELIV-005). */
+export const DELIVERY_OFFER_STATUS_VALUES = ['pending', 'accepted', 'declined', 'expired', 'superseded'] as const
+export type DeliveryOfferStatus = (typeof DELIVERY_OFFER_STATUS_VALUES)[number]
+
+/** `courier_shift_record_status` (D.4) — история физических смен, отдельно от `CourierShiftStatus`. */
+export const COURIER_SHIFT_RECORD_STATUS_VALUES = ['active', 'closed'] as const
+export type CourierShiftRecordStatus = (typeof COURIER_SHIFT_RECORD_STATUS_VALUES)[number]
+
+/** `courier_status` (`11-database-schema.md` §32). */
+export const COURIER_STATUS_VALUES = ['pending_verification', 'active', 'suspended', 'terminated'] as const
+export type CourierStatus = (typeof COURIER_STATUS_VALUES)[number]
+
+/** `couriers.shift_status` (D.1) — денормализованный быстрый флаг для алгоритма назначения. */
+export const COURIER_SHIFT_STATUS_VALUES = ['off_shift', 'on_shift'] as const
+export type CourierShiftStatus = (typeof COURIER_SHIFT_STATUS_VALUES)[number]
+
+/** `courier_tax_status` (REQ-COUR-1..11). */
+export const COURIER_TAX_STATUS_VALUES = [
+  'individual_patent',
+  'civil_contract_platform_withholds',
+  'chain_employee',
+] as const
+export type CourierTaxStatus = (typeof COURIER_TAX_STATUS_VALUES)[number]
+
+/** `courier_vehicle_type`. */
+export const COURIER_VEHICLE_TYPE_VALUES = ['foot', 'bicycle', 'moped', 'car'] as const
+export type CourierVehicleType = (typeof COURIER_VEHICLE_TYPE_VALUES)[number]
+
 /** `POST /api/v1/delivery-offers/:id/decline` — SRS-DELIV-014. */
 export const declineDeliveryOfferRequestSchema = z.object({
   reason: z.string().max(DECLINE_REASON_MAX_LENGTH).optional(),
