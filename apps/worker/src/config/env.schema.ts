@@ -31,6 +31,9 @@ const DEFAULT_RECONCILIATION_DEDUP_DAYS = 7
 // DTJ-253, SRS-ORD-032, ticket «Что сделать» п.2: ASSUMPTION буквально из тикета — каждые
 // 2 минуты (короче минимального разумного платёжного окна на оплату).
 const DEFAULT_UNPAID_ORDER_TIMEOUT_CRON = '*/2 * * * *'
+// DTJ-254, SRS-ORD-035, ticket «Что сделать» п.1: ASSUMPTION буквально из тикета — каждые
+// 2 минуты (короче минимального разумного `pickup_sla_minutes`, дефолт 7).
+const DEFAULT_PICKUP_SLA_TIMEOUT_CRON = '*/2 * * * *'
 
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const
 
@@ -79,6 +82,8 @@ export const envSchema = z.object({
     .transform((v) => v === 'true'),
   // DTJ-253, DoD «UNPAID_ORDER_TIMEOUT_CRON — именованная ENV-константа».
   UNPAID_ORDER_TIMEOUT_CRON: z.string().min(1).default(DEFAULT_UNPAID_ORDER_TIMEOUT_CRON),
+  // DTJ-254, DoD «PickupSlaTimeoutJob интервал — именованная ENV-константа».
+  PICKUP_SLA_TIMEOUT_CRON: z.string().min(1).default(DEFAULT_PICKUP_SLA_TIMEOUT_CRON),
   // DTJ-253/254: общий секрет `apps/worker → POST /api/v1/internal/orders/:id/system-cancel`
   // (`apps/api`, см. JSDoc `system-order-cancel.client.ts`). `optional`, ТОТ ЖЕ приём, что
   // `MOCK_BANK_WEBHOOK_SECRET` — отсутствие ENV даёт рантайм-ошибку джобы при попытке вызова

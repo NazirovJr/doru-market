@@ -6,6 +6,18 @@ import { defineConfig } from 'vitest/config'
  * (infrastructure-подобный код) — ≥70%". `coverage.enabled` заставляет обычный `vitest run`
  * (а значит и `pnpm test` → `turbo run test`) считать покрытие и падать при просадке ниже
  * порога — без отдельного флага `--coverage` в скрипте `test`.
+ *
+ * `pool: 'forks'` + `fileParallelism: false` (найдено при DTJ-250/254 — ТРЕТИЙ/ВТОРОЙ
+ * `*.job.integration.spec.ts` файл, пишущий в `orders` реальным Postgres, обнажил гонку,
+ * которую `apps/api/vitest.integration.config.ts` уже решила ТЕМ ЖЕ приёмом для идентичного
+ * класса проблемы, см. её JSDoc): несколько интеграционных файлов (`unpaid-order-timeout`/
+ * `pickup-sla-timeout`/`payout-execution`) сеют `orders.order_number` СВОИМ независимым
+ * счётчиком, начинающимся с одного и того же префикса-даты — параллельный запуск файлов в
+ * разных vitest-воркерах даёт `duplicate key value violates unique constraint
+ * "orders_order_number_key"` на конкурентных INSERT против ОДНОЙ реальной БД. Сериализация
+ * файлов (тот же компромисс, что у `apps/api`: тесты ВНУТРИ одного файла всё равно
+ * распараллеливаются векторно, каждый создаёт свой независимый `pg.Pool`/сервер) убирает гонку
+ * без переписывания seed-хелперов каждого файла.
  */
 
 const COVERAGE_THRESHOLD_PERCENT = 70
@@ -16,6 +28,8 @@ export default defineConfig({
     // `dist/**` может содержать скомпилированные `*.spec.js` (см. tsconfig.json `files`),
     // их не нужно запускать повторно как отдельный набор тестов поверх `src/**/*.spec.ts`.
     exclude: ['**/node_modules/**', 'dist/**'],
+    pool: 'forks',
+    fileParallelism: false,
     coverage: {
       provider: 'v8',
       enabled: true,
