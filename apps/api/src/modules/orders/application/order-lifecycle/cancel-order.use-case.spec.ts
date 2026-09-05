@@ -79,6 +79,7 @@ function makeHarness(): Harness {
     releaseStock,
     hasExpiredReservedBatch: vi.fn(),
     getStockQuantity: vi.fn(),
+    reserveForOrder: vi.fn(),
   }
   const refundFull = vi.fn<RefundFacadePort['refundFull']>().mockResolvedValue(ok(undefined))
   const refundFacade: RefundFacadePort = { refundFull }
@@ -279,6 +280,7 @@ describe('CancelOrderUseCase — отказ RefundFacadePort', () => {
       releaseStock,
       hasExpiredReservedBatch: vi.fn(),
       getStockQuantity: vi.fn(),
+      reserveForOrder: vi.fn(),
     }
     const refundError: RefundError = { code: ErrorCode.PAYMENT_PROVIDER_UNAVAILABLE, message: 'bank down' }
     const refundFull = vi.fn<RefundFacadePort['refundFull']>().mockResolvedValue(err(refundError))

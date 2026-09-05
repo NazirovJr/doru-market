@@ -191,6 +191,7 @@ describe.skipIf(!postgresAvailable)('CancelOrderUseCase — integration (DTJ-232
       releaseStock,
       hasExpiredReservedBatch: vi.fn(),
       getStockQuantity: vi.fn(),
+      reserveForOrder: vi.fn(),
     }
     refundFull = vi.fn<RefundFacadePort['refundFull']>().mockResolvedValue(ok(undefined))
     const refundFacade: RefundFacadePort = { refundFull }

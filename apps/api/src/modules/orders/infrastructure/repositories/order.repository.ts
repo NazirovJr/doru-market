@@ -6,9 +6,16 @@
  * `orders` через `ON CONFLICT (id) DO UPDATE` над ПОЛНЫМ набором колонок (проще и safer, чем
  * частичный SET только «мутирующих после создания» полей — заказ создаётся один раз за
  * checkout, повторный `save()` того же объекта либо создаёт (первый вызов), либо переносит
- * ТЕ ЖЕ значения плюс изменившиеся через state-machine методы поля). `order_items` —
- * `ON CONFLICT (id) DO NOTHING`: позиции неизменяемы после создания (`OrderItem`, DTJ-221,
- * все поля `readonly`), повторная вставка тех же id — no-op, не ошибка.
+ * ТЕ ЖЕ значения плюс изменившиеся через state-machine методы поля).
+ *
+ * `order_items` — БЫЛО `ON CONFLICT (id) DO NOTHING` (DTJ-221: «позиции неизменяемы после
+ * создания, все поля readonly»). ИЗМЕНЕНО на `DO UPDATE` (DTJ-302/303, EP-12 §A.3/A.4) — это
+ * предположение стало неверным: терминал фармацевта мутирует `fulfillmentStatus`/
+ * `scannedBatchId`/... и, при замене партии, сам `inventoryBatchId` ПОСЛЕ создания заказа
+ * (`OrderItem.markScannedOk`/`substituteBatch`/`markUnavailable`, см. их JSDoc). `DO UPDATE` над
+ * ПОЛНЫМ набором колонок безопасен для существующих вызывающих: `checkout`/`cancel` и т.п.
+ * никогда не меняют значения ЭТИХ полей между вызовами `save()` — повторная запись ТЕХ ЖЕ
+ * значений идемпотентна, разницы с прежним `DO NOTHING` для них нет.
  *
  * `tx` — `OrderUnitOfWorkTx` (`unknown`), резолвится в конкретный Drizzle-клиент через
  * `resolveDrizzleClient` (см. `drizzle-tx.util.ts`) — тот же паттерн, что `auth`
@@ -20,7 +27,7 @@
  * подтверждается как существующая).
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { type DrizzleDb, DRIZZLE_DB } from '@/infrastructure/database/drizzle.provider.js'
 import { orders, orderItems, type OrderRow, type OrderItemRow } from '@/db/schema/orders.js'
 import {
@@ -29,10 +36,16 @@ import {
   type OrderUnitOfWorkTx,
 } from '@/modules/orders/application/ports/order-repository.port.js'
 import { Order, type OrderSnapshot } from '@/modules/orders/domain/order.entity.js'
+import { SCAN_METHOD_VALUES, type ScanMethod } from '@/modules/orders/domain/order-item.entity.js'
 import { Money } from '@/shared-kernel/domain/value-objects/money.vo.js'
 import { GeoPoint } from '@/shared-kernel/domain/value-objects/geo-point.vo.js'
 import { OrderNumber } from '@/shared-kernel/domain/value-objects/order-number.vo.js'
-import { ORDER_CANCEL_REASON_VALUES, type OrderCancelReason } from '@/modules/orders/domain/order-domain-event.js'
+import {
+  ORDER_CANCEL_REASON_VALUES,
+  ORDER_ITEM_ISSUE_REASON_VALUES,
+  type OrderCancelReason,
+  type OrderItemIssueReason,
+} from '@/modules/orders/domain/order-domain-event.js'
 import { BILLING_STRATEGY_VALUES, type BillingStrategy, type OrderPaymentMethod } from '@dorutj/contracts'
 import { resolveDrizzleClient } from './drizzle-tx.util.js'
 
@@ -73,10 +86,29 @@ export class DrizzleOrderRepository implements OrderRepositoryPort {
       .values(values)
       .onConflictDoUpdate({ target: orders.id, set: values })
     if (s.items.length > 0) {
+      const itemValues = s.items.map((item) => itemSnapshotToInsert(item, s.id))
+      // `set: { col: sql`excluded.col`}`, НЕ статическое значение из одной позиции (в отличие
+      // от однострочного upsert `orders` выше, где `set: values` безопасен ровно потому, что
+      // строка одна): `.values(itemValues)` — МНОГОСТРОЧНЫЙ insert (позиций ≥1 на заказ), и
+      // Drizzle применил бы ОДНО статическое значение `set` ко ВСЕМ конфликтующим строкам сразу,
+      // если бы оно не ссылалось на `excluded` (псевдотаблицу «то, что пытались вставить ЭТОЙ
+      // строкой») — только мутирующие после создания колонки (DTJ-302/303), остальные (цена/
+      // количество/...) неизменны, их обновление до тех же значений излишне.
       await client
         .insert(orderItems)
-        .values(s.items.map((item) => itemSnapshotToInsert(item, s.id)))
-        .onConflictDoNothing({ target: orderItems.id })
+        .values(itemValues)
+        .onConflictDoUpdate({
+          target: orderItems.id,
+          set: {
+            fulfillmentStatus: sql`excluded.fulfillment_status`,
+            scannedBatchId: sql`excluded.scanned_batch_id`,
+            scannedAt: sql`excluded.scanned_at`,
+            scannedBy: sql`excluded.scanned_by`,
+            scanMethod: sql`excluded.scan_method`,
+            itemIssueReason: sql`excluded.item_issue_reason`,
+            inventoryBatchId: sql`excluded.inventory_batch_id`,
+          },
+        })
     }
   }
 
@@ -129,6 +161,13 @@ function itemSnapshotToInsert(item: OrderSnapshot['items'][number], orderId: str
     commissionBps: item.commissionBps,
     platformFeeDiram: item.platformFeeDiram,
     inventoryBatchId: item.inventoryBatchId,
+    // DTJ-302/303 — прогресс сборки терминалом фармацевта (см. JSDoc `save()` выше).
+    fulfillmentStatus: item.fulfillmentStatus,
+    scannedBatchId: item.scannedBatchId,
+    scannedAt: item.scannedAt,
+    scannedBy: item.scannedBy,
+    scanMethod: item.scanMethod,
+    itemIssueReason: item.itemIssueReason,
   }
 }
 
@@ -193,7 +232,35 @@ function rowToItemSnapshot(row: OrderItemRow): OrderSnapshot['items'][number] {
     commissionBps: row.commissionBps,
     platformFeeDiram: row.platformFeeDiram,
     inventoryBatchId: row.inventoryBatchId,
+    // DTJ-302/303 — `fulfillmentStatus` уже типизирован Drizzle pg-enum'ом (совпадает 1:1 с
+    // доменным `OrderItemFulfillmentStatus`, см. `enums.schema.ts`) — каста не требует, в
+    // отличие от `scanMethod`/`itemIssueReason` ниже (`varchar` + raw SQL CHECK, не типизированный
+    // Drizzle-enum, тот же приём, что `toCancelReasonOrThrow`/`toBillingStrategyOrThrow` выше).
+    fulfillmentStatus: row.fulfillmentStatus,
+    scannedBatchId: row.scannedBatchId,
+    scannedAt: toDateOrNull(row.scannedAt),
+    scannedBy: row.scannedBy,
+    scanMethod: toScanMethodOrNull(row.scanMethod, row.id),
+    itemIssueReason: toItemIssueReasonOrNull(row.itemIssueReason, row.id),
   }
+}
+
+/** Вынесено ради `max-lines-per-function` (C1) — та же защита, что `toCancelReasonOrThrow`. */
+function toScanMethodOrNull(value: string | null, itemId: string): ScanMethod | null {
+  if (value === null) return null
+  if ((SCAN_METHOD_VALUES as readonly string[]).includes(value)) {
+    return value as ScanMethod
+  }
+  throw new Error(`order_items.scan_method "${value}" is not a recognized ScanMethod for item ${itemId} — data integrity violation`)
+}
+
+/** Вынесено ради `max-lines-per-function` (C1) — та же защита, что `toCancelReasonOrThrow`. */
+function toItemIssueReasonOrNull(value: string | null, itemId: string): OrderItemIssueReason | null {
+  if (value === null) return null
+  if ((ORDER_ITEM_ISSUE_REASON_VALUES as readonly string[]).includes(value)) {
+    return value as OrderItemIssueReason
+  }
+  throw new Error(`order_items.item_issue_reason "${value}" is not a recognized OrderItemIssueReason for item ${itemId} — data integrity violation`)
 }
 
 function rowToGeoPoint(row: OrderRow): GeoPoint | null {

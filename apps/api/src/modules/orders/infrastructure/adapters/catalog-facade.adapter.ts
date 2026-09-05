@@ -22,10 +22,13 @@
  * (DTJ-223/225, вне `files_owned` этого тикета) — вне периметра DTJ-227.
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { gt, inArray, sql } from 'drizzle-orm'
+import { and, eq, gt, inArray, sql } from 'drizzle-orm'
+import { Barcode } from '@dorutj/domain-kernel'
 import { CATALOG_FACADE, type CatalogFacade } from '@/modules/catalog/index.js'
 import { type DrizzleDb, DRIZZLE_DB } from '@/infrastructure/database/drizzle.provider.js'
 import { pharmacyInventory } from '@/db/schema/pharmacy-inventory.js'
+import { medicines } from '@/db/schema/medicines.js'
+import { pharmacySkuMapping } from '@/db/schema/pharmacy-sku-mapping.js'
 import {
   CATALOG_FACADE_PORT,
   type CatalogFacadePort,
@@ -73,6 +76,29 @@ export class CatalogFacadeAdapter implements CatalogFacadePort {
       out.set(medicineId, new Map(refs.map((ref) => [ref.substanceId, ref.innName])))
     }
     return out
+  }
+
+  /** DTJ-302 — см. JSDoc `CatalogFacadePort.resolveMedicineIdByBarcode` для полного обоснования. */
+  async resolveMedicineIdByBarcode(pharmacyId: string, rawBarcode: string): Promise<string | null> {
+    const barcode = Barcode.parse(rawBarcode)
+    if (barcode.isGloballyIdentifiable()) {
+      const rows = await this.db
+        .select({ id: medicines.id })
+        .from(medicines)
+        .where(eq(medicines.barcode, barcode.getRawValue()))
+        .limit(1)
+      return rows[0]?.id ?? null
+    }
+    // Не глобально идентифицируемый (D-06: невалидный EAN-13 ИЛИ внутренний префикс `2`) —
+    // трактуется как `internal_sku` (SRS-DOM-076) — резолв через кэш конкретной аптеки.
+    const rows = await this.db
+      .select({ medicineId: pharmacySkuMapping.medicineId })
+      .from(pharmacySkuMapping)
+      .where(
+        and(eq(pharmacySkuMapping.pharmacyId, pharmacyId), eq(pharmacySkuMapping.internalSku, barcode.getRawValue())),
+      )
+      .limit(1)
+    return rows[0]?.medicineId ?? null
   }
 
   /** MIN(price) по непросроченным лотам с остатком — см. «ВНИМАНИЕ» в JSDoc файла. Один batch-запрос. */

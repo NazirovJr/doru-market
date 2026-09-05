@@ -23,10 +23,11 @@ describe('UnimplementedInventoryFacadeAdapter (D-EP09-16)', () => {
     await expect(adapter.getStockQuantity('pharmacy-1', 'medicine-1')).resolves.toBe(0)
   })
 
-  it('reserveStock/releaseStock — запись — по-прежнему бросают', async () => {
+  it('reserveStock/releaseStock/reserveForOrder — запись — по-прежнему бросают', async () => {
     const adapter = new UnimplementedInventoryFacadeAdapter()
     await expect(adapter.reserveStock('pharmacy-1', [])).rejects.toThrow()
     await expect(adapter.releaseStock([])).rejects.toThrow()
+    await expect(adapter.reserveForOrder('pharmacy-1', 'medicine-1', 'L1', 1)).rejects.toThrow()
   })
 })
 

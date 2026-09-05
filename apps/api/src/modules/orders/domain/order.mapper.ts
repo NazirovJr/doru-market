@@ -56,5 +56,12 @@ export function toOrderItemDto(item: OrderItem, orderId: string): OrderItemDto {
     totalPriceDiram: Number(s.totalPrice.diram),
     commissionBps: s.commissionBps,
     platformFeeDiram: Number(s.platformFeeDiram),
+    // DTJ-302/303 — прогресс сборки терминалом фармацевта, см. JSDoc `OrderItemDto`.
+    fulfillmentStatus: s.fulfillmentStatus,
+    scannedBatchId: s.scannedBatchId,
+    scannedAt: toIsoOrNull(s.scannedAt),
+    scannedBy: s.scannedBy,
+    scanMethod: s.scanMethod,
+    itemIssueReason: s.itemIssueReason,
   }
 }

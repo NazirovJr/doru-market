@@ -219,6 +219,7 @@ function makeHarness(overrides: Partial<HarnessOverrides> = {}): Harness {
     releaseStock: vi.fn<InventoryFacadePort['releaseStock']>().mockResolvedValue(undefined),
     hasExpiredReservedBatch: vi.fn<InventoryFacadePort['hasExpiredReservedBatch']>().mockResolvedValue(false),
     getStockQuantity: vi.fn<InventoryFacadePort['getStockQuantity']>().mockResolvedValue(100),
+    reserveForOrder: vi.fn<InventoryFacadePort['reserveForOrder']>(),
   }
 
   const createInvoice = vi.fn<PaymentInvoicePort['createInvoice']>()

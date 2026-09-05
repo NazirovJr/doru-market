@@ -103,6 +103,7 @@ import { Global, Module } from '@nestjs/common'
 import {
   type InventoryFacadePort,
   type InventoryFacadeError,
+  type BatchSubstitutionError,
   type ReleaseStockItemCommand,
   type ReserveStockItemCommand,
   type ReservedStockLine,
@@ -179,6 +180,14 @@ import { DetectPriceDriftService } from './application/checkout/detect-price-dri
 // (CheckoutUseCase/CancelOrderUseCase — уже в providers[] ниже, USERS_REPOSITORY — экспортирован
 // AuthModule, уже в imports[] ниже) — новых провайдеров эта правка не добавляет.
 import { CheckoutController } from './presentation/checkout/checkout.controller.js'
+// DTJ-302 (EP-12, терминал фармацевта §A.3) — ScanOrderItemUseCase +
+// PharmacyTerminalItemsController (`POST /orders/:id/items/:itemId/scan`). Использует ТОЛЬКО уже
+// забинженные провайдеры (ORDER_REPOSITORY_DRIZZLE_PROVIDER/ORDERS_UNIT_OF_WORK_DRIZZLE_PROVIDER/
+// CATALOG_FACADE_PORT_PROVIDER/INVENTORY_FACADE_PORT_PROVIDER — все уже в providers[] ниже) + CLOCK
+// (`SharedKernelModule`, `@Global()` — уже резолвится без локальной регистрации, тот же приём,
+// что `CancelOrderUseCase` выше — ни один провайдер CLOCK в этом файле не заведён, и не нужен).
+import { ScanOrderItemUseCase } from './application/pharmacy-terminal/scan-order-item.use-case.js'
+import { PharmacyTerminalItemsController } from './presentation/pharmacy-terminal/pharmacy-terminal-items.controller.js'
 
 /**
  * `UnimplementedCatalogFacadeAdapter`/`UnimplementedOrderRepositoryAdapter` (DTJ-220/222) —
@@ -224,6 +233,29 @@ export class UnimplementedInventoryFacadeAdapter implements InventoryFacadePort 
 
   getStockQuantity(_pharmacyId: string, _medicineId: string): Promise<number> {
     return Promise.resolve(0)
+  }
+
+  /**
+   * DTJ-302 — метод добавлен в интерфейс ПОСЛЕ того, как DTJ-227 заменил этот класс в DI (см.
+   * JSDoc файла выше «РЕШЕНО (DTJ-227)») — этот стаб больше нигде не биндится, кроме прямого
+   * конструирования в `orders.module.spec.ts`; реальная реализация уже есть в
+   * `InventoryFacadeAdapter.reserveForOrder` (`infrastructure/adapters/inventory-facade.adapter.ts`).
+   * Бросает, как `reserveStock`/`releaseStock` выше (та же категория — ЗАПИСЬ/резервирование,
+   * D-EP09-11) — существует исключительно чтобы `implements InventoryFacadePort` продолжал типиться.
+   */
+  // eslint-disable-next-line max-params -- сигнатура фиксирована интерфейсом `InventoryFacadePort.reserveForOrder` (позиционные параметры порта, не выбор этого файла).
+  reserveForOrder(
+    _pharmacyId: string,
+    _medicineId: string,
+    _batchNumber: string,
+    _quantity: number,
+  ): Promise<Result<{ readonly batchId: string }, BatchSubstitutionError>> {
+    return Promise.reject(
+      new Error(
+        'InventoryFacadePort.reserveForOrder() has no implementation on this legacy stub — see ' +
+          'InventoryFacadeAdapter for the real implementation (DTJ-302/DTJ-227).',
+      ),
+    )
   }
 }
 
@@ -333,7 +365,7 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
   // TenancyModule — DTJ-228/229: `TenancyFacadeAdapter` инжектит TENANT_SETTINGS_REPOSITORY
   // (экспортирован tenancy.module.ts) для `getCodLimitDiram`.
   imports: [CatalogModule, OnboardingModule, AuthModule, TenancyModule, PaymentsModule],
-  controllers: [CartController, CheckoutController, RetryPaymentController],
+  controllers: [CartController, CheckoutController, RetryPaymentController, PharmacyTerminalItemsController],
   providers: [
     CART_REPOSITORY_DRIZZLE_PROVIDER,
     CATALOG_FACADE_PORT_PROVIDER,
@@ -382,6 +414,8 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     DetectPriceDriftService,
     // DTJ-241 (SRS-PAY-041) — retry-payment (см. JSDoc блока providers, начало файла).
     RetryPaymentUseCase,
+    // DTJ-302 (EP-12, терминал фармацевта §A.3, см. JSDoc импортов выше).
+    ScanOrderItemUseCase,
   ],
   // DTJ-226 (правка приёмки CTO, правило 2 AGENTS.md): без `exports` `OrdersFacade`/
   // `ORDERS_FACADE` были написаны, но физически недостижимы через `imports: [OrdersModule]` —
