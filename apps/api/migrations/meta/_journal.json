@@ -265,6 +265,18 @@
       "when": 1700000450000,
       "tag": "0041_pharmacy_terminal_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "when": 1700000460000,
+      "tag": "0042_delivery_module_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "when": 1700000470000,
+      "tag": "0043_audit_action_category_cash_reconciliation",
+      "breakpoints": true
     }
   ]
 }

@@ -291,3 +291,61 @@ export const partialFulfillmentStatusEnum = pgEnum('partial_fulfillment_status',
   'rejected',
   'auto_confirmed_timeout',
 ])
+
+/**
+ * Курьер и доставка (EP-13, DTJ-313, `11-database-schema.md` Группа H + `25-module-courier-
+ * delivery.md` D.1-D.4). `couriers`/`delivery_assignments` физически не существовали ни в одной
+ * миграции ДО этого тикета (Группа H была запланирована, но не реализована EP-01 — см. JSDoc
+ * `couriers.ts`/`delivery-assignments.ts`) — этот тикет создаёт их впервые, а не расширяет.
+ * `courier_sourcing_mode` — НЕ pgEnum: `tenants.courier_sourcing_mode` уже `VARCHAR(32)`
+ * (`0002_tenants_and_settings.sql`), тот же приём, что `inventory_sync_batch.status` выше —
+ * не заводится здесь повторно.
+ * Порядок значений НЕ переименовывать, только дописывать в конец.
+ */
+export const courierStatusEnum = pgEnum('courier_status', [
+  'pending_verification',
+  'active',
+  'suspended',
+  'terminated',
+])
+
+/** REQ-COUR-1..11 (`11-database-schema.md` строка 195-197). */
+export const courierTaxStatusEnum = pgEnum('courier_tax_status', [
+  'individual_patent',
+  'civil_contract_platform_withholds',
+  'chain_employee',
+])
+
+export const courierVehicleTypeEnum = pgEnum('courier_vehicle_type', ['foot', 'bicycle', 'moped', 'car'])
+
+/**
+ * FSM `delivery_assignment_status` (`10-domain-model.md` §«State machines»/6, SRS-DOM-137..144).
+ * Переходы — см. `modules/delivery/domain/delivery-assignment.state-machine.ts`, единственный
+ * источник допустимости перехода (не дублируется здесь).
+ */
+export const deliveryAssignmentStatusEnum = pgEnum('delivery_assignment_status', [
+  'unassigned',
+  'assigned',
+  'en_route_to_pharmacy',
+  'picked_up_from_pharmacy',
+  'en_route_to_customer',
+  'delivered',
+  'delivery_failed',
+])
+
+/** `couriers.shift_status` (D.1, SRS-DELIV-003/006) — денормализованный быстрый флаг для
+ * алгоритма назначения, синхронизируется атомарно с `courier_shifts` (application-слой). */
+export const courierShiftStatusEnum = pgEnum('courier_shift_status', ['off_shift', 'on_shift'])
+
+/** `delivery_offers.status` (D.3, SRS-DELIV-005). */
+export const deliveryOfferStatusEnum = pgEnum('delivery_offer_status', [
+  'pending',
+  'accepted',
+  'declined',
+  'expired',
+  'superseded',
+])
+
+/** `courier_shifts.status` (D.4, SRS-DELIV-006) — история физических смен курьера, отдельно от
+ * `couriers.shift_status`. */
+export const courierShiftRecordStatusEnum = pgEnum('courier_shift_record_status', ['active', 'closed'])

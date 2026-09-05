@@ -27,3 +27,4 @@ export * from './support.js'
 // DTJ-300 (EP-12) — тела запросов терминала фармацевта, отдельный плоский файл (не './orders/'
 // директория — избегает коллизии с существующим './orders.js', см. отчёт сдачи тикета).
 export * from './orders-pharmacy-terminal.contracts.js'
+export * from './delivery/delivery.contracts.js'
