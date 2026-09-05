@@ -179,6 +179,13 @@ import { DetectPriceDriftService } from './application/checkout/detect-price-dri
 // (CheckoutUseCase/CancelOrderUseCase — уже в providers[] ниже, USERS_REPOSITORY — экспортирован
 // AuthModule, уже в imports[] ниже) — новых провайдеров эта правка не добавляет.
 import { CheckoutController } from './presentation/checkout/checkout.controller.js'
+// DTJ-301 (EP-12, модуль 24 «Терминал фармацевта») — очередь/accept/reclaim. Новых портов не
+// требует за пределами уже забинженных (ORDER_REPOSITORY_PORT/ORDERS_UNIT_OF_WORK/ORDERS_OUTBOX/
+// INVENTORY_FACADE_PORT/TENANCY_FACADE_PORT — все уже провайдятся выше DTJ-227/228/229).
+import { GetOrderQueueUseCase } from './application/pharmacy-terminal/get-order-queue.use-case.js'
+import { AcceptOrderUseCase } from './application/pharmacy-terminal/accept-order.use-case.js'
+import { ReclaimOrderUseCase } from './application/pharmacy-terminal/reclaim-order.use-case.js'
+import { PharmacyTerminalQueueController } from './presentation/pharmacy-terminal/pharmacy-terminal-queue.controller.js'
 
 /**
  * `UnimplementedCatalogFacadeAdapter`/`UnimplementedOrderRepositoryAdapter` (DTJ-220/222) —
@@ -333,7 +340,7 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
   // TenancyModule — DTJ-228/229: `TenancyFacadeAdapter` инжектит TENANT_SETTINGS_REPOSITORY
   // (экспортирован tenancy.module.ts) для `getCodLimitDiram`.
   imports: [CatalogModule, OnboardingModule, AuthModule, TenancyModule, PaymentsModule],
-  controllers: [CartController, CheckoutController, RetryPaymentController],
+  controllers: [CartController, CheckoutController, RetryPaymentController, PharmacyTerminalQueueController],
   providers: [
     CART_REPOSITORY_DRIZZLE_PROVIDER,
     CATALOG_FACADE_PORT_PROVIDER,
@@ -382,6 +389,10 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     DetectPriceDriftService,
     // DTJ-241 (SRS-PAY-041) — retry-payment (см. JSDoc блока providers, начало файла).
     RetryPaymentUseCase,
+    // DTJ-301 (EP-12, модуль 24) — очередь/accept/reclaim терминала фармацевта (см. JSDoc импортов выше).
+    GetOrderQueueUseCase,
+    AcceptOrderUseCase,
+    ReclaimOrderUseCase,
   ],
   // DTJ-226 (правка приёмки CTO, правило 2 AGENTS.md): без `exports` `OrdersFacade`/
   // `ORDERS_FACADE` были написаны, но физически недостижимы через `imports: [OrdersModule]` —

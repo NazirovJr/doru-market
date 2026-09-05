@@ -56,6 +56,10 @@ const DEFAULT_COMMISSION_BPS_BY_CATEGORY: Readonly<Record<CommissionCategory, nu
 /** R1-дефолт разрешённых способов оплаты (SRS-ORD-025 п.2, ASSUMPTION документа) — см. JSDoc порта. */
 const DEFAULT_ENABLED_PAYMENT_METHODS: readonly OrderPaymentMethod[] = ['cash_courier']
 
+/** DTJ-301 — 1:1 с DB-дефолтом `tenant_settings.pickup_sla_minutes` (D-19, `db/schema/tenants.ts`
+ *  `DEFAULT_PICKUP_SLA_MINUTES`) — тот же фолбэк-приём, что `COD_LIMIT_DEFAULT_DIRAM` выше. */
+const PICKUP_SLA_MINUTES_DEFAULT = 7
+
 @Injectable()
 export class TenancyFacadeAdapter implements TenancyFacadePort {
   constructor(
@@ -93,6 +97,12 @@ export class TenancyFacadeAdapter implements TenancyFacadePort {
   /** TODO(Group C): `tenant_settings.enabled_payment_methods` не существует — см. JSDoc файла/порта. */
   getEnabledPaymentMethods(_tenantId: string): Promise<readonly OrderPaymentMethod[]> {
     return Promise.resolve(DEFAULT_ENABLED_PAYMENT_METHODS)
+  }
+
+  /** DTJ-301 (SRS-PHT-008/030) — 1:1 с `getCodLimitDiram` выше (тот же `tenantSettingsRepository`). */
+  async getPickupSlaMinutes(tenantId: string): Promise<number> {
+    const settings = await this.tenantSettingsRepository.findByTenantId(TenantId.from(tenantId))
+    return settings?.pickupSlaMinutes ?? PICKUP_SLA_MINUTES_DEFAULT
   }
 }
 

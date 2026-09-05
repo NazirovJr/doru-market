@@ -125,3 +125,17 @@ export interface PharmacyTerminalQueueItemDto {
   readonly assignedPharmacistName: string | null
   readonly createdAt: string
 }
+
+/**
+ * DTJ-301 (SRS-PHT-005a) — `meta.groupedBy` эндпоинта очереди, ТОЛЬКО когда `pharmacy_admin`
+ * запросил `GET /orders` БЕЗ `filter[pharmacyId]` (агрегированный вид сети). Решение по формату
+ * (тикет DTJ-301 ссылался на этот файл как «уже зафиксировано DTJ-300» — на деле DTJ-300 этот
+ * формат НЕ фиксировал, см. отчёт сдачи DTJ-301, foundIssue): словарь `pharmacyId → orderId[]`
+ * (порядок id внутри каждой аптеки — тот же, что и в `data`), а НЕ плоское поле `pharmacyId` на
+ * каждой позиции — `PharmacyTerminalQueueItemDto` выше 1:1 повторяет перечень полей SRS-PHT-006
+ * (единственный, БЕЗ `pharmacyId`) для одноаптечного вида, менять его ради агрегированного случая
+ * означало бы два разных контракта на один и тот же эндпоинт.
+ */
+export interface PharmacyTerminalQueueGroupedByDto {
+  readonly pharmacyId: Readonly<Record<string, readonly string[]>>
+}

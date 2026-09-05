@@ -20,11 +20,21 @@
  * подтверждается как существующая).
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import { type DrizzleDb, DRIZZLE_DB } from '@/infrastructure/database/drizzle.provider.js'
 import { orders, orderItems, type OrderRow, type OrderItemRow } from '@/db/schema/orders.js'
+// DTJ-301 (EP-12) — `pharmacies`/`users` importés ТОЛЬКО для очереди терминала (JOIN на имя
+// фармацевта + резолвинг сети `pharmacy_admin` через `pharmacies.chain_id`), тот же приём, что
+// `InventoryFacadeAdapter` импортирует `pharmacy-inventory.js` напрямую (db/schema — вне
+// `modules/**`, `no-cross-module-deep-import`/`no-db-schema-in-business-layers` его не касаются,
+// см. JSDoc `InventoryFacadeAdapter`).
+import { pharmacies } from '@/db/schema/pharmacies.js'
+import { users } from '@/db/schema/users.js'
 import {
   ORDER_REPOSITORY_PORT,
+  type LockedOrderRow,
+  type OrderQueueQuery,
+  type OrderQueueRow,
   type OrderRepositoryPort,
   type OrderUnitOfWorkTx,
 } from '@/modules/orders/application/ports/order-repository.port.js'
@@ -35,6 +45,7 @@ import { OrderNumber } from '@/shared-kernel/domain/value-objects/order-number.v
 import { ORDER_CANCEL_REASON_VALUES, type OrderCancelReason } from '@/modules/orders/domain/order-domain-event.js'
 import { BILLING_STRATEGY_VALUES, type BillingStrategy, type OrderPaymentMethod } from '@dorutj/contracts'
 import { resolveDrizzleClient } from './drizzle-tx.util.js'
+import { toQueueRow } from './order-queue-row.mapper.js'
 
 @Injectable()
 export class DrizzleOrderRepository implements OrderRepositoryPort {
@@ -83,6 +94,92 @@ export class DrizzleOrderRepository implements OrderRepositoryPort {
   private async hydrate(client: DrizzleDb, row: OrderRow): Promise<Order> {
     const itemRows = await client.select().from(orderItems).where(eq(orderItems.orderId, row.id))
     return Order.restore(rowToSnapshot(row, itemRows))
+  }
+
+  /** DTJ-301 (SRS-PHT-007/009, TC-PHT-023) — см. JSDoc порта: `tx` обязателен, лочит РОВНО строку `orders`. */
+  async findByIdForUpdate(tenantId: string, orderId: string, tx: OrderUnitOfWorkTx): Promise<LockedOrderRow | null> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const rows = await client
+      .select()
+      .from(orders)
+      .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)))
+      .limit(1)
+      .for('update')
+    const row = rows[0]
+    if (row === undefined) return null
+    const order = await this.hydrate(client, row)
+    return { order, assignedPharmacistId: row.assignedPharmacistId }
+  }
+
+  /** DTJ-301 — см. JSDoc порта. Точечный `UPDATE`, не через `save()` (поле вне `OrderSnapshot`). */
+  async setAssignedPharmacist(orderId: string, pharmacistId: string, tx: OrderUnitOfWorkTx): Promise<void> {
+    const client = resolveDrizzleClient(this.db, tx)
+    await client.update(orders).set({ assignedPharmacistId: pharmacistId }).where(eq(orders.id, orderId))
+  }
+
+  /** DTJ-301 — см. JSDoc порта. Best-effort: несуществующий пользователь → `null`, не бросает. */
+  async findAssignedPharmacistName(pharmacistId: string): Promise<string | null> {
+    const rows = await this.db.select({ fullName: users.fullName }).from(users).where(eq(users.id, pharmacistId)).limit(1)
+    return rows[0]?.fullName ?? null
+  }
+
+  /**
+   * DTJ-301 (SRS-PHT-005a) — см. JSDoc порта. `_tenantId` НЕ участвует в фильтре: `pharmacy_
+   * chains.tenant_id` — НЕ простая тенант-принадлежность (SRS-TEN-003, `postgres-pharmacy-map.
+   * adapter.ts` JSDoc «Скоуп по тенанту») — `NULL` означает «нейтральная/маркетплейсная сеть»,
+   * видимая ЛЮБОМУ нейтральному тенанту, а не «ничья»; наивное `= tenantId` без учёта нейтрального
+   * случая либо теряло бы легитимные нейтральные сети, либо (при обратной логике) требовало бы
+   * JOIN на `tenants.is_neutral`, которого этот метод не имеет повода тянуть — резолвинг `chainId
+   * → pharmacyId[]` только СУЖАЕТ кандидатов ДО обращения к `orders`, а РЕАЛЬНУЮ тенант-изоляцию
+   * (SRS-API-043/046) уже даёт `findQueueOrders`'s `eq(orders.tenantId, query.tenantId)` —
+   * поэтому здесь достаточно `pharmacies.chain_id = :chainId` (сам `chainId` — из JWT актора,
+   * подделать нельзя без валидного токена).
+   */
+  async findPharmacyIdsByChain(_tenantId: string, chainId: string): Promise<readonly string[]> {
+    const rows = await this.db.select({ id: pharmacies.id }).from(pharmacies).where(eq(pharmacies.chainId, chainId))
+    return rows.map((r) => r.id)
+  }
+
+  /**
+   * DTJ-301 (SRS-PHT-005/006) — кандидаты очереди, БЕЗ сортировки/пагинации (`OrderQueueSortPolicy`,
+   * application). Два запроса: (1) `orders` LEFT JOIN `users` (имя текущего исполнителя), (2)
+   * `COUNT(*) GROUP BY order_id` на `order_items` (масштаб MVP — очередь одной аптеки/сети, не
+   * весь исторический массив заказов, см. «Риски» тикета).
+   */
+  async findQueueOrders(query: OrderQueueQuery): Promise<readonly OrderQueueRow[]> {
+    const pharmacyIds =
+      query.scope.kind === 'pharmacy' ? [query.scope.pharmacyId] : await this.findPharmacyIdsByChain(query.tenantId, query.scope.chainId)
+    if (pharmacyIds.length === 0) return []
+    const rows = await this.db
+      .select({
+        id: orders.id,
+        orderNumber: orders.orderNumber,
+        status: orders.status,
+        pharmacyId: orders.pharmacyId,
+        itemsTotalTjs: orders.itemsTotalTjs,
+        paymentMethod: orders.paymentMethod,
+        prescriptionId: orders.prescriptionId,
+        slaDeadlineAt: orders.slaDeadlineAt,
+        assignedPharmacistId: orders.assignedPharmacistId,
+        assignedPharmacistName: users.fullName,
+        createdAt: orders.createdAt,
+      })
+      .from(orders)
+      .leftJoin(users, eq(users.id, orders.assignedPharmacistId))
+      .where(and(eq(orders.tenantId, query.tenantId), inArray(orders.pharmacyId, pharmacyIds), inArray(orders.status, query.statuses)))
+    if (rows.length === 0) return []
+    const countByOrder = await this.countItemsByOrder(rows.map((r) => r.id))
+    return rows.map((row) => toQueueRow(row, countByOrder.get(row.id) ?? 0))
+  }
+
+  /** Вынесено из `findQueueOrders` ради `max-lines-per-function` (C1). */
+  private async countItemsByOrder(orderIds: readonly string[]): Promise<ReadonlyMap<string, number>> {
+    const rows = await this.db
+      .select({ orderId: orderItems.orderId, cnt: sql<number>`count(*)::int` })
+      .from(orderItems)
+      .where(inArray(orderItems.orderId, orderIds))
+      .groupBy(orderItems.orderId)
+    return new Map(rows.filter((r): r is { orderId: string; cnt: number } => r.orderId !== null).map((r) => [r.orderId, r.cnt]))
   }
 }
 

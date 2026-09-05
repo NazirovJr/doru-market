@@ -50,3 +50,19 @@ describe('TenancyFacadeAdapter.resolveCommissionRate (SRS-DOM-160, решени�
     )
   })
 })
+
+describe('TenancyFacadeAdapter.getPickupSlaMinutes (DTJ-301, SRS-PHT-008/030)', () => {
+  it('настройки тенанта отсутствуют (findByTenantId → null) → дефолт 7 минут (D-19)', async () => {
+    const adapter = makeAdapter()
+    await expect(adapter.getPickupSlaMinutes(TENANT_ID)).resolves.toBe(7)
+  })
+
+  it('настройки тенанта есть → читает pickupSlaMinutes, не дефолт', async () => {
+    const repo: TenantSettingsRepositoryPort = {
+      findByTenantId: vi.fn().mockResolvedValue({ pickupSlaMinutes: 12 }),
+      save: vi.fn(),
+    }
+    const adapter = new TenancyFacadeAdapter(repo)
+    await expect(adapter.getPickupSlaMinutes(TENANT_ID)).resolves.toBe(12)
+  })
+})
