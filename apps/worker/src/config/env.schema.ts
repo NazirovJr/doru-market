@@ -47,6 +47,15 @@ const DEFAULT_CASH_COMMISSION_AGGREGATION_WEEKLY_ISSUE_CRON = '50 23 * * 0'
 const DEFAULT_BILLING_INVOICE_OVERDUE_CRON = '0 1 * * *'
 // DTJ-252, ticket «Что сделать» п.1: ASSUMPTION буквально из тикета — `GRACE_PERIOD_DAYS=3`.
 const DEFAULT_BILLING_INVOICE_OVERDUE_GRACE_PERIOD_DAYS = 3
+// DTJ-254, SRS-ORD-035, ticket «Что сделать» п.1: ASSUMPTION буквально из тикета — каждые
+// 2 минуты (короче минимального разумного `pickup_sla_minutes`, дефолт 7).
+const DEFAULT_PICKUP_SLA_TIMEOUT_CRON = '*/2 * * * *'
+// DTJ-250: ASSUMPTION этого тикета (не зафиксирована буквально в тексте) — ежечасно, ТА ЖЕ
+// каденция, что сосед `PayoutSchedulerJob` (DTJ-249, ticket DTJ-249 «Технический контекст»).
+const DEFAULT_PAYOUT_EXECUTION_CRON = '0 * * * *'
+// DTJ-250, ticket «Что сделать» п.3: ASSUMPTION лимит на батч — не найден общий паттерн
+// батчинга в кодовой базе на момент реализации (проверено), заведён локально этим тикетом.
+const DEFAULT_PAYOUT_BATCH_SIZE = 50
 
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const
 
@@ -95,10 +104,17 @@ export const envSchema = z.object({
     .transform((v) => v === 'true'),
   // DTJ-253, DoD «UNPAID_ORDER_TIMEOUT_CRON — именованная ENV-константа».
   UNPAID_ORDER_TIMEOUT_CRON: z.string().min(1).default(DEFAULT_UNPAID_ORDER_TIMEOUT_CRON),
-  // DTJ-253/254: общий секрет `apps/worker → POST /api/v1/internal/orders/:id/system-cancel`
-  // (`apps/api`, см. JSDoc `system-order-cancel.client.ts`). `optional`, ТОТ ЖЕ приём, что
-  // `MOCK_BANK_WEBHOOK_SECRET` — отсутствие ENV даёт рантайм-ошибку джобы при попытке вызова
-  // (см. `requestSystemOrderCancel`), не Zod-сбой старта процесса.
+  // DTJ-254, DoD «PickupSlaTimeoutJob интервал — именованная ENV-константа».
+  PICKUP_SLA_TIMEOUT_CRON: z.string().min(1).default(DEFAULT_PICKUP_SLA_TIMEOUT_CRON),
+  // DTJ-250, DoD «PAYOUT_BATCH_SIZE/MOCK_PAYOUT_DELAY_MS — именованные ENV-константы» (интервал
+  // джобы — тот же приём, хоть и не назван буквально тикетом, см. DEFAULT_PAYOUT_EXECUTION_CRON).
+  PAYOUT_EXECUTION_CRON: z.string().min(1).default(DEFAULT_PAYOUT_EXECUTION_CRON),
+  PAYOUT_BATCH_SIZE: z.coerce.number().int().positive().default(DEFAULT_PAYOUT_BATCH_SIZE),
+  // DTJ-253/254/250: общий секрет `apps/worker → POST /api/v1/internal/orders/:id/system-cancel`,
+  // `POST /api/v1/internal/payouts/transfer-batch` (`apps/api`, см. JSDoc
+  // `system-order-cancel.client.ts`/`payout-transfer-batch.client.ts`). `optional`, ТОТ ЖЕ приём,
+  // что `MOCK_BANK_WEBHOOK_SECRET` — отсутствие ENV даёт рантайм-ошибку джобы при попытке вызова,
+  // не Zod-сбой старта процесса.
   INTERNAL_API_KEY: z.string().optional(),
   // DTJ-249, DoD «PAYOUT_SCHEDULER_CRON — именованная ENV-константа».
   PAYOUT_SCHEDULER_CRON: z.string().min(1).default(DEFAULT_PAYOUT_SCHEDULER_CRON),

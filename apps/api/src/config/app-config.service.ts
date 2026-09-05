@@ -173,4 +173,14 @@ export class AppConfigService {
   get internalApiKey(): string | undefined {
     return this.configService.get('INTERNAL_API_KEY', { infer: true })
   }
+
+  /** [DTJ-250, SRS-PAY-033] Активный адаптер `BankPayoutTransferPort` (`payments.module.ts` DI-ветка). */
+  get payoutDriver(): EnvConfig['PAYOUT_DRIVER'] {
+    return this.configService.get('PAYOUT_DRIVER', { infer: true })
+  }
+
+  /** [DTJ-250, SRS-PAY-033] Задержка (мс) `MockBankPayoutTransferProvider.transferBatch`; `0` — немедленно. */
+  get mockPayoutDelayMs(): number {
+    return this.configService.get('MOCK_PAYOUT_DELAY_MS', { infer: true })
+  }
 }

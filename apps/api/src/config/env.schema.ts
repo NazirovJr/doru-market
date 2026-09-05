@@ -41,6 +41,10 @@ const DEFAULT_MOCK_BANK_AUTO_PAY_DELAY_MS = 2_000
  * банку РТ (уточняется R3, реальный контракт).
  */
 const DEFAULT_BANK_INVOICE_VALIDITY_MINUTES = 15
+/** [DTJ-250, SRS-PAY-033] Задержка `MockBankPayoutTransferProvider.transferBatch` — ASSUMPTION
+ * тикета (0 — немедленное подтверждение, тот же приём, что `DEFAULT_MOCK_BANK_AUTO_PAY_DELAY_MS`
+ * для DTJ-238, но со значением 0, буквально указанным ticket «Что сделать» п.2). */
+const DEFAULT_MOCK_PAYOUT_DELAY_MS = 0
 const MINUTES_PER_HOUR = 60
 const HOURS_PER_DAY = 24
 const SECONDS_PER_MINUTE = 60
@@ -136,6 +140,15 @@ export const envSchema = z.object({
   // недоступным ЛЮБОМУ вызывающему (`InternalServiceGuard` отказывает при `undefined`), это
   // безопасный дефолт для секрета (в отличие от небезопасного дефолта для самого таймаута).
   INTERNAL_API_KEY: z.string().optional(),
+  // [DTJ-250, SRS-PAY-033] Единственный переключатель адаптера BankPayoutTransferPort на уровне
+  // DI (`{ provide: BANK_PAYOUT_TRANSFER_PORT, useFactory: ... }`, payments.module.ts) — тот же
+  // приём, что PAYMENT_DRIVER, но с ОДНИМ R1-значением ('mock' — реальный банковский адаптер R3,
+  // вне периметра). `z.enum(['mock'])`, не `z.literal`, — единообразие с PAYMENT_DRIVER
+  // (`z.enum`), расширяется той же формой при появлении R3-значения.
+  PAYOUT_DRIVER: z.enum(['mock']).default('mock'),
+  // [DTJ-250, SRS-PAY-033] Задержка (мс) MockBankPayoutTransferProvider.transferBatch — ASSUMPTION
+  // 0 (тикет), тот же приём, что MOCK_BANK_AUTO_PAY_DELAY_MS.
+  MOCK_PAYOUT_DELAY_MS: z.coerce.number().int().nonnegative().default(DEFAULT_MOCK_PAYOUT_DELAY_MS),
 })
 
 /** [DTJ-023] Секунды в N минутах/часах/дне — для use case расчёта rate-limit окон. */
