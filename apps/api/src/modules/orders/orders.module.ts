@@ -188,6 +188,13 @@ import { CheckoutController } from './presentation/checkout/checkout.controller.
 // что `CancelOrderUseCase` выше — ни один провайдер CLOCK в этом файле не заведён, и не нужен).
 import { ScanOrderItemUseCase } from './application/pharmacy-terminal/scan-order-item.use-case.js'
 import { PharmacyTerminalItemsController } from './presentation/pharmacy-terminal/pharmacy-terminal-items.controller.js'
+// DTJ-303 (EP-12, терминал фармацевта §A.4) — ReportItemIssueUseCase, дописывает второй метод
+// (`report-issue`) в УЖЕ созданный DTJ-302 `PharmacyTerminalItemsController` (`presentation/
+// pharmacy-terminal/pharmacy-terminal-items.controller.ts`, тот же файл, второй провайдер в
+// конструкторе). Использует ТОЛЬКО уже забинженные провайдеры (ORDER_REPOSITORY_DRIZZLE_PROVIDER/
+// ORDERS_UNIT_OF_WORK_DRIZZLE_PROVIDER/INVENTORY_FACADE_PORT_PROVIDER — все уже в providers[]
+// ниже) + PINO_LOGGER (`LoggerModule`, `@Global()` — тот же приём, что `CancelOrderUseCase`).
+import { ReportItemIssueUseCase } from './application/pharmacy-terminal/report-item-issue.use-case.js'
 
 /**
  * `UnimplementedCatalogFacadeAdapter`/`UnimplementedOrderRepositoryAdapter` (DTJ-220/222) —
@@ -254,6 +261,16 @@ export class UnimplementedInventoryFacadeAdapter implements InventoryFacadePort 
       new Error(
         'InventoryFacadePort.reserveForOrder() has no implementation on this legacy stub — see ' +
           'InventoryFacadeAdapter for the real implementation (DTJ-302/DTJ-227).',
+      ),
+    )
+  }
+
+  /** DTJ-303 — тот же приём, что `reserveForOrder` выше: метод добавлен интерфейсом после того, как DTJ-227 заменил этот класс в DI. Бросает — та же категория ЗАПИСЬ (сигнализирует расхождение остатка), что `reserveStock`/`releaseStock`/`reserveForOrder`. */
+  reconcileZeroStock(_medicineId: string, _batchId: string): Promise<void> {
+    return Promise.reject(
+      new Error(
+        'InventoryFacadePort.reconcileZeroStock() has no implementation on this legacy stub — see ' +
+          'InventoryFacadeAdapter for the real implementation (DTJ-303/DTJ-227).',
       ),
     )
   }
@@ -416,6 +433,8 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     RetryPaymentUseCase,
     // DTJ-302 (EP-12, терминал фармацевта §A.3, см. JSDoc импортов выше).
     ScanOrderItemUseCase,
+    // DTJ-303 (EP-12, терминал фармацевта §A.4, см. JSDoc импортов выше).
+    ReportItemIssueUseCase,
   ],
   // DTJ-226 (правка приёмки CTO, правило 2 AGENTS.md): без `exports` `OrdersFacade`/
   // `ORDERS_FACADE` были написаны, но физически недостижимы через `imports: [OrdersModule]` —

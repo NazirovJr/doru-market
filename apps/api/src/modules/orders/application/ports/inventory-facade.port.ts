@@ -170,4 +170,31 @@ export interface InventoryFacadePort {
     quantity: number,
     tx?: OrderUnitOfWorkTx,
   ): Promise<Result<{ readonly batchId: string }, BatchSubstitutionError>>
+
+  /**
+   * РАСШИРЕНИЕ (DTJ-303, foundIssue — тот же класс решения, что `reserveForOrder`/
+   * `getStockQuantity` выше: минимальная аддитивная правка интерфейса, ни один существующий
+   * метод не тронут). Тикет DTJ-303 называет `reconcileZeroStock` «существующей инфраструктурной
+   * операцией» — проверено: метод НЕ существует нигде в кодовой базе на момент этого тикета
+   * (согласовано де-факто, см. отчёт сдачи).
+   *
+   * Сигнализирует расхождение `pharmacy_inventory.quantity` (в БД остаток есть) vs физическое
+   * наличие (фармацевт при `report-issue(reason='out_of_stock')` подтверждает — товара
+   * физически нет на полке). НЕ таблица `inventory_sync_errors` (`db/schema/
+   * inventory-sync-errors.ts`) — та НЕ подходит буквально: `batch_id` там `NOT NULL REFERENCES
+   * inventory_sync_batch(id)` (конкретная сессия CSV-загрузки остатков, EP-05/DTJ-145), а
+   * `error_code` ограничен CHECK'ом на коды формата загрузки (`invalid_price`/`barcode_invalid`/
+   * ...) — сканирование терминала фармацевта не имеет отношения ни к какому батчу синхронизации.
+   * Спецификация модуля 24 сама говорит «inventory_sync_errors-ПОДОБНЫЙ лог» (не «в ту же
+   * таблицу») — этот метод НЕ автоматически корректирует `quantity` (спецификация явно отдаёт
+   * это «последующей РУЧНОЙ сверке аптекой», система только сигнализирует расхождение).
+   * Реализация — best-effort `PINO_LOGGER`, тот же приём, что `CancelOrderUseCase.
+   * logOrderCancelled` (реальная персистентная таблица расхождений — TODO(EP-05), вне периметра
+   * `orders`, владелец — `modules/inventory`).
+   *
+   * Вызывающий (`ReportItemIssueUseCase`) обязан вызывать этот метод ПОСЛЕ коммита транзакции
+   * перехода `fulfillmentStatus` (fire-and-forget, ошибка не должна ломать ответ клиенту, DoD
+   * тикета) — см. её JSDoc.
+   */
+  reconcileZeroStock(medicineId: string, batchId: string): Promise<void>
 }

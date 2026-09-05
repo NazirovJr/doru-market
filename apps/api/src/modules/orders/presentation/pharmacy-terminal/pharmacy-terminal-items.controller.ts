@@ -11,12 +11,22 @@
  * заново, тот же приём, что `CheckoutController`/`CancelOrderUseCase`.
  */
 import { Body, Controller, HttpCode, Inject, InternalServerErrorException, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
-import { ErrorCode, ScanOrderItemRequestSchema, type ScanOrderItemRequestDto, ok, type SuccessEnvelope, type OrderItemDto } from '@dorutj/contracts'
+import {
+  ErrorCode,
+  ScanOrderItemRequestSchema,
+  type ScanOrderItemRequestDto,
+  ReportItemIssueRequestSchema,
+  type ReportItemIssueRequestDto,
+  ok,
+  type SuccessEnvelope,
+  type OrderItemDto,
+} from '@dorutj/contracts'
 import { HttpStatus } from '@/common/http/http-status.constants.js'
 import { Idempotent } from '@/common/http/decorators/idempotent.decorator.js'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
 import { AuthGuard, CurrentUser, Roles, RolesGuard, type JwtClaims } from '@/modules/auth/index.js'
 import { ScanOrderItemUseCase } from '@/modules/orders/application/pharmacy-terminal/scan-order-item.use-case.js'
+import { ReportItemIssueUseCase } from '@/modules/orders/application/pharmacy-terminal/report-item-issue.use-case.js'
 
 const UUID_PIPE = new ParseUUIDPipe({ version: '4' })
 
@@ -26,6 +36,7 @@ export class PharmacyTerminalItemsController {
   constructor(
     // Явный @Inject на КАЖДОМ параметре — esbuild/vitest не эмитит `design:paramtypes` (DTJ-001).
     @Inject(ScanOrderItemUseCase) private readonly scanOrderItem: ScanOrderItemUseCase,
+    @Inject(ReportItemIssueUseCase) private readonly reportItemIssue: ReportItemIssueUseCase,
   ) {}
 
   /** `POST /api/v1/orders/:id/items/:itemId/scan` (SRS-PHT-011). */
@@ -46,6 +57,32 @@ export class PharmacyTerminalItemsController {
       rawBarcode: body.rawBarcode,
       manualEntry: body.manualEntry,
       scannedBatchNumber: body.scannedBatchNumber ?? null,
+      actor: {
+        userId: claims.sub,
+        role: claims.role,
+        tenantId: requireTenantId(claims),
+        pharmacyId: claims.pharmacyId,
+      },
+    })
+    return ok(result)
+  }
+
+  /** `POST /api/v1/orders/:id/items/:itemId/report-issue` (SRS-PHT-017). */
+  // eslint-disable-next-line max-params -- 4 HTTP-параметра (:id, :itemId, JWT-claims, тело), каждый со своим Nest-декоратором (@Param/@CurrentUser/@Body) — тот же приём, что `scan` выше/CartController.
+  @Post(':id/items/:itemId/report-issue')
+  @HttpCode(HttpStatus.Ok)
+  @Roles('pharmacist')
+  @Idempotent()
+  async reportIssue(
+    @Param('id', UUID_PIPE) orderId: string,
+    @Param('itemId', UUID_PIPE) itemId: string,
+    @CurrentUser() claims: JwtClaims,
+    @Body(new ZodValidationPipe(ReportItemIssueRequestSchema)) body: ReportItemIssueRequestDto,
+  ): Promise<SuccessEnvelope<OrderItemDto>> {
+    const result = await this.reportItemIssue.execute({
+      orderId,
+      itemId,
+      reason: body.reason,
       actor: {
         userId: claims.sub,
         role: claims.role,

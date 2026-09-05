@@ -27,6 +27,7 @@ function setUp(stockQuantity: number) {
     hasExpiredReservedBatch: vi.fn(),
     getStockQuantity: getStockQuantityMock,
     reserveForOrder: vi.fn(),
+    reconcileZeroStock: vi.fn(),
   }
   const calculator = new AvailabilityCalculator(cartHoldStore, inventoryFacade)
   return { calculator, getActiveHoldsMock, getStockQuantityMock }

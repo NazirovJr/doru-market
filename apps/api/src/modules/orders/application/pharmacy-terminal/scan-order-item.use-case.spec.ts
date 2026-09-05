@@ -88,6 +88,7 @@ function makeHarness(): Harness {
     hasExpiredReservedBatch: vi.fn(),
     getStockQuantity: vi.fn(),
     reserveForOrder,
+    reconcileZeroStock: vi.fn(),
   }
   const useCase = new ScanOrderItemUseCase(repo, PASSTHROUGH_UOW, catalogFacade, inventoryFacade, new FixedClock())
   return { useCase, repo, catalogFacade, inventoryFacade, reserveForOrder, releaseStock }
