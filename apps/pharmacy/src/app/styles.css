@@ -1,0 +1,30 @@
+@import 'tailwindcss';
+
+/*
+ * Временные токены дизайн-системы (DTJ-166) — тот же приём, что `apps/web/src/app/styles.css`
+ * (DTJ-003/DTJ-028): компоненты используют @theme-токены (`bg-surface`, `text-ink`, ...), а не
+ * буквальный HEX/RGB (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §5, «ноль хардкодных цветов»).
+ * TODO(EP-18): заменить значения токенов на итоговую White-Label дизайн-систему `packages/ui`,
+ * когда она перестанет быть заглушкой (см. `packages/ui/src/index.ts`).
+ */
+@theme {
+  --color-surface: #ffffff;
+  --color-ink: #0f172a;
+  --color-ink-muted: #64748b;
+  --color-line: #e2e8f0;
+  --color-brand-primary: #0ea5e9;
+  --color-brand-danger: #dc2626;
+}
+
+/*
+ * DTJ-166 не заводит отдельный AppLayout (нет в files_owned, нет требования брендинга/шапки —
+ * в отличие от apps/web SRS-UX-027). Фон/цвет текста страницы задаются здесь глобально, а не
+ * классами на каждой странице (`bg-surface text-ink`) — иначе первый кадр до монтирования React
+ * и сами страницы-заглушки (`pages/inventory/*.tsx`) наследуют цвет фона браузера/ОС вместо
+ * токена дизайн-системы (найдено визуальной проверкой в браузере при сдаче тикета).
+ */
+body {
+  min-height: 100vh;
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+}

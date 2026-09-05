@@ -11,6 +11,8 @@
   "auth.login.telegram_hint": "Воридшавии зуд бидуни SMS — бот рамзро худкор мефирист",
   "auth.login.telegram_unavailable": "Воридшавӣ тавассути Telegram дастнорас аст. Ин саҳифаро дар Telegram Mini App кушоед.",
   "auth.login.telegram_auth_failed": "Тавассути Telegram ворид нашуд. Бори дигар кӯшиш кунед ё SMS-ро истифода баред.",
+  "auth.login.pharmacy_heading": "Кабинети дорухона",
+  "auth.login.pharmacy_role_denied": "Шумо ба кабинети дорухона дастрасӣ надоред. Ба маъмури шабака муроҷиат кунед.",
   "ux.error.otp_expired": "Рамз кӯҳна шуд. Рамзи навро дархост кунед.",
   "ux.error.otp_locked": "Кӯшишҳои зиёди нодуруст. Рамзи навро тавассути SMS/Telegram дархост кунед.",
   "ux.error.otp_mismatch": "Рамзи нодуруст. Кӯшишҳои боқимонда: {attemptsLeft}",
@@ -93,5 +95,6 @@
   "checkout.failed_group.price_or_stock_changed": "Нарх ё мавҷудияти мол ҳангоми фармоиш тағйир ёфт.",
   "checkout.failed_group.insufficient_stock": "Мол дар анбор кофӣ нест.",
   "checkout.failed_group.controlled_substance_forbidden": "Ин дору таҳти назорати махсус аст — фармоиши онлайн дастрас нест.",
-  "checkout.failed_group.generic": "Фармоиш дар ин дорухона иҷро нашуд."
+  "checkout.failed_group.generic": "Фармоиш дар ин дорухона иҷро нашуд.",
+  "pharmacy.page.coming_soon": "Экран дар ҳоли таҳия"
 }
