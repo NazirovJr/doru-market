@@ -1,0 +1,25 @@
+-- =====================================================================================
+-- 0037_payout_schedule_status_index.sql — EP-10, DTJ-249 (PayoutSchedulerJob).
+-- =====================================================================================
+-- Номер: следующий свободный по `ls apps/api/migrations/`/`meta/_journal.json`, проверено
+-- непосредственно перед созданием файла — последняя применённая `0036_orders_payment_window_
+-- expires_at.sql`.
+--
+-- КОНТЕКСТ (риск тикета DTJ-249, «убедиться, что индекс на payout_schedule(status)/orders
+-- (delivered_at) присутствует... аналогично риску DTJ-247»): проверено `grep -rn "CREATE INDEX"
+-- apps/api/migrations/*.sql` — индекса на `payout_schedule.status` НЕТ ни в `0029_payments.sql`,
+-- ни в одной последующей миграции. `PayoutSchedulerJob` выполняет `UPDATE payout_schedule SET
+-- status='due' WHERE status='pending' AND EXISTS (...)` каждый час (BullMQ repeatable) — без
+-- индекса это full table scan на растущей таблице при КАЖДОМ тике. Тот же класс риска и то же
+-- решение, что DTJ-247 добавил `ix_escrow_ledger_created_at` (`0034_support_tickets_audit_log.
+-- sql`) для СВОЕЙ новой сканирующей джобы.
+--
+-- Обычный (не partial) индекс — `status` используется джобой в `WHERE status='pending'`
+-- (комментарий выше), а `HoldPayoutUseCase`/будущий `PayoutExecutionJob` (DTJ-250) читают/пишут
+-- по `status IN ('pending','due')`/`status='due'` — несколько значений одной и той же колонки
+-- в разных запросах делают partial-индекс на одно значение менее полезным, чем полный btree.
+--
+-- Идемпотентна (`IF NOT EXISTS`) — прогоняется повторно без ошибки.
+-- =====================================================================================
+
+CREATE INDEX IF NOT EXISTS ix_payout_schedule_status ON payout_schedule (status);

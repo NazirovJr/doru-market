@@ -17,6 +17,8 @@
 import { sql } from 'drizzle-orm'
 import { bigint, date, jsonb, pgTable, smallint, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
 import {
+  billingInvoiceStatusEnum,
+  billingInvoiceTypeEnum,
   escrowEntryDirectionEnum,
   escrowEntryTypeEnum,
   paymentOperationStatusEnum,
@@ -107,4 +109,34 @@ export const paymentOperations = pgTable(PAYMENT_OPERATIONS_TABLE, {
   expiresAt: timestamp('expires_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).default(sql`NOW()`),
   updatedAt: timestamp('updated_at', { withTimezone: true }).default(sql`NOW()`),
+})
+
+/**
+ * ДОБАВЛЕНО (DTJ-251) — таблица НЕ входила в базовую схему DTJ-236 вопреки тексту тикета
+ * DTJ-251, см. JSDoc `0038_platform_billing_invoices.sql`. `CONSTRAINT uq_billing_invoices_
+ * chain_type_period` (миграция) НЕ повторена здесь декларативно — тот же минималистичный
+ * приём, что остальные три таблицы этого файла (constraint'ы живут в миграции, эта схема
+ * только физическое хранение/типы колонок для Drizzle query builder, см. JSDoc файла).
+ * `DrizzlePlatformBillingInvoiceRepository.upsertDraft` передаёт `target` в
+ * `onConflictDoUpdate` явно колонками — не требует декларации constraint'а в ЭТОМ объекте,
+ * только его физического существования в БД (мигрирован).
+ */
+export const PLATFORM_BILLING_INVOICES_TABLE = 'platform_billing_invoices'
+
+export const platformBillingInvoices = pgTable(PLATFORM_BILLING_INVOICES_TABLE, {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  chainId: uuid('chain_id')
+    .notNull()
+    .references(() => pharmacyChains.id, { onDelete: 'restrict' }),
+  invoiceType: billingInvoiceTypeEnum('invoice_type').notNull(),
+  status: billingInvoiceStatusEnum('status').notNull().default('draft'),
+  periodStart: timestamp('period_start', { withTimezone: true }).notNull(),
+  periodEnd: timestamp('period_end', { withTimezone: true }).notNull(),
+  subtotalDiram: bigint('subtotal_diram', { mode: 'bigint' }).notNull(),
+  vatDiram: bigint('vat_diram', { mode: 'bigint' }).notNull().default(sql`0`),
+  totalDiram: bigint('total_diram', { mode: 'bigint' }).notNull(),
+  issuedAt: timestamp('issued_at', { withTimezone: true }),
+  dueAt: timestamp('due_at', { withTimezone: true }),
+  paidAt: timestamp('paid_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).default(sql`NOW()`),
 })

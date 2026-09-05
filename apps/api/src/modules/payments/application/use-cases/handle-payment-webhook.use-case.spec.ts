@@ -1,8 +1,11 @@
 /**
- * Unit-тест `HandlePaymentWebhookUseCase` (EP-10, DTJ-242, тест-план тикета) — все порты
+ * Unit-тест `HandlePaymentWebhookUseCase` (EP-10, DTJ-242/243, тест-план тикетов) — все порты
  * замоканы (`application`-слой не знает о реальной инфраструктуре, `02` §3). Интеграционные
- * ACs 1-5 против РЕАЛЬНОГО Postgres — `test/integration/payments/handle-payment-webhook.
+ * ACs против РЕАЛЬНОГО Postgres — `test/integration/payments/handle-payment-webhook.
  * integration.spec.ts`; здесь — оркестрация, порядок операций и границы транзакции.
+ *
+ * DTJ-243 добавляет: `findRefundOperationRef` (out-of-order refund), `AuditLogPort`
+ * (неизвестный платёж), `LatePaymentRefundService` (payment_confirmed на `cancelled` заказе).
  */
 import { describe, expect, it, vi } from 'vitest'
 import type { Logger } from 'pino'
@@ -14,6 +17,8 @@ import type {
 import type { EscrowLedgerRepository } from '@/modules/payments/application/ports/escrow-ledger-repository.port.js'
 import type { PaymentsOrderSnapshot, PaymentsUnitOfWorkTx } from '@/modules/payments/application/ports/orders-facade.port.js'
 import type { PaymentsUnitOfWorkPort } from '@/modules/payments/application/ports/payments-unit-of-work.port.js'
+import type { AuditLogPort } from '@/modules/payments/application/ports/audit-log.port.js'
+import type { LatePaymentRefundService } from '@/modules/payments/application/services/late-payment-refund.service.js'
 import { InvalidWebhookSignatureError } from '@dorutj/contracts'
 import { HandlePaymentWebhookUseCase } from './handle-payment-webhook.use-case.js'
 import { WebhookProviderUnknownError } from './errors/webhook-provider-unknown.error.js'
@@ -40,6 +45,7 @@ function makeOrderSnapshot(overrides: Partial<PaymentsOrderSnapshot> = {}): Paym
     paymentMethod: 'alif_mobi',
     totalAmountDiram: 15_000n,
     pharmacyChainId: null,
+    items: [],
     ...overrides,
   }
 }
@@ -49,12 +55,15 @@ function buildHarness() {
   const registry = { resolve: vi.fn<(providerName: string) => BankWebhookVerifierPort | null>(() => verifier) }
   const webhookOperations = {
     findOrderByProviderRef: vi.fn<(providerRef: string, tx?: PaymentsUnitOfWorkTx) => Promise<OriginalPaymentOperationRef | null>>(),
+    findRefundOperationRef: vi.fn<(providerRef: string, tx?: PaymentsUnitOfWorkTx) => Promise<OriginalPaymentOperationRef | null>>(),
     recordEventIfNew: vi.fn<(input: RecordWebhookEventInput, tx: PaymentsUnitOfWorkTx) => Promise<boolean>>(),
   }
   const ledgerRepository = { append: vi.fn() }
   const ordersPort = { getOrderById: vi.fn(), markPaidEscrow: vi.fn(), cancel: vi.fn() }
   const outbox = { append: vi.fn() }
   const unitOfWork: PaymentsUnitOfWorkPort = { run: (cb) => cb(TX_MARKER) }
+  const auditLog = { appendPaymentOverride: vi.fn<AuditLogPort['appendPaymentOverride']>().mockResolvedValue(undefined) }
+  const latePaymentRefund = { handle: vi.fn().mockResolvedValue(undefined) }
   const logger = { warn: vi.fn() }
 
   const useCase = new HandlePaymentWebhookUseCase(
@@ -64,9 +73,11 @@ function buildHarness() {
     ordersPort,
     outbox,
     unitOfWork,
+    auditLog,
+    latePaymentRefund as unknown as LatePaymentRefundService,
     logger as unknown as Logger,
   )
-  return { useCase, verifier, registry, webhookOperations, ledgerRepository, ordersPort, outbox, logger }
+  return { useCase, verifier, registry, webhookOperations, ledgerRepository, ordersPort, outbox, auditLog, latePaymentRefund, logger }
 }
 
 describe('HandlePaymentWebhookUseCase', () => {
@@ -93,7 +104,7 @@ describe('HandlePaymentWebhookUseCase', () => {
     expect(h.logger.warn).toHaveBeenCalledWith(expect.objectContaining({ providerName: 'mock_bank' }), 'payments.webhook.invalid_signature')
   })
 
-  it('providerRef неизвестен (SRS-PAY-028, defensive) — 200-эквивалент, без транзакции/мутации', async () => {
+  it('providerRef неизвестен (SRS-PAY-028) — 200-эквивалент, без транзакции/мутации, audit_log записан (DTJ-243)', async () => {
     const h = buildHarness()
     h.verifier.verify.mockReturnValue({ ok: true, value: makePayload() })
     h.webhookOperations.findOrderByProviderRef.mockResolvedValue(null)
@@ -102,7 +113,27 @@ describe('HandlePaymentWebhookUseCase', () => {
 
     expect(h.webhookOperations.recordEventIfNew).not.toHaveBeenCalled()
     expect(h.ordersPort.markPaidEscrow).not.toHaveBeenCalled()
-    expect(h.logger.warn).toHaveBeenCalledWith(expect.objectContaining({ providerRef: 'mock_inv_1' }), 'payments.webhook.unknown_provider_ref')
+    expect(h.logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ providerRef: 'mock_inv_1', action: 'unknown_payment_webhook' }),
+      'payments.webhook.unknown_payment',
+    )
+    expect(h.auditLog.appendPaymentOverride).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ tenantId: null, entityId: null, action: 'unknown_payment_webhook' }),
+    )
+  })
+
+  it('DTJ-243, SRS-PAY-025: refund_confirmed БЕЗ соответствующей payment_operations-строки (out-of-order/спуфинг) — трактуется как неизвестный платёж, findOrderByProviderRef НЕ вызывается вовсе', async () => {
+    const h = buildHarness()
+    h.verifier.verify.mockReturnValue({ ok: true, value: makePayload({ type: 'refund_confirmed' }) })
+    h.webhookOperations.findRefundOperationRef.mockResolvedValue(null)
+
+    await h.useCase.execute(Buffer.from('{}'), {}, 'mock_bank')
+
+    expect(h.webhookOperations.findOrderByProviderRef).not.toHaveBeenCalled()
+    expect(h.webhookOperations.recordEventIfNew).not.toHaveBeenCalled()
+    expect(h.auditLog.appendPaymentOverride).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ action: 'out_of_order_refund_webhook' }),
+    )
   })
 
   it('AC2 — recordEventIfNew возвращает false (дубликат) → markPaidEscrow/ledger/outbox НЕ вызываются', async () => {
@@ -141,6 +172,7 @@ describe('HandlePaymentWebhookUseCase', () => {
 
     expect(h.ordersPort.getOrderById).toHaveBeenCalledWith('tenant-1', 'order-1', TX_MARKER)
     expect(h.ordersPort.markPaidEscrow).toHaveBeenCalledWith('tenant-1', 'order-1', 'mock_inv_1', payload.occurredAt, TX_MARKER)
+    expect(h.latePaymentRefund.handle).not.toHaveBeenCalled()
 
     const ledgerArgs = h.ledgerRepository.append.mock.calls[0] as [{ entryType: string; direction: string; orderId: string }, PaymentsUnitOfWorkTx]
     expect(ledgerArgs[0]).toMatchObject({ entryType: 'hold_created', direction: 'debit', orderId: 'order-1' })
@@ -152,7 +184,26 @@ describe('HandlePaymentWebhookUseCase', () => {
     expect(outboxArgs[2]).toBe(TX_MARKER)
   })
 
-  it('payment_failed — идемпотентная строка пишется, НО markPaidEscrow/ledger/outbox НЕ вызываются (TODO(DTJ-245), см. JSDoc п.5)', async () => {
+  it('DTJ-243, SRS-PAY-027: payment_confirmed прибывает, а заказ УЖЕ cancelled — LatePaymentRefundService.handle вызван, markPaidEscrow/ledger.append(hold через use case)/outbox НЕ вызываются', async () => {
+    const h = buildHarness()
+    const payload = makePayload()
+    h.verifier.verify.mockReturnValue({ ok: true, value: payload })
+    h.webhookOperations.findOrderByProviderRef.mockResolvedValue({ orderId: 'order-1', tenantId: 'tenant-1' })
+    h.webhookOperations.recordEventIfNew.mockResolvedValue(true)
+    h.ordersPort.getOrderById.mockResolvedValue(makeOrderSnapshot({ status: 'cancelled' }))
+
+    await h.useCase.execute(Buffer.from('{}'), {}, 'mock_bank')
+
+    expect(h.latePaymentRefund.handle).toHaveBeenCalledExactlyOnceWith(
+      { tenantId: 'tenant-1', orderId: 'order-1', amountDiram: 15_000n, providerRef: 'mock_inv_1' },
+      TX_MARKER,
+    )
+    expect(h.ordersPort.markPaidEscrow).not.toHaveBeenCalled()
+    expect(h.ledgerRepository.append).not.toHaveBeenCalled()
+    expect(h.outbox.append).not.toHaveBeenCalled()
+  })
+
+  it('payment_failed — идемпотентная строка пишется, НО markPaidEscrow/ledger/outbox НЕ вызываются', async () => {
     const h = buildHarness()
     const payload = makePayload({ type: 'payment_failed' })
     h.verifier.verify.mockReturnValue({ ok: true, value: payload })
@@ -169,11 +220,11 @@ describe('HandlePaymentWebhookUseCase', () => {
     expect(h.ledgerRepository.append).not.toHaveBeenCalled()
   })
 
-  it('refund_confirmed — тоже вне SRS-PAY-018 категорического пути этого тикета: идемпотентная строка есть, markPaidEscrow нет', async () => {
+  it('refund_confirmed С найденной операцией рефанда (не спуфинг) — идемпотентная строка есть, markPaidEscrow нет (DTJ-243 обновляет резолвинг, поведение сохранено)', async () => {
     const h = buildHarness()
     const payload = makePayload({ type: 'refund_confirmed' })
     h.verifier.verify.mockReturnValue({ ok: true, value: payload })
-    h.webhookOperations.findOrderByProviderRef.mockResolvedValue({ orderId: 'order-1', tenantId: 'tenant-1' })
+    h.webhookOperations.findRefundOperationRef.mockResolvedValue({ orderId: 'order-1', tenantId: 'tenant-1' })
     h.webhookOperations.recordEventIfNew.mockResolvedValue(true)
 
     await h.useCase.execute(Buffer.from('{}'), {}, 'mock_bank')
@@ -181,6 +232,7 @@ describe('HandlePaymentWebhookUseCase', () => {
     const recordArgs = h.webhookOperations.recordEventIfNew.mock.calls[0] as [RecordWebhookEventInput, PaymentsUnitOfWorkTx]
     expect(recordArgs[0].succeeded).toBe(true) // refund_confirmed — «успех» операции возврата, не создания hold.
     expect(h.ordersPort.markPaidEscrow).not.toHaveBeenCalled()
+    expect(h.auditLog.appendPaymentOverride).not.toHaveBeenCalled()
   })
 
   it('order исчез внутри собственной транзакции (defensive) — бросает, не создаёт частичное состояние', async () => {

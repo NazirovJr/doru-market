@@ -51,6 +51,19 @@ export interface PaymentsOrderSnapshot {
    * `null`, если у заказа нет `pharmacyId` ИЛИ у аптеки нет `chainId` (независимая аптека).
    */
   readonly pharmacyChainId: string | null
+  /**
+   * ДОБАВЛЕНО (DTJ-244, аддитивно — та же оговорка, что `pharmacyChainId` выше). Нужно
+   * `CaptureEscrowUseCase` для `Σ(order_items.platform_fee_diram)` (SRS-PAY-031) — см. «Риски»
+   * тикета DTJ-244: «расширить сигнатуру порта, если текущая не возвращает позиции заказа
+   * целиком». Минимальный снэпшот позиции — только поле, реально нужное потребителю на момент
+   * этой правки (YAGNI — не полная проекция `OrderItem`).
+   */
+  readonly items: readonly PaymentsOrderItemSnapshot[]
+}
+
+/** См. JSDoc `PaymentsOrderSnapshot.items` (DTJ-244). */
+export interface PaymentsOrderItemSnapshot {
+  readonly platformFeeDiram: bigint
 }
 
 export interface PaymentsOrderActor {

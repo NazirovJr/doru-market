@@ -1,0 +1,22 @@
+{
+  "name": "@dorutj/invariants",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "DoruTJ — tests/invariants: сквозные гейт-тесты доменных инвариантов, затрагивающих несколько модулей одновременно и всю таблицу разом (первый — D-25 paid_escrow ⟺ escrow_ledger, DTJ-255).",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@dorutj/contracts": "workspace:*",
+    "@types/node": "^24.13.3",
+    "@types/pg": "^8.23.1",
+    "@types/supertest": "^7.2.1",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.23.0",
+    "supertest": "^7.2.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  }
+}

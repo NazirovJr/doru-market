@@ -43,6 +43,8 @@ import { PAYMENTS_ORDERS_PORT, type PaymentsOrdersPort } from '@/modules/payment
 import { PAYMENTS_OUTBOX, type PaymentsOutboxPort } from '@/modules/payments/application/ports/payments-outbox.port.js'
 import { PAYMENTS_UNIT_OF_WORK, type PaymentsUnitOfWorkPort } from '@/modules/payments/application/ports/payments-unit-of-work.port.js'
 import { PINO_LOGGER } from '@/common/logging/pino-logger.token.js'
+import { AUDIT_LOG_PORT, type AuditLogPort } from '@/modules/payments/application/ports/audit-log.port.js'
+import { LatePaymentRefundService } from '@/modules/payments/application/services/late-payment-refund.service.js'
 import { HandlePaymentWebhookUseCase } from '@/modules/payments/application/use-cases/handle-payment-webhook.use-case.js'
 import { createTestApp, TEST_MOCK_BANK_WEBHOOK_SECRET, type TestApp } from './__tests__/test-app.js'
 
@@ -383,6 +385,8 @@ function buildUseCaseWithFaultyLedger(app: INestApplication): HandlePaymentWebho
     app.get<PaymentsOrdersPort>(PAYMENTS_ORDERS_PORT),
     app.get<PaymentsOutboxPort>(PAYMENTS_OUTBOX),
     app.get<PaymentsUnitOfWorkPort>(PAYMENTS_UNIT_OF_WORK),
+    app.get<AuditLogPort>(AUDIT_LOG_PORT),
+    app.get(LatePaymentRefundService),
     app.get(PINO_LOGGER),
   )
 }

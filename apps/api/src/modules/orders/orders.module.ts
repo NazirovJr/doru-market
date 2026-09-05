@@ -179,6 +179,12 @@ import { DetectPriceDriftService } from './application/checkout/detect-price-dri
 // (CheckoutUseCase/CancelOrderUseCase — уже в providers[] ниже, USERS_REPOSITORY — экспортирован
 // AuthModule, уже в imports[] ниже) — новых провайдеров эта правка не добавляет.
 import { CheckoutController } from './presentation/checkout/checkout.controller.js'
+// DTJ-253/254 (EP-10) — мост apps/worker → apps/api для системной отмены заказа по таймауту
+// (см. JSDoc `system-cancel-order.use-case.ts` «МОСТ МЕЖДУ ПРОЦЕССАМИ»). Новые файлы,
+// providers/controllers дополнены строками — существующие не тронуты (D-27).
+import { SystemCancelOrderUseCase } from './application/order-lifecycle/system-cancel-order.use-case.js'
+import { InternalServiceGuard } from './presentation/internal/internal-service.guard.js'
+import { SystemCancelOrderController } from './presentation/internal/system-cancel-order.controller.js'
 
 /**
  * `UnimplementedCatalogFacadeAdapter`/`UnimplementedOrderRepositoryAdapter` (DTJ-220/222) —
@@ -333,7 +339,7 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
   // TenancyModule — DTJ-228/229: `TenancyFacadeAdapter` инжектит TENANT_SETTINGS_REPOSITORY
   // (экспортирован tenancy.module.ts) для `getCodLimitDiram`.
   imports: [CatalogModule, OnboardingModule, AuthModule, TenancyModule, PaymentsModule],
-  controllers: [CartController, CheckoutController, RetryPaymentController],
+  controllers: [CartController, CheckoutController, RetryPaymentController, SystemCancelOrderController],
   providers: [
     CART_REPOSITORY_DRIZZLE_PROVIDER,
     CATALOG_FACADE_PORT_PROVIDER,
@@ -382,6 +388,10 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     DetectPriceDriftService,
     // DTJ-241 (SRS-PAY-041) — retry-payment (см. JSDoc блока providers, начало файла).
     RetryPaymentUseCase,
+    // DTJ-253/254 (EP-10) — SystemCancelOrderUseCase переиспользует ТЕ ЖЕ провайдеры выше
+    // (OrdersFacade/INVENTORY_FACADE_PORT/REFUND_FACADE_PORT/CLOCK), новых DI-токенов не требует.
+    SystemCancelOrderUseCase,
+    InternalServiceGuard,
   ],
   // DTJ-226 (правка приёмки CTO, правило 2 AGENTS.md): без `exports` `OrdersFacade`/
   // `ORDERS_FACADE` были написаны, но физически недостижимы через `imports: [OrdersModule]` —

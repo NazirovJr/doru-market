@@ -8,6 +8,10 @@ import { PruneSearchQueryLogModule } from './jobs/prune-search-query-log/prune-s
 import { CartCleanupModule } from './jobs/cart-cleanup/cart-cleanup.module.js'
 import { MockBankAutoPayModule } from './jobs/escrow-timeouts/mock-bank-auto-pay.module.js'
 import { EscrowReconciliationModule } from './jobs/payout/escrow-reconciliation.module.js'
+import { UnpaidOrderTimeoutModule } from './jobs/escrow-timeouts/unpaid-order-timeout.module.js'
+import { PayoutSchedulerModule } from './jobs/payout/payout-scheduler.module.js'
+import { CashCommissionAggregationModule } from './jobs/payout/cash-commission-aggregation.module.js'
+import { BillingInvoiceOverdueModule } from './jobs/payout/billing-invoice-overdue.module.js'
 
 /**
  * Барабанный модуль (D-27) — корневой `AppModule` apps/worker. Каждый новый тикет,
@@ -25,6 +29,10 @@ import { EscrowReconciliationModule } from './jobs/payout/escrow-reconciliation.
     CartCleanupModule,
     MockBankAutoPayModule,
     EscrowReconciliationModule,
+    UnpaidOrderTimeoutModule,
+    PayoutSchedulerModule,
+    CashCommissionAggregationModule,
+    BillingInvoiceOverdueModule,
   ],
 })
 // Класс существует только как носитель декоратора @Module для графа DI NestJS — штатный паттерн.

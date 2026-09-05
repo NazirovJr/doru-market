@@ -106,6 +106,36 @@ describe('PharmacyChain state machine', () => {
     const submitted = PharmacyChain.create(newChainCommand()).submitForReview(NOW)
     expect(() => submitted.submitForReview(NOW)).toThrow(InvalidOnboardingTransitionError)
   })
+
+  // DTJ-252: active → suspended (симметрично terminate() выше). `approve()` переводит в
+  // `approved`, не `active` (`PharmacyChain` domain-слой не несёт отдельного перехода в
+  // `active` — вне её периметра, см. `CHAIN_STATUSES_ALLOWING_PHARMACY_ACTIVE`) — восстанавливаем
+  // сущность напрямую в `active` через `restore()`, тот же приём, что маппер инфраструктуры.
+  it('active → suspended (suspend) — неоплаченный B2B-инвойс', () => {
+    const activeChain = PharmacyChain.restore({ ...PharmacyChain.create(newChainCommand()).props, status: 'active' })
+    const suspended = activeChain.suspend(ACTOR, 'unpaid_invoice')
+    expect(suspended.status).toBe('suspended')
+  })
+
+  it('suspend() из НЕ-active состояния бросает InvalidOnboardingTransitionError', () => {
+    const draft = PharmacyChain.create(newChainCommand())
+    expect(() => draft.suspend(ACTOR, 'unpaid_invoice')).toThrow(InvalidOnboardingTransitionError)
+
+    const approved = draft.submitForReview(NOW).approve(ACTOR)
+    expect(() => approved.suspend(ACTOR, 'unpaid_invoice')).toThrow(InvalidOnboardingTransitionError)
+  })
+
+  it('suspended → suspended (самопереход) бросает — вызывающий (OnboardingFacade) обязан сам гарантировать идемпотентность', () => {
+    const activeChain = PharmacyChain.restore({ ...PharmacyChain.create(newChainCommand()).props, status: 'active' })
+    const suspended = activeChain.suspend(ACTOR, 'unpaid_invoice')
+    expect(() => suspended.suspend(ACTOR, 'unpaid_invoice')).toThrow(InvalidOnboardingTransitionError)
+  })
+
+  it('suspended → pending_review (requestReactivation) остаётся рабочим после suspend()', () => {
+    const activeChain = PharmacyChain.restore({ ...PharmacyChain.create(newChainCommand()).props, status: 'active' })
+    const suspended = activeChain.suspend(ACTOR, 'unpaid_invoice')
+    expect(suspended.requestReactivation().status).toBe('pending_review')
+  })
 })
 
 describe('PharmacyChain.updateApplication', () => {

@@ -120,5 +120,10 @@ function toSnapshot(row: OrderReadRow, pharmacyChainId: string | null): Payments
     paymentMethod: row.paymentMethod,
     totalAmountDiram: Money.fromDbDecimalTjs(row.totalAmountTjs).diram,
     pharmacyChainId,
+    // DTJ-244 (аддитивное поле порта) — минимальная правка ради компиляции: этот адаптер
+    // НЕ забинжен ни в один провайдер (см. JSDoc файла, «остаётся неиспользуемым», DTJ-242
+    // отчёт сдачи) — реальных позиций заказа не носит ни один текущий вызывающий код, т.к.
+    // такого кода физически нет.
+    items: [],
   }
 }

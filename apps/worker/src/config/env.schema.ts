@@ -28,6 +28,25 @@ const DEFAULT_API_INTERNAL_URL = 'http://localhost:3000'
 const DEFAULT_RECONCILIATION_CRON = '0 3 * * *'
 // DTJ-247, SRS-PAY-042, ticket «Что сделать» п.2: ASSUMPTION буквально из тикета.
 const DEFAULT_RECONCILIATION_DEDUP_DAYS = 7
+// DTJ-253, SRS-ORD-032, ticket «Что сделать» п.2: ASSUMPTION буквально из тикета — каждые
+// 2 минуты (короче минимального разумного платёжного окна на оплату).
+const DEFAULT_UNPAID_ORDER_TIMEOUT_CRON = '*/2 * * * *'
+// DTJ-249, SRS-PAY-030, ticket «Технический контекст»: ASSUMPTION буквально из тикета —
+// ежечасно (pending→due — единственный переход payout, управляемый временем, D-19).
+const DEFAULT_PAYOUT_SCHEDULER_CRON = '0 * * * *'
+// DTJ-251, SRS-PAY-036: ASSUMPTION — 00:30 Asia/Dushanbe (после полуночи, период [вчера,сегодня)
+// уже закрыт к моменту запуска, см. JSDoc cash-commission-aggregation.scheduler.ts).
+const DEFAULT_CASH_COMMISSION_AGGREGATION_DAILY_CRON = '30 0 * * *'
+// DTJ-251, ticket «Что сделать» п.3: ASSUMPTION — воскресенье 23:50 Asia/Dushanbe (буквальный
+// текст тикета «23:59», округлено на 10 минут раньше — запас на выполнение тика до смены дня).
+const DEFAULT_CASH_COMMISSION_AGGREGATION_WEEKLY_ISSUE_CRON = '50 23 * * 0'
+// DTJ-252, ticket «Что сделать» п.1: ASSUMPTION буквально из тикета — «ежедневно»; 01:00
+// Asia/Dushanbe, ПОСЛЕ ежедневного тика CashCommissionAggregationJob (00:30) и weekly-issue
+// (воскресенье 23:50) — просроченный инвойс уже гарантированно issued к моменту проверки, не
+// гонка с ещё формируемым draft/только что issued инвойсом того же тика.
+const DEFAULT_BILLING_INVOICE_OVERDUE_CRON = '0 1 * * *'
+// DTJ-252, ticket «Что сделать» п.1: ASSUMPTION буквально из тикета — `GRACE_PERIOD_DAYS=3`.
+const DEFAULT_BILLING_INVOICE_OVERDUE_GRACE_PERIOD_DAYS = 3
 
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const
 
@@ -74,6 +93,21 @@ export const envSchema = z.object({
     .union([z.literal('true'), z.literal('false')])
     .default('false')
     .transform((v) => v === 'true'),
+  // DTJ-253, DoD «UNPAID_ORDER_TIMEOUT_CRON — именованная ENV-константа».
+  UNPAID_ORDER_TIMEOUT_CRON: z.string().min(1).default(DEFAULT_UNPAID_ORDER_TIMEOUT_CRON),
+  // DTJ-253/254: общий секрет `apps/worker → POST /api/v1/internal/orders/:id/system-cancel`
+  // (`apps/api`, см. JSDoc `system-order-cancel.client.ts`). `optional`, ТОТ ЖЕ приём, что
+  // `MOCK_BANK_WEBHOOK_SECRET` — отсутствие ENV даёт рантайм-ошибку джобы при попытке вызова
+  // (см. `requestSystemOrderCancel`), не Zod-сбой старта процесса.
+  INTERNAL_API_KEY: z.string().optional(),
+  // DTJ-249, DoD «PAYOUT_SCHEDULER_CRON — именованная ENV-константа».
+  PAYOUT_SCHEDULER_CRON: z.string().min(1).default(DEFAULT_PAYOUT_SCHEDULER_CRON),
+  // DTJ-251, ticket «Что сделать» п.2/3: два раздельных расписания одной джобы.
+  CASH_COMMISSION_AGGREGATION_DAILY_CRON: z.string().min(1).default(DEFAULT_CASH_COMMISSION_AGGREGATION_DAILY_CRON),
+  CASH_COMMISSION_AGGREGATION_WEEKLY_ISSUE_CRON: z.string().min(1).default(DEFAULT_CASH_COMMISSION_AGGREGATION_WEEKLY_ISSUE_CRON),
+  // DTJ-252, DoD «GRACE_PERIOD_DAYS — именованная ENV-константа»/«BillingInvoiceOverdueJob (BullMQ repeatable, ежедневно)».
+  BILLING_INVOICE_OVERDUE_CRON: z.string().min(1).default(DEFAULT_BILLING_INVOICE_OVERDUE_CRON),
+  BILLING_INVOICE_OVERDUE_GRACE_PERIOD_DAYS: z.coerce.number().int().positive().default(DEFAULT_BILLING_INVOICE_OVERDUE_GRACE_PERIOD_DAYS),
 })
 
 export type WorkerEnv = z.infer<typeof envSchema>

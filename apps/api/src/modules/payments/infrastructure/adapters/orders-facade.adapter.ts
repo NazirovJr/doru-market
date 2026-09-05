@@ -45,12 +45,13 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { and, eq } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
-import { orders } from '@/db/schema/orders.js'
+import { orders, orderItems } from '@/db/schema/orders.js'
 import { pharmacies } from '@/db/schema/pharmacies.js'
 import { Money } from '@/shared-kernel/domain/value-objects/money.vo.js'
 import { ORDERS_FACADE, type OrdersFacade, type OrderCancelReason } from '@/modules/orders/index.js'
 import {
   type PaymentsOrderActor,
+  type PaymentsOrderItemSnapshot,
   type PaymentsOrderSnapshot,
   type PaymentsOrdersPort,
   type PaymentsUnitOfWorkTx,
@@ -110,6 +111,7 @@ export class OrdersFacadeAdapter implements PaymentsOrdersPort {
       paymentMethod: order.paymentMethod,
       totalAmountDiram: order.totalAmount.diram,
       pharmacyChainId,
+      items: order.items.map((item) => ({ platformFeeDiram: item.platformFeeDiram })),
     }
   }
 
@@ -132,7 +134,18 @@ export class OrdersFacadeAdapter implements PaymentsOrdersPort {
     const row = rows[0]
     if (row === undefined) return null
     const pharmacyChainId = await this.resolvePharmacyChainId(row.pharmacyId, client)
-    return toSnapshot(row, pharmacyChainId)
+    const items = await this.loadItemSnapshots(orderId, client)
+    return toSnapshot(row, pharmacyChainId, items)
+  }
+
+  /** DTJ-244 — см. JSDoc `PaymentsOrderSnapshot.items`. ОТДЕЛЬНЫЙ запрос (не JOIN в `getOrderByIdLocking`
+   * выше): `orders`/`order_items` — 1:N, JOIN тиражировал бы строку заказа по числу позиций. */
+  private async loadItemSnapshots(orderId: string, client: DrizzleDb): Promise<readonly PaymentsOrderItemSnapshot[]> {
+    const rows = await client
+      .select({ platformFeeDiram: orderItems.platformFeeDiram })
+      .from(orderItems)
+      .where(eq(orderItems.orderId, orderId))
+    return rows
   }
 
   /**
@@ -175,7 +188,11 @@ export class OrdersFacadeAdapter implements PaymentsOrdersPort {
   }
 }
 
-function toSnapshot(row: OrderLockRow, pharmacyChainId: string | null): PaymentsOrderSnapshot {
+function toSnapshot(
+  row: OrderLockRow,
+  pharmacyChainId: string | null,
+  items: readonly PaymentsOrderItemSnapshot[],
+): PaymentsOrderSnapshot {
   if (row.status === null) {
     throw new Error(`orders.status is NULL for order ${row.id} — invalid data, cannot build PaymentsOrderSnapshot`)
   }
@@ -187,6 +204,7 @@ function toSnapshot(row: OrderLockRow, pharmacyChainId: string | null): Payments
     paymentMethod: row.paymentMethod,
     totalAmountDiram: Money.fromDbDecimalTjs(row.totalAmountTjs).diram,
     pharmacyChainId,
+    items,
   }
 }
 

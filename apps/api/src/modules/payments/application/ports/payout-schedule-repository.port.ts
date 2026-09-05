@@ -21,6 +21,19 @@ export const PAYOUT_SCHEDULE_REPOSITORY = Symbol.for('@dorutj/payments/payout-sc
 /** Непрозрачный дескриптор активной транзакции (см. JSDoc файла). */
 export type PayoutScheduleUnitOfWorkTx = unknown
 
+/** ДОБАВЛЕНО (DTJ-244) — вход `insertPending` (SRS-PAY-031). `orderId UNIQUE` (DDL) — конфликт
+ * (заказ уже имеет строку, двойная доставка `OrderDeliveredEvent`) → `ON CONFLICT DO NOTHING`,
+ * не ошибка (идемпотентность здесь — на уровне `ProcessedEventsPort`, ЭТА защита вторична). */
+export interface InsertPendingPayoutInput {
+  readonly orderId: string
+  readonly pharmacyId: string
+  readonly grossAmountDiram: bigint
+  readonly commissionDiram: bigint
+  readonly netAmountDiram: bigint
+  /** Снэпшот `tenant_settings.hold_period_days` НА МОМЕНТ `delivered` (не пересчитывается позже). */
+  readonly holdPeriodDays: number
+}
+
 export interface PayoutScheduleRepository {
   /**
    * Given для заказа уже существует строка `payout_schedule` (пост-`delivered` случай, AC4
@@ -30,4 +43,84 @@ export interface PayoutScheduleRepository {
    * уже реверснутой строке не пишет вторую мутацию впустую).
    */
   reverseIfExists(tenantId: string, orderId: string, tx?: PayoutScheduleUnitOfWorkTx): Promise<boolean>
+
+  /** (DTJ-244) — создаёт строку `status='pending'` при `OrderDeliveredEvent` (SRS-PAY-031). */
+  insertPending(input: InsertPendingPayoutInput, tx?: PayoutScheduleUnitOfWorkTx): Promise<void>
+
+  /**
+   * ДОБАВЛЕНО (DTJ-249, SRS-DOM-058/105) — контракт заморозки выплаты по спору, нужен ТОЛЬКО
+   * `HoldPayoutUseCase` (PaymentsFacade.holdPayout, публичный контракт для EP-14). Тот же приём,
+   * что `reverseIfExists`/DTJ-245 выше: заведён ЭТИМ тикетом, не буквальным `files_owned`
+   * DTJ-249 (`hold-payout.use-case.ts`) — интерфейс порта живёт при своём репозитории, не при
+   * use case'е (`02` §1.3).
+   *
+   * Объект-параметр `HoldIfPendingInput` (не 3 отдельных строковых аргумента) — `max-params`
+   * ≤3 (C5): с опциональным `tx` это было бы 4 позиционных параметра.
+   *
+   * `UPDATE ... WHERE status IN ('pending','due')` — одна круговая поездка, не
+   * check-then-write. `held=false` (0 строк затронуто) — см. JSDoc `HoldPayoutUseCase` про
+   * контракт `alreadyPaid`: единственный СЕГОДНЯ достижимый случай 0 строк — `status='paid'`
+   * (пост-payout, AC3 тикета); `disputed`/`reversed`/несуществующая строка — тот же
+   * ноль-эффект код-путь, EP-14 различит причину при необходимости (см. «Риски» тикета —
+   * контракт зафиксирован как лучшее понимание на момент EP-10).
+   */
+  holdIfPending(input: HoldIfPendingInput, tx?: PayoutScheduleUnitOfWorkTx): Promise<{ held: boolean }>
+
+  /**
+   * РАСШИРЕНИЕ (DTJ-252, SRS-API-004..007) — `GET /api/v1/pharmacy-accounts/:id/payouts`,
+   * курсорная (keyset) страница `payout_schedule` ОДНОЙ аптеки, с `orderNumber` (JOIN `orders`,
+   * тот же приём межмодульного чтения таблицы, что `orderBelongsToTenant` в этом файле).
+   * Сортировка `created_at DESC, id DESC` (свежие выплаты первыми — типичный порядок для
+   * финансового отчёта); `cursor` — значение/id ПОСЛЕДНЕЙ строки предыдущей страницы
+   * (`packages/contracts/pagination`, keyset, не offset).
+   */
+  findByPharmacy(input: FindPayoutsByPharmacyInput): Promise<FindPayoutsByPharmacyResult>
+
+  /**
+   * РАСШИРЕНИЕ (DTJ-252) — ВСЕ строки `payout_schedule` аптеки, БЕЗ пагинации (DoD: «CSV —
+   * полным потоком, не курсорная пагинация»), тот же фильтр/сортировка, что `findByPharmacy`.
+   * Отдельный метод, не `findByPharmacy` с завышенным `limit` — явная граница «список»/«экспорт»
+   * (C11, explicit over implicit): вызывающий код читает из сигнатуры, что здесь НЕТ страницы.
+   */
+  findAllByPharmacy(pharmacyId: string, statuses?: readonly string[]): Promise<readonly PayoutReportRow[]>
+}
+
+/** Вход `holdIfPending` (см. её JSDoc про C5). */
+export interface HoldIfPendingInput {
+  readonly tenantId: string
+  readonly orderId: string
+  readonly disputeId: string
+}
+
+/** Строка отчёта `findByPharmacy`/`findAllByPharmacy` (DTJ-252) — поля буквально из АС3 тикета. */
+export interface PayoutReportRow {
+  readonly orderId: string
+  readonly orderNumber: string
+  readonly grossAmountDiram: bigint
+  readonly commissionDiram: bigint
+  readonly netAmountDiram: bigint
+  readonly status: string
+  readonly dueAt: Date | null
+  readonly paidAt: Date | null
+}
+
+/** Декодированный курсор `findByPharmacy` — `v` ISO-строка `created_at`, `id` — `payout_schedule.id` (tie-break). */
+export interface PayoutCursor {
+  readonly v: string
+  readonly id: string
+}
+
+/** Вход `findByPharmacy` — объект-параметр (C5, `max-params` ≤3). */
+export interface FindPayoutsByPharmacyInput {
+  readonly pharmacyId: string
+  readonly statuses?: readonly string[] | undefined
+  readonly limit: number
+  readonly cursor: PayoutCursor | null
+}
+
+export interface FindPayoutsByPharmacyResult {
+  readonly items: readonly PayoutReportRow[]
+  /** Курсор последней строки страницы — `null`, если страница пуста (нет следующей). */
+  readonly nextCursor: PayoutCursor | null
+  readonly hasMore: boolean
 }

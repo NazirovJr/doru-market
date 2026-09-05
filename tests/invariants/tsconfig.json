@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["../../apps/api/src/*"],
+      "@apitest/*": ["../../apps/api/test/*"],
+      "@dorutj/contracts": ["../../packages/contracts/src/index.ts"],
+      "@dorutj/contracts/*": ["../../packages/contracts/src/*"],
+      "@dorutj/domain-kernel": ["../../packages/domain-kernel/src/index.ts"],
+      "@dorutj/domain-kernel/*": ["../../packages/domain-kernel/src/*"],
+      "@dorutj/i18n": ["../../packages/i18n/src/index.ts"],
+      "@dorutj/i18n/*": ["../../packages/i18n/src/*"]
+    },
+    // Этот tsconfig компилирует ОДНУ программу вместе со всем транзитивно затронутым apps/api
+    // (createTestApp() тянет OrdersModule и почти всё дерево NestJS-модулей) — decorator-опции
+    // компилятора действуют на уровень ПРОГРАММЫ, а не по «родному» tsconfig каждого файла, так
+    // что без них tsc не парсит @Injectable()/@Inject() и т.п. по всему графу (см. apps/api/tsconfig.json).
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["*.spec.ts"],
+  "exclude": ["node_modules", "dist"]
+}

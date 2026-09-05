@@ -26,6 +26,7 @@ function fakeOrder(overrides: Partial<PaymentsOrderSnapshot> = {}): PaymentsOrde
     paymentMethod: 'alif_mobi',
     totalAmountDiram: 10_000n,
     pharmacyChainId: OWN_CHAIN_ID,
+    items: [],
     ...overrides,
   }
 }

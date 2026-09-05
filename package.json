@@ -19,6 +19,7 @@
     "test": "turbo run test",
     "test:watch": "turbo run test:watch",
     "test:e2e": "pnpm --filter @dorutj/e2e test",
+    "test:invariants": "pnpm --filter @dorutj/invariants test",
     "arch:check": "pnpm exec depcruise --config .dependency-cruiser.cjs apps packages",
     "arch:graph": "depcruise --config .dependency-cruiser.cjs --output-type dot apps packages > arch-graph.dot",
     "test:arch": "vitest run tests/arch/run-fixture-check.spec.ts tests/arch/runtime-connectivity.spec.ts tests/arch/suppression-justification.spec.ts tests/arch/di-explicit-inject.spec.ts",
