@@ -37,11 +37,7 @@ export const userRoleEnum = pgEnum('user_role', [
  * добавлен в миграции `0010_otp_purpose_add_onboarding_contact.sql`
  * (DTJ-016 follow-up) — см. файлы миграций.
  */
-export const otpPurposeEnum = pgEnum('otp_purpose', [
-  'login',
-  'delivery_handover',
-  'onboarding_contact',
-])
+export const otpPurposeEnum = pgEnum('otp_purpose', ['login', 'delivery_handover', 'onboarding_contact'])
 
 /**
  * Канал приёма остатков (EP-05, DTJ-142, SRS-INV-005). Используется в
@@ -51,11 +47,7 @@ export const otpPurposeEnum = pgEnum('otp_purpose', [
  * - `rest`   — push от 1С/ERP через REST+HMAC.
  * Порядок значений НЕ переименовывать, только дописывать в конец.
  */
-export const inventorySyncChannelEnum = pgEnum('inventory_sync_channel', [
-  'manual',
-  'excel',
-  'rest',
-])
+export const inventorySyncChannelEnum = pgEnum('inventory_sync_channel', ['manual', 'excel', 'rest'])
 
 /**
  * Тип синхронизации (EP-05, DTJ-142, SRS-INV-027). `delta` — добавочные
@@ -273,3 +265,29 @@ export const supportTicketCategoryEnum = pgEnum('support_ticket_category', [
 
 /** Статус обращения (EP-14, DTJ-270). Тип уже создан `0034_support_tickets_audit_log.sql` — см. JSDoc supportTicketChannelEnum выше, тот же случай. */
 export const supportTicketStatusEnum = pgEnum('support_ticket_status', ['open', 'in_progress', 'resolved', 'closed'])
+
+/**
+ * Прогресс сканирования позиции заказа терминалом фармацевта (EP-12, DTJ-300, модуль 24,
+ * SRS-PHT-002/011..020, `[РАСШИРЕНИЕ]`). Создан миграцией `0041_pharmacy_terminal_schema.sql`.
+ * Не путать с `orderStatusEnum` (уровень заказа) — это прогресс ОДНОЙ позиции.
+ * Порядок значений НЕ переименовывать, только дописывать в конец.
+ */
+export const orderItemFulfillmentStatusEnum = pgEnum('order_item_fulfillment_status', [
+  'pending',
+  'scanned_ok',
+  'unavailable',
+])
+
+/**
+ * Статус запроса подтверждения частичной сборки клиентом (EP-12, DTJ-300, модуль 24, D-10,
+ * SRS-PHT-019..023a, `[РАСШИРЕНИЕ]`). Создан миграцией `0041_pharmacy_terminal_schema.sql`.
+ * `auto_confirmed_timeout` — молчание клиента до `expires_at` трактуется как согласие
+ * (SRS-PHT-023a), НЕ как отказ.
+ * Порядок значений НЕ переименовывать, только дописывать в конец.
+ */
+export const partialFulfillmentStatusEnum = pgEnum('partial_fulfillment_status', [
+  'awaiting_customer',
+  'confirmed',
+  'rejected',
+  'auto_confirmed_timeout',
+])

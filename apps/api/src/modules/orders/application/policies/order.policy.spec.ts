@@ -62,3 +62,60 @@ describe('OrderPolicy.canCancel (DTJ-222, SRS-DOM-154, SRS-ORD-029/031)', () => 
     expect(OrderPolicy.canCancel(orderAtStatus('paid_escrow'), courier)).toBe(false)
   })
 })
+
+describe('OrderPolicy.canAccept (DTJ-301, SRS-PHT-007)', () => {
+  const ownPharmacist: OrderPolicyActor = { role: 'pharmacist', userId: 'staff-1', pharmacyId: 'pharmacy-1' }
+  const otherPharmacist: OrderPolicyActor = { role: 'pharmacist', userId: 'staff-2', pharmacyId: 'pharmacy-2' }
+  const ownPharmacyAdmin: OrderPolicyActor = { role: 'pharmacy_admin', userId: 'admin-1', pharmacyId: 'pharmacy-1' }
+  const customer: OrderPolicyActor = { role: 'customer', userId: 'customer-1', pharmacyId: null }
+
+  it.each<[OrderStatus, boolean]>([
+    ['pending_payment', false],
+    ['confirmed', true],
+    ['paid_escrow', true],
+    ['processing', false],
+    ['picked_up', false],
+    ['delivered', false],
+    ['cancelled', false],
+    ['refunded', false],
+    ['return_in_progress', false],
+  ])('статус %s, своя аптека, pharmacist → canAccept = %s', (status, expected) => {
+    expect(OrderPolicy.canAccept(orderAtStatus(status), ownPharmacist)).toBe(expected)
+  })
+
+  it('pharmacy_admin своей аптеки, paid_escrow → true (SRS-PHT-004, «тот же набор действий»)', () => {
+    expect(OrderPolicy.canAccept(orderAtStatus('paid_escrow'), ownPharmacyAdmin)).toBe(true)
+  })
+
+  it('pharmacist чужой аптеки, paid_escrow → false', () => {
+    expect(OrderPolicy.canAccept(orderAtStatus('paid_escrow'), otherPharmacist)).toBe(false)
+  })
+
+  it('customer — не входит в допустимые роли → false', () => {
+    expect(OrderPolicy.canAccept(orderAtStatus('paid_escrow'), customer)).toBe(false)
+  })
+})
+
+describe('OrderPolicy.canReclaim (DTJ-301, SRS-PHT-010)', () => {
+  const ownPharmacist: OrderPolicyActor = { role: 'pharmacist', userId: 'staff-2', pharmacyId: 'pharmacy-1' }
+  const otherPharmacist: OrderPolicyActor = { role: 'pharmacist', userId: 'staff-3', pharmacyId: 'pharmacy-2' }
+  const ownPharmacyAdmin: OrderPolicyActor = { role: 'pharmacy_admin', userId: 'admin-1', pharmacyId: 'pharmacy-1' }
+
+  it.each<[OrderStatus, boolean]>([
+    ['paid_escrow', false],
+    ['confirmed', false],
+    ['processing', true],
+    ['picked_up', false],
+    ['cancelled', false],
+  ])('статус %s, своя аптека, ЛЮБОЙ pharmacist (не владелец приёмки) → canReclaim = %s (SRS-PHT-038 — UX-блокировка, не security)', (status, expected) => {
+    expect(OrderPolicy.canReclaim(orderAtStatus(status), ownPharmacist)).toBe(expected)
+  })
+
+  it('pharmacy_admin своей аптеки, processing → true', () => {
+    expect(OrderPolicy.canReclaim(orderAtStatus('processing'), ownPharmacyAdmin)).toBe(true)
+  })
+
+  it('pharmacist чужой аптеки, processing → false', () => {
+    expect(OrderPolicy.canReclaim(orderAtStatus('processing'), otherPharmacist)).toBe(false)
+  })
+})

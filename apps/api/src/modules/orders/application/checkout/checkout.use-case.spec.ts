@@ -236,7 +236,12 @@ function makeHarness(overrides: Partial<HarnessOverrides> = {}): Harness {
     .fn<TenancyFacadePort['getEnabledPaymentMethods']>()
     .mockResolvedValue(overrides.enabledPaymentMethods ?? DEFAULT_ENABLED_PAYMENT_METHODS)
   const resolveCommissionRate = vi.fn<TenancyFacadePort['resolveCommissionRate']>().mockResolvedValue(DEFAULT_COMMISSION_BPS)
-  const tenancyFacade: TenancyFacadePort = { resolveCommissionRate, getCodLimitDiram, getEnabledPaymentMethods }
+  const tenancyFacade: TenancyFacadePort = {
+    resolveCommissionRate,
+    getCodLimitDiram,
+    getEnabledPaymentMethods,
+    getPickupSlaMinutes: vi.fn(),
+  }
 
   const deliveryFacade: DeliveryFacadePort = { calculateFee: vi.fn<DeliveryFacadePort['calculateFee']>().mockResolvedValue(0n) }
 

@@ -30,7 +30,7 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
-import { orderStatusEnum } from './enums.schema.js'
+import { orderItemFulfillmentStatusEnum, orderStatusEnum } from './enums.schema.js'
 import { users } from './users.js'
 import { pharmacies } from './pharmacies.js'
 import { tenants } from './tenants.js'
@@ -43,7 +43,9 @@ export const ORDERS_TABLE = 'orders'
 export const orders = pgTable(
   ORDERS_TABLE,
   {
-    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    id: uuid('id')
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
     orderNumber: varchar('order_number', { length: 20 }).notNull().unique(),
     customerId: uuid('customer_id')
       .notNull()
@@ -95,6 +97,10 @@ export const orders = pgTable(
     // `pg.Pool` (не через этот Drizzle-схему), поэтому её отсутствие здесь не блокировало бы
     // джобу — колонка добавлена ради консистентности схемы, не как обязательная зависимость.
     paymentWindowExpiresAt: timestamp('payment_window_expires_at', { withTimezone: true }),
+    // [РАСШИРЕНИЕ, EP-12, DTJ-300, модуль 24] — мягкая UX-блокировка «кто ведёт сборку»
+    // (SRS-PHT-006/007/010/038), НЕ RBAC-контроль (тот остаётся orders:*:pharmacy). Заполняется
+    // AcceptOrderUseCase/reclaim (DTJ-301+, вне этого тикета) — миграция 0041.
+    assignedPharmacistId: uuid('assigned_pharmacist_id').references(() => users.id, { onDelete: 'set null' }),
   },
   (table) => [
     check(
@@ -120,18 +126,36 @@ export const ORDER_ITEMS_TABLE = 'order_items'
 export const orderItems = pgTable(
   ORDER_ITEMS_TABLE,
   {
-    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    id: uuid('id')
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
     orderId: uuid('order_id').references(() => orders.id, { onDelete: 'cascade' }),
     medicineId: uuid('medicine_id').references(() => medicines.id),
     unitPriceTjs: numeric('unit_price_tjs', { precision: 10, scale: 2 }).notNull(),
     quantity: integer('quantity').notNull(),
     totalPriceTjs: numeric('total_price_tjs', { precision: 10, scale: 2 }).notNull(),
     commissionBps: smallint('commission_bps').notNull().default(0),
-    platformFeeDiram: bigint('platform_fee_diram', { mode: 'bigint' }).notNull().default(sql`0`),
+    platformFeeDiram: bigint('platform_fee_diram', { mode: 'bigint' })
+      .notNull()
+      .default(sql`0`),
     // Ссылается на pharmacy_inventory(id) — см. JSDoc файла («ОТКЛОНЕНИЕ ОТ КАНОНИЧЕСКОГО DDL»).
     inventoryBatchId: uuid('inventory_batch_id').references(() => pharmacyInventory.id, {
       onDelete: 'set null',
     }),
+    // [РАСШИРЕНИЕ, EP-12, DTJ-300, модуль 24] — прогресс сканирования позиции терминалом
+    // (SRS-PHT-011..020). Миграция 0037.
+    fulfillmentStatus: orderItemFulfillmentStatusEnum('fulfillment_status').notNull().default('pending'),
+    // Партия, ФАКТИЧЕСКИ отсканированная при сборке — может отличаться от `inventoryBatchId`
+    // (FEFO-резерв) при замене партии (SRS-PHT-014). Как и `inventoryBatchId` выше — ссылается на
+    // `pharmacy_inventory(id)`, НЕ на `inventory_batches` (foundIssue DTJ-220, `inventory_batches`
+    // физически не существует ни в одной миграции — та же поправка, что уже применена к
+    // `inventoryBatchId` выше; спецификация модуля 24 буквально называет колонку REFERENCES
+    // `inventory_batches(id)`, что на этом кодовой базе некорректно).
+    scannedBatchId: uuid('scanned_batch_id').references(() => pharmacyInventory.id, { onDelete: 'set null' }),
+    scannedAt: timestamp('scanned_at', { withTimezone: true }),
+    scannedBy: uuid('scanned_by').references(() => users.id, { onDelete: 'set null' }),
+    scanMethod: varchar('scan_method', { length: 10 }),
+    itemIssueReason: varchar('item_issue_reason', { length: 30 }),
   },
   (table) => [
     check('chk_order_items_price_positive', sql`${table.unitPriceTjs} > 0`),
@@ -139,6 +163,14 @@ export const orderItems = pgTable(
     check(
       'chk_order_items_total_matches',
       sql`${table.totalPriceTjs} = ${table.unitPriceTjs} * ${table.quantity}`,
+    ),
+    check(
+      'chk_order_items_scan_method',
+      sql`${table.scanMethod} IN ('camera', 'manual') OR ${table.scanMethod} IS NULL`,
+    ),
+    check(
+      'chk_order_items_item_issue_reason',
+      sql`${table.itemIssueReason} IN ('out_of_stock', 'expired_on_shelf', 'damaged_packaging') OR ${table.itemIssueReason} IS NULL`,
     ),
   ],
 )

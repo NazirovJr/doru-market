@@ -73,6 +73,10 @@ function makeSettingsRow(overrides: Partial<TenantSettingsRow> = {}): TenantSett
     // строкой, иначе typecheck красный для всего репозитория (см. отчёт DTJ-278, foundIssues).
     supportFirstResponseSlaMinutes: 60,
     defaultLocale: 'tj',
+    // DTJ-300 (EP-12, модуль 24) — дефолты из tenant_settings (10/20/60).
+    partialFulfillmentConfirmationTimeoutMinutes: 10,
+    handoverOtpMaxRegenerationsPerOrder: 20,
+    handoverOtpRegenerateMinIntervalSeconds: 60,
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     ...overrides,
   }
@@ -159,8 +163,7 @@ function makeFakeDb(tenantRows: readonly TenantRow[], settingsRows: readonly Ten
             if (rowKey === undefined) {
               throw new Error(`Мок не знает колонку "${columnName}" — дополни COLUMN_TO_ROW_KEY`)
             }
-            const source: readonly Record<string, unknown>[] =
-              name === 'tenants' ? tenantRows : settingsRows
+            const source: readonly Record<string, unknown>[] = name === 'tenants' ? tenantRows : settingsRows
             const filtered = source.filter((row) => row[rowKey] === value)
             return {
               limit(_n: number) {

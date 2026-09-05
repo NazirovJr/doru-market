@@ -259,6 +259,12 @@
       "when": 1700000440000,
       "tag": "0040_support_ticket_sla_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "when": 1700000450000,
+      "tag": "0041_pharmacy_terminal_schema",
+      "breakpoints": true
     }
   ]
 }

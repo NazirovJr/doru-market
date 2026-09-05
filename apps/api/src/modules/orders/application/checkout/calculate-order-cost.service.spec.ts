@@ -54,6 +54,7 @@ function makeHarness(commissionByCategory: Partial<Record<'rx' | 'otc', number>>
     resolveCommissionRate,
     getCodLimitDiram: vi.fn(),
     getEnabledPaymentMethods: vi.fn(),
+    getPickupSlaMinutes: vi.fn(),
   }
   const calculateFee = vi.fn<DeliveryFacadePort['calculateFee']>().mockResolvedValue(1_500n)
   const deliveryFacade: DeliveryFacadePort = { calculateFee }

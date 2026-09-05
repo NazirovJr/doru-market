@@ -53,4 +53,10 @@ export interface TenancyFacadePort {
    * (см. JSDoc файла) — колонки `tenant_settings.enabled_payment_methods` физически нет.
    */
   getEnabledPaymentMethods(tenantId: string): Promise<readonly OrderPaymentMethod[]>
+
+  /**
+   * DTJ-301 (EP-12, SRS-PHT-008/030, D-19) — `tenant_settings.pickup_sla_minutes` (дефолт 7
+   * минут), читает `AcceptOrderUseCase` для `slaDeadlineAt = now + pickupSlaMinutes`.
+   */
+  getPickupSlaMinutes(tenantId: string): Promise<number>
 }

@@ -109,6 +109,16 @@ const EXPECTED: readonly (readonly [ErrorCode, number])[] = [
   // DTJ-271 (EP-11), SRS-RET-003, решение CTO D-EP11-5 (reports/EP11-EP14-CTO-BRIEF.md) —
   // reason='undelivered' переадресуется на SupportFacade/OrderDispute, не создаёт OrderReturn.
   [ErrorCode.UNSUPPORTED_RETURN_REASON, 422],
+
+  // DTJ-300 (EP-12), docs/spec/24-module-pharmacy-terminal.md §«Дополнения к схеме БД»,
+  // таблица «Новые доменные ошибки».
+  [ErrorCode.ORDER_ALREADY_CLAIMED, 409],
+  [ErrorCode.ORDER_ITEM_NOT_FOUND, 404],
+  [ErrorCode.ITEM_ALREADY_SCANNED, 409],
+  [ErrorCode.BATCH_NOT_AVAILABLE, 422],
+  [ErrorCode.SEAL_CONFIRMATION_REQUIRED, 400],
+  [ErrorCode.PARTIAL_FULFILLMENT_PENDING, 409],
+  [ErrorCode.HANDOVER_OTP_NOT_FOUND, 404],
 ]
 
 describe('ErrorCode / ERROR_HTTP_STATUS — сверка с источниками', () => {

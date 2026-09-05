@@ -185,6 +185,13 @@ import { CheckoutController } from './presentation/checkout/checkout.controller.
 import { SystemCancelOrderUseCase } from './application/order-lifecycle/system-cancel-order.use-case.js'
 import { InternalServiceGuard } from './presentation/internal/internal-service.guard.js'
 import { SystemCancelOrderController } from './presentation/internal/system-cancel-order.controller.js'
+// DTJ-301 (EP-12, модуль 24 «Терминал фармацевта») — очередь/accept/reclaim. Новых портов не
+// требует за пределами уже забинженных (ORDER_REPOSITORY_PORT/ORDERS_UNIT_OF_WORK/ORDERS_OUTBOX/
+// INVENTORY_FACADE_PORT/TENANCY_FACADE_PORT — все уже провайдятся выше DTJ-227/228/229).
+import { GetOrderQueueUseCase } from './application/pharmacy-terminal/get-order-queue.use-case.js'
+import { AcceptOrderUseCase } from './application/pharmacy-terminal/accept-order.use-case.js'
+import { ReclaimOrderUseCase } from './application/pharmacy-terminal/reclaim-order.use-case.js'
+import { PharmacyTerminalQueueController } from './presentation/pharmacy-terminal/pharmacy-terminal-queue.controller.js'
 
 /**
  * `UnimplementedCatalogFacadeAdapter`/`UnimplementedOrderRepositoryAdapter` (DTJ-220/222) —
@@ -339,7 +346,13 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
   // TenancyModule — DTJ-228/229: `TenancyFacadeAdapter` инжектит TENANT_SETTINGS_REPOSITORY
   // (экспортирован tenancy.module.ts) для `getCodLimitDiram`.
   imports: [CatalogModule, OnboardingModule, AuthModule, TenancyModule, PaymentsModule],
-  controllers: [CartController, CheckoutController, RetryPaymentController, SystemCancelOrderController],
+  controllers: [
+    CartController,
+    CheckoutController,
+    RetryPaymentController,
+    SystemCancelOrderController,
+    PharmacyTerminalQueueController,
+  ],
   providers: [
     CART_REPOSITORY_DRIZZLE_PROVIDER,
     CATALOG_FACADE_PORT_PROVIDER,
@@ -392,6 +405,10 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     // (OrdersFacade/INVENTORY_FACADE_PORT/REFUND_FACADE_PORT/CLOCK), новых DI-токенов не требует.
     SystemCancelOrderUseCase,
     InternalServiceGuard,
+    // DTJ-301 (EP-12, модуль 24) — очередь/accept/reclaim терминала фармацевта (см. JSDoc импортов выше).
+    GetOrderQueueUseCase,
+    AcceptOrderUseCase,
+    ReclaimOrderUseCase,
   ],
   // DTJ-226 (правка приёмки CTO, правило 2 AGENTS.md): без `exports` `OrdersFacade`/
   // `ORDERS_FACADE` были написаны, но физически недостижимы через `imports: [OrdersModule]` —
