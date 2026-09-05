@@ -119,3 +119,26 @@ describe('OrderPolicy.canReclaim (DTJ-301, SRS-PHT-010)', () => {
     expect(OrderPolicy.canReclaim(orderAtStatus('processing'), otherPharmacist)).toBe(false)
   })
 })
+
+describe('OrderPolicy.canManagePicking (DTJ-302/303, EP-12 §A.3/A.4)', () => {
+  const ownPharmacist: OrderPolicyActor = { role: 'pharmacist', userId: 'staff-1', pharmacyId: 'pharmacy-1' }
+  const otherPharmacist: OrderPolicyActor = { role: 'pharmacist', userId: 'staff-2', pharmacyId: 'pharmacy-2' }
+  const ownPharmacyAdmin: OrderPolicyActor = { role: 'pharmacy_admin', userId: 'admin-1', pharmacyId: 'pharmacy-1' }
+  const owner: OrderPolicyActor = { role: 'customer', userId: 'customer-1', pharmacyId: null }
+
+  it('pharmacist — своя аптека → true', () => {
+    expect(OrderPolicy.canManagePicking(orderAtStatus('processing'), ownPharmacist)).toBe(true)
+  })
+
+  it('pharmacist — чужая аптека → false', () => {
+    expect(OrderPolicy.canManagePicking(orderAtStatus('processing'), otherPharmacist)).toBe(false)
+  })
+
+  it('pharmacy_admin — своя аптека → false (DTJ-302: РОВНО pharmacist, в отличие от canCancel)', () => {
+    expect(OrderPolicy.canManagePicking(orderAtStatus('processing'), ownPharmacyAdmin)).toBe(false)
+  })
+
+  it('customer — не входит в допустимые роли → false', () => {
+    expect(OrderPolicy.canManagePicking(orderAtStatus('processing'), owner)).toBe(false)
+  })
+})

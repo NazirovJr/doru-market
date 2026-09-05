@@ -29,13 +29,17 @@
  */
 import { Inject, Injectable } from '@nestjs/common'
 import { and, eq, sql } from 'drizzle-orm'
+import type { Logger } from 'pino'
 import { ErrorCode } from '@dorutj/contracts'
 import { err, ok, type Result } from '@dorutj/domain-kernel'
+import { PINO_LOGGER } from '@/common/logging/pino-logger.token.js'
 import { type DrizzleDb, DRIZZLE_DB } from '@/infrastructure/database/drizzle.provider.js'
 import { pharmacyInventory } from '@/db/schema/pharmacy-inventory.js'
 import { orderItems } from '@/db/schema/orders.js'
+import { ExpiryDate } from '@/shared-kernel/domain/value-objects/expiry-date.vo.js'
 import {
   INVENTORY_FACADE_PORT,
+  type BatchSubstitutionError,
   type InventoryFacadeError,
   type InventoryFacadePort,
   type ReleaseStockItemCommand,
@@ -51,9 +55,19 @@ interface SelectedBatchRow {
   readonly quantity: number
 }
 
+/** Строка, отобранная `selectAndLockExactBatch` (DTJ-302) — та же партия, что и `SelectedBatchRow`, но по точному номеру серии, не FEFO, и без `price` (замена партии не меняет цену позиции). */
+interface ExactBatchRow {
+  readonly id: string
+  readonly quantity: number
+  readonly expiresAt: string
+}
+
 @Injectable()
 export class InventoryFacadeAdapter implements InventoryFacadePort {
-  constructor(@Inject(DRIZZLE_DB) private readonly db: DrizzleDb) {}
+  constructor(
+    @Inject(DRIZZLE_DB) private readonly db: DrizzleDb,
+    @Inject(PINO_LOGGER) private readonly logger: Logger,
+  ) {}
 
   async reserveStock(
     pharmacyId: string,
@@ -125,6 +139,62 @@ export class InventoryFacadeAdapter implements InventoryFacadePort {
     return Number(rows[0]?.total ?? '0')
   }
 
+  /**
+   * DTJ-302 — см. JSDoc `InventoryFacadePort.reserveForOrder` для полного обоснования решения.
+   * `WHERE pharmacy_id/medicine_id/batch_number` даёт «та же аптека, тот же товар» БЕСПЛАТНО
+   * (ни одна строка не найдётся для чужой аптеки/медикамента) — резолвинг номера серии и
+   * блокировка строки ОДНИМ запросом (TOCTOU-safe, тот же приём, что `selectAndLockFefoBatch`).
+   * Порядок проверок ПОСЛЕ чтения (не специфицирован тикетом буквально для комбинированных
+   * случаев): не найдена → срок годности → количество — от «это вообще кандидат» к «годна ли»
+   * к «хватит ли».
+   */
+  // eslint-disable-next-line max-params -- сигнатура фиксирована интерфейсом `InventoryFacadePort.reserveForOrder` (позиционные параметры порта, не выбор этого файла — см. его JSDoc про (pharmacyId, medicineId, batchNumber)).
+  async reserveForOrder(
+    pharmacyId: string,
+    medicineId: string,
+    batchNumber: string,
+    quantity: number,
+    tx?: OrderUnitOfWorkTx,
+  ): Promise<Result<{ readonly batchId: string }, BatchSubstitutionError>> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const batch = await this.selectAndLockExactBatch(client, { pharmacyId, medicineId, batchNumber })
+    if (batch === null) {
+      return err({ code: ErrorCode.BATCH_NOT_AVAILABLE })
+    }
+    const expiry = ExpiryDate.parse(batch.expiresAt)
+    if (!expiry.ok || !expiry.value.isSellable(new Date())) {
+      return err({ code: ErrorCode.EXPIRED_STOCK })
+    }
+    if (batch.quantity < quantity) {
+      return err({ code: ErrorCode.BATCH_NOT_AVAILABLE })
+    }
+    await client
+      .update(pharmacyInventory)
+      .set({ quantity: batch.quantity - quantity, updatedAt: new Date() })
+      .where(eq(pharmacyInventory.id, batch.id))
+    return ok({ batchId: batch.id })
+  }
+
+  /** Вынесено из `reserveForOrder` ради `max-lines-per-function`/`max-params` (C1, ≤40/≤3) — см. её JSDoc для обоснования блокировки. */
+  private async selectAndLockExactBatch(
+    client: DrizzleDb,
+    filter: { readonly pharmacyId: string; readonly medicineId: string; readonly batchNumber: string },
+  ): Promise<ExactBatchRow | null> {
+    const rows = await client
+      .select({ id: pharmacyInventory.id, quantity: pharmacyInventory.quantity, expiresAt: pharmacyInventory.expiresAt })
+      .from(pharmacyInventory)
+      .where(
+        and(
+          eq(pharmacyInventory.pharmacyId, filter.pharmacyId),
+          eq(pharmacyInventory.medicineId, filter.medicineId),
+          eq(pharmacyInventory.batchNumber, filter.batchNumber),
+        ),
+      )
+      .limit(1)
+      .for('update')
+    return rows[0] ?? null
+  }
+
   /** См. «FEFO — ОДИН лот на позицию» в JSDoc файла — самый ранний лот, покрывающий `quantity` целиком. */
   private async selectAndLockFefoBatch(
     client: DrizzleDb,
@@ -146,6 +216,12 @@ export class InventoryFacadeAdapter implements InventoryFacadePort {
       .limit(1)
       .for('update')
     return rows[0] ?? null
+  }
+
+  /** DTJ-303 — см. JSDoc `InventoryFacadePort.reconcileZeroStock` для полного обоснования (best-effort лог, не `inventory_sync_errors`, не авто-коррекция `quantity`). */
+  async reconcileZeroStock(medicineId: string, batchId: string): Promise<void> {
+    this.logger.warn({ medicineId, batchId }, 'inventory_reconcile_zero_stock')
+    return Promise.resolve()
   }
 }
 

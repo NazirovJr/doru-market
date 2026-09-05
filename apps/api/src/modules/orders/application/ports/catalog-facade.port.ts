@@ -81,4 +81,31 @@ export interface CatalogFacadePort {
    * сведении к `Set`.
    */
   getSubstanceSet(medicineIds: readonly string[]): Promise<ReadonlyMap<string, ReadonlyMap<string, string>>>
+
+  /**
+   * РАСШИРЕНИЕ (DTJ-302, foundIssue — тот же класс решения, что `getStockQuantity` на
+   * `InventoryFacadePort`, зафиксированный в JSDoc того порта как «D-EP09-9», и подтверждённый
+   * `disputed`-отчётом DTJ-224 для CTO: минимальная аддитивная правка интерфейса — новый метод,
+   * ни один существующий не тронут). Тикет DTJ-302 называет `CatalogFacade.resolveMedicineByComposite(
+   * barcode, tenantId)` «существующим методом» — проверено: `resolveMedicineByComposite`
+   * РЕАЛЬНО существует (`modules/catalog/index.ts`, DTJ-097), но (а) сигнатура иная —
+   * `(input: CompositeMatchInput)`, без `tenantId` вовсе; (б) `CompositeMatchInput.rawTradeName`
+   * ОБЯЗАТЕЛЕН (`ResolveMedicineByCompositeUseCase.validateInput`, бросает
+   * `InvalidCompositeMatchInputError` на пустой строке) — сканирование терминала фармацевта имеет
+   * ТОЛЬКО сырой штрихкод, без названия препарата, поэтому реальный composite-матчинг (шаг
+   * fuzzy-по-названию) структурно неприменим к этому вызову. Этот метод — узкий, специфичный
+   * для сканирования контракт: точное совпадение по `medicines.barcode` (глобально
+   * идентифицируемый EAN-13, `Barcode.isGloballyIdentifiable()`) ИЛИ, если штрихкод внутренний/
+   * невалидный EAN-13 (D-06, SRS-DOM-076 — трактуется как `internal_sku`), точное совпадение в
+   * `pharmacy_sku_mapping (pharmacy_id, internal_sku)` — кэш, уже используемый входящей 1С-
+   * синхронизацией (EP-05, `pharmacy-sku-mapping.repository.port.ts`) для ТОЙ ЖЕ пары.
+   * Реализация читает ОБЕ таблицы напрямую через `db/schema/**` (не публичный фасад
+   * `modules/catalog/index.ts` — там нет подходящего метода, и не `modules/inventory/**` —
+   * прямой импорт домена чужого модуля запрещён) — тот же приём, что `InventoryFacadeAdapter`
+   * уже использует для `pharmacy_inventory`/`order_items` (см. его JSDoc «Нет публичного фасада
+   * modules/inventory/index.ts»). `null` — штрихкод не резолвился НИКУДА (ни один путь не даёт
+   * `medicineId`) — вызывающий (`ScanOrderItemUseCase`) трактует `null` как «не совпадает» точно
+   * так же, как резолв в ЧУЖОЙ медикамент (оба ведут к `404 ORDER_ITEM_NOT_FOUND`, SRS-PHT-012).
+   */
+  resolveMedicineIdByBarcode(pharmacyId: string, rawBarcode: string): Promise<string | null>
 }

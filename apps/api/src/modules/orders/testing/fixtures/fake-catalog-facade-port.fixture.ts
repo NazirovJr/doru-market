@@ -28,9 +28,20 @@ export interface SubstanceInput {
 export class FakeCatalogFacadePort implements CatalogFacadePort {
   private readonly snapshots = new Map<string, MedicineOrderSnapshot>()
   private readonly substanceSets = new Map<string, ReadonlyMap<string, string>>()
+  private readonly barcodeResolutions = new Map<string, string>()
 
   setSnapshot(snapshot: SnapshotInput): void {
     this.snapshots.set(snapshot.medicineId, { ...snapshot, tradeName: snapshot.tradeName ?? snapshot.medicineId })
+  }
+
+  /** DTJ-302 (`[РАСШИРЕНИЕ]` порта) — регистрирует `(pharmacyId, rawBarcode) → medicineId`. */
+  setBarcodeResolution(pharmacyId: string, rawBarcode: string, medicineId: string): void {
+    this.barcodeResolutions.set(`${pharmacyId}::${rawBarcode}`, medicineId)
+  }
+
+  /** Не зарегистрировано `setBarcodeResolution` для этой пары → `null` (нет совпадения). */
+  resolveMedicineIdByBarcode(pharmacyId: string, rawBarcode: string): Promise<string | null> {
+    return Promise.resolve(this.barcodeResolutions.get(`${pharmacyId}::${rawBarcode}`) ?? null)
   }
 
   /** `substances` — id-строки (имя дефолтится к id) ИЛИ `{substanceId, name}` для явного имени. */

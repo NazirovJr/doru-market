@@ -69,6 +69,18 @@ export interface ReleaseStockItemCommand {
   readonly quantity: number
 }
 
+/**
+ * Ошибка `reserveForOrder` (DTJ-302) — набор кодов ýже, чем `InventoryFacadeError` выше:
+ * `INSUFFICIENT_STOCK` там означает «FEFO не нашёл НИКАКОЙ подходящий лот» (поиск), здесь лот
+ * УЖЕ известен (`batchId` — конкретная партия, отсканированная фармацевтом) — либо он валиден,
+ * либо нет, семантика ближе к `422 BATCH_NOT_AVAILABLE` (SRS-PHT-014). Отдельный тип, НЕ
+ * расширение union `InventoryFacadeError.code` — переиспользование поменяло бы контракт
+ * существующего типа, потенциально ломая любой exhaustive-`switch` на двух текущих значениях.
+ */
+export interface BatchSubstitutionError {
+  readonly code: ErrorCode.EXPIRED_STOCK | ErrorCode.BATCH_NOT_AVAILABLE
+}
+
 export interface InventoryFacadePort {
   /**
    * Жёсткий резерв остатка на ОДНУ аптеку (SRS-ORD-018 шаг 4c). ОДИН батч-вызов на группу.
@@ -115,4 +127,74 @@ export interface InventoryFacadePort {
    * `getMedicineSnapshot`: отсутствие в источнике не бросает, вызывающий решает сам).
    */
   getStockQuantity(pharmacyId: string, medicineId: string): Promise<number>
+
+  /**
+   * РАСШИРЕНИЕ (DTJ-302, foundIssue — тот же класс решения, что `getStockQuantity` выше:
+   * «Минимальная аддитивная правка интерфейса (новый метод, ни один существующий не тронут) —
+   * тот же класс решения, что D-EP09-9... Зафиксировано в disputed отчёта DTJ-224 для CTO»).
+   * Тикет DTJ-302 предполагает `releaseReservation(oldBatchId, qty)` +
+   * `reserveForOrder(newBatchId, qty)` как ДВЕ новые операции — проверено: «освободить РОВНО
+   * известный `batchId` на известное `quantity`» уже 1:1 покрыто существующим `releaseStock`
+   * выше (тот же вход `{inventoryBatchId, quantity}[]`, тот же эффект — вернуть количество на
+   * партию); отдельный `releaseReservation` дублировал бы его без нового поведения (`02` §1.3:
+   * «порт объявляется один раз»). Реально ОТСУТСТВУЕТ только «резервирование КОНКРЕТНОЙ, уже
+   * известной партии» — `reserveStock` выше делает ПРОТИВОПОЛОЖНОЕ (сам ищет лот по FEFO для
+   * `medicineId`, не принимает конкретный лот), непригодно для замены партии сканированием
+   * (SRS-PHT-014: фармацевт УЖЕ читает номер серии физически с коробки — вторичный FEFO-поиск
+   * мог бы выбрать ДРУГОЙ лот, не тот, что реально отсканирован).
+   *
+   * ВХОД — `(pharmacyId, medicineId, batchNumber)`, НЕ `batchId` (UUID): клиент терминала
+   * (`ScanOrderItemRequestDto.scannedBatchNumber`) присылает человекочитаемый номер серии
+   * (`pharmacy_inventory.batch_number`), не внутренний `id` — фармацевт физически читает номер
+   * с упаковки, не UUID. Резолвинг «номер → строка» и резерв — ОДНА locked-операция (`SELECT
+   * ... WHERE pharmacy_id/medicine_id/batch_number = ? FOR UPDATE`, тот же приём, что
+   * `selectAndLockFefoBatch`), не два отдельных вызова (TOCTOU: строка могла обнулиться между
+   * резолвом и резервом). Фильтр по `pharmacyId`+`medicineId` В САМОМ запросе даёт «та же аптека,
+   * тот же товар» (SRS-PHT-014) БЕСПЛАТНО — отдельного сравнения после чтения не нужно: ни одна
+   * строка не найдётся, если партия принадлежит другой аптеке.
+   *
+   * При успехе резервирует (списывает `quantity`) и возвращает РЕЗОЛВЛЕННЫЙ `batchId` — он
+   * нужен вызывающему для `OrderItem.substituteBatch(batchId)` (домен хранит UUID, не номер).
+   * Ошибки: партия не найдена ЛИБО чужой аптеки/медикамента (неотличимо снаружи, тот же приём,
+   * что `OrderRepositoryPort.findById` — чужой тенант ⇒ как «не существует») → `BATCH_NOT_AVAILABLE`;
+   * найдена, но просрочена (`ExpiryDate.isSellable`, буфер 0) → `EXPIRED_STOCK`; найдена и годна,
+   * но `quantity` недостаточно → `BATCH_NOT_AVAILABLE`. Порядок вызова в use case: `reserveForOrder`
+   * (новая партия) ВСЕГДА ДО `releaseStock` (старая) — если новая невалидна, старый резерв
+   * остаётся нетронутым (TC-PHT-006: «резерв старой партии НЕ освобождён»), это БЕЗОПАСНЕЕ, чем
+   * порядок, буквально перечисленный в тексте тикета.
+   */
+  reserveForOrder(
+    pharmacyId: string,
+    medicineId: string,
+    batchNumber: string,
+    quantity: number,
+    tx?: OrderUnitOfWorkTx,
+  ): Promise<Result<{ readonly batchId: string }, BatchSubstitutionError>>
+
+  /**
+   * РАСШИРЕНИЕ (DTJ-303, foundIssue — тот же класс решения, что `reserveForOrder`/
+   * `getStockQuantity` выше: минимальная аддитивная правка интерфейса, ни один существующий
+   * метод не тронут). Тикет DTJ-303 называет `reconcileZeroStock` «существующей инфраструктурной
+   * операцией» — проверено: метод НЕ существует нигде в кодовой базе на момент этого тикета
+   * (согласовано де-факто, см. отчёт сдачи).
+   *
+   * Сигнализирует расхождение `pharmacy_inventory.quantity` (в БД остаток есть) vs физическое
+   * наличие (фармацевт при `report-issue(reason='out_of_stock')` подтверждает — товара
+   * физически нет на полке). НЕ таблица `inventory_sync_errors` (`db/schema/
+   * inventory-sync-errors.ts`) — та НЕ подходит буквально: `batch_id` там `NOT NULL REFERENCES
+   * inventory_sync_batch(id)` (конкретная сессия CSV-загрузки остатков, EP-05/DTJ-145), а
+   * `error_code` ограничен CHECK'ом на коды формата загрузки (`invalid_price`/`barcode_invalid`/
+   * ...) — сканирование терминала фармацевта не имеет отношения ни к какому батчу синхронизации.
+   * Спецификация модуля 24 сама говорит «inventory_sync_errors-ПОДОБНЫЙ лог» (не «в ту же
+   * таблицу») — этот метод НЕ автоматически корректирует `quantity` (спецификация явно отдаёт
+   * это «последующей РУЧНОЙ сверке аптекой», система только сигнализирует расхождение).
+   * Реализация — best-effort `PINO_LOGGER`, тот же приём, что `CancelOrderUseCase.
+   * logOrderCancelled` (реальная персистентная таблица расхождений — TODO(EP-05), вне периметра
+   * `orders`, владелец — `modules/inventory`).
+   *
+   * Вызывающий (`ReportItemIssueUseCase`) обязан вызывать этот метод ПОСЛЕ коммита транзакции
+   * перехода `fulfillmentStatus` (fire-and-forget, ошибка не должна ломать ответ клиенту, DoD
+   * тикета) — см. её JSDoc.
+   */
+  reconcileZeroStock(medicineId: string, batchId: string): Promise<void>
 }

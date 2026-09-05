@@ -87,4 +87,16 @@ export const OrderPolicy = {
     if (actor.pharmacyId !== order.pharmacyId) return false
     return RECLAIMABLE_STATUSES.has(order.status)
   },
+
+  /**
+   * РАСШИРЕНИЕ (DTJ-302/303, EP-12 §A.3/A.4) — `scan`/`report-issue` терминала фармацевта.
+   * ИНАЧЕ, чем `canCancel` выше: РОВНО `pharmacist` (не `pharmacy_admin` — DTJ-302 «Что сделать»
+   * п.5: «единственная допустимая роль на этот эндпоинт»), своя аптека. Без проверки
+   * `order.status` — пайплайн валидации SRS-PHT-011..018 не называет статус заказа отдельным
+   * условием (в отличие от `CANCELLABLE_STATUSES` у `canCancel`), только `fulfillmentStatus`
+   * ПОЗИЦИИ — это проверяет use case через `OrderItem.assertPending()`/`markUnavailable()`.
+   */
+  canManagePicking(order: Order, actor: OrderPolicyActor): boolean {
+    return actor.role === 'pharmacist' && actor.pharmacyId === order.pharmacyId
+  },
 }

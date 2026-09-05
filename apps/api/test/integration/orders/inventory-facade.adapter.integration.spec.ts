@@ -16,9 +16,13 @@ import { randomUUID } from 'node:crypto'
 import { Pool } from 'pg'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { afterEach, beforeAll, beforeEach, afterAll, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, beforeEach, afterAll, describe, expect, it, vi } from 'vitest'
+import type { Logger } from 'pino'
 import { ErrorCode } from '@dorutj/contracts'
 import { InventoryFacadeAdapter } from '@/modules/orders/infrastructure/adapters/inventory-facade.adapter.js'
+
+/** DTJ-303 — `InventoryFacadeAdapter` теперь требует `PINO_LOGGER` (для `reconcileZeroStock`), тот же приём, что `cancel-order.use-case.integration.spec.ts`. */
+const SILENT_LOGGER = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as Logger
 
 const TEST_DATABASE_URL =
   process.env.ORDERS_TEST_DATABASE_URL ?? process.env.DATABASE_URL ?? 'postgres://test:test@localhost:5432/dorutj_test'
@@ -53,7 +57,7 @@ describe.skipIf(!postgresAvailable)('InventoryFacadeAdapter — integration (DTJ
   beforeAll(() => {
     pool = new Pool({ connectionString: TEST_DATABASE_URL })
     db = drizzle(pool)
-    adapter = new InventoryFacadeAdapter(db)
+    adapter = new InventoryFacadeAdapter(db, SILENT_LOGGER)
   })
 
   afterAll(async () => {

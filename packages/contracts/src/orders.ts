@@ -10,6 +10,7 @@
  * ISO-8601 UTC-строки (граница JSON, конвенция `pharmacies-map.ts`/`search.ts`).
  */
 import { z } from 'zod'
+import type { ReportItemIssueReason } from './orders-pharmacy-terminal.contracts.js'
 
 /** 1:1 с enum `order_status` (D-25: `confirmed` — синхронный результат `cash_courier`). */
 export const ORDER_STATUS_VALUES = [
@@ -87,6 +88,19 @@ export interface OrderItemDto {
   readonly totalPriceDiram: number
   readonly commissionBps: number
   readonly platformFeeDiram: number
+  /**
+   * РАСШИРЕНИЕ (DTJ-302/303, EP-12 §A.3/A.4, SRS-PHT-002/011..018) — прогресс физической
+   * сборки этой позиции терминалом фармацевта. `scannedAt` — ISO-8601 UTC-строка (конвенция
+   * файла, см. JSDoc выше), не `Date` (граница JSON). `itemIssueReason` переиспользует
+   * `ReportItemIssueReason` (`orders-pharmacy-terminal.contracts.ts`) — тот же набор значений,
+   * не дублируется третий раз в этом файле.
+   */
+  readonly fulfillmentStatus: 'pending' | 'scanned_ok' | 'unavailable'
+  readonly scannedBatchId: string | null
+  readonly scannedAt: string | null
+  readonly scannedBy: string | null
+  readonly scanMethod: 'camera' | 'manual' | null
+  readonly itemIssueReason: ReportItemIssueReason | null
 }
 
 /**
