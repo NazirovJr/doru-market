@@ -71,6 +71,8 @@ function makeHarness(pickupSlaMinutes = 7): Harness {
     releaseStock: vi.fn(),
     hasExpiredReservedBatch,
     getStockQuantity: vi.fn(),
+    reserveForOrder: vi.fn(),
+    reconcileZeroStock: vi.fn(),
   }
   const getPickupSlaMinutes = vi.fn<TenancyFacadePort['getPickupSlaMinutes']>().mockResolvedValue(pickupSlaMinutes)
   const tenancyFacade: TenancyFacadePort = {

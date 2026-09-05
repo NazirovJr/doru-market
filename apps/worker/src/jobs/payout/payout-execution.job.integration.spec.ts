@@ -256,8 +256,11 @@ describe.skipIf(!postgresAvailable)('PayoutExecutionJob — integration (DTJ-250
   it('TC-PAY-009: строка disputed для одного из заказов НЕ включена в батч (не запрошена вовсе — WHERE status=\'due\' её уже исключает)', async () => {
     const pharmacyId = await seedPharmacy(null)
     const dueId = await seedPayoutSchedule({ pharmacyId, status: 'due' })
-    const disputeId = randomUUID()
-    const disputedId = await seedPayoutSchedule({ pharmacyId, status: 'disputed', heldByDisputeId: disputeId })
+    // `held_by_dispute_id` НЕ задан (NULL) — после мёржа EP-11 (`order_disputes`, FK
+    // `fk_payout_schedule_dispute`) заглушечный `randomUUID()` здесь нарушал бы constraint;
+    // тест проверяет ТОЛЬКО фильтрацию по `status`, реальная ссылка на спор не нужна (NULL
+    // легален для этой nullable-колонки, FK не проверяет NULL).
+    const disputedId = await seedPayoutSchedule({ pharmacyId, status: 'disputed' })
     const captured: CapturedRequest[] = []
     const server = await startStandInServer(captured)
     try {
@@ -278,7 +281,9 @@ describe.skipIf(!postgresAvailable)('PayoutExecutionJob — integration (DTJ-250
 
   it('AC4: ноль строк due (типичное R1-прод состояние) — джоба завершается без ошибки, HTTP-мост НЕ вызывается вовсе', async () => {
     const pharmacyId = await seedPharmacy(null)
-    await seedPayoutSchedule({ pharmacyId, status: 'disputed', heldByDisputeId: randomUUID() })
+    // `held_by_dispute_id` НЕ задан — см. комментарий у TC-PAY-009 выше (FK `fk_payout_schedule_dispute`
+    // после мёржа EP-11, NULL легален, тест проверяет только исключение `disputed`-строк из выборки).
+    await seedPayoutSchedule({ pharmacyId, status: 'disputed' })
     const captured: CapturedRequest[] = []
     const server = await startStandInServer(captured)
     try {

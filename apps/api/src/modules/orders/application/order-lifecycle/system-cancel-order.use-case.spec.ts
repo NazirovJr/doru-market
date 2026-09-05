@@ -52,6 +52,8 @@ function makeHarness(): Harness {
     releaseStock,
     hasExpiredReservedBatch: vi.fn(),
     getStockQuantity: vi.fn(),
+    reserveForOrder: vi.fn(),
+    reconcileZeroStock: vi.fn(),
   }
   const refundFull = vi.fn<RefundFacadePort['refundFull']>().mockResolvedValue(ok(undefined))
   const refundFacade: RefundFacadePort = { refundFull }
@@ -171,6 +173,8 @@ describe('SystemCancelOrderUseCase (DTJ-253/254)', () => {
       releaseStock,
       hasExpiredReservedBatch: vi.fn(),
       getStockQuantity: vi.fn(),
+      reserveForOrder: vi.fn(),
+      reconcileZeroStock: vi.fn(),
     }
     const failingUseCase = new SystemCancelOrderUseCase(
       new OrdersFacade(repo),
