@@ -152,6 +152,8 @@ export class InvalidPrescriptionTransitionError extends ForbiddenTransitionError
 export class InvalidOnboardingTransitionError extends ForbiddenTransitionError {}
 export class AutomaticReactivationForbiddenError extends ForbiddenTransitionError {}
 export class DisputeAfterPayoutRequiresAdjustmentError extends ForbiddenTransitionError {}
+/** DTJ-271 (EP-11) — `OrderReturn.state-machine.ts`, недопустимый переход `return_status`. */
+export class InvalidReturnStatusTransitionError extends ForbiddenTransitionError {}
 
 // ==================== BusinessRuleViolationError → 422 BUSINESS_RULE_VIOLATION ====================
 
@@ -269,6 +271,18 @@ export class TenantConfirmationPendingError extends BusinessRuleViolationError {
 export class DisputeHoldViolationError extends BusinessRuleViolationError {
   constructor(details?: Record<string, unknown>) {
     super('Payout is on hold due to an open dispute', details, ErrorCode.PAYOUT_ON_HOLD)
+  }
+}
+
+/**
+ * DTJ-271 (EP-11), SRS-RET-003, D-EP11-5 — `reason='undelivered'` не создаёт `OrderReturn`,
+ * обрабатывается через `SupportFacade`/будущий `OrderDispute`. Падение означает баг вызывающего
+ * кода (use case обязан отфильтровать эту причину раньше вызова `OrderReturn.request()`/
+ * `ReturnFinancialOutcomeResolver.resolve()`), не пользовательский сценарий.
+ */
+export class UnsupportedReturnReasonError extends BusinessRuleViolationError {
+  constructor(details?: Record<string, unknown>) {
+    super('Return reason is not supported by the returns flow', details, ErrorCode.UNSUPPORTED_RETURN_REASON)
   }
 }
 

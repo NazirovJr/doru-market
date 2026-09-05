@@ -153,6 +153,14 @@ export enum ErrorCode {
   // адаптером — тело НЕ обрабатывается вовсе (ни HMAC, ни JSON.parse). Новый код в конец
   // каталога (D-27), тот же класс добавления, что ORDER_NOT_RETRYABLE (D-EP09-9).
   WEBHOOK_PROVIDER_UNKNOWN = 'WEBHOOK_PROVIDER_UNKNOWN',
+
+  // UNSUPPORTED_RETURN_REASON — DTJ-271 (EP-11), SRS-RET-003: `reason='undelivered'` не создаёт
+  // `OrderReturn` — обрабатывается через `SupportFacade`/будущий `OrderDispute`, не через
+  // возврат. Решение CTO D-EP11-5 (`reports/EP11-EP14-CTO-BRIEF.md`): обобщённый
+  // `BUSINESS_RULE_VIOLATION` не годится — клиенту нужно отличить «эта причина обслуживается
+  // другим процессом» от прочих отказов. Новый код в конец каталога (D-27), тот же класс
+  // добавления, что WEBHOOK_PROVIDER_UNKNOWN.
+  UNSUPPORTED_RETURN_REASON = 'UNSUPPORTED_RETURN_REASON',
 }
 
 /** HTTP-статус для каждого `ErrorCode` (`AllExceptionsFilter`, DTJ-018 — единственный фильтр приложения). */
@@ -254,4 +262,6 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   [ErrorCode.SMS_PROVIDER_UNAVAILABLE]: 503,
 
   [ErrorCode.WEBHOOK_PROVIDER_UNKNOWN]: 400,
+
+  [ErrorCode.UNSUPPORTED_RETURN_REASON]: 422,
 }

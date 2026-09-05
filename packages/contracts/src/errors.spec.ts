@@ -106,6 +106,9 @@ const EXPECTED: readonly (readonly [ErrorCode, number])[] = [
 
   // DTJ-242 (EP-10), SRS-PAY-019 / TC-PAY-005 — docs/spec/21-module-orders-payments-escrow.md.
   [ErrorCode.WEBHOOK_PROVIDER_UNKNOWN, 400],
+  // DTJ-271 (EP-11), SRS-RET-003, решение CTO D-EP11-5 (reports/EP11-EP14-CTO-BRIEF.md) —
+  // reason='undelivered' переадресуется на SupportFacade/OrderDispute, не создаёт OrderReturn.
+  [ErrorCode.UNSUPPORTED_RETURN_REASON, 422],
 ]
 
 describe('ErrorCode / ERROR_HTTP_STATUS — сверка с источниками', () => {

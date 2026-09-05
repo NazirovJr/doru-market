@@ -187,3 +187,89 @@ export const billingInvoiceTypeEnum = pgEnum('billing_invoice_type', [
  * Порядок значений НЕ переименовывать, только дописывать в конец.
  */
 export const billingInvoiceStatusEnum = pgEnum('billing_invoice_status', ['draft', 'issued', 'paid', 'overdue', 'void'])
+
+/**
+ * Статус возврата (EP-11, DTJ-270, D-09/REQ-RET-1, SRS-DB-008/009). Создан миграцией
+ * `0039_returns_disputes_support.sql`, DDL 1:1 `11-database-schema.md` строки 134-137.
+ * `returned_to_pharmacy` — значение есть в типе, но ни один переход R1 не ведёт в него
+ * (`order-return.state-machine.ts`, D-EP11-4: приёмка и решение о restock — один шаг
+ * `confirmReceived()`); задел под будущее разделение «товар доехал»/«фармацевт принял».
+ * Порядок значений НЕ переименовывать, только дописывать в конец.
+ */
+export const returnStatusEnum = pgEnum('return_status', [
+  'return_requested',
+  'return_in_transit',
+  'returned_to_pharmacy',
+  'return_confirmed',
+  'return_rejected',
+])
+
+/**
+ * Причина возврата (EP-11, DTJ-270, SRS-DB-008/009). Создан миграцией
+ * `0039_returns_disputes_support.sql`, `11-database-schema.md` строки 138-140. `undelivered` —
+ * НЕ ведёт к `OrderReturn` (переадресуется в `SupportFacade`/будущий `OrderDispute`,
+ * SRS-RET-003) — значение существует в enum'е (схема БД — закон), но домен `returns` отклоняет
+ * его в фабрике (`UnsupportedReturnReasonError`).
+ * Порядок значений НЕ переименовывать, только дописывать в конец.
+ */
+export const returnReasonEnum = pgEnum('return_reason', [
+  'defect',
+  'wrong_item',
+  'damaged_packaging',
+  'expired_or_near_expiry',
+  'undelivered',
+  'refused_at_door',
+  'undeliverable',
+  'customer_dispute_post_delivery',
+])
+
+/**
+ * Исход осмотра возврата (EP-11, DTJ-270, SRS-DB-008/009, REQ-RET-3/4). Создан миграцией
+ * `0039_returns_disputes_support.sql`, `11-database-schema.md` строка 142.
+ * Порядок значений НЕ переименовывать, только дописывать в конец.
+ */
+export const returnDispositionEnum = pgEnum('return_disposition', ['restock', 'destroy', 'pending_inspection'])
+
+/**
+ * Статус спора (EP-11/14, DTJ-270, D-24/REQ-DISPUTE, SRS-DB-008/009). Создан миграцией
+ * `0039_returns_disputes_support.sql`, `11-database-schema.md` строки 145-148. Таблица
+ * `order_disputes` — фундамент без домена/use case в этом диапазоне тикетов (D-EP11-6,
+ * полный воркфлоу — R3-3 за флагом `disputes_workflow_enabled`).
+ * Порядок значений НЕ переименовывать, только дописывать в конец.
+ */
+export const disputeStatusEnum = pgEnum('dispute_status', [
+  'open',
+  'awaiting_customer',
+  'resolved_reject',
+  'resolved_refund_full',
+  'resolved_refund_partial',
+  'resolved_adjustment',
+])
+
+/**
+ * Канал обращения (EP-14, DTJ-270). Тип УЖЕ СОЗДАН в БД миграцией
+ * `0034_support_tickets_audit_log.sql` (DTJ-247, побочный продукт `EscrowReconciliationJob`) —
+ * этот `pgEnum` НЕ повторяет `CREATE TYPE` (та миграция её не трогает), это первое типизированное
+ * Drizzle-определение уже существующего enum'а: DTJ-247 писал в `support_tickets` напрямую через
+ * `pg`-адаптер (`apps/worker/src/jobs/payout/pg-support-ticket.adapter.ts`), не через Drizzle.
+ * Порядок значений НЕ переименовывать, только дописывать в конец.
+ */
+export const supportTicketChannelEnum = pgEnum('support_ticket_channel', [
+  'in_app',
+  'telegram_bot',
+  'phone',
+  'system_auto',
+])
+
+/** Категория обращения (EP-14, DTJ-270). Тип уже создан `0034_support_tickets_audit_log.sql` — см. JSDoc supportTicketChannelEnum выше, тот же случай. */
+export const supportTicketCategoryEnum = pgEnum('support_ticket_category', [
+  'order_not_received',
+  'payment_issue',
+  'order_item_damaged_or_expired',
+  'order_quality_defect',
+  'courier_conduct',
+  'other',
+])
+
+/** Статус обращения (EP-14, DTJ-270). Тип уже создан `0034_support_tickets_audit_log.sql` — см. JSDoc supportTicketChannelEnum выше, тот же случай. */
+export const supportTicketStatusEnum = pgEnum('support_ticket_status', ['open', 'in_progress', 'resolved', 'closed'])

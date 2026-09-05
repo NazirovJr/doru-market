@@ -17,6 +17,8 @@ import { InventoryModule } from './modules/inventory/inventory.module.js'
 import { AuthModule } from './modules/auth/auth.module.js'
 import { OrdersModule } from './modules/orders/orders.module.js'
 import { PaymentsModule } from './modules/payments/payments.module.js'
+import { ReturnsModule } from './modules/returns/returns.module.js'
+import { SupportModule } from './modules/support/support.module.js'
 import { ResponseInterceptor } from './common/http/interceptors/response.interceptor.js'
 import { OpenApiModule } from './common/openapi/openapi.module.js'
 import { IdempotencyModule } from './common/idempotency/idempotency.module.js'
@@ -38,7 +40,7 @@ import { IdempotencyModule } from './common/idempotency/idempotency.module.js'
  * Сняты с регистрации в волне 6 — см. JSDoc `common/filters/all-exceptions.filter.ts`.
  */
 @Module({
-  imports: [AppConfigModule, LoggerModule, HealthModule, DatabaseModule, RedisModule, SharedKernelModule, OpenApiModule, IdempotencyModule, TenancyModule, OnboardingModule, CatalogModule, InventoryModule, AuthModule, OrdersModule, PaymentsModule, ScheduleModule.forRoot()],
+  imports: [AppConfigModule, LoggerModule, HealthModule, DatabaseModule, RedisModule, SharedKernelModule, OpenApiModule, IdempotencyModule, TenancyModule, OnboardingModule, CatalogModule, InventoryModule, AuthModule, OrdersModule, PaymentsModule, ReturnsModule, SupportModule, ScheduleModule.forRoot()],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
   ],

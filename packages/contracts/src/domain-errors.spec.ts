@@ -35,6 +35,7 @@ import {
   InvalidPhoneNumberFormatError,
   InvalidPrescriptionTransitionError,
   InvalidPriceError,
+  InvalidReturnStatusTransitionError,
   InvalidRestockQuantityError,
   InvalidWebhookSignatureError,
   LedgerImbalanceError,
@@ -63,6 +64,7 @@ import {
   TenantConfirmationPendingError,
   TokenInvalidatedError,
   UnauthorizedAdjustmentError,
+  UnsupportedReturnReasonError,
   ValidationError,
 } from './domain-errors.js'
 
@@ -100,6 +102,7 @@ const EXPECTED_CONCRETE_CLASSES: ReadonlySet<string> = new Set<string>([
   'InvalidOnboardingTransitionError',
   'AutomaticReactivationForbiddenError',
   'DisputeAfterPayoutRequiresAdjustmentError',
+  'InvalidReturnStatusTransitionError',
   'BusinessRuleViolationError',
   'PrescriptionNotVerifiedError',
   'ControlledSubstanceNotOrderableError',
@@ -136,6 +139,7 @@ const EXPECTED_CONCRETE_CLASSES: ReadonlySet<string> = new Set<string>([
   'PaymentProviderUnavailableError',
   'OcrProviderUnavailableError',
   'SmsProviderUnavailableError',
+  'UnsupportedReturnReasonError',
 ])
 
 /** [конструктор, ожидаемый ErrorCode] — 1:1 дерево `10-domain-model.md` §«Доменные ошибки». */
@@ -163,6 +167,7 @@ const CASES: readonly (readonly [() => DomainError, ErrorCode])[] = [
   [() => new InvalidOnboardingTransitionError(), ErrorCode.INVALID_STATE_TRANSITION],
   [() => new AutomaticReactivationForbiddenError(), ErrorCode.INVALID_STATE_TRANSITION],
   [() => new DisputeAfterPayoutRequiresAdjustmentError(), ErrorCode.INVALID_STATE_TRANSITION],
+  [() => new InvalidReturnStatusTransitionError(), ErrorCode.INVALID_STATE_TRANSITION],
   [() => new BusinessRuleViolationError(), ErrorCode.BUSINESS_RULE_VIOLATION],
   [() => new PrescriptionNotVerifiedError(), ErrorCode.PRESCRIPTION_NOT_VERIFIED],
   [() => new ControlledSubstanceNotOrderableError(), ErrorCode.CONTROLLED_SUBSTANCE_FORBIDDEN],
@@ -199,6 +204,7 @@ const CASES: readonly (readonly [() => DomainError, ErrorCode])[] = [
   [() => new PaymentProviderUnavailableError(), ErrorCode.PAYMENT_PROVIDER_UNAVAILABLE],
   [() => new OcrProviderUnavailableError(), ErrorCode.OCR_PROVIDER_UNAVAILABLE],
   [() => new SmsProviderUnavailableError(), ErrorCode.SMS_PROVIDER_UNAVAILABLE],
+  [() => new UnsupportedReturnReasonError(), ErrorCode.UNSUPPORTED_RETURN_REASON],
 ]
 
 describe('domain-errors — иерархия 1:1 с 10-domain-model.md', () => {
