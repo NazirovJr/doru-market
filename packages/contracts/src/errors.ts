@@ -202,6 +202,9 @@ export enum ErrorCode {
   // `inventory_sync_errors.error_code`, см. `docs/spec/22-module-inventory-sync-1c.md`
   // SRS-INV-013/014). ----
   EXCEL_TEMPLATE_HEADER_MISMATCH = 'EXCEL_TEMPLATE_HEADER_MISMATCH', // 400, SRS-INV-014
+  // Файл превышает `EXCEL_IMPORT_MAX_ROWS` строк (ASSUMPTION 20000) — тоже отклоняется
+  // целиком ДО построчного разбора (структурная ошибка, не построчная), DTJ-160.
+  EXCEL_IMPORT_ROW_LIMIT_EXCEEDED = 'EXCEL_IMPORT_ROW_LIMIT_EXCEEDED', // 400, SRS-INV-014
 }
 
 /** HTTP-статус для каждого `ErrorCode` (`AllExceptionsFilter`, DTJ-018 — единственный фильтр приложения). */
@@ -329,4 +332,5 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   [ErrorCode.HANDOVER_OTP_NOT_FOUND]: 404,
 
   [ErrorCode.EXCEL_TEMPLATE_HEADER_MISMATCH]: 400,
+  [ErrorCode.EXCEL_IMPORT_ROW_LIMIT_EXCEEDED]: 400,
 }

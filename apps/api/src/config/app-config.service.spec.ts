@@ -40,6 +40,7 @@ const BASE_ENV: EnvConfig = {
   BANK_INVOICE_VALIDITY_MINUTES: 15,
   PAYOUT_DRIVER: 'mock',
   MOCK_PAYOUT_DELAY_MS: 0,
+  EXCEL_IMPORT_MAX_ROWS: 20_000,
 }
 
 describe('AppConfigService', () => {

@@ -45,6 +45,7 @@ import { PHARMACY_SKU_MAPPING_REPOSITORY } from './application/ports/pharmacy-sk
 import { INVENTORY_OUTBOX } from './application/ports/inventory-outbox.port.js'
 import { FULL_SYNC_COMPLETION } from './application/ports/full-sync-completion.port.js'
 import { INVENTORY_SYNC_QUEUE } from './application/ports/inventory-sync-queue.port.js'
+import { EXCEL_INVENTORY_PARSER } from './application/ports/excel-inventory-parser.port.js'
 import { PHARMACY_API_KEY_VERIFICATION } from './application/ports/pharmacy-api-key-verification.port.js'
 import { InMemoryPharmacyApiKeyVerificationAdapter } from './infrastructure/adapters/in-memory-pharmacy-api-key-verification.adapter.js'
 import { PharmacyApiKeyGuard } from './presentation/guards/pharmacy-api-key.guard.js'
@@ -71,6 +72,7 @@ import { DrizzleInventoryOutboxAdapter } from './infrastructure/adapters/drizzle
 import { DrizzleInventorySyncBatchRepository } from './infrastructure/adapters/drizzle-inventory-sync-batch.repository.js'
 import { DrizzleInventorySyncReportRepository } from './infrastructure/adapters/drizzle-inventory-sync-report.repository.js'
 import { DrizzlePharmacyApiKeyVerificationAdapter } from './infrastructure/adapters/drizzle-pharmacy-api-key-verification.adapter.js'
+import { XlsxExcelInventoryParserAdapter } from './infrastructure/adapters/xlsx-excel-inventory-parser.adapter.js'
 
 @Module({
   imports: [AuthModule, RedisModule],
@@ -85,6 +87,8 @@ import { DrizzlePharmacyApiKeyVerificationAdapter } from './infrastructure/adapt
     { provide: FULL_SYNC_COMPLETION, useClass: DrizzleFullSyncCompletionAdapter },
     { provide: INVENTORY_SYNC_QUEUE, useClass: BullmqInventorySyncQueueAdapter },
     { provide: PHARMACY_API_KEY_VERIFICATION, useClass: DrizzlePharmacyApiKeyVerificationAdapter },
+    // DTJ-160: единственная реализация — `exceljs`, тот же пакет, что генератор шаблона DTJ-159.
+    { provide: EXCEL_INVENTORY_PARSER, useClass: XlsxExcelInventoryParserAdapter },
     InMemoryPharmacyApiKeyVerificationAdapter,
     PharmacyApiKeyGuard,
     InMemoryPharmacyInventoryRepository,

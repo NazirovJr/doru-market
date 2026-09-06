@@ -183,4 +183,9 @@ export class AppConfigService {
   get mockPayoutDelayMs(): number {
     return this.configService.get('MOCK_PAYOUT_DELAY_MS', { infer: true })
   }
+
+  /** [DTJ-160, SRS-INV-014] Максимум строк в одном файле Excel/CSV-импорта остатков. */
+  get excelImportMaxRows(): number {
+    return this.configService.get('EXCEL_IMPORT_MAX_ROWS', { infer: true })
+  }
 }

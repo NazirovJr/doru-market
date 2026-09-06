@@ -28,6 +28,8 @@ const DEFAULT_TELEGRAM_INIT_DATA_MAX_AGE_SECONDS = 300
 const DEFAULT_SEARCH_QUERY_TIMEOUT_MS = 2_000
 /** [DTJ-224, SRS-ORD-005] TTL мягкого Redis-резерва количества в корзине — ASSUMPTION тикета (900с = 15 мин). */
 const DEFAULT_CART_HOLD_TTL_SECONDS = 900
+/** [DTJ-160, SRS-INV-014] Максимум строк в одном файле Excel/CSV-импорта остатков (ASSUMPTION). */
+const DEFAULT_EXCEL_IMPORT_MAX_ROWS = 20_000
 /** [DTJ-227, SRS-DOM-166] Таймаут синхронного вызова `PaymentInvoicePort.createInvoice` после
  * commit транзакции группы — ASSUMPTION тикета (8000мс), см. «Что сделать» п.2.4.d. */
 const DEFAULT_PAYMENT_PROVIDER_TIMEOUT_MS = 8_000
@@ -149,6 +151,9 @@ export const envSchema = z.object({
   // [DTJ-250, SRS-PAY-033] Задержка (мс) MockBankPayoutTransferProvider.transferBatch — ASSUMPTION
   // 0 (тикет), тот же приём, что MOCK_BANK_AUTO_PAY_DELAY_MS.
   MOCK_PAYOUT_DELAY_MS: z.coerce.number().int().nonnegative().default(DEFAULT_MOCK_PAYOUT_DELAY_MS),
+  // [DTJ-160, SRS-INV-014] Максимум строк в одном Excel/CSV-файле импорта остатков —
+  // ASSUMPTION 20000 (тикет). Превышение отклоняет весь файл целиком, до построчного разбора.
+  EXCEL_IMPORT_MAX_ROWS: z.coerce.number().int().positive().default(DEFAULT_EXCEL_IMPORT_MAX_ROWS),
 })
 
 /** [DTJ-023] Секунды в N минутах/часах/дне — для use case расчёта rate-limit окон. */

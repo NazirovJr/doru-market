@@ -21,3 +21,14 @@ export class ExcelTemplateHeaderMismatchError extends ValidationError {
     super('Excel/CSV template header mismatch: a required column is missing', details, ErrorCode.EXCEL_TEMPLATE_HEADER_MISMATCH)
   }
 }
+
+/**
+ * SRS-INV-014 — файл Excel/CSV-импорта остатков превышает `EXCEL_IMPORT_MAX_ROWS`
+ * (ASSUMPTION 20000, ENV) строк — весь файл отклоняется ДО построчного разбора, тем же
+ * приёмом, что `ExcelTemplateHeaderMismatchError` (структурная ошибка файла, не строки).
+ */
+export class ExcelImportRowLimitExceededError extends ValidationError {
+  constructor(details?: Record<string, unknown>) {
+    super('Excel/CSV import file exceeds the maximum allowed row count', details, ErrorCode.EXCEL_IMPORT_ROW_LIMIT_EXCEEDED)
+  }
+}
