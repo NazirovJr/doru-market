@@ -11,10 +11,12 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { eq, and } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
+import { Money } from '@/shared-kernel/domain/value-objects/money.vo.js'
 import { orders, orderItems } from '@/db/schema/orders.js'
 import { pharmacies } from '@/db/schema/pharmacies.js'
 import { medicines } from '@/db/schema/medicines.js'
 import { pharmacyInventory } from '@/db/schema/pharmacy-inventory.js'
+import { couriers } from '@/db/schema/couriers.js'
 import {
   RETURNS_ORDERS_PORT,
   type ReturnsOrdersPort,
@@ -47,6 +49,9 @@ export class DrizzleReturnsOrdersFacadeAdapter implements ReturnsOrdersPort {
         billingStrategy: orders.billingStrategy,
         deliveredAt: orders.deliveredAt,
         courierId: orders.courierId,
+        itemsTotalTjs: orders.itemsTotalTjs,
+        deliveryFeeTjs: orders.deliveryFeeTjs,
+        totalAmountTjs: orders.totalAmountTjs,
       })
       .from(orders)
       .leftJoin(pharmacies, eq(pharmacies.id, orders.pharmacyId))
@@ -57,6 +62,16 @@ export class DrizzleReturnsOrdersFacadeAdapter implements ReturnsOrdersPort {
     }
     const items = await this.loadItems(client, orderId)
     return toOrderReturnContext(row, items)
+  }
+
+  /** DTJ-275 — см. JSDoc `ReturnsOrdersPort.getCourierIdForUser`. `tenantId` не фильтрует
+   *  `couriers` напрямую (таблица не тенант-скоупная, платформенный пул), но параметр сохранён
+   *  в сигнатуре порта для единообразия с остальными методами (может понадобиться при
+   *  мульти-тенантном флоте сетей, R3). */
+  public async getCourierIdForUser(_tenantId: string, userId: string, tx?: ReturnsUnitOfWorkTx): Promise<string | null> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const [row] = await client.select({ id: couriers.id }).from(couriers).where(eq(couriers.userId, userId)).limit(1)
+    return row?.id ?? null
   }
 
   private async loadItems(client: DrizzleDb, orderId: string): Promise<readonly ReturnOrderItemSnapshot[]> {
@@ -92,6 +107,9 @@ interface OrderReturnHeaderRow {
   readonly billingStrategy: string
   readonly deliveredAt: Date | null
   readonly courierId: string | null
+  readonly itemsTotalTjs: string
+  readonly deliveryFeeTjs: string
+  readonly totalAmountTjs: string
 }
 
 /** Извлечено из `getOrderForReturn` — C1 (`max-lines-per-function`, порог 40 строк). */
@@ -109,6 +127,9 @@ function toOrderReturnContext(row: OrderReturnHeaderRow, items: readonly ReturnO
     deliveredAt: row.deliveredAt,
     courierId: row.courierId,
     items,
+    itemsTotalDiram: Money.fromDbDecimalTjs(row.itemsTotalTjs).diram,
+    deliveryFeeDiram: Money.fromDbDecimalTjs(row.deliveryFeeTjs).diram,
+    totalAmountDiram: Money.fromDbDecimalTjs(row.totalAmountTjs).diram,
   }
 }
 

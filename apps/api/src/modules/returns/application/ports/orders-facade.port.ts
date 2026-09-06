@@ -67,9 +67,25 @@ export interface OrderReturnContext {
   /** DTJ-273 п.2 (курьерская ветка, `picked_up`) — курьер, УЖЕ везущий заказ (`orders.courier_id`), не результат нового назначения. */
   readonly courierId: string | null
   readonly items: readonly ReturnOrderItemSnapshot[]
+  /** DTJ-274 пп.4-6 — сумма позиций заказа (диримы), нужна `refundItems`/`refundFull`. `orders.items_total_tjs` конвертируется в infra-мапперe (правило 6 AGENTS.md). */
+  readonly itemsTotalDiram: bigint
+  /** DTJ-274 пп.4-6 — стоимость доставки (диримы), нужна `refundDelivery`/`recordAdjustment` (недополученная аптекой часть при `single_invoice`). */
+  readonly deliveryFeeDiram: bigint
+  /** DTJ-274 п.5-6 — `itemsTotalDiram + deliveryFeeDiram` (см. `chk_orders_total_amount` в схеме) — читается отдельным полем, не пересчитывается вызывающим кодом. */
+  readonly totalAmountDiram: bigint
 }
 
 export interface ReturnsOrdersPort {
   /** Чужой тенант ⇒ `null` (SRS-API-046: существование чужой строки не подтверждается). */
   getOrderForReturn(tenantId: string, orderId: string, tx?: ReturnsUnitOfWorkTx): Promise<OrderReturnContext | null>
+
+  /**
+   * DTJ-275 — RBAC-владение courier-ветки `POST /api/v1/order-returns` (SRS-RET-011,
+   * `ReturnsPolicy.canRequest`): `orders.courier_id` хранит `couriers.id`, JWT `sub` — `users.id`
+   * (см. `couriers.user_id` FK, `db/schema/couriers.ts`) — резолвинг нужен ИМЕННО здесь, не в
+   * `auth`, т.к. только `returns` знает, для чего сравнение требуется. `null` — пользователь не
+   * зарегистрирован как курьер (роль `courier` без профиля — не должно происходить, но не
+   * инвариант уровня БД, presentation обязан трактовать как «не назначен»).
+   */
+  getCourierIdForUser(tenantId: string, userId: string, tx?: ReturnsUnitOfWorkTx): Promise<string | null>
 }
