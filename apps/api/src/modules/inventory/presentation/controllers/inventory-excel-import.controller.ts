@@ -46,6 +46,17 @@
  * не содержит `pharmacyId`, тот же приём, что `ManualEntryRequestSchema` DTJ-162).
  * `super_admin` без привязанной аптеки (`claims.pharmacyId===null`) получает
  * `400 VALIDATION_ERROR` — известное ограничение схемы контракта, не обходится молча.
+ *
+ * **ДОПОЛНЕНО DTJ-164** (`persistParserErrorsContainerIfNeeded`, «Что сделать» п.1 того
+ * тикета): если парсер отклонил хотя бы одну строку (`rejectedRows.length > 0`) — СВЕРХ N
+ * обычных батчей создаётся ОДИН синтетический батч-контейнер (`channel='excel',
+ * status='failed_validation', totalRows=0`, ТЕМ ЖЕ `sourceUploadId`), хранящий
+ * ПАРСЕР-ошибки в `inventory_sync_errors`/`inventory_sync_raw_items` — так отчёт DTJ-164
+ * (`GET .../error-report`) читает ОДИН источник (`findBySourceUploadId` + построчные ошибки
+ * ПО ВСЕМ батчам загрузки), объединяющий ошибки парсинга и ошибки use case. НЕ через
+ * `PersistInventorySyncBatchService` (не публикует `queued`-событие — синтетический
+ * контейнер уже терминален при создании, публикация была бы семантической ложью и обвалила
+ * бы гипотетического будущего воркера на `IllegalBatchStatusTransitionError`).
  */
 import { Controller, HttpCode, HttpException, HttpStatus, Inject, Post, Req, UseGuards } from '@nestjs/common'
 import { randomUUID } from 'node:crypto'
@@ -63,7 +74,12 @@ import { CLOCK, type Clock } from '@/shared-kernel/application/ports/clock.port.
 import {
   EXCEL_INVENTORY_PARSER,
   type ExcelInventoryParserPort,
+  type RejectedExcelRow,
 } from '@/modules/inventory/application/ports/excel-inventory-parser.port.js'
+import {
+  INVENTORY_SYNC_BATCH_REPOSITORY,
+  type InventorySyncBatchRepository,
+} from '@/modules/inventory/application/ports/inventory-sync-batch.repository.port.js'
 import { PersistInventorySyncBatchService } from '@/modules/inventory/application/services/persist-inventory-sync-batch.service.js'
 import { buildExcelImportBatchPlans } from '../mappers/excel-inventory-request-to-command.mapper.js'
 
@@ -79,10 +95,16 @@ interface MultipartUpload {
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('pharmacy_admin', 'super_admin')
 export class InventoryExcelImportController {
+  // 4 DI-инъекции (DTJ-164 добавил прямой доступ к InventorySyncBatchRepository для
+  // синтетического parser-errors контейнера, см. JSDoc файла) — тот же приём, что исходный
+  // InventoryBatchUpdateController до рефакторинга DTJ-161.
+  // eslint-disable-next-line max-params -- см. комментарий выше
   constructor(
     @Inject(EXCEL_INVENTORY_PARSER) private readonly parser: ExcelInventoryParserPort,
     @Inject(PersistInventorySyncBatchService)
     private readonly persistBatch: PersistInventorySyncBatchService,
+    @Inject(INVENTORY_SYNC_BATCH_REPOSITORY)
+    private readonly syncBatchRepository: InventorySyncBatchRepository,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -113,6 +135,11 @@ export class InventoryExcelImportController {
       generateBatchId: randomUUID,
     })
     await this.persistPlans(plans)
+    await this.persistParserErrorsContainerIfNeeded({
+      pharmacyId,
+      sourceUploadId,
+      rejectedRows: parseResult.rejectedRows,
+    })
 
     const response: InventoryExcelImportAcceptedResponse = {
       sourceUploadId,
@@ -144,6 +171,51 @@ export class InventoryExcelImportController {
         rows: plan.rows,
       })
     }
+  }
+
+  /**
+   * DTJ-164 «Что сделать» п.1 — синтетический батч-контейнер ТОЛЬКО если парсер отклонил
+   * хотя бы одну строку. `syncType='delta'`/`fullSyncSessionId=null` независимо от режима
+   * загрузки (`mode`) — контейнер не участвует в FSM полной синхронизации, это чистый
+   * контейнер ошибок. НЕ используем `PersistInventorySyncBatchService` — см. JSDoc файла.
+   */
+  private async persistParserErrorsContainerIfNeeded(input: {
+    readonly pharmacyId: string
+    readonly sourceUploadId: string
+    readonly rejectedRows: readonly RejectedExcelRow[]
+  }): Promise<void> {
+    if (input.rejectedRows.length === 0) return
+    const now = this.clock.now()
+    const { batch } = await this.syncBatchRepository.createIfNotExists({
+      id: randomUUID(),
+      pharmacyId: input.pharmacyId,
+      channel: 'excel',
+      syncType: 'delta',
+      fullSyncSessionId: null,
+      isLastPage: true,
+      totalRows: 0,
+      note: 'parser-errors container (DTJ-160/164)',
+      now,
+      sourceUploadId: input.sourceUploadId,
+    })
+    batch.markProcessing()
+    batch.markFailedValidation(
+      input.rejectedRows.map((row) => ({ rowIndex: row.rowIndex, reason: row.reason })),
+      now,
+    )
+    await this.syncBatchRepository.save(batch)
+    await this.syncBatchRepository.appendRawItems(
+      batch.id,
+      input.rejectedRows.map((row) => ({ rowIndex: row.rowIndex, payload: row.rawRow })),
+    )
+    await this.syncBatchRepository.appendErrors(
+      input.rejectedRows.map((row) => ({
+        batchId: batch.id,
+        rowIndex: row.rowIndex,
+        errorCode: row.errorCode,
+        reason: row.reason,
+      })),
+    )
   }
 }
 

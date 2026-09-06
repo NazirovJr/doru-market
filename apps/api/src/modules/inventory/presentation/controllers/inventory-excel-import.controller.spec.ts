@@ -109,7 +109,7 @@ function makeController(parseResult: ExcelInventoryParseResult): {
   const persistBatch = new PersistInventorySyncBatchService(syncBatchRepository, outbox)
   const clock = new StubClock(new Date('2026-01-15T10:00:00.000Z'))
   const parser = new FakeParser(parseResult)
-  const controller = new InventoryExcelImportController(parser, persistBatch, clock)
+  const controller = new InventoryExcelImportController(parser, persistBatch, syncBatchRepository, clock)
   return { controller, syncBatchRepository, outbox }
 }
 
@@ -156,6 +156,28 @@ describe('InventoryExcelImportController (DTJ-161, SRS-INV-014)', () => {
     const result = await controller.import(fakeRequest({ mode: 'append_update' }), makeClaims())
 
     expect(result).toMatchObject({ data: { totalBatches: 3, totalRows: 2495, rejectedByParser: 5 } })
+  })
+
+  it('DTJ-164: rejectedRows>0 создаёт СИНТЕТИЧЕСКИЙ parser-errors батч (channel=excel, failed_validation, totalRows=0) с теми же ошибками', async () => {
+    const { controller, syncBatchRepository } = makeController({ rows: makeRows(10), rejectedRows: makeRejectedRows(2) })
+    const result = await controller.import(fakeRequest({ mode: 'append_update' }), makeClaims())
+
+    // 1 обычный батч (10 строк < 1000) + 1 синтетический контейнер.
+    const batches = await syncBatchRepository.findBySourceUploadId(extractSourceUploadId(result))
+    expect(batches).toHaveLength(2)
+    const container = batches.find((b) => b.totalRows === 0)
+    expect(container).toMatchObject({ channel: 'excel', status: 'failed_validation' })
+    const containerErrors = await syncBatchRepository.findRowErrorsByBatchId(container?.id ?? '')
+    expect(containerErrors).toHaveLength(2)
+    expect(containerErrors.every((e) => e.errorCode === 'invalid_price')).toBe(true)
+  })
+
+  it('DTJ-164: rejectedRows=0 НЕ создаёт синтетический батч (уже покрыто предыдущими тестами — доп. явная проверка)', async () => {
+    const { controller, syncBatchRepository } = makeController({ rows: makeRows(10), rejectedRows: [] })
+    const result = await controller.import(fakeRequest({ mode: 'append_update' }), makeClaims())
+
+    const batches = await syncBatchRepository.findBySourceUploadId(extractSourceUploadId(result))
+    expect(batches.every((b) => b.totalRows > 0)).toBe(true)
   })
 
   it('полностью невалидный файл (0 валидных строк) не создаёт ни одного батча, 400 VALIDATION_ERROR', async () => {
