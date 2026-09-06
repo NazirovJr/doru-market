@@ -1,5 +1,5 @@
 /**
- * `EscalateTicketPriorityController` (EP-14, DTJ-280) —
+ * `EscalateTicketPriorityController` (EP-14, DTJ-280/281) —
  * `POST /api/v1/internal/support-tickets/:id/escalate-priority`, единственный HTTP-вход
  * `EscalateTicketPriorityUseCase`.
  *
@@ -15,14 +15,18 @@
  * дополнительного бизнес-контекста, который воркер обязан передать (никакого `tenantId`/
  * `expectedFromStatus`: `EscalateTicketPriorityUseCase` сам читает `tenantId` тикета через
  * репозиторий).
+ *
+ * ДОБАВЛЕНО (DTJ-281): вызывает `EscalateTicketPriorityUseCase` ЧЕРЕЗ `SupportFacade`
+ * (`SUPPORT_FACADE`), не напрямую use case, как было временно на шаге DTJ-280 (`SupportFacade`
+ * тогда ещё не имел реализации метода) — единообразие точки входа, DTJ-281 «Что сделать» п.3:
+ * «используется DTJ-280 через фасад, не напрямую use case, даже изнутри своего же модуля».
+ * `TicketNotFoundError` по-прежнему импортируется из `application/` (не `domain/` напрямую) —
+ * см. ре-экспорт в `escalate-ticket-priority.use-case.ts`, `presentation-goes-through-application`.
  */
 import { Controller, HttpCode, HttpStatus, Inject, NotFoundException, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
 import { ok, type SuccessEnvelope } from '@dorutj/contracts'
-import {
-  EscalateTicketPriorityUseCase,
-  TicketNotFoundError,
-  type EscalateTicketPriorityResult,
-} from '@/modules/support/application/use-cases/escalate-ticket-priority.use-case.js'
+import { TicketNotFoundError } from '@/modules/support/application/use-cases/escalate-ticket-priority.use-case.js'
+import { SUPPORT_FACADE, type SupportFacade, type EscalateTicketPriorityFacadeResult } from '@/modules/support/index.js'
 import { SupportInternalServiceGuard } from './support-internal-service.guard.js'
 
 const ID_PARSE_UUID = new ParseUUIDPipe({ version: '4' })
@@ -30,17 +34,15 @@ const ID_PARSE_UUID = new ParseUUIDPipe({ version: '4' })
 @Controller({ path: 'internal/support-tickets', version: '1' })
 @UseGuards(SupportInternalServiceGuard)
 export class EscalateTicketPriorityController {
-  public constructor(
-    @Inject(EscalateTicketPriorityUseCase) private readonly escalateTicketPriority: EscalateTicketPriorityUseCase,
-  ) {}
+  public constructor(@Inject(SUPPORT_FACADE) private readonly supportFacade: SupportFacade) {}
 
   @Post(':id/escalate-priority')
   @HttpCode(HttpStatus.OK)
   public async escalate(
     @Param('id', ID_PARSE_UUID) ticketId: string,
-  ): Promise<SuccessEnvelope<EscalateTicketPriorityResult>> {
+  ): Promise<SuccessEnvelope<EscalateTicketPriorityFacadeResult>> {
     try {
-      const result = await this.escalateTicketPriority.execute({ ticketId })
+      const result = await this.supportFacade.escalateTicketPriority(ticketId)
       return ok(result)
     } catch (error) {
       // Гонка «тикет удалён/не существует между SQL-сканом воркера и этим вызовом» — 404, не
