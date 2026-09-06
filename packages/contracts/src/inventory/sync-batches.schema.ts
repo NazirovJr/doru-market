@@ -48,3 +48,35 @@ export const InventorySyncBatchStatusResponseSchema = z.object({
   completedAt: z.string().nullable(),
 })
 export type InventorySyncBatchStatusResponse = z.infer<typeof InventorySyncBatchStatusResponseSchema>
+
+/**
+ * `GET /api/v1/inventory-sync-batches` (DTJ-163, SRS-INV-043) — курсорный список отчёта
+ * кабинета аптеки (человеческая роль, `pharmacist`/`pharmacy_admin`/`super_admin`; НЕ путать с
+ * `InventorySyncBatchStatusResponseSchema` DTJ-158, который обслуживает системный принципал
+ * `pharmacy_system`). Один элемент списка — то же тело, что статус-ответ DTJ-158, ПЛЮС
+ * `sourceUploadId` (SRS-INV-043 явно называет его среди отображаемых полей).
+ */
+export const InventorySyncBatchListItemSchema = InventorySyncBatchStatusResponseSchema.extend({
+  sourceUploadId: z.string().nullable(),
+})
+export type InventorySyncBatchListItemDto = z.infer<typeof InventorySyncBatchListItemSchema>
+
+/**
+ * Построчная ошибка батча (DTJ-163 `/errors`, SRS-INV-044) — `message` уже локализовано
+ * (`errorCode → i18n`, `Accept-Language`), `errorCode` остаётся для программной обработки
+ * клиентом (SRS-API-015: `details` — структурный объект, `message` — человекочитаемый текст).
+ * `rawRow` — `null` для батчей канала `manual` (ручной ввод не пишет сырые строки, см. JSDoc
+ * `InventoryManualEntryController`) — не признак повреждения данных.
+ */
+export const InventorySyncRowErrorResponseSchema = z.object({
+  rowIndex: z.number().int().nonnegative(),
+  errorCode: z.string(),
+  message: z.string(),
+  rawRow: z.record(z.string(), z.unknown()).nullable(),
+})
+export type InventorySyncRowErrorResponseDto = z.infer<typeof InventorySyncRowErrorResponseSchema>
+
+/** `GET /api/v1/inventory-sync-batches/pending-moderation-count` (DTJ-163, SRS-INV-046). */
+export interface InventoryPendingModerationCountResponse {
+  readonly pendingCount: number
+}

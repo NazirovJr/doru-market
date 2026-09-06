@@ -11,6 +11,7 @@
 import { HttpException, HttpStatus } from '@nestjs/common'
 import { describe, expect, it } from 'vitest'
 import { InMemoryInventorySyncBatchRepository } from '@/modules/inventory/infrastructure/adapters/in-memory-inventory-sync-batch.repository.js'
+import { InMemoryCatalogMatchQueueReadAdapter } from '@/modules/inventory/infrastructure/adapters/in-memory-catalog-match-queue-read.adapter.js'
 import { InventorySyncReportQueryService } from '@/modules/inventory/application/services/inventory-sync-report-query.service.js'
 import { InventorySyncBatchStatusController } from './inventory-sync-batch-status.controller.js'
 import type { FastifyRequestWithPrincipal } from '../guards/pharmacy-api-key.guard.js'
@@ -22,7 +23,10 @@ function makeController(): {
   repo: InMemoryInventorySyncBatchRepository
 } {
   const repo = new InMemoryInventorySyncBatchRepository()
-  const reportQuery = new InventorySyncReportQueryService(repo)
+  // DTJ-163: `InventorySyncReportQueryService` растёт, второй конструкторный параметр не
+  // используется ветками DTJ-158 (own-аптека/сеть) — InMemory-заглушка, тот же приём, что
+  // остальные InMemory-адаптеры этого модуля.
+  const reportQuery = new InventorySyncReportQueryService(repo, new InMemoryCatalogMatchQueueReadAdapter())
   return { controller: new InventorySyncBatchStatusController(reportQuery), repo }
 }
 
