@@ -2,3 +2,4 @@
 export * from './batch-update.schema.js'
 export * from './sync-batches.schema.js'
 export * from './excel-import.schema.js'
+export * from './manual-entry.schema.js'

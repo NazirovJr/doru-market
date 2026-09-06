@@ -60,6 +60,7 @@ import { InventoryBatchUpdateController } from './presentation/controllers/inven
 import { InventorySyncBatchStatusController } from './presentation/controllers/inventory-sync-batch-status.controller.js'
 import { InventoryImportTemplateController } from './presentation/controllers/inventory-import-template.controller.js'
 import { InventoryExcelImportController } from './presentation/controllers/inventory-excel-import.controller.js'
+import { InventoryManualEntryController } from './presentation/controllers/inventory-manual-entry.controller.js'
 import { CompositeInventoryMatcherService } from './application/services/composite-inventory-matcher.service.js'
 import { InventorySyncReportQueryService } from './application/services/inventory-sync-report-query.service.js'
 import { PersistInventorySyncBatchService } from './application/services/persist-inventory-sync-batch.service.js'
@@ -126,6 +127,7 @@ import { XlsxExcelInventoryParserAdapter } from './infrastructure/adapters/xlsx-
     InventorySyncBatchStatusController,
     InventoryImportTemplateController,
     InventoryExcelImportController,
+    InventoryManualEntryController,
   ],
   exports: [
     PHARMACY_INVENTORY_REPOSITORY,
