@@ -14,6 +14,7 @@ import { CashCommissionAggregationModule } from './jobs/payout/cash-commission-a
 import { BillingInvoiceOverdueModule } from './jobs/payout/billing-invoice-overdue.module.js'
 import { PickupSlaTimeoutModule } from './jobs/escrow-timeouts/pickup-sla-timeout.module.js'
 import { PayoutExecutionModule } from './jobs/payout/payout-execution.module.js'
+import { NotificationDispatchModule } from './jobs/notifications/notification-dispatch.module.js'
 
 /**
  * Барабанный модуль (D-27) — корневой `AppModule` apps/worker. Каждый новый тикет,
@@ -37,6 +38,7 @@ import { PayoutExecutionModule } from './jobs/payout/payout-execution.module.js'
     BillingInvoiceOverdueModule,
     PickupSlaTimeoutModule,
     PayoutExecutionModule,
+    NotificationDispatchModule,
   ],
 })
 // Класс существует только как носитель декоратора @Module для графа DI NestJS — штатный паттерн.
