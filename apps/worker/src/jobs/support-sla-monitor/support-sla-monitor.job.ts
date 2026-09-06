@@ -43,6 +43,10 @@ export interface SupportSlaMonitorResult {
 export class SupportSlaMonitorJob {
   private readonly logger = new Logger(SupportSlaMonitorJob.name)
 
+  // 4 зависимости — тот же приём, что use case'ы EP-14 в apps/api (`CreateSupportTicketUseCase`
+  // и др.): явный @Inject на каждом параметре держит граф зависимостей видимым в providers[]
+  // модуля, а не скрывает его за анонимной фабрикой/bag-объектом без собственной семантики.
+  // eslint-disable-next-line max-params -- см. комментарий выше
   constructor(
     @Inject(SUPPORT_SLA_TICKET_SCANNER) private readonly scanner: SupportSlaTicketScannerPort,
     @Inject(API_INTERNAL_URL_TOKEN) private readonly apiInternalUrl: string,

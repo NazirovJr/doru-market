@@ -45,14 +45,18 @@ describe('SupportSlaMonitorJob (DTJ-280)', () => {
 
   it('критерий приёмки 1 — тикет найден сканом → HTTP-мост вызван РОВНО один раз на escalate-priority этого тикета, reEscalationCooldownMinutes передан в скан', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse({ ticketId: TICKET_A.ticketId, priority: 1 }))
-    const scanner = fakeScanner([TICKET_A])
+    // Отдельная переменная для мока — иначе @typescript-eslint/unbound-method ругается на ссылку
+    // на метод интерфейса без вызова (конвенция `payout-execution.job.spec.ts`/
+    // `license-expiry-check.processor.spec.ts`).
+    const findOverdueTicketsMock = vi.fn<SupportSlaTicketScannerPort['findOverdueTickets']>().mockResolvedValue([TICKET_A])
+    const scanner: SupportSlaTicketScannerPort = { findOverdueTickets: findOverdueTicketsMock }
     const job = buildJob(scanner, INTERNAL_API_KEY)
 
     const now = new Date('2026-09-04T03:00:00.000Z')
     const result = await job.runOnce(now)
 
     expect(result).toEqual({ scanned: 1, escalated: 1, failed: 0 })
-    expect(scanner.findOverdueTickets).toHaveBeenCalledWith(now, RE_ESCALATION_COOLDOWN_MINUTES)
+    expect(findOverdueTicketsMock).toHaveBeenCalledWith(now, RE_ESCALATION_COOLDOWN_MINUTES)
     expect(globalThis.fetch).toHaveBeenCalledOnce()
     const call = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [URL, RequestInit]
     expect(call[0]).toEqual(new URL(`/api/v1/internal/support-tickets/${TICKET_A.ticketId}/escalate-priority`, API_INTERNAL_URL))

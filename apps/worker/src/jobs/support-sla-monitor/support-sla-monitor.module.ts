@@ -10,7 +10,9 @@ import { ConfigService } from '@nestjs/config'
 import { Queue } from 'bullmq'
 import type { Redis } from 'ioredis'
 import { Pool } from 'pg'
+// eslint-disable-next-line no-restricted-imports -- `@/...` не резолвится в worker-рантайме: nest-cli.json использует дефолтный tsc-билдер без webpack/tsconfig-paths (см. common/health/health.service.ts).
 import type { WorkerEnv } from '../../config/env.schema.js'
+// eslint-disable-next-line no-restricted-imports -- `@/...` не резолвится в worker-рантайме: nest-cli.json использует дефолтный tsc-билдер без webpack/tsconfig-paths (см. common/health/health.service.ts).
 import { REDIS_CONNECTION } from '../../config/redis-connection.provider.js'
 import { PgSupportSlaScannerAdapter } from './pg-support-sla-scanner.adapter.js'
 import { API_INTERNAL_URL_TOKEN, INTERNAL_API_KEY_TOKEN } from './escalate-support-ticket.client.js'
