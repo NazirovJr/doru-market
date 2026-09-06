@@ -42,6 +42,7 @@ export class DrizzleSupportTicketsRepository implements SupportTicketsRepository
       updatedAt: snapshot.updatedAt,
       firstResponseDueAt: snapshot.firstResponseDueAt,
       firstRespondedAt: snapshot.firstRespondedAt,
+      lastEscalatedAt: snapshot.lastEscalatedAt,
       priority: snapshot.priority,
     }
     await client
@@ -70,6 +71,7 @@ function toDomain(row: SupportTicketRow): SupportTicket {
     description: row.description,
     firstResponseDueAt: row.firstResponseDueAt,
     firstRespondedAt: row.firstRespondedAt,
+    lastEscalatedAt: row.lastEscalatedAt,
     createdAt: row.createdAt ?? new Date(0),
     updatedAt: row.updatedAt ?? new Date(0),
   })

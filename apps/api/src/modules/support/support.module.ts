@@ -16,6 +16,9 @@
  * DTJ-279 (`CreateSupportTicketUseCase` + порты + адаптеры) добавляет провайдеры сюда строками
  * (D-27) — единственная точка создания обращения (SRS-ADM-053/074).
  *
+ * DTJ-280 (`EscalateTicketPriorityUseCase` + `EscalateTicketPriorityController` internal-мост
+ * `apps/worker → apps/api`) добавляет провайдер/контроллер той же строчной аддитивной техникой.
+ *
  * Модуль `disputes` (EP-14, `order_disputes`/`dispute_status_history`) НЕ заводится этим файлом
  * и НЕ входит в этот диапазон тикетов (D-EP11-6) — таблицы существуют как фундамент
  * (`db/schema/support.ts`), домен/use case поверх них — R3-3 за флагом
@@ -23,14 +26,16 @@
  */
 import { Module } from '@nestjs/common'
 import { CreateSupportTicketUseCase } from './application/use-cases/create-support-ticket.use-case.js'
+import { EscalateTicketPriorityUseCase } from './application/use-cases/escalate-ticket-priority.use-case.js'
 import { SUPPORT_TICKETS_REPOSITORY_PROVIDER } from './infrastructure/repositories/drizzle-support-tickets.repository.js'
 import { SUPPORT_ORDERS_FACADE_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-support-orders-facade.adapter.js'
 import { SUPPORT_TENANT_SETTINGS_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-support-tenant-settings.adapter.js'
 import { SUPPORT_UNIT_OF_WORK_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-support-unit-of-work.adapter.js'
 import { SUPPORT_OUTBOX_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-support-outbox.adapter.js'
+import { EscalateTicketPriorityController } from './presentation/internal/escalate-ticket-priority.controller.js'
 
 @Module({
-  controllers: [],
+  controllers: [EscalateTicketPriorityController],
   providers: [
     SUPPORT_TICKETS_REPOSITORY_PROVIDER,
     SUPPORT_ORDERS_FACADE_DRIZZLE_PROVIDER,
@@ -38,6 +43,7 @@ import { SUPPORT_OUTBOX_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizz
     SUPPORT_UNIT_OF_WORK_DRIZZLE_PROVIDER,
     SUPPORT_OUTBOX_DRIZZLE_PROVIDER,
     CreateSupportTicketUseCase,
+    EscalateTicketPriorityUseCase,
   ],
 })
 // NestJS module marker class: Nest требует класс-носитель декоратора @Module, providers

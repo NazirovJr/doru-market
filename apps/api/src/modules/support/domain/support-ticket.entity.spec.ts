@@ -35,6 +35,7 @@ function buildSnapshot(status: SupportTicketStatus, overrides: Partial<SupportTi
     description: null,
     firstResponseDueAt: NOW,
     firstRespondedAt: null,
+    lastEscalatedAt: null,
     createdAt: NOW,
     updatedAt: NOW,
     ...overrides,
@@ -186,5 +187,23 @@ describe('SupportTicket.toSnapshot()/restore() — round-trip', () => {
     const original = SupportTicket.open(baseCommand(), NOW)
     const restored = SupportTicket.restore(original.toSnapshot())
     expect(restored.toSnapshot()).toEqual(original.toSnapshot())
+  })
+})
+
+describe('SupportTicket.escalatePriority() — DTJ-280', () => {
+  it('увеличивает priority на 1 и фиксирует lastEscalatedAt=now', () => {
+    const ticket = SupportTicket.restore(buildSnapshot('open', { priority: 0, lastEscalatedAt: null }))
+    const escalatedAt = fixedDate('2026-06-01T10:00:00Z')
+    ticket.escalatePriority(escalatedAt)
+    expect(ticket.priority).toBe(1)
+    expect(ticket.lastEscalatedAt).toEqual(escalatedAt)
+  })
+
+  it('вызов дважды подряд увеличивает priority дважды (анти-дребезг — забота SQL-скана воркера, не этого метода)', () => {
+    const ticket = SupportTicket.restore(buildSnapshot('open', { priority: 0, lastEscalatedAt: null }))
+    ticket.escalatePriority(fixedDate('2026-06-01T10:00:00Z'))
+    ticket.escalatePriority(fixedDate('2026-06-01T10:05:00Z'))
+    expect(ticket.priority).toBe(2)
+    expect(ticket.lastEscalatedAt).toEqual(fixedDate('2026-06-01T10:05:00Z'))
   })
 })
