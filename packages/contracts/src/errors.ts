@@ -182,6 +182,15 @@ export enum ErrorCode {
   // другим процессом» от прочих отказов. Новый код в конец каталога (D-27), тот же класс
   // добавления, что WEBHOOK_PROVIDER_UNKNOWN.
   UNSUPPORTED_RETURN_REASON = 'UNSUPPORTED_RETURN_REASON',
+  // RETURN_WINDOW_EXPIRED — DTJ-273 (EP-11), SRS-RET-012: `RequestReturnUseCase` отклоняет
+  // `customer_dispute_post_delivery` вне `tenant_settings.dispute_window_hours` от `deliveredAt`.
+  // Application-проверка (не доменная state-machine) — `422 BUSINESS_RULE_VIOLATION` обобщил бы
+  // её неотличимо от прочих отказов, тот же класс добавления, что UNSUPPORTED_RETURN_REASON.
+  RETURN_WINDOW_EXPIRED = 'RETURN_WINDOW_EXPIRED',
+  // RETURN_NOT_FOUND — DTJ-275 (EP-11), SRS-API-038: `returnId` в пути не резолвится ни в одну
+  // строку `order_returns` — по аналогии с ORDER_ITEM_NOT_FOUND/HANDOVER_OTP_NOT_FOUND (не общий
+  // NOT_FOUND, см. JSDoc `NotFoundError` в `domain-errors.ts`).
+  RETURN_NOT_FOUND = 'RETURN_NOT_FOUND',
 
   // ---- Доменные: модуль 24 «Терминал фармацевта» (DTJ-300, EP-12) — новые коды в конец
   // каталога (D-27), тот же класс добавления, что PRICE_OR_STOCK_CHANGED/ORDER_NOT_RETRYABLE
@@ -312,6 +321,9 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   [ErrorCode.WEBHOOK_PROVIDER_UNKNOWN]: 400,
 
   [ErrorCode.UNSUPPORTED_RETURN_REASON]: 422,
+  [ErrorCode.RETURN_WINDOW_EXPIRED]: 422,
+  [ErrorCode.RETURN_NOT_FOUND]: 404,
+
   [ErrorCode.ORDER_ALREADY_CLAIMED]: 409,
   [ErrorCode.ORDER_ITEM_NOT_FOUND]: 404,
   [ErrorCode.ITEM_ALREADY_SCANNED]: 409,

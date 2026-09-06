@@ -299,6 +299,17 @@ export class UnsupportedReturnReasonError extends BusinessRuleViolationError {
   }
 }
 
+/**
+ * DTJ-273 (EP-11), SRS-RET-012 — `customer_dispute_post_delivery` запрошен после
+ * `deliveredAt + tenant_settings.dispute_window_hours`. Application-уровневая проверка
+ * (`RequestReturnUseCase`), не доменная — `OrderReturn.request()` ничего не знает про окно.
+ */
+export class ReturnWindowExpiredError extends BusinessRuleViolationError {
+  constructor(details?: Record<string, unknown>) {
+    super('Return window has expired', details, ErrorCode.RETURN_WINDOW_EXPIRED)
+  }
+}
+
 // ==================== delivery (модуль 25 §A.9, EP-13 DTJ-313) ====================
 // `CourierTenantMismatchError`/`CourierNotEligibleError` (SRS-DOM-037/038) уже существуют выше —
 // переиспользуются этим модулем без изменений (§A.9 «уже определённые коды»), не дублируются здесь.

@@ -17,6 +17,28 @@
  * модуля будет готов — пустой `interface {}` запрещён линтером
  * (`@typescript-eslint/no-empty-object-type`) как вводящий в заблуждение.
  */
+import type {
+  CreateSupportTicketCommand,
+  CreateSupportTicketResult,
+} from './application/use-cases/create-support-ticket.use-case.js'
 
 /** DI-токен для будущего провайдера `SupportFacade` (`{ provide: SUPPORT_FACADE, useClass: ... }`). */
 export const SUPPORT_FACADE = Symbol.for('@dorutj/support/support-facade')
+
+/**
+ * ДОБАВЛЕНО (EP-11, DTJ-273) — интерфейс `SupportFacade` прибыл первым реальным методом
+ * (`createAutoOrManualTicket`), как и предсказывал JSDoc выше (DTJ-270). Первый межмодульный
+ * потребитель — `returns → support` (`RequestReturnUseCase`, SRS-RET-003: `reason='undelivered'`
+ * переадресуется в обращение вместо `OrderReturn`). Метод обёртки назван иначе, чем
+ * `CreateSupportTicketUseCase.execute` (тот же приём несовпадения имён, что
+ * `PaymentsFacade.holdPayout` ↔ `HoldPayoutUseCase.execute`, `modules/payments/payments.module.ts`
+ * DTJ-249) — форма фиксируется здесь, реализация — `useFactory` в `support.module.ts`.
+ */
+export interface SupportFacade {
+  createAutoOrManualTicket(command: CreateSupportTicketCommand): Promise<CreateSupportTicketResult>
+}
+
+export type {
+  CreateSupportTicketCommand,
+  CreateSupportTicketResult,
+} from './application/use-cases/create-support-ticket.use-case.js'

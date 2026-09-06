@@ -20,6 +20,12 @@
  * и НЕ входит в этот диапазон тикетов (D-EP11-6) — таблицы существуют как фундамент
  * (`db/schema/support.ts`), домен/use case поверх них — R3-3 за флагом
  * `disputes_workflow_enabled`.
+ *
+ * DTJ-273 (EP-11, файл СВЕРХ буквального `files_owned` — правило 11 AGENTS.md, барабан правится
+ * добавлением, правило 8) — первый реальный провайдер `SUPPORT_FACADE` (объявлен `index.ts` ещё
+ * DTJ-270, пустым до сих пор): `useFactory` оборачивает `CreateSupportTicketUseCase.execute` в
+ * форму `SupportFacade.createAutoOrManualTicket` (разные имена метода, см. JSDoc `index.ts`), тот
+ * же приём, что `PAYMENTS_FACADE`/`HoldPayoutUseCase` в `payments.module.ts` (DTJ-249).
  */
 import { Module } from '@nestjs/common'
 import { CreateSupportTicketUseCase } from './application/use-cases/create-support-ticket.use-case.js'
@@ -28,6 +34,7 @@ import { SUPPORT_ORDERS_FACADE_DRIZZLE_PROVIDER } from './infrastructure/adapter
 import { SUPPORT_TENANT_SETTINGS_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-support-tenant-settings.adapter.js'
 import { SUPPORT_UNIT_OF_WORK_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-support-unit-of-work.adapter.js'
 import { SUPPORT_OUTBOX_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-support-outbox.adapter.js'
+import { SUPPORT_FACADE, type SupportFacade } from './index.js'
 
 @Module({
   controllers: [],
@@ -38,7 +45,19 @@ import { SUPPORT_OUTBOX_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizz
     SUPPORT_UNIT_OF_WORK_DRIZZLE_PROVIDER,
     SUPPORT_OUTBOX_DRIZZLE_PROVIDER,
     CreateSupportTicketUseCase,
+    // DTJ-273 — SUPPORT_FACADE, первый провайдер (см. JSDoc блока providers выше).
+    {
+      provide: SUPPORT_FACADE,
+      useFactory: (useCase: CreateSupportTicketUseCase): SupportFacade => ({
+        createAutoOrManualTicket: (command) => useCase.execute(command),
+      }),
+      inject: [CreateSupportTicketUseCase],
+    },
   ],
+  // DTJ-273 — `SUPPORT_FACADE` виден `ReturnsModule` через `imports: [SupportModule]` (её module-local,
+  // НЕ `@Global()` — единственный сегодняшний межмодульный потребитель, тот же явный приём, что
+  // `TenancyModule`/`PaymentsModule` в `orders.module.ts`, не расширение видимости молча).
+  exports: [SUPPORT_FACADE],
 })
 // NestJS module marker class: Nest требует класс-носитель декоратора @Module, providers
 // регистрируются декоратором, а не телом класса (тот же приём, что modules/payments/orders).

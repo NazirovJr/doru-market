@@ -23,13 +23,54 @@
  * `payments.module.ts` DTJ-240: «провайдер резолвится в DI-графе заранее, вызывающий код —
  * DTJ-274 — появится позже») — резолвинг Nest проверяется уже сегодня, не откладывается до
  * появления первого потребителя.
+ *
+ * DTJ-273 — первые use case'ы/адаптеры модуля. `imports: [TenancyModule, SupportModule]` — оба
+ * НЕ `@Global()` (в отличие от `OrdersModule`/`AuthModule`), тот же явный приём, что
+ * `orders.module.ts`/`payments.module.ts` для `TenancyModule`. `RETURNS_DELIVERY_PORT` биндится
+ * NullAdapter'ом (правило 15 AGENTS.md, TODO(EP-13) — см. JSDoc адаптера): модуль `delivery` на
+ * этой волне содержит только domain-слой, реального провайдера ещё нет.
  */
 import { Module } from '@nestjs/common'
+import { TenancyModule } from '@/modules/tenancy/tenancy.module.js'
+import { SupportModule } from '@/modules/support/support.module.js'
 import { ReturnFinancialOutcomeResolver } from './application/policies/return-financial-outcome.policy.js'
+import { RequestReturnUseCase } from './application/use-cases/request-return.use-case.js'
+import { MarkReturnInTransitUseCase } from './application/use-cases/mark-return-in-transit.use-case.js'
+import { ConfirmReturnReceivedUseCase } from './application/use-cases/confirm-return-received.use-case.js'
+import { RejectReturnUseCase } from './application/use-cases/reject-return.use-case.js'
+import { AdminOverrideReturnUseCase } from './application/use-cases/admin-override-return.use-case.js'
+import { RetryReturnTransitUseCase } from './application/use-cases/retry-return-transit.use-case.js'
+import { RETURNS_REPOSITORY_PROVIDER } from './infrastructure/repositories/drizzle-returns.repository.js'
+import { RETURNS_UNIT_OF_WORK_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-returns-unit-of-work.adapter.js'
+import { RETURNS_OUTBOX_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-returns-outbox.adapter.js'
+import { RETURNS_ORDERS_FACADE_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-returns-orders-facade.adapter.js'
+import { RETURNS_INVENTORY_FACADE_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-returns-inventory-facade.adapter.js'
+import { RETURNS_TENANT_SETTINGS_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-returns-tenant-settings.adapter.js'
+import { RETURNS_SUPPORT_FACADE_PROVIDER } from './infrastructure/adapters/returns-support-facade.adapter.js'
+import { RETURNS_DELIVERY_PORT } from './application/ports/delivery-facade.port.js'
+import { UnimplementedReturnsDeliveryAdapter } from './infrastructure/adapters/unimplemented-returns-delivery-facade.adapter.js'
 
 @Module({
+  imports: [TenancyModule, SupportModule],
   controllers: [],
-  providers: [ReturnFinancialOutcomeResolver],
+  providers: [
+    ReturnFinancialOutcomeResolver,
+    RETURNS_REPOSITORY_PROVIDER,
+    RETURNS_UNIT_OF_WORK_DRIZZLE_PROVIDER,
+    RETURNS_OUTBOX_DRIZZLE_PROVIDER,
+    RETURNS_ORDERS_FACADE_DRIZZLE_PROVIDER,
+    RETURNS_INVENTORY_FACADE_DRIZZLE_PROVIDER,
+    RETURNS_TENANT_SETTINGS_DRIZZLE_PROVIDER,
+    RETURNS_SUPPORT_FACADE_PROVIDER,
+    // TODO(EP-13): заменить на реальный адаптер, когда у `delivery` появится публичный фасад.
+    { provide: RETURNS_DELIVERY_PORT, useClass: UnimplementedReturnsDeliveryAdapter },
+    RequestReturnUseCase,
+    MarkReturnInTransitUseCase,
+    ConfirmReturnReceivedUseCase,
+    RejectReturnUseCase,
+    AdminOverrideReturnUseCase,
+    RetryReturnTransitUseCase,
+  ],
 })
 // NestJS module marker class: Nest требует класс-носитель декоратора @Module, providers
 // регистрируются декоратором, а не телом класса (тот же приём, что modules/payments/orders).
