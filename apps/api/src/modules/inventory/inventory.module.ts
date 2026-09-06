@@ -63,6 +63,7 @@ import { InventoryImportTemplateController } from './presentation/controllers/in
 import { InventoryExcelImportController } from './presentation/controllers/inventory-excel-import.controller.js'
 import { InventoryManualEntryController } from './presentation/controllers/inventory-manual-entry.controller.js'
 import { InventorySyncBatchesReportController } from './presentation/controllers/inventory-sync-batches-report.controller.js'
+import { InventoryExcelErrorReportController } from './presentation/controllers/inventory-excel-error-report.controller.js'
 import { CompositeInventoryMatcherService } from './application/services/composite-inventory-matcher.service.js'
 import { InventorySyncReportQueryService } from './application/services/inventory-sync-report-query.service.js'
 import { PersistInventorySyncBatchService } from './application/services/persist-inventory-sync-batch.service.js'
@@ -136,6 +137,7 @@ import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/
     InventoryExcelImportController,
     InventoryManualEntryController,
     InventorySyncBatchesReportController,
+    InventoryExcelErrorReportController,
   ],
   exports: [
     PHARMACY_INVENTORY_REPOSITORY,

@@ -77,6 +77,11 @@ export interface InventorySyncRowErrorForActorResult {
   readonly rawRow: Readonly<Record<string, unknown>> | null
 }
 
+/** DTJ-164: отчёт об ошибках Excel-импорта — объединяет ВСЕ батчи одного `sourceUploadId`. */
+export interface ExcelImportErrorReportResult {
+  readonly rows: readonly InventorySyncRowErrorForActorResult[]
+}
+
 @Injectable()
 export class InventorySyncReportQueryService {
   constructor(
@@ -196,6 +201,38 @@ export class InventorySyncReportQueryService {
     const owned = await this.isOwnedByActor(input.pharmacyId, input.actor)
     if (!owned) return null
     return this.catalogMatchQueueRead.countPending(input.pharmacyId)
+  }
+
+  /**
+   * DTJ-164 `GET /:sourceUploadId/error-report` (SRS-INV-045) — объединяет `inventory_sync_errors`
+   * ПО ВСЕМ батчам одной Excel-загрузки (`findBySourceUploadId`, включает синтетический
+   * parser-errors контейнер DTJ-161/164). `null` — `sourceUploadId` не найден, не принадлежит
+   * актору, ИЛИ импорт завершился без единой ошибки (АС3: «нет смысла скачивать пустой отчёт») —
+   * все три случая дают `404` контроллеру, не различаются намеренно (SRS-API-046-style).
+   */
+  async getErrorReportForActor(input: {
+    readonly sourceUploadId: string
+    readonly actor: InventoryReportActor
+    readonly locale: Locale
+  }): Promise<ExcelImportErrorReportResult | null> {
+    const batches = await this.syncBatchRepository.findBySourceUploadId(input.sourceUploadId)
+    const firstBatch = batches[0]
+    if (firstBatch === undefined) return null
+    const owned = await this.isOwnedByActor(firstBatch.pharmacyId, input.actor)
+    if (!owned) return null
+    const errorsPerBatch = await Promise.all(
+      batches.map((batch) => this.syncBatchRepository.findRowErrorsByBatchId(batch.id)),
+    )
+    const allErrors = errorsPerBatch.flat()
+    if (allErrors.length === 0) return null
+    return {
+      rows: allErrors.map((error) => ({
+        rowIndex: error.rowIndex,
+        errorCode: error.errorCode,
+        message: translateInventoryRowErrorCode(error.errorCode, input.locale),
+        rawRow: error.rawRow,
+      })),
+    }
   }
 
   /**
