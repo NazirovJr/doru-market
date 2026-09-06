@@ -140,5 +140,17 @@
   "admin.support.author_role.super_admin": "Администратор",
   "admin.support.author_role.pharmacist": "Фармацевт",
   "admin.support.author_role.pharmacy_admin": "Администратор аптеки",
-  "admin.support.author_role.courier": "Курьер"
+  "admin.support.author_role.courier": "Курьер",
+
+  "customer.support.page_title": "Мои обращения",
+  "customer.support.unauthenticated": "Войдите, чтобы создать обращение или увидеть свои обращения.",
+  "customer.support.contact_button": "Написать в поддержку",
+  "customer.support.list.loading": "Загружаем обращения…",
+  "customer.support.list.empty": "У вас пока нет обращений в поддержку.",
+  "customer.support.form.title": "Написать в поддержку",
+  "customer.support.form.category_label": "Тема обращения",
+  "customer.support.form.description_label": "Опишите проблему",
+  "customer.support.form.submit": "Отправить",
+  "customer.support.form.submit_pending": "Отправляем…",
+  "customer.support.form.success": "Обращение отправлено. Мы ответим в ближайшее время."
 }

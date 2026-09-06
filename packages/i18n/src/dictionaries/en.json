@@ -140,5 +140,17 @@
   "admin.support.author_role.super_admin": "Administrator",
   "admin.support.author_role.pharmacist": "Pharmacist",
   "admin.support.author_role.pharmacy_admin": "Pharmacy admin",
-  "admin.support.author_role.courier": "Courier"
+  "admin.support.author_role.courier": "Courier",
+
+  "customer.support.page_title": "My tickets",
+  "customer.support.unauthenticated": "Log in to create a ticket or see your tickets.",
+  "customer.support.contact_button": "Contact support",
+  "customer.support.list.loading": "Loading your tickets…",
+  "customer.support.list.empty": "You don't have any support tickets yet.",
+  "customer.support.form.title": "Contact support",
+  "customer.support.form.category_label": "Topic",
+  "customer.support.form.description_label": "Describe the issue",
+  "customer.support.form.submit": "Send",
+  "customer.support.form.submit_pending": "Sending…",
+  "customer.support.form.success": "Your ticket has been sent. We'll respond soon."
 }

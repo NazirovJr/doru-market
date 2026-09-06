@@ -140,5 +140,17 @@
   "admin.support.author_role.super_admin": "Маъмур",
   "admin.support.author_role.pharmacist": "Фармасевт",
   "admin.support.author_role.pharmacy_admin": "Маъмури дорухона",
-  "admin.support.author_role.courier": "Курер"
+  "admin.support.author_role.courier": "Курер",
+
+  "customer.support.page_title": "Мурожиатҳои ман",
+  "customer.support.unauthenticated": "Барои сохтани мурожиат ё дидани мурожиатҳои худ ворид шавед.",
+  "customer.support.contact_button": "Ба дастгирӣ навиштан",
+  "customer.support.list.loading": "Мурожиатҳо бор карда мешаванд…",
+  "customer.support.list.empty": "Шумо ҳанӯз мурожиати дастгирӣ надоред.",
+  "customer.support.form.title": "Ба дастгирӣ навиштан",
+  "customer.support.form.category_label": "Мавзӯи мурожиат",
+  "customer.support.form.description_label": "Мушкилиро тасвир кунед",
+  "customer.support.form.submit": "Фиристодан",
+  "customer.support.form.submit_pending": "Фиристода мешавад…",
+  "customer.support.form.success": "Мурожиат фиристода шуд. Мо ба зудӣ ҷавоб медиҳем."
 }
