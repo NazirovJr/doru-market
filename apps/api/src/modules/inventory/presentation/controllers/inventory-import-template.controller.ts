@@ -36,7 +36,7 @@ import {
   INVENTORY_IMPORT_TEMPLATE_FILENAME_XLSX,
   INVENTORY_IMPORT_TEMPLATE_HEADERS,
   INVENTORY_IMPORT_TEMPLATE_SHEET_NAME,
-} from '../../infrastructure/inventory-import-template.constants.js'
+} from '@/modules/inventory/infrastructure/inventory-import-template.constants.js'
 
 const XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 const CSV_CONTENT_TYPE = 'text/csv; charset=utf-8'

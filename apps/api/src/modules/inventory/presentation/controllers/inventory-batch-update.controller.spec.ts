@@ -17,6 +17,7 @@ import { InMemoryPharmacyInventoryRepository } from '@/modules/inventory/infrast
 import { InMemoryPharmacySkuMappingRepository } from '@/modules/inventory/infrastructure/adapters/in-memory-pharmacy-sku-mapping.repository.js'
 import { IngestInventoryBatchWithMatchingUseCase } from '@/modules/inventory/application/use-cases/ingest-inventory-batch-with-matching.use-case.js'
 import { InMemoryFullSyncCompletion } from '@/modules/inventory/infrastructure/adapters/in-memory-full-sync-completion.js'
+import { PersistInventorySyncBatchService } from '@/modules/inventory/application/services/persist-inventory-sync-batch.service.js'
 import { InventoryBatchUpdateController } from './inventory-batch-update.controller.js'
 import type { FastifyRequestWithPrincipal } from '../guards/pharmacy-api-key.guard.js'
 import type { Clock } from '@/shared-kernel/application/ports/clock.port.js'
@@ -61,10 +62,10 @@ function makeController(): {
     clock,
     uow,
   )
+  const persistBatch = new PersistInventorySyncBatchService(syncBatchRepository, outbox)
   const controller = new InventoryBatchUpdateController(
     ingestBatch,
-    syncBatchRepository,
-    outbox,
+    persistBatch,
     clock,
   )
   return { controller, syncBatchRepository, outbox, ingestBatch }

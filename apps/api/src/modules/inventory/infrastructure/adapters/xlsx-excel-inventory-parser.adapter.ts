@@ -191,25 +191,45 @@ function extractRawRow(row: ExcelJS.Row, headerMap: HeaderColumnMap): Readonly<R
   }
 }
 
-/** Построчная валидация (SRS-INV-012/013) — первая провалившаяся проверка решает `errorCode`. */
-function parseRow(rowIndex: number, row: ExcelJS.Row, headerMap: HeaderColumnMap): RowParseResult {
-  const internalSku = cellText(row, headerMap, 'internalSku')
-  const rawTradeName = cellText(row, headerMap, 'rawTradeName')
-  const priceText = cellText(row, headerMap, 'priceDiram')
-  const quantityText = cellText(row, headerMap, 'quantity')
-  const expiryText = cellText(row, headerMap, 'expiresAtIso')
-  if (internalSku === '' || rawTradeName === '' || priceText === '' || quantityText === '' || expiryText === '') {
-    return { ok: false, errorCode: 'missing_required_field', reason: 'a required column is empty for this row' }
+interface RequiredFieldTexts {
+  readonly internalSku: string
+  readonly rawTradeName: string
+  readonly priceText: string
+  readonly quantityText: string
+  readonly expiryText: string
+}
+
+/** `null` — хотя бы одна из 5 обязательных колонок пуста (`missing_required_field`, вызывающая сторона решает код). */
+function extractRequiredFieldTexts(row: ExcelJS.Row, headerMap: HeaderColumnMap): RequiredFieldTexts | null {
+  const fields: RequiredFieldTexts = {
+    internalSku: cellText(row, headerMap, 'internalSku'),
+    rawTradeName: cellText(row, headerMap, 'rawTradeName'),
+    priceText: cellText(row, headerMap, 'priceDiram'),
+    quantityText: cellText(row, headerMap, 'quantity'),
+    expiryText: cellText(row, headerMap, 'expiresAtIso'),
   }
+  const isAnyEmpty = Object.values(fields).some((value) => value === '')
+  return isAnyEmpty ? null : fields
+}
 
-  const priceResult = parsePriceDiram(priceText)
-  if (!priceResult.ok) return priceResult
+type QuantityParseResult =
+  | { readonly ok: true; readonly quantity: number }
+  | { readonly ok: false; readonly errorCode: 'invalid_quantity'; readonly reason: string }
 
+function parseQuantity(quantityText: string): QuantityParseResult {
   const quantity = Number(quantityText)
   if (!Number.isInteger(quantity) || quantity < 0) {
     return { ok: false, errorCode: 'invalid_quantity', reason: `quantity must be a non-negative integer: "${quantityText}"` }
   }
+  return { ok: true, quantity }
+}
 
+type ExpiryParseResult =
+  | { readonly ok: true; readonly expiresAtIso: string }
+  | { readonly ok: false; readonly errorCode: 'ambiguous_date_format'; readonly reason: string }
+
+/** Нативная Excel-дата ИЛИ несовпадение строгого `ДД.ММ.ГГГГ` — обе ветки `ambiguous_date_format` (SRS-INV-013). */
+function parseExpiryIso(row: ExcelJS.Row, headerMap: HeaderColumnMap, expiryText: string): ExpiryParseResult {
   if (isNativeDateCell(row, headerMap, 'expiresAtIso')) {
     return {
       ok: false,
@@ -221,21 +241,36 @@ function parseRow(rowIndex: number, row: ExcelJS.Row, headerMap: HeaderColumnMap
   if (dateMatch === null) {
     return { ok: false, errorCode: 'ambiguous_date_format', reason: `expiry date must match ДД.ММ.ГГГГ exactly: "${expiryText}"` }
   }
-  const [, day, month, year] = dateMatch as unknown as readonly [string, string, string, string]
+  const [, day, month, year] = dateMatch
+  return { ok: true, expiresAtIso: `${year ?? ''}-${month ?? ''}-${day ?? ''}` }
+}
+
+/** Построчная валидация (SRS-INV-012/013) — первая провалившаяся проверка решает `errorCode`. */
+function parseRow(rowIndex: number, row: ExcelJS.Row, headerMap: HeaderColumnMap): RowParseResult {
+  const fields = extractRequiredFieldTexts(row, headerMap)
+  if (fields === null) {
+    return { ok: false, errorCode: 'missing_required_field', reason: 'a required column is empty for this row' }
+  }
+  const priceResult = parsePriceDiram(fields.priceText)
+  if (!priceResult.ok) return priceResult
+  const quantityResult = parseQuantity(fields.quantityText)
+  if (!quantityResult.ok) return quantityResult
+  const expiryResult = parseExpiryIso(row, headerMap, fields.expiryText)
+  if (!expiryResult.ok) return expiryResult
 
   return {
     ok: true,
     row: {
       rowIndex,
-      internalSku,
+      internalSku: fields.internalSku,
       rawBarcode: cellText(row, headerMap, 'rawBarcode') || null,
-      rawTradeName,
+      rawTradeName: fields.rawTradeName,
       rawDosageForm: cellText(row, headerMap, 'rawDosageForm') || null,
       rawDosageStrength: cellText(row, headerMap, 'rawDosageStrength') || null,
       rawManufacturerName: cellText(row, headerMap, 'rawManufacturerName') || null,
       priceDiram: priceResult.priceDiram,
-      quantity,
-      expiresAtIso: `${year}-${month}-${day}`,
+      quantity: quantityResult.quantity,
+      expiresAtIso: expiryResult.expiresAtIso,
       batchNumber: cellText(row, headerMap, 'batchNumber') || null,
     },
   }

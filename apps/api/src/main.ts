@@ -13,6 +13,7 @@ import { VersioningType } from '@nestjs/common'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import helmet from '@fastify/helmet'
 import cors from '@fastify/cors'
+import multipart from '@fastify/multipart'
 import pino from 'pino'
 import { AppModule } from './app.module.js'
 import { AppConfigService } from './config/app-config.service.js'
@@ -32,6 +33,8 @@ type FastifyRegisterablePlugin = Parameters<NestFastifyApplication['register']>[
 /** SRS-API-066: лимит тела JSON по умолчанию (переопределения для конкретных маршрутов —
  * в тикетах, которым они нужны, например `/inventory/batch-update`, EP-05). */
 const DEFAULT_JSON_BODY_LIMIT_BYTES = 1_048_576
+/** [DTJ-161, SRS-API-066] Общий мультипарт-лимит `POST /inventory-excel-import` (файл `.xlsx`/`.csv`), 10MB. */
+const EXCEL_IMPORT_MULTIPART_LIMIT_BYTES = 10_485_760
 /** SRS-API-064: HSTS на год, включая поддомены. */
 const HSTS_MAX_AGE_SECONDS = 31_536_000
 const LISTEN_HOST = '0.0.0.0'
@@ -63,6 +66,13 @@ async function registerTransportSecurity(
     origin: (origin: string | undefined, callback: (error: Error | null, allow: boolean) => void) => {
       callback(null, origin === undefined || isAllowedCorsOrigin(origin, config))
     },
+  })
+  // [DTJ-161, SRS-INV-014/API-066] Регистрируется ГЛОБАЛЬНО (тот же уровень, что helmet/cors) —
+  // `request.parts()`/`request.file()` становятся доступны на ЛЮБОМ маршруте приложения, но
+  // фактически используются только `InventoryExcelImportController`. `fileSize` — общий
+  // мультипарт-лимит тикета (10MB, НЕ 5MB REST-батч-лимита SRS-API-066).
+  await app.register(multipart as unknown as FastifyRegisterablePlugin, {
+    limits: { fileSize: EXCEL_IMPORT_MULTIPART_LIMIT_BYTES },
   })
 }
 

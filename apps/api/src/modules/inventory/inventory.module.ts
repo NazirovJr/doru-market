@@ -59,8 +59,10 @@ import { IngestInventoryBatchWithMatchingUseCase } from './application/use-cases
 import { InventoryBatchUpdateController } from './presentation/controllers/inventory-batch-update.controller.js'
 import { InventorySyncBatchStatusController } from './presentation/controllers/inventory-sync-batch-status.controller.js'
 import { InventoryImportTemplateController } from './presentation/controllers/inventory-import-template.controller.js'
+import { InventoryExcelImportController } from './presentation/controllers/inventory-excel-import.controller.js'
 import { CompositeInventoryMatcherService } from './application/services/composite-inventory-matcher.service.js'
 import { InventorySyncReportQueryService } from './application/services/inventory-sync-report-query.service.js'
+import { PersistInventorySyncBatchService } from './application/services/persist-inventory-sync-batch.service.js'
 import { DetectStuckFullSyncSessionsUseCase } from './application/use-cases/detect-stuck-full-sync-sessions.use-case.js'
 import { FullSyncSessionWatchdogCron } from './infrastructure/jobs/full-sync-session-watchdog.cron.js'
 import { BullmqInventorySyncQueueAdapter } from './infrastructure/adapters/bullmq-inventory-sync-queue.adapter.js'
@@ -100,6 +102,9 @@ import { XlsxExcelInventoryParserAdapter } from './infrastructure/adapters/xlsx-
     IngestInventoryBatchWithMatchingUseCase,
     CompositeInventoryMatcherService,
     InventorySyncReportQueryService,
+    // DTJ-161: общий шаг «создать батч + raw items + outbox queued» — REST (DTJ-157) и
+    // Excel-import (этот тикет), см. её JSDoc.
+    PersistInventorySyncBatchService,
     DetectStuckFullSyncSessionsUseCase,
     FullSyncSessionWatchdogCron,
     BullmqInventorySyncQueueAdapter,
@@ -120,6 +125,7 @@ import { XlsxExcelInventoryParserAdapter } from './infrastructure/adapters/xlsx-
     InventoryBatchUpdateController,
     InventorySyncBatchStatusController,
     InventoryImportTemplateController,
+    InventoryExcelImportController,
   ],
   exports: [
     PHARMACY_INVENTORY_REPOSITORY,

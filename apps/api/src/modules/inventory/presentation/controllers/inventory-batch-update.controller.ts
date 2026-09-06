@@ -46,6 +46,13 @@
  * весь HTTP pipeline Nest и его декораторную резолюцию параметров — тот же
  * класс дефекта, что уже описан в `docs/07-WAVE4-HANDOFF.md` §3.2 (карта
  * аптек, фейковый DI-путь в тесте).
+ *
+ * **РЕФАКТОРИНГ (DTJ-161 DoD):** шаги (2)-(4) («идемпотентное создание батча +
+ * `appendRawItems` + outbox `queued`-событие») вынесены в
+ * `PersistInventorySyncBatchService` — второй потребитель
+ * (`InventoryExcelImportController`, DTJ-161) сделал копипаст этой логики
+ * нарушением C15/DRY. Поведение НЕ изменилось (тот же порядок вызовов,
+ * та же идемпотентность по `created`), см. JSDoc сервиса.
  */
 import {
   Body,
@@ -66,16 +73,8 @@ import {
 } from '@dorutj/contracts'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
 import { CLOCK, type Clock } from '@/shared-kernel/application/ports/clock.port.js'
-import {
-  IngestInventoryBatchWithMatchingUseCase,
-  type IngestInventoryBatchCommand,
-  type IngestRowInput,
-} from '@/modules/inventory/application/use-cases/ingest-inventory-batch-with-matching.use-case.js'
-import {
-  INVENTORY_SYNC_BATCH_REPOSITORY,
-  type InventorySyncBatchRepository,
-} from '@/modules/inventory/application/ports/inventory-sync-batch.repository.port.js'
-import { INVENTORY_OUTBOX, type InventoryOutboxPort } from '@/modules/inventory/application/ports/inventory-outbox.port.js'
+import { IngestInventoryBatchWithMatchingUseCase } from '@/modules/inventory/application/use-cases/ingest-inventory-batch-with-matching.use-case.js'
+import { PersistInventorySyncBatchService } from '@/modules/inventory/application/services/persist-inventory-sync-batch.service.js'
 import {
   PharmacyApiKeyGuard,
   type FastifyRequestWithPrincipal,
@@ -88,15 +87,13 @@ const REST_BATCH_MAX_ITEMS = 1000
 @Controller({ path: 'inventory', version: '1' })
 @UseGuards(PharmacyApiKeyGuard)
 export class InventoryBatchUpdateController {
-  // eslint-disable-next-line max-params -- 4 DI-инъекции, NestJS constructor injection резолвит по позиции; единый options-объект не идиоматичен для Nest DI
+  // Явный @Inject(класс): esbuild (vitest) не эмитит `design:paramtypes` — без него Nest
+  // падает на компиляции модуля (DTJ-001).
   constructor(
-    // Явный @Inject(класс): esbuild (vitest) не эмитит `design:paramtypes` — без него Nest
-    // падает на компиляции модуля (DTJ-001).
     @Inject(IngestInventoryBatchWithMatchingUseCase)
     private readonly ingestBatch: IngestInventoryBatchWithMatchingUseCase,
-    @Inject(INVENTORY_SYNC_BATCH_REPOSITORY)
-    private readonly syncBatchRepository: InventorySyncBatchRepository,
-    @Inject(INVENTORY_OUTBOX) private readonly outbox: InventoryOutboxPort,
+    @Inject(PersistInventorySyncBatchService)
+    private readonly persistBatch: PersistInventorySyncBatchService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -115,17 +112,17 @@ export class InventoryBatchUpdateController {
       principal.pharmacyId,
       now,
     )
-    // 1) Идемпотентное создание батча.
-    const { batch, created } = await this.syncBatchRepository.createIfNotExists({
-      id: command.batchId,
+    // Шаги (1)-(3): идемпотентное создание батча + сырые строки + outbox-событие.
+    const { batch, created } = await this.persistBatch.persistAndQueue({
+      batchId: command.batchId,
       pharmacyId: command.pharmacyId,
       channel: 'rest',
       syncType: command.syncType,
       fullSyncSessionId: command.fullSyncSessionId,
       isLastPage: command.isLastPage,
-      totalRows: command.rows.length,
       note: null,
       now,
+      rows: command.rows,
     })
     if (!created) {
       return ok({
@@ -134,7 +131,6 @@ export class InventoryBatchUpdateController {
         acceptedForProcessing: false,
       })
     }
-    await this.persistAndQueueBatch(command)
     // 4) Синхронный вызов use case'а (R1; R2 — через worker).
     const result = await this.ingestBatch.execute(command)
     return ok({
@@ -165,35 +161,5 @@ export class InventoryBatchUpdateController {
         HttpStatus.UNPROCESSABLE_ENTITY,
       )
     }
-  }
-
-  /** Шаги (2)-(3): батчевый `appendRawItems` + outbox-событие `queued`. */
-  private async persistAndQueueBatch(command: IngestInventoryBatchCommand): Promise<void> {
-    await this.syncBatchRepository.appendRawItems(
-      command.batchId,
-      command.rows.map((row) => ({ rowIndex: row.rowIndex, payload: rowToPayload(row) })),
-    )
-    this.outbox.appendBatchQueued({
-      eventType: 'inventory.sync_batch.queued',
-      batchId: command.batchId,
-      pharmacyId: command.pharmacyId,
-      channel: 'rest',
-      syncType: command.syncType,
-    })
-  }
-}
-
-function rowToPayload(row: IngestRowInput): Readonly<Record<string, unknown>> {
-  return {
-    internal_sku: row.internalSku,
-    raw_barcode: row.rawBarcode,
-    raw_trade_name: row.rawTradeName,
-    raw_dosage_form: row.rawDosageForm,
-    raw_dosage_strength: row.rawDosageStrength,
-    raw_manufacturer_name: row.rawManufacturerName,
-    price_diram: row.priceDiram.toString(),
-    quantity: row.quantity,
-    expires_at: row.expiresAtIso,
-    batch_number: row.batchNumber,
   }
 }

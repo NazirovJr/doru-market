@@ -64,7 +64,7 @@ describe('XlsxExcelInventoryParserAdapter (DTJ-160, SRS-INV-012/013/014)', () =>
   it('корректный xlsx с переставленными колонками парсится верно по заголовку (SRS-INV-012)', async () => {
     const shuffledHeaders = [...HEADER_TEXTS].reverse()
     const values = validRowValues()
-    const shuffledValues = shuffledHeaders.map((header) => values[HEADER_TEXTS.indexOf(header)] as string)
+    const shuffledValues = shuffledHeaders.map((header) => values[HEADER_TEXTS.indexOf(header)]!)
     const buffer = await buildXlsxBuffer(shuffledHeaders, [shuffledValues])
     const adapter = new XlsxExcelInventoryParserAdapter(fakeConfig())
 
@@ -127,7 +127,7 @@ describe('XlsxExcelInventoryParserAdapter (DTJ-160, SRS-INV-012/013/014)', () =>
     const buffer = await workbook.xlsx.writeBuffer()
     const adapter = new XlsxExcelInventoryParserAdapter(fakeConfig())
 
-    const result = await adapter.parse(Buffer.from(buffer as unknown as ArrayBuffer), XLSX_MIME)
+    const result = await adapter.parse(Buffer.from(buffer), XLSX_MIME)
 
     expect(result.rejectedRows).toEqual([expect.objectContaining({ errorCode: 'ambiguous_date_format' })])
   })
@@ -135,7 +135,7 @@ describe('XlsxExcelInventoryParserAdapter (DTJ-160, SRS-INV-012/013/014)', () =>
   it('отсутствие обязательной колонки (Остаток (шт.)) отклоняет весь файл целиком', async () => {
     const headersWithoutQuantity = HEADER_TEXTS.filter((h) => h !== 'Остаток (шт.)')
     const valuesWithoutQuantity = headersWithoutQuantity.map(
-      (header) => validRowValues()[HEADER_TEXTS.indexOf(header)] as string,
+      (header) => validRowValues()[HEADER_TEXTS.indexOf(header)]!,
     )
     const buffer = await buildXlsxBuffer(headersWithoutQuantity, [valuesWithoutQuantity])
     const adapter = new XlsxExcelInventoryParserAdapter(fakeConfig())

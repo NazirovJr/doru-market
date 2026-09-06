@@ -24,7 +24,7 @@ import {
 import {
   INVENTORY_IMPORT_TEMPLATE_EXPIRY_HEADER,
   INVENTORY_IMPORT_TEMPLATE_HEADERS,
-} from '../../infrastructure/inventory-import-template.constants.js'
+} from '@/modules/inventory/infrastructure/inventory-import-template.constants.js'
 
 const BOM_CODE_POINT = 0xfeff
 
@@ -110,10 +110,9 @@ describe('InventoryImportTemplateController (DTJ-159, SRS-INV-012)', () => {
   })
 
   it('маршрут ограничен @Roles(pharmacy_admin, super_admin) — pharmacist/customer/courier не проходят RolesGuard', () => {
-    const roles: readonly string[] | undefined = Reflect.getMetadata(
-      ROLES_METADATA_KEY,
-      InventoryImportTemplateController,
-    )
+    const roles = Reflect.getMetadata(ROLES_METADATA_KEY, InventoryImportTemplateController) as
+      | readonly string[]
+      | undefined
     expect(roles).toEqual(['pharmacy_admin', 'super_admin'])
   })
 })
