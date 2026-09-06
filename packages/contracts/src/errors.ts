@@ -194,6 +194,15 @@ export enum ErrorCode {
   SEAL_CONFIRMATION_REQUIRED = 'SEAL_CONFIRMATION_REQUIRED', // 400, SRS-PHT-025
   PARTIAL_FULFILLMENT_PENDING = 'PARTIAL_FULFILLMENT_PENDING', // 409, SRS-PHT-026
   HANDOVER_OTP_NOT_FOUND = 'HANDOVER_OTP_NOT_FOUND', // 404, SRS-PHT-028
+
+  // ---- Доменные: модуль support (DTJ-282, EP-14, SRS-ADM-076) — новые коды в конец
+  // каталога (D-27), тот же класс добавления, что модуль 24. Ни один из трёх не найден
+  // среди уже существующих кодов (`TicketNotFoundError`/`TicketAlreadyTerminalError`/
+  // `InvalidTicketStatusTransitionError`, DTJ-278, ранее локальные `Error`-потомки —
+  // централизованы здесь, см. `domain-errors-support.ts`). ----
+  TICKET_NOT_FOUND = 'TICKET_NOT_FOUND', // 404
+  TICKET_ALREADY_TERMINAL = 'TICKET_ALREADY_TERMINAL', // 409
+  INVALID_TICKET_STATUS_TRANSITION = 'INVALID_TICKET_STATUS_TRANSITION', // 409
 }
 
 /** HTTP-статус для каждого `ErrorCode` (`AllExceptionsFilter`, DTJ-018 — единственный фильтр приложения). */
@@ -319,4 +328,8 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   [ErrorCode.SEAL_CONFIRMATION_REQUIRED]: 400,
   [ErrorCode.PARTIAL_FULFILLMENT_PENDING]: 409,
   [ErrorCode.HANDOVER_OTP_NOT_FOUND]: 404,
+
+  [ErrorCode.TICKET_NOT_FOUND]: 404,
+  [ErrorCode.TICKET_ALREADY_TERMINAL]: 409,
+  [ErrorCode.INVALID_TICKET_STATUS_TRANSITION]: 409,
 }

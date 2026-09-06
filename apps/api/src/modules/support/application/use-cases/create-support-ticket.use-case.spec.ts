@@ -90,7 +90,15 @@ function buildHarness() {
   const nextMock = vi.fn(() => TICKET_ID)
   const nowMock = vi.fn(() => FIXED_NOW)
 
-  const repository = { save: saveMock, findById: findByIdMock }
+  // DTJ-282 — `SupportTicketsRepositoryPort` расширен `list`/`saveMessage`/`listMessagesByTicketId`;
+  // этот use case их не вызывает, стаб нужен только для структурного соответствия интерфейсу.
+  const repository = {
+    save: saveMock,
+    findById: findByIdMock,
+    list: vi.fn(),
+    saveMessage: vi.fn(),
+    listMessagesByTicketId: vi.fn().mockResolvedValue([]),
+  }
   const ordersFacade = { belongsToCustomer: belongsToCustomerMock }
   const tenantSettings = { getFirstResponseSlaMinutes: getFirstResponseSlaMinutesMock }
   const outbox = { append: appendMock }

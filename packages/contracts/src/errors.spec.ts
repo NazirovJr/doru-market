@@ -135,6 +135,11 @@ const EXPECTED: readonly (readonly [ErrorCode, number])[] = [
   [ErrorCode.SEAL_CONFIRMATION_REQUIRED, 400],
   [ErrorCode.PARTIAL_FULFILLMENT_PENDING, 409],
   [ErrorCode.HANDOVER_OTP_NOT_FOUND, 404],
+
+  // ---- Доменные: модуль support (DTJ-282, EP-14, SRS-ADM-076) ----
+  [ErrorCode.TICKET_NOT_FOUND, 404],
+  [ErrorCode.TICKET_ALREADY_TERMINAL, 409],
+  [ErrorCode.INVALID_TICKET_STATUS_TRANSITION, 409],
 ]
 
 describe('ErrorCode / ERROR_HTTP_STATUS — сверка с источниками', () => {

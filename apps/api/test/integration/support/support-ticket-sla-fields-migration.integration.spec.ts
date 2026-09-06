@@ -47,7 +47,10 @@ async function isPostgresReachable(url: string): Promise<boolean> {
 const postgresAvailable = await isPostgresReachable(TEST_DATABASE_URL)
 const migratorAvailable = postgresAvailable && (await isPostgresReachable(MIGRATOR_DATABASE_URL))
 
-const MIGRATION_SQL_PATH = fileURLToPath(new URL('../../../migrations/0038_support_ticket_sla_fields.sql', import.meta.url))
+// DTJ-282 fix: файл переномерован 0038→0040 при мёрже последующих эпиков (EP-10..EP-13 волны
+// добавили миграции перед этой веткой) — путь был осиротевшим, тест падал на readFileSync ДО
+// одного реального assert (см. `ls apps/api/migrations/` — актуальный файл `0040_...`).
+const MIGRATION_SQL_PATH = fileURLToPath(new URL('../../../migrations/0040_support_ticket_sla_fields.sql', import.meta.url))
 const MIGRATION_SQL = readFileSync(MIGRATION_SQL_PATH, 'utf8')
 
 interface ColumnRow {

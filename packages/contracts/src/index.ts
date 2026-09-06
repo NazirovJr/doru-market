@@ -12,6 +12,9 @@ export * from './errors.js'
 export * from './domain-errors.js'
 // DTJ-300 (EP-12) — НЕ реэкспортируется из domain-errors.js (циклический импорт, см. JSDoc файла).
 export * from './domain-errors-pharmacy-terminal.js'
+// DTJ-282 (EP-14) — тот же приём split по max-lines, НЕ реэкспортируется из domain-errors.js
+// (циклический импорт, см. JSDoc domain-errors-support.js).
+export * from './domain-errors-support.js'
 export * from './permissions.js'
 export * from './pagination.js'
 export * from './envelope.js'

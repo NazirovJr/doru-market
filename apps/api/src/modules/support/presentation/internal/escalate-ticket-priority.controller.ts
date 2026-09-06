@@ -20,12 +20,21 @@
  * (`SUPPORT_FACADE`), не напрямую use case, как было временно на шаге DTJ-280 (`SupportFacade`
  * тогда ещё не имел реализации метода) — единообразие точки входа, DTJ-281 «Что сделать» п.3:
  * «используется DTJ-280 через фасад, не напрямую use case, даже изнутри своего же модуля».
- * `TicketNotFoundError` по-прежнему импортируется из `application/` (не `domain/` напрямую) —
- * см. ре-экспорт в `escalate-ticket-priority.use-case.ts`, `presentation-goes-through-application`.
+ *
+ * УПРОЩЕНО (DTJ-282): БОЛЬШЕ НЕ перехватывает `TicketNotFoundError` вручную. До DTJ-282 этот
+ * класс был обычным `Error`-потомком (DTJ-278) — `AllExceptionsFilter` (`@Catch()`, распознаёт
+ * только `instanceof DomainError`) пропустил бы его в generic `500`, поэтому JSDoc этого файла
+ * ранее прямо указывал: «точный ErrorCode — периметр DTJ-282» — эта правка его закрывает.
+ * `TicketNotFoundError` теперь ре-экспортирован из `@dorutj/contracts` (`domain-errors-support.ts`)
+ * как `NotFoundError`-потомок с `code: TICKET_NOT_FOUND` — пропагирует НАПРЯМУЮ до
+ * `AllExceptionsFilter`, которая мапит `404 TICKET_NOT_FOUND` сама, без второго фильтра ошибок
+ * для этого модуля (DTJ-282 «Что сделать» п.6). Гонка «тикет удалён/не существует между
+ * SQL-сканом воркера и этим вызовом» (C12: ошибка не проглатывается) по-прежнему покрыта — только
+ * теперь ТЕМ ЖЕ единым механизмом, что и остальные доменные ошибки приложения, не веткой
+ * `try/catch` в одном конкретном контроллере.
  */
-import { Controller, HttpCode, HttpStatus, Inject, NotFoundException, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
+import { Controller, HttpCode, HttpStatus, Inject, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
 import { ok, type SuccessEnvelope } from '@dorutj/contracts'
-import { TicketNotFoundError } from '@/modules/support/application/use-cases/escalate-ticket-priority.use-case.js'
 import { SUPPORT_FACADE, type SupportFacade, type EscalateTicketPriorityFacadeResult } from '@/modules/support/index.js'
 import { SupportInternalServiceGuard } from './support-internal-service.guard.js'
 
@@ -41,18 +50,7 @@ export class EscalateTicketPriorityController {
   public async escalate(
     @Param('id', ID_PARSE_UUID) ticketId: string,
   ): Promise<SuccessEnvelope<EscalateTicketPriorityFacadeResult>> {
-    try {
-      const result = await this.supportFacade.escalateTicketPriority(ticketId)
-      return ok(result)
-    } catch (error) {
-      // Гонка «тикет удалён/не существует между SQL-сканом воркера и этим вызовом» — 404, не
-      // проглоченный 500 (C12). Точный доменный ErrorCode (TICKET_NOT_FOUND) — периметр DTJ-282
-      // (`packages/contracts/src/errors.ts`, следующий тикет цепочки); здесь — нативный Nest 404
-      // достаточен, единственный вызывающий этот маршрут — apps/worker, не браузер.
-      if (error instanceof TicketNotFoundError) {
-        throw new NotFoundException(`Support ticket "${ticketId}" not found`)
-      }
-      throw error
-    }
+    const result = await this.supportFacade.escalateTicketPriority(ticketId)
+    return ok(result)
   }
 }

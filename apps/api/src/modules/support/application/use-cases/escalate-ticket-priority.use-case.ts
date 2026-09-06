@@ -18,16 +18,6 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { CLOCK, type Clock } from '@/shared-kernel/application/ports/clock.port.js'
 import { TicketNotFoundError } from '../../domain/index.js'
-
-/**
- * Ре-экспорт (не только внутреннее использование) — `presentation/internal/escalate-ticket-
- * priority.controller.ts` ловит этот класс `instanceof`, чтобы вернуть `404`. Прямой импорт
- * контроллером `../../domain/index.js` нарушил бы `presentation-goes-through-application`
- * (`.dependency-cruiser.cjs`, `02` §1.1: presentation обязан идти через application, не к
- * domain напрямую) — эта строка держит `TicketNotFoundError` доступным ЧЕРЕЗ application-слой,
- * тот же приём, что публичные фасады ре-экспортируют избранные доменные типы наружу модуля.
- */
-export { TicketNotFoundError }
 import { SUPPORT_TICKETS_REPOSITORY, type SupportTicketsRepositoryPort } from '../ports/support-tickets-repository.port.js'
 import { SUPPORT_TENANT_SETTINGS_PORT, type SupportTenantSettingsPort } from '../ports/support-tenant-settings.port.js'
 import { SUPPORT_UNIT_OF_WORK, type SupportUnitOfWorkPort } from '../ports/support-unit-of-work.port.js'
@@ -44,6 +34,12 @@ export interface EscalateTicketPriorityResult {
 
 @Injectable()
 export class EscalateTicketPriorityUseCase {
+  // 5 зависимостей — тот же обоснованный превышение C5, что `CreateSupportTicketUseCase`: явный
+  // @Inject на каждом параметре держит граф зависимостей видимым в providers[] модуля. Пред-
+  // существующий пробел (DTJ-280, обнаружен DTJ-282 при скоуп-линте src/modules/support: раньше
+  // не ловился отдельным прогоном ESLint по модулю) — исправлено попутно, тот же файл уже
+  // правится этим тикетом (см. JSDoc выше про удалённый ре-экспорт TicketNotFoundError).
+  // eslint-disable-next-line max-params -- см. комментарий выше
   public constructor(
     @Inject(SUPPORT_TICKETS_REPOSITORY) private readonly repository: SupportTicketsRepositoryPort,
     @Inject(SUPPORT_TENANT_SETTINGS_PORT) private readonly tenantSettings: SupportTenantSettingsPort,

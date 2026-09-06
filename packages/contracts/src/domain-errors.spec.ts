@@ -90,6 +90,11 @@ import {
   PendingCustomerConfirmationError,
   SealConfirmationRequiredError,
 } from './domain-errors-pharmacy-terminal.js'
+import {
+  InvalidTicketStatusTransitionError,
+  TicketAlreadyTerminalError,
+  TicketNotFoundError,
+} from './domain-errors-support.js'
 
 /**
  * Полный список concrete-классов публичного каталога ошибок — `./domain-errors.ts` +
@@ -189,6 +194,10 @@ const EXPECTED_CONCRETE_CLASSES: ReadonlySet<string> = new Set<string>([
   'NoActiveShiftError',
   'ActiveAssignmentBlocksShiftEndError',
   'ContactAttemptsInsufficientError',
+  // Support — модуль support (EP-14, DTJ-282).
+  'TicketNotFoundError',
+  'TicketAlreadyTerminalError',
+  'InvalidTicketStatusTransitionError',
 ])
 
 /** [конструктор, ожидаемый ErrorCode] — 1:1 дерево `10-domain-model.md` §«Доменные ошибки». */
@@ -278,6 +287,10 @@ const CASES: readonly (readonly [() => DomainError, ErrorCode])[] = [
   [() => new NoActiveShiftError(), ErrorCode.NO_ACTIVE_SHIFT],
   [() => new ActiveAssignmentBlocksShiftEndError(), ErrorCode.ACTIVE_ASSIGNMENT_BLOCKS_SHIFT_END],
   [() => new ContactAttemptsInsufficientError(), ErrorCode.CONTACT_ATTEMPTS_INSUFFICIENT],
+  // Support — модуль support (EP-14, DTJ-282, SRS-ADM-076).
+  [() => new TicketNotFoundError('ticket-1'), ErrorCode.TICKET_NOT_FOUND],
+  [() => new TicketAlreadyTerminalError('ticket-1'), ErrorCode.TICKET_ALREADY_TERMINAL],
+  [() => new InvalidTicketStatusTransitionError('ticket-1', 'closed', 'open'), ErrorCode.INVALID_TICKET_STATUS_TRANSITION],
 ]
 
 describe('domain-errors — иерархия 1:1 с 10-domain-model.md', () => {
@@ -349,5 +362,24 @@ describe('domain-errors-pharmacy-terminal — иерархия (DTJ-300, нас�
 
   it('SealConfirmationRequiredError — instanceof ValidationError', () => {
     expect(new SealConfirmationRequiredError()).toBeInstanceOf(ValidationError)
+  })
+})
+
+describe('domain-errors-support — иерархия (DTJ-282, наследование от подходящего промежуточного класса)', () => {
+  it('TicketNotFoundError — instanceof NotFoundError, но с собственным (не NOT_FOUND) кодом, details.ticketId', () => {
+    const error = new TicketNotFoundError('ticket-1')
+    expect(error).toBeInstanceOf(NotFoundError)
+    expect(error.code).toBe(ErrorCode.TICKET_NOT_FOUND)
+    expect(error.details).toEqual({ ticketId: 'ticket-1' })
+  })
+
+  it('TicketAlreadyTerminalError/InvalidTicketStatusTransitionError — instanceof ConflictError', () => {
+    expect(new TicketAlreadyTerminalError('ticket-1')).toBeInstanceOf(ConflictError)
+    expect(new InvalidTicketStatusTransitionError('ticket-1', 'closed', 'open')).toBeInstanceOf(ConflictError)
+  })
+
+  it('InvalidTicketStatusTransitionError — details несёт ticketId/from/to', () => {
+    const error = new InvalidTicketStatusTransitionError('ticket-1', 'closed', 'open')
+    expect(error.details).toEqual({ ticketId: 'ticket-1', from: 'closed', to: 'open' })
   })
 })
