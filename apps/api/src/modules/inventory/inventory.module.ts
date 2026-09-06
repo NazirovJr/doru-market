@@ -57,6 +57,7 @@ import { IngestInventoryBatchUseCase } from './application/use-cases/ingest-inve
 import { IngestInventoryBatchWithMatchingUseCase } from './application/use-cases/ingest-inventory-batch-with-matching.use-case.js'
 import { InventoryBatchUpdateController } from './presentation/controllers/inventory-batch-update.controller.js'
 import { InventorySyncBatchStatusController } from './presentation/controllers/inventory-sync-batch-status.controller.js'
+import { InventoryImportTemplateController } from './presentation/controllers/inventory-import-template.controller.js'
 import { CompositeInventoryMatcherService } from './application/services/composite-inventory-matcher.service.js'
 import { InventorySyncReportQueryService } from './application/services/inventory-sync-report-query.service.js'
 import { DetectStuckFullSyncSessionsUseCase } from './application/use-cases/detect-stuck-full-sync-sessions.use-case.js'
@@ -111,7 +112,11 @@ import { DrizzlePharmacyApiKeyVerificationAdapter } from './infrastructure/adapt
     // провайдер, тот же приём, что `DrizzleInventorySyncErrorsRepository`.
     DrizzleInventorySyncReportRepository,
   ],
-  controllers: [InventoryBatchUpdateController, InventorySyncBatchStatusController],
+  controllers: [
+    InventoryBatchUpdateController,
+    InventorySyncBatchStatusController,
+    InventoryImportTemplateController,
+  ],
   exports: [
     PHARMACY_INVENTORY_REPOSITORY,
     INVENTORY_SYNC_BATCH_REPOSITORY,
