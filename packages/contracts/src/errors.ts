@@ -194,6 +194,14 @@ export enum ErrorCode {
   SEAL_CONFIRMATION_REQUIRED = 'SEAL_CONFIRMATION_REQUIRED', // 400, SRS-PHT-025
   PARTIAL_FULFILLMENT_PENDING = 'PARTIAL_FULFILLMENT_PENDING', // 409, SRS-PHT-026
   HANDOVER_OTP_NOT_FOUND = 'HANDOVER_OTP_NOT_FOUND', // 404, SRS-PHT-028
+
+  // ---- Доменные: EP-05 inventory (DTJ-160/161) — новый код в конец каталога (D-27).
+  // Excel/CSV-импорт остатков: файл структурно не соответствует шаблону (отсутствует
+  // обязательная колонка заголовка) — весь файл отклоняется ДО построчной обработки. Это
+  // НЕ построчный `inventory_sync_row_error_code` (тот не HTTP-код вовсе, живёт только в
+  // `inventory_sync_errors.error_code`, см. `docs/spec/22-module-inventory-sync-1c.md`
+  // SRS-INV-013/014). ----
+  EXCEL_TEMPLATE_HEADER_MISMATCH = 'EXCEL_TEMPLATE_HEADER_MISMATCH', // 400, SRS-INV-014
 }
 
 /** HTTP-статус для каждого `ErrorCode` (`AllExceptionsFilter`, DTJ-018 — единственный фильтр приложения). */
@@ -319,4 +327,6 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   [ErrorCode.SEAL_CONFIRMATION_REQUIRED]: 400,
   [ErrorCode.PARTIAL_FULFILLMENT_PENDING]: 409,
   [ErrorCode.HANDOVER_OTP_NOT_FOUND]: 404,
+
+  [ErrorCode.EXCEL_TEMPLATE_HEADER_MISMATCH]: 400,
 }

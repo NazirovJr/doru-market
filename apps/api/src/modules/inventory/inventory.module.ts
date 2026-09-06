@@ -56,7 +56,9 @@ import { InMemoryFullSyncCompletion } from './infrastructure/adapters/in-memory-
 import { IngestInventoryBatchUseCase } from './application/use-cases/ingest-inventory-batch.use-case.js'
 import { IngestInventoryBatchWithMatchingUseCase } from './application/use-cases/ingest-inventory-batch-with-matching.use-case.js'
 import { InventoryBatchUpdateController } from './presentation/controllers/inventory-batch-update.controller.js'
+import { InventorySyncBatchStatusController } from './presentation/controllers/inventory-sync-batch-status.controller.js'
 import { CompositeInventoryMatcherService } from './application/services/composite-inventory-matcher.service.js'
+import { InventorySyncReportQueryService } from './application/services/inventory-sync-report-query.service.js'
 import { DetectStuckFullSyncSessionsUseCase } from './application/use-cases/detect-stuck-full-sync-sessions.use-case.js'
 import { FullSyncSessionWatchdogCron } from './infrastructure/jobs/full-sync-session-watchdog.cron.js'
 import { BullmqInventorySyncQueueAdapter } from './infrastructure/adapters/bullmq-inventory-sync-queue.adapter.js'
@@ -66,6 +68,7 @@ import { DrizzlePharmacyInventoryRepository } from './infrastructure/adapters/dr
 import { DrizzlePharmacySkuMappingRepository } from './infrastructure/adapters/drizzle-pharmacy-sku-mapping.repository.js'
 import { DrizzleInventoryOutboxAdapter } from './infrastructure/adapters/drizzle-inventory-outbox.adapter.js'
 import { DrizzleInventorySyncBatchRepository } from './infrastructure/adapters/drizzle-inventory-sync-batch.repository.js'
+import { DrizzleInventorySyncReportRepository } from './infrastructure/adapters/drizzle-inventory-sync-report.repository.js'
 import { DrizzlePharmacyApiKeyVerificationAdapter } from './infrastructure/adapters/drizzle-pharmacy-api-key-verification.adapter.js'
 
 @Module({
@@ -91,6 +94,7 @@ import { DrizzlePharmacyApiKeyVerificationAdapter } from './infrastructure/adapt
     IngestInventoryBatchUseCase,
     IngestInventoryBatchWithMatchingUseCase,
     CompositeInventoryMatcherService,
+    InventorySyncReportQueryService,
     DetectStuckFullSyncSessionsUseCase,
     FullSyncSessionWatchdogCron,
     BullmqInventorySyncQueueAdapter,
@@ -102,8 +106,12 @@ import { DrizzlePharmacyApiKeyVerificationAdapter } from './infrastructure/adapt
     // `DrizzleInventorySyncBatchRepository.appendErrors` (делегирование,
     // см. JSDoc `drizzle-inventory-sync-batch.repository.ts`).
     DrizzleInventorySyncErrorsRepository,
+    // DTJ-163/164: read-side отчёта кабинета, делегирование из
+    // `DrizzleInventorySyncBatchRepository` (см. её JSDoc) — самостоятельный
+    // провайдер, тот же приём, что `DrizzleInventorySyncErrorsRepository`.
+    DrizzleInventorySyncReportRepository,
   ],
-  controllers: [InventoryBatchUpdateController],
+  controllers: [InventoryBatchUpdateController, InventorySyncBatchStatusController],
   exports: [
     PHARMACY_INVENTORY_REPOSITORY,
     INVENTORY_SYNC_BATCH_REPOSITORY,

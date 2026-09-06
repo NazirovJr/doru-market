@@ -96,5 +96,14 @@
   "checkout.failed_group.insufficient_stock": "Мол дар анбор кофӣ нест.",
   "checkout.failed_group.controlled_substance_forbidden": "Ин дору таҳти назорати махсус аст — фармоиши онлайн дастрас нест.",
   "checkout.failed_group.generic": "Фармоиш дар ин дорухона иҷро нашуд.",
-  "pharmacy.page.coming_soon": "Экран дар ҳоли таҳия"
+  "pharmacy.page.coming_soon": "Экран дар ҳоли таҳия",
+  "inventory.sync_row_error.invalid_price": "Нархи нодуруст",
+  "inventory.sync_row_error.invalid_quantity": "Миқдори нодуруст",
+  "inventory.sync_row_error.expires_at_invalid": "Мӯҳлати истифода нодуруст",
+  "inventory.sync_row_error.barcode_invalid": "Штрихкод нодуруст",
+  "inventory.sync_row_error.medicine_not_found": "Дору дар каталог ёфт нашуд",
+  "inventory.sync_row_error.unmatched_medicine": "Бо каталог мувофиқат нашуд",
+  "inventory.sync_row_error.duplicate_in_batch": "Сатри такрорӣ дар боста",
+  "inventory.sync_row_error.ambiguous_date_format": "Формати сана норавшан аст — ДД.ММ.ГГГГ истифода баред",
+  "inventory.sync_row_error.missing_required_field": "Майдони ҳатмӣ холӣ аст"
 }

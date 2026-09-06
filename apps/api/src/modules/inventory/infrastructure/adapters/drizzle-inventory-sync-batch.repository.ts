@@ -48,7 +48,6 @@ import {
   InventorySyncBatch,
   type BatchStatus,
   type InventorySyncBatchSnapshot,
-  type SyncType,
 } from '@/modules/inventory/domain/inventory-sync-batch.entity.js'
 import type { InventorySyncChannel, InventorySyncStatus } from '@/modules/inventory/domain/inventory-sync.types.js'
 import {
@@ -62,6 +61,12 @@ import {
 import type { UnitOfWorkTx } from '@/modules/auth/index.js'
 import { resolveDrizzleClient } from './drizzle-tx.util.js'
 import { DrizzleInventorySyncErrorsRepository } from './drizzle-inventory-sync-errors.repository.js'
+import {
+  DrizzleInventorySyncReportRepository,
+  type ReportScopeInput,
+} from './drizzle-inventory-sync-report.repository.js'
+import { rowToInventorySyncBatchSnapshot } from './inventory-sync-batch-row.mapper.js'
+import type { InventoryRowErrorDetail } from '@/modules/inventory/application/ports/inventory-sync-batch.repository.port.js'
 
 const MS_PER_MINUTE = 60_000
 const NON_TERMINAL_STATUSES: ReadonlySet<InventorySyncStatus> = new Set(['queued', 'processing'])
@@ -76,6 +81,7 @@ interface CreateIfNotExistsInput {
   readonly totalRows: number
   readonly note: string | null
   readonly now: Date
+  readonly sourceUploadId?: string | null
 }
 
 @Injectable()
@@ -84,7 +90,35 @@ export class DrizzleInventorySyncBatchRepository implements InventorySyncBatchRe
     @Inject(DRIZZLE_DB) private readonly db: DrizzleDb,
     @Inject(DrizzleInventorySyncErrorsRepository)
     private readonly errorsRepository: DrizzleInventorySyncErrorsRepository,
+    // Опционален с фолбэком (не `@Inject`-обязателен): 2 существующих интеграционных теста
+    // (DTJ-144/154) конструируют этот класс напрямую с ДВУМЯ аргументами — не трогаем их вызовы.
+    // NestJS DI при боевой сборке всегда резолвит все 3 явно (см. `inventory.module.ts`), фолбэк
+    // ниже срабатывает ТОЛЬКО при ручном `new` без 3-го аргумента.
+    @Inject(DrizzleInventorySyncReportRepository)
+    private readonly reportRepository: DrizzleInventorySyncReportRepository = new DrizzleInventorySyncReportRepository(
+      db,
+    ),
   ) {}
+
+  // ── Делегирование в DrizzleInventorySyncReportRepository (DTJ-163/164) ────
+
+  findPharmacyChainId(pharmacyId: string): Promise<string | null> {
+    return this.reportRepository.findPharmacyChainId(pharmacyId)
+  }
+
+  findManyForReport(
+    input: ReportScopeInput,
+  ): Promise<{ readonly items: readonly InventorySyncBatchSnapshot[]; readonly hasMore: boolean }> {
+    return this.reportRepository.findManyForReport(input)
+  }
+
+  findRowErrorsByBatchId(batchId: string): Promise<readonly InventoryRowErrorDetail[]> {
+    return this.reportRepository.findRowErrorsByBatchId(batchId)
+  }
+
+  findBySourceUploadId(sourceUploadId: string): Promise<readonly InventorySyncBatchSnapshot[]> {
+    return this.reportRepository.findBySourceUploadId(sourceUploadId)
+  }
 
   // ── Плоский API (R1-бутстрап, `IngestInventoryBatchUseCase`, легаси) ──────
 
@@ -133,7 +167,7 @@ export class DrizzleInventorySyncBatchRepository implements InventorySyncBatchRe
     const rows = await client.select().from(inventorySyncBatch).where(eq(inventorySyncBatch.id, id)).limit(1)
     const row = rows[0]
     if (row === undefined) return null
-    return InventorySyncBatch.restore(this.rowToSnapshot(row))
+    return InventorySyncBatch.restore(rowToInventorySyncBatchSnapshot(row))
   }
 
   async save(batch: InventorySyncBatch, tx?: UnitOfWorkTx): Promise<void> {
@@ -182,12 +216,12 @@ export class DrizzleInventorySyncBatchRepository implements InventorySyncBatchRe
     const snapshot = this.buildCandidateSnapshot(input)
     const insertedRow = await this.insertBatchIfAbsent(snapshot)
     if (insertedRow !== null) {
-      return { batch: InventorySyncBatch.restore(this.rowToSnapshot(insertedRow)), created: true }
+      return { batch: InventorySyncBatch.restore(rowToInventorySyncBatchSnapshot(insertedRow)), created: true }
     }
     // Конфликт по `id` (batch_id уже принят ранее, SRS-INV-009) — идемпотентный
     // повтор, возвращаем СУЩЕСТВУЮЩУЮ строку, новую не создаём.
     const existingRow = await this.fetchExistingBatchRow(input.id)
-    return { batch: InventorySyncBatch.restore(this.rowToSnapshot(existingRow)), created: false }
+    return { batch: InventorySyncBatch.restore(rowToInventorySyncBatchSnapshot(existingRow)), created: false }
   }
 
   private buildCandidateSnapshot(input: CreateIfNotExistsInput): InventorySyncBatchSnapshot {
@@ -200,6 +234,9 @@ export class DrizzleInventorySyncBatchRepository implements InventorySyncBatchRe
         totalRows: input.totalRows,
         ...(input.fullSyncSessionId !== null ? { fullSyncSessionId: input.fullSyncSessionId } : {}),
         ...(input.syncType === 'full' ? { isLastPage: input.isLastPage } : {}),
+        ...(input.sourceUploadId !== null && input.sourceUploadId !== undefined
+          ? { sourceUploadId: input.sourceUploadId }
+          : {}),
       },
       input.now,
       input.note,
@@ -223,6 +260,7 @@ export class DrizzleInventorySyncBatchRepository implements InventorySyncBatchRe
         note: snapshot.note,
         receivedAt: snapshot.receivedAt,
         status: snapshot.status,
+        sourceUploadId: snapshot.sourceUploadId ?? null,
       })
       .onConflictDoNothing({ target: inventorySyncBatch.id })
       .returning()
@@ -278,25 +316,6 @@ export class DrizzleInventorySyncBatchRepository implements InventorySyncBatchRe
     }))
   }
 
-  private rowToSnapshot(row: InventorySyncBatchRow): InventorySyncBatchSnapshot {
-    return {
-      id: row.id,
-      pharmacyId: row.pharmacyId,
-      channel: row.channel as InventorySyncChannel,
-      syncType: row.syncType as SyncType,
-      status: row.status as BatchStatus,
-      totalRows: row.totalRows,
-      acceptedRows: row.acceptedRows,
-      rejectedRows: row.rejectedRows,
-      fullSyncSessionId: row.fullSyncSessionId,
-      pageNumber: row.pageNumber,
-      isLastPage: row.isLastPage,
-      receivedAt: row.receivedAt,
-      completedAt: row.finishedAt,
-      errorSummary: row.errorSummary as readonly { readonly rowIndex: number; readonly reason: string }[] | null,
-      note: row.note,
-    }
-  }
 }
 
 interface SessionRow {

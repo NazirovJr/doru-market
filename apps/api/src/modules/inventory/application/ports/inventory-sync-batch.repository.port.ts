@@ -14,7 +14,10 @@
  *   - InMemory (R1-бутстрап) — `in-memory-inventory-sync-batch.repository.ts`.
  *   - Drizzle (DTJ-154) — set-based `INSERT ... ON CONFLICT (id) DO UPDATE`.
  */
-import type { InventorySyncBatch } from '../../domain/inventory-sync-batch.entity.js'
+import type {
+  InventorySyncBatch,
+  InventorySyncBatchSnapshot,
+} from '../../domain/inventory-sync-batch.entity.js'
 import type {
   InventorySyncChannel,
   InventorySyncStatus,
@@ -38,19 +41,43 @@ export interface CreateInventorySyncBatchInput {
   readonly note: string | null
 }
 
+/**
+ * Коды построчных ошибок (`inventory_sync_errors.error_code`, CHECK-constraint, НЕ pg enum —
+ * см. JSDoc миграции 0020/0044). `ambiguous_date_format`/`missing_required_field` — DTJ-160
+ * (Excel/CSV-парсер, SRS-INV-013), остальные — DTJ-145/148 (REST/матчинг-конвейер).
+ */
+export type InventorySyncRowErrorCode =
+  | 'invalid_price'
+  | 'invalid_quantity'
+  | 'expires_at_invalid'
+  | 'barcode_invalid'
+  | 'medicine_not_found'
+  | 'unmatched_medicine'
+  | 'duplicate_in_batch'
+  | 'ambiguous_date_format'
+  | 'missing_required_field'
+
 /** Одна запись построчной ошибки (для `inventory_sync_errors` таблицы, DTJ-145). */
 export interface InventorySyncRowError {
   readonly batchId: string
   readonly rowIndex: number
-  readonly errorCode:
-    | 'invalid_price'
-    | 'invalid_quantity'
-    | 'expires_at_invalid'
-    | 'barcode_invalid'
-    | 'medicine_not_found'
-    | 'unmatched_medicine'
-    | 'duplicate_in_batch'
+  readonly errorCode: InventorySyncRowErrorCode
   readonly reason: string
+}
+
+/**
+ * Построчная ошибка + исходные данные строки (DTJ-163/164). `rawRow` реконструируется JOIN'ом
+ * с `inventory_sync_raw_items` по `(batch_id, row_index)` — отдельной колонки в
+ * `inventory_sync_errors` для этого НЕТ (см. риски DTJ-164: raw_items уже хранит payload для
+ * ЛЮБОГО батча, включая синтетический parser-errors контейнер DTJ-161/164, повторное поле было
+ * бы дублированием источника данных). `null`, если raw-строка не найдена (не должно происходить
+ * в норме — раз ошибка есть, строка была персистирована; `null` — defensive, не падение).
+ */
+export interface InventoryRowErrorDetail {
+  readonly rowIndex: number
+  readonly errorCode: InventorySyncRowErrorCode
+  readonly reason: string
+  readonly rawRow: Readonly<Record<string, unknown>> | null
 }
 
 /** Сырая строка из `inventory_sync_raw_items` (DTJ-141, DTJ-145). */
@@ -133,6 +160,14 @@ export interface InventorySyncBatchRepository {
     readonly totalRows: number
     readonly note: string | null
     readonly now: Date
+    /**
+     * Группирующий UUID загрузки (DTJ-161, SRS-INV-014/043) — для Excel-канала объединяет N
+     * чанков ОДНОЙ загрузки под одним `sourceUploadId` (переиспользуется и для delta, и для full).
+     * `null` для каналов без группировки (`rest`/`manual`). Колонка `source_upload_id` уже
+     * существует в БД с DTJ-142 (`0015a_inventory_sync_extensions.sql`) — этот тикет лишь
+     * прокидывает её через порт/агрегат, которые её раньше не читали/не писали.
+     */
+    readonly sourceUploadId?: string | null
   }): Promise<{ readonly batch: InventorySyncBatch; readonly created: boolean }>
 
   /**
@@ -144,4 +179,40 @@ export interface InventorySyncBatchRepository {
     batchId: string,
     items: readonly { readonly rowIndex: number; readonly payload: Readonly<Record<string, unknown>> }[],
   ): Promise<void>
+
+  /**
+   * Узкий lookup `pharmacies.chain_id` по `pharmacyId` (DTJ-158/163/164) — для проверки владения
+   * «свой батч ИЛИ батч своей сети» (SRS-API-046-style: чужой → 404, не 403). Не толще, чем нужно
+   * потребителю: только `chain_id`, не вся строка `pharmacies`. `null`, если аптека вне сети ИЛИ
+   * не существует (оба случая трактуются одинаково вызывающей стороной — отсутствие сети).
+   */
+  findPharmacyChainId(pharmacyId: string): Promise<string | null>
+
+  /**
+   * Курсорный список батчей для отчёта кабинета (DTJ-163, SRS-INV-043, SRS-API-004). Скоуп —
+   * РЕШЕНИЕ ВЫЗЫВАЮЩЕЙ СТОРОНЫ (application/presentation, не порт): передать `pharmacyId` (одна
+   * аптека) ИЛИ `chainId` (вся сеть) ИЛИ ни то, ни другое (`super_admin`, без фильтра). Если оба
+   * заданы — `chainId` в приоритете (шире скоуп). Сортировка — `receivedAt DESC, id DESC`
+   * (keyset). Синтетические parser-errors контейнеры (DTJ-164, `total_rows=0`) ВСЕГДА исключены
+   * из этого списка — см. риски DTJ-164 (не путать пользователя строкой «0 из 0»).
+   */
+  findManyForReport(input: {
+    readonly pharmacyId: string | null
+    readonly chainId: string | null
+    readonly cursor: { readonly v: string; readonly id: string } | null
+    readonly limit: number
+  }): Promise<{ readonly items: readonly InventorySyncBatchSnapshot[]; readonly hasMore: boolean }>
+
+  /**
+   * Построчные ошибки батча + исходные данные строки (DTJ-163 `/errors`, DTJ-162 ответ ручного
+   * ввода) — JOIN с `inventory_sync_raw_items` по `(batch_id, row_index)`, см. JSDoc
+   * `InventoryRowErrorDetail`. Порядок — по `rowIndex` (та же индексация `ix_inventory_sync_errors_batch`).
+   */
+  findRowErrorsByBatchId(batchId: string): Promise<readonly InventoryRowErrorDetail[]>
+
+  /**
+   * Все батчи одной загрузки (DTJ-164, `source_upload_id` — группирует N чанков Excel-импорта,
+   * ВКЛЮЧАЯ синтетический parser-errors контейнер DTJ-161/164, в отличие от `findManyForReport`).
+   */
+  findBySourceUploadId(sourceUploadId: string): Promise<readonly InventorySyncBatchSnapshot[]>
 }

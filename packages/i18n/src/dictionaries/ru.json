@@ -96,5 +96,14 @@
   "checkout.failed_group.insufficient_stock": "Недостаточно товара на складе.",
   "checkout.failed_group.controlled_substance_forbidden": "Препарат подлежит специальному учёту — заказ онлайн недоступен.",
   "checkout.failed_group.generic": "Не удалось оформить заказ для этой аптеки.",
-  "pharmacy.page.coming_soon": "Экран в разработке"
+  "pharmacy.page.coming_soon": "Экран в разработке",
+  "inventory.sync_row_error.invalid_price": "Некорректная цена",
+  "inventory.sync_row_error.invalid_quantity": "Некорректный остаток",
+  "inventory.sync_row_error.expires_at_invalid": "Некорректный срок годности",
+  "inventory.sync_row_error.barcode_invalid": "Некорректный штрихкод",
+  "inventory.sync_row_error.medicine_not_found": "Медикамент не найден в каталоге",
+  "inventory.sync_row_error.unmatched_medicine": "Не удалось сопоставить с каталогом",
+  "inventory.sync_row_error.duplicate_in_batch": "Повторяющаяся позиция в пачке",
+  "inventory.sync_row_error.ambiguous_date_format": "Неоднозначный формат даты — используйте ДД.ММ.ГГГГ",
+  "inventory.sync_row_error.missing_required_field": "Не заполнено обязательное поле"
 }
