@@ -77,7 +77,7 @@ export class RefundOnReturnResolvedUseCase {
       return
     }
     const outcome = this.resolveOutcome(command)
-    await this.applyOutcome(command, order, outcome, tx)
+    await this.applyOutcome({ command, order, outcome, tx })
   }
 
   private resolveOutcome(command: RefundOnReturnResolvedCommand): ReturnFinancialOutcome {
@@ -90,26 +90,16 @@ export class RefundOnReturnResolvedUseCase {
     return this.financialOutcomeResolver.resolve(reason, dispositionResult.value)
   }
 
-  private async applyOutcome(
-    command: RefundOnReturnResolvedCommand,
-    order: OrderReturnContext,
-    outcome: ReturnFinancialOutcome,
-    tx: ReturnsUnitOfWorkTx,
-  ): Promise<void> {
-    if (order.billingStrategy === 'split_items_delivery') {
-      await this.applySplitBilling(command, order, outcome, tx)
+  private async applyOutcome(input: ApplyOutcomeInput): Promise<void> {
+    if (input.order.billingStrategy === 'split_items_delivery') {
+      await this.applySplitBilling(input)
       return
     }
-    await this.applySingleInvoice(command, order, outcome, tx)
+    await this.applySingleInvoice(input)
   }
 
   /** SRS-RET-007 — `refundByComponent` для КАЖДОЙ части с `*Refund === 'full'`, ПОЛНЫЙ refund той части, delivery не задета, если не положена. */
-  private async applySplitBilling(
-    command: RefundOnReturnResolvedCommand,
-    order: OrderReturnContext,
-    outcome: ReturnFinancialOutcome,
-    tx: ReturnsUnitOfWorkTx,
-  ): Promise<void> {
+  private async applySplitBilling({ command, order, outcome, tx }: ApplyOutcomeInput): Promise<void> {
     const base = { orderId: command.orderId, returnId: command.returnId }
     if (outcome.itemsRefund === 'full') {
       await this.paymentsPort.refundItems(command.tenantId, { ...base, amountDiram: order.itemsTotalDiram }, tx)
@@ -131,12 +121,7 @@ export class RefundOnReturnResolvedUseCase {
    * DTJ-272, не производит такую пару) — не обрабатывается веткой отдельно, `else`-случай ниже
    * покрывает её явным `throw`, чтобы будущее изменение резолвера не прошло здесь молча.
    */
-  private async applySingleInvoice(
-    command: RefundOnReturnResolvedCommand,
-    order: OrderReturnContext,
-    outcome: ReturnFinancialOutcome,
-    tx: ReturnsUnitOfWorkTx,
-  ): Promise<void> {
+  private async applySingleInvoice({ command, order, outcome, tx }: ApplyOutcomeInput): Promise<void> {
     const base = { orderId: command.orderId, returnId: command.returnId }
     if (outcome.itemsRefund === 'full' && outcome.deliveryFeeRefund === 'full') {
       await this.paymentsPort.refundFull(command.tenantId, { ...base, amountDiram: order.totalAmountDiram }, tx)
@@ -164,4 +149,12 @@ export class RefundOnReturnResolvedUseCase {
       `RefundOnReturnResolvedUseCase: unexpected ReturnFinancialOutcome combination (${outcome.itemsRefund}, ${outcome.deliveryFeeRefund}) — invariant violation.`,
     )
   }
+}
+
+/** Извлечено из сигнатур `applyOutcome`/`applySplitBilling`/`applySingleInvoice` — C1 (`max-params`, порог 3). */
+interface ApplyOutcomeInput {
+  readonly command: RefundOnReturnResolvedCommand
+  readonly order: OrderReturnContext
+  readonly outcome: ReturnFinancialOutcome
+  readonly tx: ReturnsUnitOfWorkTx
 }

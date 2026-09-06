@@ -16,7 +16,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
 import type { Pool } from 'pg'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { ForbiddenError, type UserRole } from '@dorutj/contracts'
+import { ForbiddenError } from '@dorutj/contracts'
 import { isErr } from '@dorutj/domain-kernel'
 import { Money } from '@/shared-kernel/domain/value-objects/money.vo.js'
 import { orderReturns } from '@/db/schema/returns.js'
@@ -162,7 +162,7 @@ describe.skipIf(!postgresAvailable)('MarkInTransit/Reject/AdminOverride/RetryTra
   it('AdminOverrideReturnUseCase — super_admin переопределяет из return_rejected → return_confirmed, disposition=restock', async () => {
     await setup()
     const returnId = await seedReturnInStatus('return_rejected')
-    const actor: ReturnsPolicyActor = { role: 'super_admin' as UserRole, pharmacyId: null, chainId: null }
+    const actor: ReturnsPolicyActor = { role: 'super_admin', pharmacyId: null, chainId: null }
 
     await adminOverride.execute({ tenantId, returnId, actorId: customerId, actor, reason: 'inspected personally, approved' })
 
@@ -177,7 +177,7 @@ describe.skipIf(!postgresAvailable)('MarkInTransit/Reject/AdminOverride/RetryTra
   it('AdminOverrideReturnUseCase — pharmacy_admin ЧУЖОЙ сети → ForbiddenError, статус не меняется', async () => {
     await setup()
     const returnId = await seedReturnInStatus('return_rejected')
-    const actor: ReturnsPolicyActor = { role: 'pharmacy_admin' as UserRole, pharmacyId: null, chainId: crypto.randomUUID() }
+    const actor: ReturnsPolicyActor = { role: 'pharmacy_admin', pharmacyId: null, chainId: crypto.randomUUID() }
 
     await expect(
       adminOverride.execute({ tenantId, returnId, actorId: customerId, actor, reason: 'attempt' }),
@@ -190,7 +190,7 @@ describe.skipIf(!postgresAvailable)('MarkInTransit/Reject/AdminOverride/RetryTra
   it('AdminOverrideReturnUseCase — pharmacy_admin СВОЕЙ сети → успех', async () => {
     await setup()
     const returnId = await seedReturnInStatus('return_rejected')
-    const actor: ReturnsPolicyActor = { role: 'pharmacy_admin' as UserRole, pharmacyId, chainId }
+    const actor: ReturnsPolicyActor = { role: 'pharmacy_admin', pharmacyId, chainId }
 
     await adminOverride.execute({ tenantId, returnId, actorId: customerId, actor, reason: 'same-chain admin approval' })
 

@@ -164,13 +164,20 @@ export interface SeedMedicineOptions {
 /** `chk_medicines_control_category_requires_rx` — 'potent'/'psychotropic'/'narcotic' ОБЯЗАН нести `is_prescription_required=true`. */
 const CONTROL_CATEGORIES_REQUIRING_RX: ReadonlySet<string> = new Set(['potent', 'psychotropic', 'narcotic'])
 
+export interface SeedMedicineWithInventoryInput {
+  readonly db: NodePgDatabase
+  readonly pharmacyId: string
+  readonly expiresAt: Date
+  readonly opts?: SeedMedicineOptions
+  /** Начальное `pharmacy_inventory.quantity` ДО возврата (по умолчанию 5) — restock-тесты читают его снова после `confirmReceived`, чтобы проверить приращение РОВНО на `orderItem.quantity`. */
+  readonly initialQuantity?: number
+}
+
 /** Категория + лекарство + позиция остатка аптеки — минимальная цепочка FK для `order_items`/restock-тестов. */
 export async function seedMedicineWithInventory(
-  db: NodePgDatabase,
-  pharmacyId: string,
-  expiresAt: Date,
-  opts?: SeedMedicineOptions,
+  input: SeedMedicineWithInventoryInput,
 ): Promise<{ readonly medicineId: string; readonly inventoryBatchId: string }> {
+  const { db, pharmacyId, expiresAt, opts } = input
   const [category] = await db
     .insert(categories)
     .values({ slug: `dtj273-cat-${randomUUID().slice(0, 8)}`, nameTj: 'Тест', nameRu: 'Тест', nameEn: 'Test', commissionCategory: 'otc' })
@@ -194,19 +201,22 @@ export async function seedMedicineWithInventory(
     pharmacyId,
     medicineId,
     price: 1000,
-    quantity: 5,
+    quantity: input.initialQuantity ?? 5,
     expiresAt: expiresAt.toISOString().slice(0, 10),
   })
   return { medicineId, inventoryBatchId }
 }
 
-export async function seedOrderItem(
-  db: NodePgDatabase,
-  orderId: string,
-  medicineId: string,
-  inventoryBatchId: string,
-  quantity: number,
-): Promise<void> {
+export interface SeedOrderItemInput {
+  readonly db: NodePgDatabase
+  readonly orderId: string
+  readonly medicineId: string
+  readonly inventoryBatchId: string
+  readonly quantity: number
+}
+
+export async function seedOrderItem(input: SeedOrderItemInput): Promise<void> {
+  const { db, orderId, medicineId, inventoryBatchId, quantity } = input
   await db.insert(orderItems).values({
     orderId,
     medicineId,
@@ -221,8 +231,8 @@ const DEFAULT_COURIER_FEE_DIRAM = 5_000n
 
 /** Тест-дублёр `ReturnsDeliveryPort` — записывает вызовы, возвращает детерминированные значения (см. JSDoc файла). */
 export class FakeReturnsDeliveryPort implements ReturnsDeliveryPort {
-  readonly assignReturnCourierCalls: Array<{ tenantId: string; returnId: string }> = []
-  readonly calculateReturnFeeCalls: Array<{ tenantId: string; orderId: string }> = []
+  readonly assignReturnCourierCalls: { tenantId: string; returnId: string }[] = []
+  readonly calculateReturnFeeCalls: { tenantId: string; orderId: string }[] = []
   assignmentResult: ReturnsCourierAssignment | null = null
   feeDiram = DEFAULT_COURIER_FEE_DIRAM
 

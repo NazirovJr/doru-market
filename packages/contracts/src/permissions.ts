@@ -45,6 +45,12 @@ export const PERMISSIONS = {
   RETURNS_REQUEST: 'returns:request',
   RETURNS_CONFIRM: 'returns:confirm',
   RETURNS_ADMIN_OVERRIDE: 'returns:admin-override',
+  // RETURNS_MARK_IN_TRANSIT — DTJ-275 (EP-11): `mark-in-transit`/`retry-transit` не перечислены
+  // отдельной строкой в исходной матрице §4.1 (только request/confirm/admin-override) —
+  // диспетчерское действие (pharmacy_admin своей сети/super_admin) закрепляется НОВОЙ строкой по
+  // аналогии с преамбулой §4.1, `reject` переиспользует `RETURNS_CONFIRM` (симметричное действие
+  // тому же принципалу — pharmacist своей аптеки, см. риски тикета DTJ-275).
+  RETURNS_MARK_IN_TRANSIT: 'returns:mark-in-transit',
   DELIVERY_REASSIGN: 'delivery:reassign',
   DELIVERY_RECORD_CASH: 'delivery:record-cash',
   PHARMACY_ACCOUNTS_APPROVE: 'pharmacy-accounts:approve',

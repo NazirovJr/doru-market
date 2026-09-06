@@ -70,7 +70,6 @@ describe.skipIf(!postgresAvailable)('RequestReturnUseCase — integration (DTJ-2
   })
 
   afterEach(async () => {
-    if (tenantId === undefined) return
     await cleanupTenant(db, tenantId)
   })
 

@@ -11,6 +11,11 @@
 import type { OrderReturn } from '../../domain/index.js'
 import type { ReturnsUnitOfWorkTx } from './orders-facade.port.js'
 
+/** Ре-экспорт для `presentation/` (DTJ-275): `dependency-cruiser` (`presentation-goes-through-application`,
+ *  `02` §1.1) запрещает `presentation/ → domain/` напрямую — контроллер/маппер получают тип
+ *  ЧЕРЕЗ этот порт (который уже легально импортирует `domain`, как и положено `application/`). */
+export type { OrderReturn }
+
 export const RETURNS_REPOSITORY = Symbol.for('@dorutj/returns/repository')
 
 export interface ReturnsRepositoryPort {

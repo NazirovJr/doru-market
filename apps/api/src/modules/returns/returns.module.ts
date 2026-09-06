@@ -54,10 +54,11 @@ import { RETURNS_DELIVERY_PORT } from './application/ports/delivery-facade.port.
 import { UnimplementedReturnsDeliveryAdapter } from './infrastructure/adapters/unimplemented-returns-delivery-facade.adapter.js'
 import { RETURNS_PAYMENTS_PORT } from './application/ports/payments-facade.port.js'
 import { UnimplementedReturnsPaymentsAdapter } from './infrastructure/adapters/unimplemented-returns-payments-facade.adapter.js'
+import { OrderReturnsController } from './presentation/order-returns.controller.js'
 
 @Module({
   imports: [TenancyModule, SupportModule],
-  controllers: [],
+  controllers: [OrderReturnsController],
   providers: [
     ReturnFinancialOutcomeResolver,
     RETURNS_REPOSITORY_PROVIDER,
