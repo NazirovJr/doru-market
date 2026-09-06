@@ -96,5 +96,20 @@
   "checkout.failed_group.insufficient_stock": "Мол дар анбор кофӣ нест.",
   "checkout.failed_group.controlled_substance_forbidden": "Ин дору таҳти назорати махсус аст — фармоиши онлайн дастрас нест.",
   "checkout.failed_group.generic": "Фармоиш дар ин дорухона иҷро нашуд.",
-  "pharmacy.page.coming_soon": "Экран дар ҳоли таҳия"
+  "pharmacy.page.coming_soon": "Экран дар ҳоли таҳия",
+  "admin.nav.tenants": "Тенантҳо",
+  "admin.nav.feature_flags": "Фича-флагҳо",
+  "admin.nav.pharmacies": "Дорухонаҳо",
+  "admin.nav.users": "Корбарон",
+  "admin.nav.orders": "Фармоишҳо",
+  "admin.nav.finance": "Молия",
+  "admin.nav.settings": "Танзимот",
+  "admin.nav.my_pharmacies": "Нуқтаҳои ман",
+  "admin.nav.my_orders": "Фармоишҳо",
+  "admin.nav.staff": "Кормандон",
+  "admin.nav.integration_keys": "Калидҳои 1С",
+  "admin.nav.reports": "Ҳисоботҳо",
+  "admin.nav.schedule": "Ҷадвал",
+  "admin.forbidden.title": "Дастрасӣ манъ аст",
+  "admin.forbidden.message": "Шумо ба ин бахш дастрасӣ надоред."
 }

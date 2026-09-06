@@ -1,0 +1,81 @@
+/**
+ * `role-routes.ts` (DTJ-350, EP-15) — декларативная карта `role → RouteConfig[]` для раздел
+ * `/admin/*`. `router.tsx` строит дерево маршрутов ИЗ этих данных, фильтруя по роли, декодированной
+ * из JWT (`shared/auth/current-role.ts`) — чужие разделы физически не монтируются (критерий
+ * приёмки 3 DTJ-350), не просто скрываются CSS.
+ *
+ * Правило пополнения (см. «Что сделать» п.6 тикета): каждый следующий тикет эпика (DTJ-351..367)
+ * заменяет `component` СВОЕЙ записи ниже на реальную лениво загружаемую страницу — путь/ключ
+ * названия/иконка уже зафиксированы этим тикетом и не меняются. До замены все 13 разделов
+ * используют общий `SectionPlaceholderPage` (`shared/ui/section-placeholder.page.tsx`).
+ *
+ * Иконки — временно строковый ключ (`packages/ui` пока не содержит ни одного компонента,
+ * `packages/ui/src/index.ts` — пустой барабан, заглушка EP-18/DTJ-400). Рендеринг реальной
+ * иконки по ключу — задача будущего меню-компонента, когда `packages/ui` их получит.
+ */
+import { lazy, type ComponentType, type LazyExoticComponent } from 'react'
+import { USER_ROLES, type UserRole } from '@dorutj/contracts'
+import type { SectionPlaceholderPageProps } from '@/shared/ui/section-placeholder.page'
+
+export interface RouteConfig {
+  /** Относительно `/admin/`, напр. `'tenants'` → `/admin/tenants`. */
+  readonly path: string
+  /** Ключ словаря `@dorutj/i18n` (`admin.nav.*`) для пункта меню/заголовка страницы. */
+  readonly titleKey: string
+  /** Семантический ключ иконки — см. JSDoc файла про временное отсутствие `packages/ui`. */
+  readonly icon: string
+  readonly Component: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>>
+}
+
+const SectionPlaceholder: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/shared/ui/section-placeholder.page').then((m) => ({ default: m.SectionPlaceholderPage })),
+)
+
+function section(path: string, titleKey: string, icon: string): RouteConfig {
+  return { path, titleKey, icon, Component: SectionPlaceholder }
+}
+
+/** `super_admin` (тикет DTJ-350 «Что сделать» п.5): Тенанты/Фиче-флаги/Аптеки/Пользователи/Заказы/Финансы/Настройки. */
+const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
+  section('tenants', 'admin.nav.tenants', 'tenants'),
+  section('feature-flags', 'admin.nav.feature_flags', 'flags'),
+  section('pharmacies', 'admin.nav.pharmacies', 'pharmacies'),
+  section('users', 'admin.nav.users', 'users'),
+  section('orders', 'admin.nav.orders', 'orders'),
+  section('finance', 'admin.nav.finance', 'finance'),
+  section('settings', 'admin.nav.settings', 'settings'),
+]
+
+/** `pharmacy_admin`: Мои точки/Заказы/Сотрудники/Ключи 1С/Отчёты/Расписание. */
+const PHARMACY_ADMIN_ROUTES: readonly RouteConfig[] = [
+  section('my-pharmacies', 'admin.nav.my_pharmacies', 'pharmacies'),
+  section('my-orders', 'admin.nav.my_orders', 'orders'),
+  section('staff', 'admin.nav.staff', 'staff'),
+  section('integration-keys', 'admin.nav.integration_keys', 'keys'),
+  section('reports', 'admin.nav.reports', 'reports'),
+  section('schedule', 'admin.nav.schedule', 'schedule'),
+]
+
+const EMPTY_ROUTES: readonly RouteConfig[] = []
+
+/** `Record<UserRole, ...>` — компилятор гарантирует запись для ВСЕХ 6 ролей (см. тест-план тикета). */
+const ROLE_ROUTES: Readonly<Record<UserRole, readonly RouteConfig[]>> = {
+  super_admin: SUPER_ADMIN_ROUTES,
+  pharmacy_admin: PHARMACY_ADMIN_ROUTES,
+  customer: EMPTY_ROUTES,
+  pharmacist: EMPTY_ROUTES,
+  courier: EMPTY_ROUTES,
+  support_agent: EMPTY_ROUTES,
+}
+
+/** Given декодированная роль (или `null` — нет сессии), возвращает список маршрутов `/admin/*` этой роли. */
+export function getRoutesForRole(role: UserRole | null): readonly RouteConfig[] {
+  if (role === null || !(USER_ROLES as readonly string[]).includes(role)) {
+    return EMPTY_ROUTES
+  }
+  // `Record<UserRole, V>` — НЕ индекс-сигнатура (`{ [key: string]: V }`), а явные свойства на
+  // каждый литерал объединения — `noUncheckedIndexedAccess` не добавляет `| undefined` для такого
+  // доступа, когда `role` уже сужен до `UserRole` (проверено выше). Фолбэк `?? EMPTY_ROUTES` был
+  // бы недостижимым кодом (`@typescript-eslint/no-unnecessary-condition` ловит именно это).
+  return ROLE_ROUTES[role]
+}

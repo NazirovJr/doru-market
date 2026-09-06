@@ -96,5 +96,20 @@
   "checkout.failed_group.insufficient_stock": "Not enough stock available.",
   "checkout.failed_group.controlled_substance_forbidden": "This medicine is controlled and cannot be ordered online.",
   "checkout.failed_group.generic": "This pharmacy's order could not be placed.",
-  "pharmacy.page.coming_soon": "Screen coming soon"
+  "pharmacy.page.coming_soon": "Screen coming soon",
+  "admin.nav.tenants": "Tenants",
+  "admin.nav.feature_flags": "Feature flags",
+  "admin.nav.pharmacies": "Pharmacies",
+  "admin.nav.users": "Users",
+  "admin.nav.orders": "Orders",
+  "admin.nav.finance": "Finance",
+  "admin.nav.settings": "Settings",
+  "admin.nav.my_pharmacies": "My locations",
+  "admin.nav.my_orders": "Orders",
+  "admin.nav.staff": "Staff",
+  "admin.nav.integration_keys": "1C integration keys",
+  "admin.nav.reports": "Reports",
+  "admin.nav.schedule": "Schedule",
+  "admin.forbidden.title": "Access denied",
+  "admin.forbidden.message": "You don't have access to this section."
 }

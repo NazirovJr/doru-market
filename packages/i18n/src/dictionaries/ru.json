@@ -96,5 +96,20 @@
   "checkout.failed_group.insufficient_stock": "Недостаточно товара на складе.",
   "checkout.failed_group.controlled_substance_forbidden": "Препарат подлежит специальному учёту — заказ онлайн недоступен.",
   "checkout.failed_group.generic": "Не удалось оформить заказ для этой аптеки.",
-  "pharmacy.page.coming_soon": "Экран в разработке"
+  "pharmacy.page.coming_soon": "Экран в разработке",
+  "admin.nav.tenants": "Тенанты",
+  "admin.nav.feature_flags": "Фиче-флаги",
+  "admin.nav.pharmacies": "Аптеки",
+  "admin.nav.users": "Пользователи",
+  "admin.nav.orders": "Заказы",
+  "admin.nav.finance": "Финансы",
+  "admin.nav.settings": "Настройки",
+  "admin.nav.my_pharmacies": "Мои точки",
+  "admin.nav.my_orders": "Заказы",
+  "admin.nav.staff": "Сотрудники",
+  "admin.nav.integration_keys": "Ключи 1С",
+  "admin.nav.reports": "Отчёты",
+  "admin.nav.schedule": "Расписание",
+  "admin.forbidden.title": "Доступ запрещён",
+  "admin.forbidden.message": "У вас нет доступа к этому разделу."
 }
