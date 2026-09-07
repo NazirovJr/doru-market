@@ -1,0 +1,123 @@
+{
+  "chains": [
+    {
+      "id": "459b7396-82fe-4e70-8250-ec1450387203",
+      "legalEntityName": "ЉДММ \"Дорумон Фарм\"",
+      "tinInn": "010098761",
+      "directorFullName": "Раҳимов Файзулло Саидович",
+      "contactPhone": "+992937001122",
+      "legalAddress": "ш. Душанбе, кӯчаи Рӯдакӣ, 45",
+      "isWhitelabelRequested": false
+    },
+    {
+      "id": "a55aca13-eb0c-4090-af86-bb0ee06f8183",
+      "legalEntityName": "ЉДММ \"Шифо Дору\"",
+      "tinInn": "010098762",
+      "directorFullName": "Каримова Мунира Абдуллоевна",
+      "contactPhone": "+992937002233",
+      "legalAddress": "ш. Душанбе, кӯчаи Айнӣ, 118",
+      "isWhitelabelRequested": false
+    },
+    {
+      "id": "b9528fcb-4411-4031-836a-d20c1630fd13",
+      "legalEntityName": "ЉДММ \"Тандурустӣ Плюс\"",
+      "tinInn": "010098763",
+      "directorFullName": "Назаров Ҳусейн Раҷабович",
+      "contactPhone": "+992937003344",
+      "legalAddress": "ш. Душанбе, кӯчаи Борбад, 27",
+      "isWhitelabelRequested": false
+    }
+  ],
+  "pharmacies": [
+    {
+      "id": "1f9bb507-7f13-4bc9-8eed-46ab52e3a34c",
+      "chainId": "459b7396-82fe-4e70-8250-ec1450387203",
+      "name": "Дорухонаи Роҳат — Рӯдакӣ",
+      "addressText": "ш. Душанбе, кӯчаи Рӯдакӣ, 89",
+      "landmarkTj": "Рӯ ба рӯи ресторани \"Роҳат\", назди истгоҳи автобус",
+      "latitude": 38.5765,
+      "longitude": 68.7870,
+      "phone": "+992937011001",
+      "is24_7": true,
+      "openingTime": null,
+      "closingTime": null,
+      "licenseNumber": "TJ-PH-2024-0101",
+      "licenseExpiryDate": "2027-12-31"
+    },
+    {
+      "id": "5f499425-306c-41ad-a365-9dd16eaaec2e",
+      "chainId": "459b7396-82fe-4e70-8250-ec1450387203",
+      "name": "Дорухонаи Роҳат — Сино",
+      "addressText": "ш. Душанбе, ноҳияи Синои, кӯчаи Ленинград, 12",
+      "landmarkTj": "Дар паҳлӯи бозори \"Сино\", ошёнаи якум",
+      "latitude": 38.6015,
+      "longitude": 68.7550,
+      "phone": "+992937011002",
+      "is24_7": false,
+      "openingTime": "08:00",
+      "closingTime": "22:00",
+      "licenseNumber": "TJ-PH-2024-0102",
+      "licenseExpiryDate": "2027-12-31"
+    },
+    {
+      "id": "6d40b288-3716-40eb-9dea-6effed84081c",
+      "chainId": "a55aca13-eb0c-4090-af86-bb0ee06f8183",
+      "name": "Дорухонаи Шифо — Шоҳмансур",
+      "addressText": "ш. Душанбе, ноҳияи Шоҳмансур, кӯчаи Ҳувайдо, 34",
+      "landmarkTj": "Назди клиникаи оилавӣ №2",
+      "latitude": 38.5590,
+      "longitude": 68.8120,
+      "phone": "+992937022001",
+      "is24_7": false,
+      "openingTime": "07:30",
+      "closingTime": "23:00",
+      "licenseNumber": "TJ-PH-2024-0201",
+      "licenseExpiryDate": "2028-03-15"
+    },
+    {
+      "id": "5699c6a3-c33f-451f-842e-81b26d0b5850",
+      "chainId": "a55aca13-eb0c-4090-af86-bb0ee06f8183",
+      "name": "Дорухонаи Шифо — Меҳргон",
+      "addressText": "ш. Душанбе, кӯчаи Ҳофиз Шерозӣ, 6",
+      "landmarkTj": "Дар бинои маркази савдои \"Меҳргон\", вароиди асосӣ",
+      "latitude": 38.5405,
+      "longitude": 68.7690,
+      "phone": "+992937022002",
+      "is24_7": true,
+      "openingTime": null,
+      "closingTime": null,
+      "licenseNumber": "TJ-PH-2024-0202",
+      "licenseExpiryDate": "2027-08-20"
+    },
+    {
+      "id": "85416ce3-d0eb-4178-a06f-85c987f98b14",
+      "chainId": "b9528fcb-4411-4031-836a-d20c1630fd13",
+      "name": "Дорухонаи Тандурустӣ — Кӯҳак",
+      "addressText": "ш. Душанбе, кӯчаи Кӯҳак, 3",
+      "landmarkTj": "Рӯ ба рӯи мактаби №89",
+      "latitude": 38.5330,
+      "longitude": 68.7420,
+      "phone": "+992937033001",
+      "is24_7": false,
+      "openingTime": "09:00",
+      "closingTime": "21:00",
+      "licenseNumber": "TJ-PH-2024-0301",
+      "licenseExpiryDate": "2026-11-10"
+    },
+    {
+      "id": "35ed066d-916b-43d0-8e3f-285bcbd4aef5",
+      "chainId": "b9528fcb-4411-4031-836a-d20c1630fd13",
+      "name": "Дорухонаи Тандурустӣ — Варзоб",
+      "addressText": "ш. Душанбе, шоссеи Варзоб, 21",
+      "landmarkTj": "Назди истгоҳи сӯзишворӣ, даромадгоҳи шимолии шаҳр",
+      "latitude": 38.5980,
+      "longitude": 68.8210,
+      "phone": "+992937033002",
+      "is24_7": true,
+      "openingTime": null,
+      "closingTime": null,
+      "licenseNumber": "TJ-PH-2024-0302",
+      "licenseExpiryDate": "2028-01-05"
+    }
+  ]
+}

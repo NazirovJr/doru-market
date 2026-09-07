@@ -22,6 +22,8 @@ import type { ControlCategory } from '@/modules/catalog/domain/medicine.enums.js
 import { Medicine } from '@/modules/catalog/domain/medicine.entity.js'
 import type { MedicineRow } from '@/db/schema/index.js'
 import type { SeedCatalogPort } from './seed-catalog.port.js'
+import type { CatalogMedicineForOffers, SeedPharmaciesDeps, SeedPharmaciesResult } from './seed-pharmacies.run.js'
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 
 const FILE_URL_PATH = fileURLToPath(import.meta.url)
 const MODULE_DIR = dirname(FILE_URL_PATH)
@@ -261,6 +263,70 @@ async function seedI18nOverridesCatalogViaCli(dbUrl: string): Promise<number> {
   }
 }
 
+/**
+ * Демо-стенд: 6 доп. аптек в Душанбе (`seed-pharmacies.run.ts`) + остатки
+ * с пересечением ассортимента (сравнение цен между аптеками). Тот же приём,
+ * что `seedI18nOverridesCatalogViaCli` выше — короткоживущее второе
+ * соединение, вынесено в отдельную функцию (C1, ≤40 строк/метод).
+ */
+async function buildListMedicinesWithSubstances(
+  db: NodePgDatabase,
+): Promise<() => Promise<readonly CatalogMedicineForOffers[]>> {
+  const { medicines, medicineSubstances } = await import('@/db/schema/index.js')
+  return async () => {
+    const meds = await db.select({ id: medicines.id, tradeName: medicines.tradeName }).from(medicines)
+    const links = await db
+      .select({ medicineId: medicineSubstances.medicineId, substanceId: medicineSubstances.substanceId })
+      .from(medicineSubstances)
+    const substancesByMedicine = new Map<string, string[]>()
+    for (const link of links) {
+      const bucket = substancesByMedicine.get(link.medicineId) ?? []
+      bucket.push(link.substanceId)
+      substancesByMedicine.set(link.medicineId, bucket)
+    }
+    return meds.map((med) => ({
+      id: med.id,
+      tradeName: med.tradeName,
+      substanceIds: substancesByMedicine.get(med.id) ?? [],
+    }))
+  }
+}
+
+async function buildPharmaciesSeedDeps(
+  db: NodePgDatabase,
+): Promise<SeedPharmaciesDeps> {
+  const { DrizzlePharmacyChainRepository } = await import(
+    '@/modules/onboarding/infrastructure/repositories/pharmacy-chain.repository.js'
+  )
+  const { DrizzlePharmacyAccountRepository } = await import(
+    '@/modules/onboarding/infrastructure/repositories/pharmacy-account.repository.js'
+  )
+  const { DrizzlePharmacyInventoryRepository } = await import(
+    '@/modules/inventory/infrastructure/adapters/drizzle-pharmacy-inventory.repository.js'
+  )
+  return {
+    chainRepo: new DrizzlePharmacyChainRepository(db),
+    accountRepo: new DrizzlePharmacyAccountRepository(db),
+    inventoryRepo: new DrizzlePharmacyInventoryRepository(db),
+    listMedicinesWithSubstances: await buildListMedicinesWithSubstances(db),
+  }
+}
+
+async function seedPharmaciesAndInventoryViaCli(dbUrl: string): Promise<SeedPharmaciesResult> {
+  const { drizzle } = await import('drizzle-orm/node-postgres')
+  const { Pool } = await import('pg')
+  const { runSeedPharmacies } = await import('./seed-pharmacies.run.js')
+
+  const pool = new Pool({ connectionString: dbUrl })
+  try {
+    const db = drizzle(pool)
+    const deps = await buildPharmaciesSeedDeps(db)
+    return await runSeedPharmacies(deps)
+  } finally {
+    await pool.end().catch(() => undefined)
+  }
+}
+
 async function main(): Promise<void> {
   // Защита от двойного запуска при импорте из тестов.
   if (process.env.DORUTJ_SEED_SKIP_MAIN === '1') return
@@ -288,6 +354,11 @@ async function main(): Promise<void> {
     const i18nUpserted = await seedI18nOverridesCatalogViaCli(dbUrl)
     // eslint-disable-next-line no-console -- CLI-скрипт.
     console.log(`[db:seed] OK — upserted ${String(i18nUpserted)} catalog.analogs.* i18n_overrides rows (DTJ-103)`)
+    const pharmaciesResult = await seedPharmaciesAndInventoryViaCli(dbUrl)
+    // eslint-disable-next-line no-console -- CLI-скрипт.
+    console.log(
+      `[db:seed] OK — pharmacies ensured=${String(pharmaciesResult.pharmaciesEnsured)}, pool=${String(pharmaciesResult.pharmacyPoolSize)}, medicines covered=${String(pharmaciesResult.medicinesCovered)}, offers upserted=${String(pharmaciesResult.offersUpserted)} (demo stand)`,
+    )
     process.exitCode = 0
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
