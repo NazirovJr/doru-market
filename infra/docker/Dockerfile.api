@@ -5,24 +5,25 @@
 # init-контейнера миграций — общий слой зависимостей строится один раз (кэшируется
 # Docker-слоями), НЕ дублирует `pnpm install` в трёх образах.
 #
-# Обоснование node:22.12-slim (НЕ alpine): нативные аддоны (в первую очередь `argon2`,
+# Обоснование node:22.23-slim (НЕ alpine): нативные аддоны (в первую очередь `argon2`,
 # см. pnpm-workspace.yaml allowBuilds) исторически проблемны на musl libc alpine —
 # либо не собираются вовсе, либо требуют дополнительных build-зависимостей и дают
 # нестабильные бинарные артефакты между патч-версиями Node. `slim` (Debian-based) снимает
 # этот риск за разумную цену (~70 МБ против ~40 МБ alpine). НЕ переключать на alpine
 # «для экономии места» без повторной проверки совместимости argon2/pg на musl.
 #
-# ВНИМАНИЕ (контракт, не факт): на момент DTJ-412 (волна 1) apps/api содержит только
-# заглушку src/main.ts (`export {}`), apps/api/drizzle и apps/api/dist/scripts/*.js ещё
-# не существуют — это ожидаемо (см. тикет, раздел «Риски и подводные камни»). Пути ниже
-# зафиксированы ПО КОНТРАКТУ для DTJ-001 (домен/миграции) и последующих тикетов EP-01:
-#   - apps/api/drizzle/                       — папка миграций drizzle-kit
-#   - apps/api/src/scripts/migrate-entrypoint.js  (компилируется в dist/scripts/...)
-#   - apps/api/src/scripts/seed-entrypoint.js     (компилируется в dist/scripts/...)
-# До появления этих файлов образ `migrator`/`runtime` не соберётся реальной сборкой —
-# синтаксис Dockerfile при этом остаётся корректным (проверяется `docker build --check`/hadolint).
+# Патч-версия не произвольная: pnpm 11.23.0 (пин `packageManager`) требует Node >= 22.13,
+# а corepack в образах младше ~22.2x несёт протухшие ключи проверки подписи npm и падает на
+# `corepack prepare` («Cannot find matching keyid»). На прежнем 22.12 сборка не проходила вовсе.
+#
+# Пути init-контейнеров выверены реальной сборкой (волна 6), а не зафиксированы «по контракту»:
+#   - apps/api/migrations/                        — миграции (НЕ apps/api/drizzle, такого каталога нет)
+#   - dist/infrastructure/database/migrate.js     — раннер миграций
+#   - dist/db/seed/seed-catalog.run.js            — сид (entrypoint сервиса `seed` в compose)
+# Прежние значения ссылались на apps/api/drizzle и dist/scripts/*-entrypoint.js — ни того,
+# ни другого в репозитории не существовало никогда, образ `migrator` не собирался вовсе.
 
-FROM node:22.12-slim AS base
+FROM node:22.23-slim AS base
 RUN corepack enable && corepack prepare pnpm@11.23.0 --activate
 WORKDIR /app
 
@@ -52,21 +53,38 @@ RUN pnpm install --frozen-lockfile --prod --filter=@dorutj/api... --filter=@doru
 # node_modules берётся из `deps` (полный, включая drizzle-kit) — этот образ никогда не
 # публикуется как продовый рантайм-процесс, поверхность атаки не критична так, как у `runtime`.
 FROM base AS migrator
-COPY --from=build /app/apps/api/dist ./apps/api/dist
-COPY --from=build /app/apps/api/drizzle ./apps/api/drizzle
-COPY --from=deps /app/node_modules ./node_modules
-ENTRYPOINT ["node", "apps/api/dist/scripts/migrate-entrypoint.js"]
+# WORKDIR — часть контракта, не косметика: migrate.js ищет миграции по ОТНОСИТЕЛЬНОМУ
+# пути './migrations', то есть от рабочего каталога. Из /app он искал бы /app/migrations.
+WORKDIR /app/apps/api
+COPY --from=build /app/apps/api/dist ./dist
+COPY --from=build /app/apps/api/migrations ./migrations
+# pnpm раскладывает зависимости ИЗОЛИРОВАННО: пакеты apps/api лежат не в
+# /app/node_modules, а в /app/apps/api/node_modules — симлинками внутрь
+# /app/node_modules/.pnpm. Workspace-пакеты — симлинки на /app/packages/*.
+# Без всех трёх копий не разрешается ни один import (прежде копировалась только первая).
+COPY --from=deps /app/node_modules /app/node_modules
+COPY --from=deps /app/apps/api/node_modules /app/apps/api/node_modules
+COPY --from=build /app/packages /app/packages
+ENTRYPOINT ["node", "dist/infrastructure/database/migrate.js"]
 
 # ---- Продовый рантайм — БЕЗ dev-зависимостей, БЕЗ исходников TS, непривилегированный ----
 # Общий базовый слой для api и worker: оба процесса используют один и тот же
 # production node_modules (устанавливается один раз в `prod-deps`, переиспользуется через
 # Docker-кэш слоёв), различаются только точкой входа в CMD финальных стадий ниже.
-FROM node:22.12-slim AS runtime
+FROM node:22.23-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build --chown=node:node /app/apps/api/dist ./apps/api/dist
 COPY --from=build --chown=node:node /app/apps/worker/dist ./apps/worker/dist
 COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules
+COPY --from=prod-deps --chown=node:node /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=prod-deps --chown=node:node /app/apps/worker/node_modules ./apps/worker/node_modules
+# Workspace-пакеты: раскладка симлинков — из prod-deps (в build она ссылается на
+# dev-зависимости, которых здесь нет), собранный код — из build.
+COPY --from=prod-deps --chown=node:node /app/packages ./packages
+COPY --from=build --chown=node:node /app/packages/contracts/dist ./packages/contracts/dist
+COPY --from=build --chown=node:node /app/packages/domain-kernel/dist ./packages/domain-kernel/dist
+COPY --from=build --chown=node:node /app/packages/i18n/dist ./packages/i18n/dist
 USER node
 EXPOSE 3000
 CMD ["node", "apps/api/dist/main.js"]

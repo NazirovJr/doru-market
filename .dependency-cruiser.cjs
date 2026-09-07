@@ -267,9 +267,22 @@ module.exports = {
         // dev-deps (например, `/// <reference types="vite/client" />`). Сами
         // `.d.ts` не компилируются в runtime-код, поэтому правило к ним
         // неприменимо (STATE-AND-RESUME-POINT.md §11.4 задача 5.1).
-        pathNot: '\\.(test|spec)\\.(ts|tsx)$|/__tests__/|\\.config\\.|\\.d\\.ts$',
+        // Дополнено артефактами того же класса, что уже исключённые: они физически не попадают
+        // в продовый бандл. Отдельный случай — `a11y/test-utils.ts`: лежит в `src/` без суффикса
+        // `.spec`, но импортируется только из спеков и намеренно отделён от `a11y-runtime`
+        // (DTJ-404), чтобы `axe-core` не утекал в сборку. Проверено фактом: вхождений
+        // `axe-core` в `dist/index.js` — ноль.
+        pathNot:
+          '\\.(test|spec)\\.(ts|tsx)$|/__tests__/|\\.config\\.|\\.d\\.ts$|/__fixtures__/|\\.stories\\.tsx$|/vitest\\.setup\\.ts$|/a11y/test-utils\\.ts$',
       },
-      to: { dependencyTypes: ['npm-dev'] },
+      // `npm-peer` исключён осознанно: peerDependency — это контракт с потребителем, а не
+      // dev-инструмент. Библиотечный пакет (`packages/ui`, `packages/i18n`) обязан объявлять
+      // `react` как peer и обязан импортировать его в исходниках, иначе компонентов не бывает.
+      // Правило считало это нарушением лишь потому, что `react` числится ещё и в
+      // `devDependencies` — он нужен для локальной сборки и тестов, стандартная практика
+      // React-библиотек. Уточнение формулировки, не ослабление: запрет на `devDependencies`
+      // в продовом коде остаётся в силе.
+      to: { dependencyTypes: ['npm-dev'], dependencyTypesNot: ['npm-peer'] },
     },
     {
       name: 'no-non-package-json',

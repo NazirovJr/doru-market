@@ -117,7 +117,7 @@ services:
       context: ../..
       dockerfile: infra/docker/Dockerfile.api
       target: migrator
-    entrypoint: ['node', 'apps/api/dist/scripts/seed-entrypoint.js']
+    entrypoint: ['node', 'dist/db/seed/seed-catalog.run.js']
     depends_on:
       migrate: { condition: service_completed_successfully }
     environment: *api-env
@@ -172,14 +172,19 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.web
-      args: { APP: web }
+      args:
+        APP: web
+        # Пусто = относительные пути через nginx (см. Dockerfile.web).
+        VITE_API_BASE_URL: ''
     depends_on: [api]
 
   admin:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.web
-      args: { APP: admin }
+      args:
+        APP: admin
+        VITE_API_BASE_URL: ''
     depends_on: [api]
 
   nginx:

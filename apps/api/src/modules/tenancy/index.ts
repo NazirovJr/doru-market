@@ -41,10 +41,9 @@ export {
   TenantScopedRepository,
   InvalidTenantIdError,
 } from './infrastructure/base/tenant-scoped-repository.js'
-export {
-  describeTenantIsolationContract,
-  type TenantIsolationContractOptions,
-} from './testing/tenant-isolation.contract-test.js'
+// `describeTenantIsolationContract` НАМЕРЕННО не реэкспортируется: помощник импортирует
+// `vitest`, и через этот barrel он попадал в продовый граф модулей — API падал на старте
+// везде, где нет dev-зависимостей. Тесты берут его прямым путём из ./testing/.
 
 // DTJ-229 (EP-09) — `orders → tenancy` фасад читает `cod_limit_diram` реального тенанта
 // (`TenancyFacadeAdapter`, `modules/orders/infrastructure/adapters/tenancy-facade.adapter.ts`)

@@ -1,0 +1,31 @@
+# Контекст сборки образов. Docker НЕ читает .gitignore — без этого файла `COPY . .`
+# в Dockerfile.web тащил в слой хостовые node_modules (нативные аддоны собраны под
+# другую ОС и в linux-образе нерабочи), .git целиком и локальные .env с секретами.
+
+node_modules/
+**/node_modules/
+
+dist/
+**/dist/
+# Журнал incremental-сборки tsc. Без него, но БЕЗ dist рядом, tsc считает сборку
+# актуальной и не порождает ничего — пакет молча собирается в пустоту.
+*.tsbuildinfo
+**/*.tsbuildinfo
+**/.turbo/
+coverage/
+**/coverage/
+*.log
+
+.git/
+.gitignore
+
+# Локальное состояние агентов и git-worktree'ы (копии дерева на других коммитах).
+.claude/
+.serena/
+
+# Секреты. apps/web/.env — исключение: он в репозитории, содержит только адрес
+# локального API и нужен сборке фронта (см. его же шапку).
+**/.env
+**/.env.local
+!apps/web/.env
+infra/docker/secrets/

@@ -6,12 +6,26 @@
 # apps/web (см. риски тикета) — apps/admin/pharmacy/courier появятся в последующих волнах,
 # используют этот же Dockerfile без изменений (только другое значение --build-arg APP).
 
-FROM node:22.12-slim AS build
+# Версия базового образа — обоснование в Dockerfile.api (pnpm 11.23.0 требует Node >= 22.13).
+FROM node:22.23-slim AS build
 ARG APP
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.23.0 --activate
 COPY . .
 RUN pnpm install --frozen-lockfile --filter=@dorutj/${APP}...
+
+# Адрес API вшивается в бандл на этапе сборки (Vite), поэтому он ОБЯЗАН приходить снаружи.
+# По умолчанию `apps/web/.env` задаёт `http://localhost:3000` — это адрес для dev-сервера, где
+# API поднят напрямую. В compose-стенде порт 3000 наружу не публикуется вовсе: браузер ходит
+# только через nginx на :80, поэтому вшитый абсолютный адрес превращал КАЖДЫЙ запрос данных в
+# `net::ERR_FAILED` — приложение открывалось, но корзина, поиск и карта показывали ошибку.
+# Пустое значение = относительные пути (`/api/v1/...`), которые nginx проксирует на api.
+ARG VITE_API_BASE_URL
+ARG VITE_TILESERVER_URL
+# Пишем файл явно, а не полагаемся на приоритет process.env над `.env`: в репозитории лежит
+# `apps/web/.env` с dev-адресом, и правила старшинства источников у Vite — не то, на что стоит
+# опираться в образе. Файл в сборочной стадии, в рантайм-образ не попадает.
+RUN { echo "VITE_API_BASE_URL=${VITE_API_BASE_URL}"; echo "VITE_TILESERVER_URL=${VITE_TILESERVER_URL}"; } > apps/${APP}/.env
 RUN pnpm turbo run build --filter=@dorutj/${APP}
 
 FROM nginx:1.27-alpine AS runtime
