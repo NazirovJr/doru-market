@@ -30,6 +30,7 @@ interface CapturedUiMapViewProps {
   readonly styleUrl?: string
   readonly onSelect?: (pointId: string) => void
   readonly onViewportChange?: (bbox: { lonMin: number; latMin: number; lonMax: number; latMax: number }) => void
+  readonly onLoadError?: () => void
 }
 
 const { capturedProps, UiMapViewStub } = vi.hoisted(() => {
@@ -73,11 +74,25 @@ afterEach(() => {
 })
 
 describe('MapView (DTJ-198/431)', () => {
-  it('1. VITE_TILESERVER_URL не задан — фолбэк «карта недоступна», без падения UI, @dorutj/ui MapView не монтируется', () => {
+  it('1. VITE_TILESERVER_URL не задан — @dorutj/ui MapView всё равно монтируется, styleUrl передаётся как undefined (встроенный OSM-фолбэк @dorutj/ui), заглушка «карта недоступна» не рендерится', () => {
     vi.stubEnv('VITE_TILESERVER_URL', '')
     render(renderMap([]))
+    expect(capturedProps.current).toBeDefined()
+    expect(capturedProps.current?.styleUrl).toBeUndefined()
+    expect(screen.queryByTestId('map-view-unavailable')).not.toBeInTheDocument()
+  })
+
+  it('1b. onLoadError от @dorutj/ui MapView — обёртка показывает t(\'map.unavailable\') поверх карты, сама карта остаётся смонтированной', () => {
+    vi.stubEnv('VITE_TILESERVER_URL', '')
+    render(renderMap([]))
+    expect(screen.queryByTestId('map-view-unavailable')).not.toBeInTheDocument()
+
+    act(() => {
+      capturedProps.current?.onLoadError?.()
+    })
+
     expect(screen.getByTestId('map-view-unavailable')).toBeInTheDocument()
-    expect(capturedProps.current).toBeUndefined()
+    expect(capturedProps.current).toBeDefined()
   })
 
   it('2. styleUrl задан — маппит pins в MapPoint[] (id/lat/lng/label) и центр lon/lat → lng/lat', () => {

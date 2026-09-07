@@ -32,6 +32,9 @@ const CLUSTER_SIZE_LARGE_THRESHOLD = 25
 const UNCLUSTERED_POINT_RADIUS_PX = 8
 const UNCLUSTERED_POINT_STROKE_WIDTH_PX = 2
 const CLUSTER_COUNT_TEXT_SIZE_PX = 12
+/** Нейтральные дефолты токенов (`tokens/colors.css`) — на случай, когда CSS ещё не применён. */
+const BRAND_PRIMARY_FALLBACK = '#64748b'
+const BRAND_SURFACE_FALLBACK = '#ffffff'
 
 export interface UseMapMarkersOptions {
   readonly map: MapLibreMap | null
@@ -69,7 +72,30 @@ function toFeatureCollection(points: readonly MapPoint[]): PointFeatureCollectio
   }
 }
 
+/**
+ * MapLibre GL НЕ резолвит CSS-переменные в paint-выражениях: `'circle-color': 'var(--brand-primary)'`
+ * для него не цвет, а мусор, и `addLayer` в этом случае молча не добавляет слой — без исключения и
+ * без записи в консоль. Внешне это выглядело как «карта грузится, а аптек на ней нет».
+ *
+ * Юнит-тесты пакета этого поймать не могли: они работают на фейковом `Map`, который paint не
+ * валидирует. Найдено только на живой карте в браузере.
+ *
+ * Поэтому токен резолвится в реальный цвет ДО передачи в MapLibre. Значение читается с
+ * `document.documentElement`, то есть White-Label продолжает работать: сеть, переопределившая
+ * `--brand-primary`, получит свои цвета маркеров при следующем построении слоёв.
+ */
+function resolveBrandColor(token: string, fallback: string): string {
+  if (typeof document === 'undefined') {
+    return fallback
+  }
+  const value = getComputedStyle(document.documentElement).getPropertyValue(token).trim()
+  return value.length > 0 ? value : fallback
+}
+
 function addPointsSourceAndLayers(map: MapLibreMap, initialPoints: readonly MapPoint[]): void {
+  const primaryColor = resolveBrandColor('--brand-primary', BRAND_PRIMARY_FALLBACK)
+  const surfaceColor = resolveBrandColor('--brand-surface', BRAND_SURFACE_FALLBACK)
+
   if (map.getSource(MAP_POINTS_SOURCE_ID) !== undefined) {
     return
   }
@@ -88,7 +114,7 @@ function addPointsSourceAndLayers(map: MapLibreMap, initialPoints: readonly MapP
     source: MAP_POINTS_SOURCE_ID,
     filter: ['has', 'point_count'],
     paint: {
-      'circle-color': 'var(--brand-primary)',
+      'circle-color': primaryColor,
       'circle-radius': [
         'step',
         ['get', 'point_count'],
@@ -107,7 +133,7 @@ function addPointsSourceAndLayers(map: MapLibreMap, initialPoints: readonly MapP
     source: MAP_POINTS_SOURCE_ID,
     filter: ['has', 'point_count'],
     layout: { 'text-field': ['get', 'point_count_abbreviated'], 'text-size': CLUSTER_COUNT_TEXT_SIZE_PX },
-    paint: { 'text-color': 'var(--brand-surface)' },
+    paint: { 'text-color': surfaceColor },
   })
 
   map.addLayer({
@@ -116,10 +142,10 @@ function addPointsSourceAndLayers(map: MapLibreMap, initialPoints: readonly MapP
     source: MAP_POINTS_SOURCE_ID,
     filter: ['!', ['has', 'point_count']],
     paint: {
-      'circle-color': 'var(--brand-primary)',
+      'circle-color': primaryColor,
       'circle-radius': UNCLUSTERED_POINT_RADIUS_PX,
       'circle-stroke-width': UNCLUSTERED_POINT_STROKE_WIDTH_PX,
-      'circle-stroke-color': 'var(--brand-surface)',
+      'circle-stroke-color': surfaceColor,
     },
   })
 }

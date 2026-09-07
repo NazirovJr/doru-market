@@ -61,6 +61,12 @@ export interface MapViewProps {
    * с self-hosted tileserver'ом передаёт свой (см. «Расхождения» в отчёте — `apps/web` DTJ-198 уже
    * использует `VITE_TILESERVER_URL`). */
   readonly styleUrl?: string | StyleSpecification
+  /** Зовётся один раз, когда карта не смогла загрузиться (сбой инициализации `MapLibre GL`,
+   * ошибка тайлов/сети — то же событие, что показывает внутренний `data-testid="map-view-load-error"`).
+   * `MapView` сам не знает локализованного текста ошибки (домен-агностичность, см. JSDoc файла) —
+   * колбэк даёт потребителю показать СВОЁ сообщение (например поверх карты), не дублируя логику
+   * определения сбоя (DTJ-431, задача «понятный текст при реальной ошибке загрузки»). */
+  readonly onLoadError?: () => void
   readonly className?: string
 }
 
@@ -163,6 +169,7 @@ export const MapView = ({
   mode,
   emptyStateSlot,
   styleUrl,
+  onLoadError,
   className,
 }: MapViewProps): ReactElement => {
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -212,12 +219,14 @@ export const MapView = ({
         map.on('error', () => {
           if (!cancelled && mapRef.current === null) {
             setLoadFailed(true)
+            onLoadError?.()
           }
         })
       })
       .catch(() => {
         if (!cancelled) {
           setLoadFailed(true)
+          onLoadError?.()
         }
       })
 

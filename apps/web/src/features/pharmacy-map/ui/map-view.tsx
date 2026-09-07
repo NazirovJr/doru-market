@@ -30,11 +30,26 @@ export type { MapPin } from '../model/map-pin'
  *    `use-map-markers.ts`) — раньше каждый пин был отдельным маркером всегда.
  * 2. **URL тайлов.** Локальная версия сама читала `import.meta.env.VITE_TILESERVER_URL` — общий
  *    компонент принимает `styleUrl` пропом и в `env` не лезет (по заданию тикета DTJ-409,
- *    домен-агностичность). Чтение `env` осталось здесь, на границе фичи.
+ *    домен-агностичность). Чтение `env` осталось здесь, на границе фичи. Когда переменная пуста —
+ *    `styleUrl` пробрасывается как `undefined`, и `MapView` (`@dorutj/ui`) сам подставляет свой
+ *    встроенный OSM-фолбэк (`DEFAULT_OSM_STYLE`, `packages/ui/src/components/map-view/map-view.tsx`,
+ *    растровые тайлы `tile.openstreetmap.org`, без ключей — `01-TECH-BASELINE.md`). Раньше (DTJ-198)
+ *    пустой `VITE_TILESERVER_URL` был ранним выходом в заглушку «карта недоступна» БЕЗ монтирования
+ *    `MapView` — на момент того тикета у общего компонента не было запасного стиля. Сейчас есть,
+ *    и этот файл больше не блокирует попытку показать карту только из-за отсутствия tileserver'а
+ *    тенанта (см. п.4 ниже про заглушку недоступности).
  * 3. **`onViewportChange`/`minZoom`.** Локальная версия имела оба (нужны экрану `/map`, DTJ-199) —
  *    общий `MapView` их не нёс. Добавлены В `packages/ui/src/components/map-view/map-view.tsx`
  *    ЭТИМ тикетом (прямо разрешено постановкой DTJ-431) — `BBox` (`@dorutj/ui`) структурно
  *    идентичен `BboxCoordinates` (`@dorutj/contracts`), проброс без маппинга полей.
+ * 4. **Заглушка «карта недоступна».** Больше не показывается вместо ПОПЫТКИ загрузить карту —
+ *    только когда карта РЕАЛЬНО не смогла загрузиться (сбой инициализации `MapLibre GL`,
+ *    недоступны тайлы/сеть). `MapView` (`@dorutj/ui`) сообщает об этом через `onLoadError`
+ *    (добавлен в `packages/ui` этим тикетом, см. JSDoc там) — обёртка держит локальный флаг
+ *    `loadError` и рендерит `t('map.unavailable')` ПОВЕРХ карты (`data-testid="map-view-unavailable"`),
+ *    не вместо неё: контейнер карты остаётся смонтирован (внутренний индикатор `MapView`
+ *    `data-testid="map-view-load-error"` тоже остаётся в DOM, он для случаев без локализованного
+ *    оверлея потребителя).
  *
  * CSS: `maplibre-gl/dist/maplibre-gl.css` импортируется ЗДЕСЬ, потребителем (DTJ-431, «Отдельный
  * пункт: CSS карты») — `packages/ui` его больше не тянет в свой library-bundle (Vite в
@@ -71,22 +86,11 @@ export const MapView = ({ center, zoom, minZoom, pins, onViewportChange, onPinCl
   const { locale } = useLocale()
   const { t } = useT(locale)
   const [selectedPharmacyId, setSelectedPharmacyId] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState(false)
 
   const points = useMemo(() => pins.map(pinToPoint), [pins])
   const selectedPin = pins.find((pin) => pin.pharmacyId === selectedPharmacyId) ?? null
   const styleUrl = readTileServerStyleUrl()
-
-  if (styleUrl === undefined) {
-    return (
-      <div
-        className="flex h-full w-full items-center justify-center bg-surface p-4 text-center text-sm text-ink-muted"
-        role="status"
-        data-testid="map-view-unavailable"
-      >
-        {t('map.unavailable')}
-      </div>
-    )
-  }
 
   const handleSelect = (pointId: string): void => {
     setSelectedPharmacyId(pointId)
@@ -105,11 +109,23 @@ export const MapView = ({ center, zoom, minZoom, pins, onViewportChange, onPinCl
         zoom={zoom}
         {...(minZoom !== undefined ? { minZoom } : {})}
         mode="full"
-        styleUrl={styleUrl}
+        {...(styleUrl !== undefined ? { styleUrl } : {})}
         onSelect={handleSelect}
         onViewportChange={handleViewportChange}
+        onLoadError={() => {
+          setLoadError(true)
+        }}
         className="h-full w-full"
       />
+      {loadError ? (
+        <div
+          className="absolute inset-0 flex items-center justify-center bg-surface p-4 text-center text-sm text-ink-muted"
+          role="status"
+          data-testid="map-view-unavailable"
+        >
+          {t('map.unavailable')}
+        </div>
+      ) : null}
       {selectedPin !== null ? (
         <div className="absolute inset-x-2 bottom-2" data-testid="map-view-selected-pin-panel">
           <PharmacyPinPopup pin={selectedPin} />
