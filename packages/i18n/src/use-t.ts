@@ -14,9 +14,17 @@ export type Locale = 'tj' | 'ru' | 'en'
 
 type Dictionary = Readonly<Record<string, string>>
 
+/**
+ * Ключ словаря, выведенный из `ru`-словаря (DTJ-402 п.4, AC5) — `ru` выбран источником типа
+ * произвольно (ключи параллельны во всех трёх локалях, гарантия — тест `dictionary key parity`
+ * в `use-t.spec.ts`). Опечатка в ключе или несуществующий ключ — ошибка TS на этапе компиляции,
+ * а не тихий `[[missing: ...]]` в рантайме.
+ */
+export type TranslationKey = keyof typeof ru
+
 export type TranslationParams = Readonly<Record<string, string | number>>
 
-export type TranslateFunction = (key: string, params?: TranslationParams) => string
+export type TranslateFunction = (key: TranslationKey, params?: TranslationParams) => string
 
 /** Плейсхолдер вида `{param}` в строке словаря — синтаксис зафиксирован тикетом DTJ-004 п.3. */
 const PARAM_PATTERN = /\{(\w+)\}/g
@@ -52,7 +60,7 @@ function buildMissingKeyMarker(key: string): string {
  * Прод-ветка отсутствующего ключа: фолбэк на `en`-словарь с заметным предупреждением в лог.
  * Тихий фолбэк запрещён тикетом DTJ-004 п.3 — пропуск ключа обязан быть виден в мониторинге.
  */
-function resolveMissingKeyInProduction(key: string, locale: Locale): string {
+function resolveMissingKeyInProduction(key: TranslationKey, locale: Locale): string {
   const fallbackValue = DICTIONARIES[FALLBACK_LOCALE][key]
   // eslint-disable-next-line no-console -- намеренный прод-фолбэк по ТЗ DTJ-004 п.3: отсутствующий ключ обязан быть виден в логе; у клиентского пакета нет доступа к pino.
   console.warn(
@@ -62,11 +70,11 @@ function resolveMissingKeyInProduction(key: string, locale: Locale): string {
   return fallbackValue ?? buildMissingKeyMarker(key)
 }
 
-function resolveTemplate(key: string, locale: Locale): string {
+function resolveTemplate(key: TranslationKey, locale: Locale): string {
   return isDevelopmentEnvironment() ? buildMissingKeyMarker(key) : resolveMissingKeyInProduction(key, locale)
 }
 
-function translate(locale: Locale, key: string, params?: TranslationParams): string {
+function translate(locale: Locale, key: TranslationKey, params?: TranslationParams): string {
   const template = DICTIONARIES[locale][key] ?? resolveTemplate(key, locale)
   return interpolate(template, params)
 }

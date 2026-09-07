@@ -1,0 +1,47 @@
+/**
+ * `CursorTable` (`SRS-UX-034` таблица «Таблицы») — горизонтальный скролл ОБЯЗАН быть на обёртке
+ * `.ui-cursor-table__scroll`, НЕ на `<body>` страницы: заголовки `<th>` не теряются при узком
+ * viewport с широким содержимым.
+ */
+.ui-cursor-table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ui-cursor-table__scroll {
+  overflow-x: auto;
+  border: 1px solid var(--brand-border);
+  border-radius: var(--radius-md);
+}
+
+.ui-cursor-table__table {
+  width: 100%;
+  min-width: max-content;
+  border-collapse: collapse;
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-base);
+  color: var(--brand-text);
+}
+
+.ui-cursor-table__table th,
+.ui-cursor-table__table td {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  border-bottom: 1px solid var(--brand-border);
+}
+
+.ui-cursor-table__table th {
+  font-weight: var(--font-weight-semibold);
+  color: var(--brand-text-muted);
+  background-color: var(--brand-bg);
+  white-space: nowrap;
+}
+
+.ui-cursor-table__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ui-cursor-table__load-more {
+  align-self: center;
+}

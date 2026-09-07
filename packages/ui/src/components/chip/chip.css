@@ -1,0 +1,55 @@
+/**
+ * `Chip` — переключаемый фильтр (`SRS-UX-021`). Визуальная высота может быть <48px (компактность,
+ * `32-design-reference.md` допускает), эффективная область попадания ВСЕГДА ≥48×48px через
+ * `padding` (hit-slop, расхождение №4) — см. `chip.tsx` `HIT_SLOP_PX`, тот же приём, что и
+ * `IconButton`. `box-sizing: content-box` обязателен по той же причине (padding должен РАСШИРЯТЬ
+ * рендерящийся бокс, не поглощаться border-box).
+ */
+.ui-chip {
+  box-sizing: content-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  height: var(--space-8);
+  padding-inline: var(--space-3);
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--brand-border);
+  background-color: var(--brand-surface);
+  color: var(--brand-text);
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: none;
+}
+
+.ui-chip--motion {
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.ui-chip:hover:not(:disabled) {
+  background-color: var(--brand-bg);
+}
+
+.ui-chip:focus-visible {
+  outline: none;
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+.ui-chip--selected {
+  background-color: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: var(--brand-surface);
+}
+
+.ui-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

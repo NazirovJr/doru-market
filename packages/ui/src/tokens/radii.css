@@ -1,0 +1,14 @@
+/**
+ * Радиусы (`SRS-UX-017`, формула пересчитана [D-26] до итогового набора 8/12/16/999).
+ * `--brand-radius` — единственный брендируемый радиус-токен (allowlist-формат `^\d{1,2}px$`,
+ * `SRS-TEN-014`). `--radius-full` ВСЕГДА фиксирован — не зависит от `--brand-radius`, иначе сеть с
+ * `--brand-radius: 0px` превратила бы круглые аватары/OTP-ячейки в квадраты.
+ */
+:root {
+  --brand-radius: 8px;
+
+  --radius-sm: var(--brand-radius);
+  --radius-md: calc(var(--brand-radius) * 1.5);
+  --radius-lg: calc(var(--brand-radius) * 2);
+  --radius-full: 999px;
+}

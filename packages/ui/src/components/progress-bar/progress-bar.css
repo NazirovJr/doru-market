@@ -1,0 +1,37 @@
+/**
+ * `ProgressBar` (`SRS-UX-021`, 0-100%). Заливка — CSS `transition` на `width` (плавно отражает
+ * смену `value`), не декоративная анимация — уважает `prefers-reduced-motion` через сокращение до
+ * мгновенной смены (`SRS-UX-020`, функциональные переходы сокращаются, не отключаются полностью).
+ */
+.ui-progress-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+}
+
+.ui-progress-bar__label {
+  font-size: var(--font-size-sm);
+  color: var(--brand-text-muted);
+}
+
+.ui-progress-bar__track {
+  width: 100%;
+  height: var(--space-2);
+  border-radius: var(--radius-full);
+  background-color: var(--brand-border);
+  overflow: hidden;
+}
+
+.ui-progress-bar__fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background-color: var(--brand-primary);
+  transition: width 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-progress-bar__fill {
+    transition: none;
+  }
+}

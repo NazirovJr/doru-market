@@ -1,0 +1,56 @@
+/**
+ * `Tabs` (`SRS-UX-021`) — пилюли, активная заливается `--brand-primary`. Реальный тап-таргет
+ * ≥48×48px по высоте через `min-height` (`SRS-UX-002`), без hit-slop — вкладки достаточно крупные
+ * визуально сами по себе (не компактный фильтр вроде `Chip`).
+ */
+.ui-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ui-tabs__tab {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--space-12);
+  padding-inline: var(--space-4);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--brand-border);
+  background-color: var(--brand-surface);
+  color: var(--brand-text);
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: none;
+}
+
+.ui-tabs__tab--motion {
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.ui-tabs__tab:hover:not(:disabled) {
+  background-color: var(--brand-bg);
+}
+
+.ui-tabs__tab:focus-visible {
+  outline: none;
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+.ui-tabs__tab--selected {
+  background-color: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: var(--brand-surface);
+}
+
+.ui-tabs__tab:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

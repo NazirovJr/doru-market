@@ -1,0 +1,44 @@
+/** `Card` — базовый контейнер (`SRS-UX-021`). `interactive` — своя фокус-рамка (`--focus-ring`),
+ * `static` — обычный `<div>`, никогда не получает фокус клавиатурой. */
+.ui-card {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background-color: var(--brand-surface);
+  border: 1px solid var(--brand-border);
+  text-align: inherit;
+  font-family: var(--brand-font-family);
+  color: inherit;
+  text-decoration: none;
+  transition: none;
+}
+
+.ui-card--interactive {
+  cursor: pointer;
+  /* `SRS-UX-002`: интерактивная карточка — тап-зона, минимум 48×48px, как любой другой
+   * интерактивный элемент (DoD DTJ-404 требует `assertHitArea` для interactive Card). */
+  min-height: var(--space-12);
+}
+
+.ui-card--motion {
+  transition:
+    box-shadow 150ms ease,
+    border-color 150ms ease,
+    transform 100ms ease;
+}
+
+.ui-card--interactive:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.ui-card--interactive:active {
+  transform: scale(0.99);
+}
+
+.ui-card--interactive:focus-visible {
+  outline: none;
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}

@@ -1,0 +1,41 @@
+/**
+ * `AudioAlertPlayer` (`SRS-UX-007`): двойной канал критичного события терминала аптеки. Пульсация
+ * — декоративно-функциональный визуальный дубль звука, отключается `prefers-reduced-motion`
+ * (класс `--pulsing` не добавляется в JS + защитный `@media` здесь). Звук (см. `.tsx`) НЕ уважает
+ * эту настройку — не декоративная анимация.
+ */
+.ui-audio-alert-player {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background-color: var(--brand-danger-bg);
+  border: 1px solid var(--brand-danger-border);
+  color: var(--brand-danger-text);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  box-shadow: var(--shadow-modal);
+}
+
+.ui-audio-alert-player--pulsing {
+  animation: ui-audio-alert-pulse 1000ms ease-in-out infinite;
+}
+
+@keyframes ui-audio-alert-pulse {
+  0%,
+  100% {
+    box-shadow: var(--shadow-modal);
+  }
+  50% {
+    box-shadow:
+      0 0 0 var(--space-1) color-mix(in srgb, var(--brand-danger) 35%, transparent),
+      var(--shadow-modal);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-audio-alert-player--pulsing {
+    animation: none;
+  }
+}

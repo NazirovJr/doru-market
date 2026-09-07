@@ -1,0 +1,20 @@
+/**
+ * `PriceTag` (`SRS-UX-002`/`SRS-UX-003`) — крупный контрастный текст цены, целевой контраст 7:1
+ * на критичных цифрах (`--brand-text` на `--brand-surface`). `strikethrough` — приглушённый цвет
+ * + меньший размер (старая цена рядом с новой, консьюмер решает расположение).
+ */
+.ui-price-tag {
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: var(--brand-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-price-tag--strikethrough {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  color: var(--brand-text-muted);
+  text-decoration-color: var(--brand-text-muted);
+}

@@ -1,0 +1,63 @@
+/**
+ * `OtpInput` (`SRS-UX-021`, `SRS-UX-002`). Ячейки логина (44×54px) не достигают 48px по ширине —
+ * `padding-inline` (hit-slop, `box-sizing: content-box`) добирает недостающее так же, как
+ * `Chip`/`IconButton`, не раздувая видимый квадрат. Ячейки курьера (56×64px) уже ≥48×48 без слопа.
+ */
+.ui-otp {
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.ui-otp__cell {
+  box-sizing: content-box;
+  padding-inline: var(--space-1);
+  text-align: center;
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--brand-text);
+  background-color: var(--brand-surface);
+  border: 1px solid var(--brand-border);
+  border-radius: var(--radius-md);
+  transition: none;
+}
+
+.ui-otp__cell--motion {
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.ui-otp__cell:focus-visible {
+  outline: none;
+  border-color: var(--brand-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.ui-otp__cell--error {
+  border-color: var(--brand-danger);
+}
+
+.ui-otp__cell--locked {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Тряска ≤200мс (`SRS-UX-020`) — применяется только при `!prefersReducedMotion`, ячейка
+ * `.ui-otp__cell--error` даёт статичную рамку без анимации, если движение отключено. */
+.ui-otp--shake {
+  animation: ui-otp-shake 200ms ease-in-out;
+}
+
+@keyframes ui-otp-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}

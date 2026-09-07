@@ -1,0 +1,49 @@
+/**
+ * `ErrorState` (`SRS-UX-021`). `fullscreen` центрирует блок на всю доступную высоту контейнера,
+ * `inline` — компактный блок внутри секции экрана (§5 `30-ux-screens-and-flows.md`).
+ */
+.ui-error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  color: var(--brand-text);
+}
+
+.ui-error-state--fullscreen {
+  min-height: 60vh;
+  justify-content: center;
+  padding: var(--space-8) var(--space-4);
+}
+
+.ui-error-state--inline {
+  padding: var(--space-6) var(--space-4);
+  background-color: var(--brand-danger-bg);
+  border: 1px solid var(--brand-danger-border);
+  border-radius: var(--radius-md);
+}
+
+.ui-error-state__title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ui-error-state__description {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--brand-text-muted);
+  max-width: 360px;
+}
+
+.ui-error-state__details {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--brand-text-muted);
+  text-align: left;
+}
+
+.ui-error-state__details summary {
+  cursor: pointer;
+}

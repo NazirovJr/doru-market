@@ -1,0 +1,70 @@
+.ui-order-timeline {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-order-timeline__step {
+  display: flex;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+  position: relative;
+}
+
+/* Вертикальная соединительная линия между шагами. */
+.ui-order-timeline__step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 20px;
+  bottom: 0;
+  width: 2px;
+  background-color: var(--brand-border);
+}
+
+.ui-order-timeline__marker {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  color: var(--brand-text-muted);
+  z-index: 1;
+  background-color: var(--brand-surface);
+}
+
+.ui-order-timeline__step--completed .ui-order-timeline__marker {
+  color: var(--brand-success);
+}
+
+.ui-order-timeline__step--current .ui-order-timeline__marker {
+  color: var(--brand-primary);
+}
+
+.ui-order-timeline__content {
+  min-width: 0;
+}
+
+.ui-order-timeline__status {
+  margin: 0;
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  color: var(--brand-text-muted);
+}
+
+.ui-order-timeline__step--current .ui-order-timeline__status {
+  font-weight: var(--font-weight-semibold);
+  color: var(--brand-text);
+}
+
+.ui-order-timeline__step--completed .ui-order-timeline__status {
+  color: var(--brand-text);
+}
+
+.ui-order-timeline__timestamp {
+  margin: 0;
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-xs);
+  color: var(--brand-text-muted);
+}

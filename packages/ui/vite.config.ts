@@ -3,15 +3,20 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import dts from 'vite-plugin-dts'
 
-// Библиотечная сборка packages/ui (DTJ-400). Реальные точки входа (./tokens, ./components)
-// подключаются последующими тикетами EP-18 вместе с исходным кодом.
+// Библиотечная сборка packages/ui.
+// Точек входа две — ровно те, что объявлены в `exports` package.json. Подпуть `./tokens` собирался
+// бы иначе только на бумаге: до DTJ-430 конфиг знал единственный вход `src/index.ts`, поэтому
+// `dist/tokens/index.js` не появлялся, и `import '@dorutj/ui/tokens'` падал у потребителя на
+// «could not be resolved» — при формально корректной записи в `exports`.
 export default defineConfig({
   plugins: [react(), dts({ rollupTypes: false })],
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: {
+        index: resolve(__dirname, 'src/index.ts'),
+        'tokens/index': resolve(__dirname, 'src/tokens/index.ts'),
+      },
       formats: ['es'],
-      fileName: 'index',
     },
     rollupOptions: {
       external: ['react', 'react-dom', 'react/jsx-runtime'],

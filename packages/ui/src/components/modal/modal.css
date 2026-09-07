@@ -1,0 +1,75 @@
+/**
+ * `Modal` (`SRS-UX-021`). Тень — `var(--shadow-modal)` (alpha 0.08, [D-26]). Появление — CSS
+ * `@keyframes` ≤200мс, `.ui-modal--motion` добавляется/убирается компонентом через
+ * `useReducedMotion()` (решение CTO вместо `framer-motion`).
+ */
+.ui-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background-color: color-mix(in srgb, var(--brand-text) 45%, transparent);
+}
+
+.ui-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - var(--space-8));
+  background-color: var(--brand-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+}
+
+.ui-modal--motion {
+  animation: ui-modal-in 180ms ease;
+}
+
+.ui-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-4) 0;
+}
+
+.ui-modal__title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--brand-text);
+}
+
+.ui-modal__close {
+  flex: none;
+}
+
+.ui-modal__body {
+  padding: var(--space-4);
+  overflow-y: auto;
+  color: var(--brand-text);
+}
+
+.ui-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-top: 1px solid var(--brand-border);
+}
+
+@keyframes ui-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

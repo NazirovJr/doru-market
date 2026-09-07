@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true
+  },
+  "include": ["**/*.ts", "**/*.tsx", "../a11y/vitest.setup.ts"],
+  "exclude": ["**/node_modules/**"]
+}

@@ -1,0 +1,31 @@
+/**
+ * `CursorList` — списочное (не табличное) представление курсорной пагинации (`SRS-API-004`).
+ * Пустое состояние НЕ рисуется здесь — потребитель передаёт свой `EmptyState` (DTJ-406) снаружи,
+ * когда `items` пуст (композиция, не встроенный слот, см. DTJ-409).
+ */
+.ui-cursor-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ui-cursor-list__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-cursor-list__item {
+  min-height: var(--space-12);
+}
+
+.ui-cursor-list__skeleton-row + .ui-cursor-list__skeleton-row {
+  margin-top: var(--space-2);
+}
+
+.ui-cursor-list__load-more {
+  align-self: center;
+}

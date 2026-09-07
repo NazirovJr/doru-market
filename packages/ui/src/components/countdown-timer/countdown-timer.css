@@ -1,0 +1,39 @@
+/**
+ * `CountdownTimer` (`32-design-reference.md`: «хорошая эталонная реализация правила эскалации»).
+ * `font-variant-numeric: tabular-nums` — цифры фиксированной ширины (не «прыгает» при смене
+ * значения), без введения отдельного monospace-семейства шрифта (токенов на это нет).
+ */
+.ui-countdown-timer {
+  display: inline-flex;
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--brand-text);
+}
+
+.ui-countdown-timer--motion .ui-countdown-timer__value {
+  transition: color 200ms ease;
+}
+
+.ui-countdown-timer--warning {
+  color: var(--brand-warning);
+}
+
+.ui-countdown-timer--danger {
+  color: var(--brand-danger);
+}
+
+/* `sr-only` — визуально скрыт, но доступен screen reader'ам (отдельный от видимых цифр
+ * `aria-live`-регион, обновляется только на пороговых переходах). */
+.ui-countdown-timer__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

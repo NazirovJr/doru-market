@@ -1,0 +1,145 @@
+/**
+ * Стили `Button` (`SRS-UX-019` 7 состояний, `SRS-UX-021`). Переходы — CSS `transition` вместо
+ * `framer-motion` (решение CTO по DTJ-404: пакета нет в монорепо, ставить не разрешено, переход
+ * цвета/тени на 150-200мс не оправдывает вес библиотеки в бюджете `SRS-UX-036`). Класс
+ * `.ui-button--motion` добавляется/убирается компонентом через `useReducedMotion()` — без него
+ * переход мгновенный (`prefers-reduced-motion: reduce`, `SRS-UX-020`).
+ */
+.ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  position: relative;
+  box-sizing: border-box;
+  font-family: var(--brand-font-family);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  padding-inline: var(--space-4);
+  cursor: pointer;
+  user-select: none;
+  transition: none;
+}
+
+.ui-button--motion {
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 100ms ease;
+}
+
+.ui-button--md {
+  min-height: calc(var(--space-12));
+}
+
+.ui-button--lg {
+  min-height: calc(var(--space-12) + var(--space-2));
+  font-size: var(--font-size-md);
+  padding-inline: var(--space-6);
+}
+
+.ui-button--primary {
+  background-color: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: var(--brand-surface);
+}
+
+.ui-button--primary:hover:not(:disabled):not([aria-disabled='true']) {
+  background-color: var(--brand-primary-hover);
+  border-color: var(--brand-primary-hover);
+}
+
+.ui-button--secondary {
+  background-color: var(--brand-secondary);
+  border-color: var(--brand-secondary);
+  color: var(--brand-text);
+}
+
+.ui-button--secondary:hover:not(:disabled):not([aria-disabled='true']) {
+  background-color: color-mix(in srgb, var(--brand-secondary) 85%, black);
+  border-color: color-mix(in srgb, var(--brand-secondary) 85%, black);
+}
+
+.ui-button--danger {
+  background-color: var(--brand-danger);
+  border-color: var(--brand-danger);
+  color: var(--brand-surface);
+}
+
+.ui-button--danger:hover:not(:disabled):not([aria-disabled='true']) {
+  background-color: color-mix(in srgb, var(--brand-danger) 85%, black);
+  border-color: color-mix(in srgb, var(--brand-danger) 85%, black);
+}
+
+.ui-button--ghost {
+  background-color: transparent;
+  border-color: var(--brand-border);
+  color: var(--brand-primary);
+}
+
+.ui-button--ghost:hover:not(:disabled):not([aria-disabled='true']) {
+  background-color: var(--brand-bg);
+}
+
+.ui-button:active:not(:disabled):not([aria-disabled='true']) {
+  transform: scale(0.97);
+}
+
+.ui-button:focus-visible {
+  outline: none;
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+.ui-button--disabled,
+.ui-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ui-button[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+.ui-button__label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ui-button__label--loading {
+  visibility: hidden;
+}
+
+.ui-button__spinner {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ui-button__spinner-icon {
+  animation: ui-button-spin 800ms linear infinite;
+}
+
+.ui-button--motion .ui-button__spinner-icon {
+  animation-duration: 800ms;
+}
+
+.ui-button:not(.ui-button--motion) .ui-button__spinner-icon {
+  animation-duration: 1ms;
+}
+
+@keyframes ui-button-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

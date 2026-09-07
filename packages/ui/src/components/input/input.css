@@ -1,0 +1,72 @@
+/**
+ * Общие стили `Input`/`Textarea` (`SRS-UX-019`, `SRS-UX-034` «Форма»). `<label>` — обычный блочный
+ * текст (связь через `htmlFor`/`id` в TSX, не CSS). Высота поля ~48px (`--space-12`).
+ */
+.ui-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-family: var(--brand-font-family);
+}
+
+.ui-field__label {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--brand-text);
+}
+
+.ui-field__control {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--space-12);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--brand-text);
+  background-color: var(--brand-surface);
+  border: 1px solid var(--brand-border);
+  border-radius: var(--radius-md);
+  transition: none;
+}
+
+.ui-field__control--motion {
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.ui-field__control:focus-visible {
+  outline: none;
+  border-color: var(--brand-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.ui-field__control:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ui-field__control--error {
+  border-color: var(--brand-danger);
+}
+
+.ui-field__error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--brand-danger-text);
+  font-size: var(--font-size-sm);
+}
+
+.ui-field__error-icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--brand-danger);
+}
+
+.ui-field__textarea {
+  resize: vertical;
+  min-height: var(--space-16);
+}

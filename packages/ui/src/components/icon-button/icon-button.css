@@ -1,0 +1,47 @@
+/**
+ * `IconButton` (`SRS-UX-021`, расхождение №4 `32-design-reference.md`): реальный тап-таргет всегда
+ * ≥48×48px, визуальный круг может быть меньше (`size="sm"` = 32px) — разница добирается `padding`
+ * (hit-slop) на самой кнопке, не раздувает видимый круг (см. `icon-button.tsx`
+ * `HIT_SLOP_STRATEGY`). `box-sizing: content-box` ОБЯЗАТЕЛЕН здесь: только он гарантирует, что
+ * `padding` реально РАСШИРЯЕТ рендерящийся бокс наружу (border-box съел бы padding из
+ * содержимого, а не добавил бы область клика).
+ */
+.ui-icon-button {
+  box-sizing: content-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--brand-text);
+  cursor: pointer;
+  transition: none;
+}
+
+.ui-icon-button--motion {
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 100ms ease;
+}
+
+.ui-icon-button:hover:not(:disabled):not([aria-disabled='true']) {
+  background-color: var(--brand-bg);
+}
+
+.ui-icon-button:active:not(:disabled):not([aria-disabled='true']) {
+  transform: scale(0.97);
+}
+
+.ui-icon-button:focus-visible {
+  outline: none;
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+.ui-icon-button:disabled,
+.ui-icon-button[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

@@ -10,6 +10,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./provider": {
+      "types": "./dist/i18n-provider.d.ts",
+      "default": "./dist/i18n-provider.js"
     }
   },
   "scripts": {
@@ -18,9 +22,14 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
+  "peerDependencies": {
+    "react": "^19.2.0"
+  },
   "devDependencies": {
     "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
     "@vitest/coverage-v8": "^4.1.11",
+    "react": "^19.2.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11"
   }

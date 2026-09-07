@@ -1,0 +1,80 @@
+/**
+ * `Select` (`SRS-UX-021`) — `role="listbox"`, `closed`/`open`. Список смонтирован ВСЕГДА
+ * (переключается атрибутом `hidden`, не условным рендером) — `aria-controls` триггера обязан
+ * указывать на реально существующий узел, а не на ID, который появляется/исчезает вместе с ним.
+ */
+.ui-select {
+  position: relative;
+}
+
+.ui-select__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ui-select__value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-select__value--placeholder {
+  color: var(--brand-text-muted);
+}
+
+.ui-select__chevron {
+  flex: none;
+  color: var(--brand-text-muted);
+  transform: rotate(0deg);
+}
+
+.ui-select__chevron--motion {
+  transition: transform 150ms ease;
+}
+
+.ui-select__chevron--open {
+  transform: rotate(180deg);
+}
+
+.ui-select__list {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  max-height: calc(var(--space-16) * 3);
+  overflow-y: auto;
+  background-color: var(--brand-surface);
+  border: 1px solid var(--brand-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-modal);
+}
+
+.ui-select__list[hidden] {
+  display: none;
+}
+
+.ui-select__option {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-base);
+  color: var(--brand-text);
+  cursor: pointer;
+}
+
+.ui-select__option--highlighted {
+  background-color: var(--brand-bg);
+}
+
+.ui-select__option--selected {
+  font-weight: var(--font-weight-semibold);
+}

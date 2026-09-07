@@ -1,0 +1,69 @@
+/**
+ * `RadioGroup` (`SRS-UX-021`, `SRS-UX-002`). Визуальный кружок 20px, эффективная область
+ * попадания ≥48×48px через `padding` на `<label>` (`box-sizing: content-box` — тот же приём, что
+ * `Chip`/`IconButton`). Вертикальный hit-slop задан ИНЛАЙН-стилем в `radio-group.tsx`
+ * (`HIT_SLOP_STYLE`) — числом px, не CSS-токеном, чтобы `assertHitArea`-тесты читали его через
+ * `getComputedStyle` в `jsdom` (см. комментарий в `.tsx`); здесь только горизонтальный `padding`.
+ * Нативный `<input type="radio">` скрыт визуально (`opacity: 0`, не `display: none`) — сохраняет
+ * фокус/клавиатуру/screen-reader поведение.
+ */
+.ui-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-radio {
+  position: relative;
+  box-sizing: content-box;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: fit-content;
+  min-height: 20px;
+  padding-inline: var(--space-2);
+  cursor: pointer;
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-base);
+  color: var(--brand-text);
+}
+
+.ui-radio__input {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  opacity: 0;
+}
+
+.ui-radio__control {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--brand-border);
+  border-radius: var(--radius-full);
+  background-color: var(--brand-surface);
+  position: relative;
+}
+
+.ui-radio__input:checked + .ui-radio__control {
+  border-color: var(--brand-primary);
+}
+
+.ui-radio__input:checked + .ui-radio__control::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: var(--radius-full);
+  background-color: var(--brand-primary);
+}
+
+.ui-radio__input:focus-visible + .ui-radio__control {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.ui-radio__label--selected {
+  font-weight: var(--font-weight-medium);
+}

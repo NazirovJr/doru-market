@@ -1,0 +1,13 @@
+{
+  "description": "Инъекционные пейлоады для validateBrandingPayload (воспроизводят TC-NFR-006). Локальный источник DTJ-401 — при появлении DTJ-425 сверяется/переиспользуется как tests/security/payloads/branding-injection.json (см. §«Что сделать» DTJ-425, C15: один источник истины).",
+  "payloads": [
+    "url(javascript:alert(1))",
+    "javascript:alert(1)",
+    "<script>alert(1)</script>",
+    "expression(alert(1))",
+    "data:text/html,<script>alert(1)</script>",
+    "red; background: url(javascript:alert(1))",
+    "#fff\"onmouseover=\"alert(1)",
+    "'; DROP TABLE tenants; --"
+  ]
+}

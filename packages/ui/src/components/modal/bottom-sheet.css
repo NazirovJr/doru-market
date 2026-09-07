@@ -1,0 +1,86 @@
+/**
+ * `BottomSheet` (`SRS-UX-021`) — оверлей снизу для мобильных `viewport < 768px`. Тень —
+ * `var(--shadow-modal)`. Появление — CSS `@keyframes` ≤200мс, уважает `prefers-reduced-motion`
+ * (`.ui-bottom-sheet--motion`, `useReducedMotion()`).
+ */
+.ui-bottom-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background-color: color-mix(in srgb, var(--brand-text) 45%, transparent);
+}
+
+.ui-bottom-sheet {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: calc(100vh - var(--space-8));
+  background-color: var(--brand-surface);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+}
+
+.ui-bottom-sheet--motion {
+  transition: transform 180ms ease;
+  animation: ui-bottom-sheet-in 180ms ease;
+}
+
+.ui-bottom-sheet__handle-area {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-2) 0;
+  touch-action: none;
+}
+
+.ui-bottom-sheet__handle {
+  width: 40px;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background-color: var(--brand-border);
+}
+
+.ui-bottom-sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 0 var(--space-4);
+}
+
+.ui-bottom-sheet__title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--brand-text);
+}
+
+.ui-bottom-sheet__close {
+  flex: none;
+}
+
+.ui-bottom-sheet__body {
+  padding: var(--space-4);
+  overflow-y: auto;
+  color: var(--brand-text);
+}
+
+.ui-bottom-sheet__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-top: 1px solid var(--brand-border);
+}
+
+@keyframes ui-bottom-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}

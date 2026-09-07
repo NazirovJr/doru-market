@@ -1,0 +1,56 @@
+.ui-pharmacy-offer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--brand-border);
+}
+
+.ui-pharmacy-offer-row__info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.ui-pharmacy-offer-row__name {
+  margin: 0;
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--brand-text);
+}
+
+.ui-pharmacy-offer-row__meta {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ui-pharmacy-offer-row__distance,
+.ui-pharmacy-offer-row__stock {
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-xs);
+  color: var(--brand-text-muted);
+}
+
+/* Индикатор устаревания — иконка + текст, НЕ только смена фона (тест-план DTJ-407 п.4). */
+.ui-pharmacy-offer-row__stale {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-xs);
+  color: var(--brand-warning-strong);
+}
+
+.ui-pharmacy-offer-row__stale-icon {
+  flex-shrink: 0;
+}
+
+.ui-pharmacy-offer-row__cta {
+  flex-shrink: 0;
+}

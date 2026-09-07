@@ -1,0 +1,33 @@
+/**
+ * `MapView` (DTJ-409, `SRS-UX-021`) — контейнер карты/пустого состояния. Высота `preview`
+ * (150-190px по `32-design-reference.md`) собрана из токенов spacing, а не хардкод-числом
+ * (см. пример `--space-12 + --space-2` в отчёте сдачи DTJ-409).
+ */
+.ui-map-view {
+  position: relative;
+  display: flex;
+  width: 100%;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background-color: var(--brand-bg);
+}
+
+.ui-map-view:not(.ui-map-view--preview) {
+  height: 100%;
+}
+
+.ui-map-view--preview {
+  /* var(--space-16) * 2 + var(--space-10) = 168px — середина диапазона 150-190px из дизайн-канваса */
+  height: calc(var(--space-16) * 2 + var(--space-10));
+}
+
+.ui-map-view__canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.ui-map-view__load-error {
+  position: absolute;
+  inset: 0;
+  background-color: var(--brand-bg);
+}

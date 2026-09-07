@@ -1,0 +1,67 @@
+/**
+ * `Stepper` (`SRS-UX-021`) — прогресс чекаута. Шаги различаются формой маркера, не только цветом:
+ * `complete` — закрашенный кружок с галочкой, `current` — закрашенный кружок с номером,
+ * `upcoming` — пустое кольцо с номером (`SRS-UX-034` доступность для дальтоников).
+ */
+.ui-stepper {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-stepper__step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  text-align: center;
+  font-family: var(--brand-font-family);
+}
+
+.ui-stepper__marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: var(--radius-full);
+  border: 2px solid var(--brand-border);
+  color: var(--brand-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  box-sizing: border-box;
+}
+
+.ui-stepper__marker-number {
+  line-height: 1;
+}
+
+.ui-stepper__label {
+  font-size: var(--font-size-sm);
+  color: var(--brand-text-muted);
+}
+
+.ui-stepper__step--current .ui-stepper__marker {
+  background-color: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: var(--brand-surface);
+}
+
+.ui-stepper__step--current .ui-stepper__label {
+  color: var(--brand-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ui-stepper__step--complete .ui-stepper__marker {
+  background-color: var(--brand-success);
+  border-color: var(--brand-success);
+  color: var(--brand-surface);
+}
+
+.ui-stepper__step--complete .ui-stepper__label {
+  color: var(--brand-text);
+}

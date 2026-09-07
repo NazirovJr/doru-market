@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import en from './dictionaries/en.json' with { type: 'json' }
 import ru from './dictionaries/ru.json' with { type: 'json' }
 import tj from './dictionaries/tj.json' with { type: 'json' }
-import { useT } from './use-t.js'
+import { useT, type TranslationKey } from './use-t.js'
+
+// DTJ-402 п.4/AC5: `t()` теперь типизирован через `TranslationKey` (`keyof typeof ru`), поэтому
+// ключ, намеренно отсутствующий в словаре, для этих рантайм-тестов приходится пробрасывать через
+// `as TranslationKey` — сам факт, что БЕЗ приведения типа TS отказывается компилировать вызов,
+// и есть требуемая AC5 гарантия (проверяется отдельным тестом типов, не этим файлом).
+const MISSING_KEY = 'ux.does.not.exist' as TranslationKey
 
 const ORIGINAL_NODE_ENV = process.env.NODE_ENV
 
@@ -50,7 +56,7 @@ describe('useT', () => {
       process.env.NODE_ENV = 'development'
       const { t } = useT('ru')
 
-      expect(t('ux.does.not.exist')).toBe('[[missing: ux.does.not.exist]]')
+      expect(t(MISSING_KEY)).toBe('[[missing: ux.does.not.exist]]')
     })
 
     it('falls back to the en dictionary with a console.warn in production', async () => {
@@ -79,7 +85,7 @@ describe('useT', () => {
       vi.spyOn(console, 'warn').mockImplementation(() => undefined)
       const { t } = useT('ru')
 
-      expect(t('ux.does.not.exist')).toBe('[[missing: ux.does.not.exist]]')
+      expect(t(MISSING_KEY)).toBe('[[missing: ux.does.not.exist]]')
 
       vi.restoreAllMocks()
     })

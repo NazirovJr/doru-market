@@ -1,0 +1,17 @@
+/**
+ * `BrandLogo` (`SRS-UX-010`) — единственный компонент, ссылающийся на «логотип бренда», без
+ * хардкода конкретного бренда. `--fallback`-вариант красится через `--brand-primary`, чтобы
+ * нейтральная метка всё равно визуально совпадала с брендом активного тенанта.
+ */
+.ui-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-height: var(--space-10);
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.ui-brand-logo--fallback {
+  color: var(--brand-primary);
+}

@@ -1,0 +1,18 @@
+/**
+ * `SearchBar` (`SRS-UX-021`) — обёртка над полем `Input` (DTJ-404) + опциональная кнопка
+ * голосового ввода рядом.
+ */
+.ui-search-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.ui-search-bar__field {
+  flex: 1;
+  min-width: 0;
+}
+
+.ui-search-bar__voice-button {
+  flex: none;
+}

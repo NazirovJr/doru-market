@@ -16,10 +16,7 @@
       "types": "./dist/tokens/index.d.ts",
       "default": "./dist/tokens/index.js"
     },
-    "./components": {
-      "types": "./dist/components/index.d.ts",
-      "default": "./dist/components/index.js"
-    }
+    "./styles.css": "./dist/ui.css"
   },
   "scripts": {
     "dev": "storybook dev -p 6006",
@@ -35,7 +32,8 @@
     "react-dom": "^19.2.0"
   },
   "dependencies": {
-    "@dorutj/i18n": "workspace:*"
+    "@dorutj/i18n": "workspace:*",
+    "maplibre-gl": "^5.24.0"
   },
   "devDependencies": {
     "@storybook/addon-a11y": "^9.1.20",
@@ -47,6 +45,7 @@
     "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^5.2.0",
     "@vitest/coverage-v8": "^4.1.11",
+    "axe-core": "^4.13.0",
     "jsdom": "^30.0.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

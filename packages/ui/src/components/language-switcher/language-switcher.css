@@ -1,0 +1,54 @@
+/**
+ * `LanguageSwitcher` (`SRS-UX-027`) — 3 пилюли `TJ/RU/EN`, активная заливается `--brand-primary`.
+ * Минимум 48×48px на пилюлю (`SRS-UX-002`) — визуальный размер УЖЕ 48px (`--space-12`), hit-slop
+ * не нужен (в отличие от компактного `Chip`).
+ *
+ * Текст активной пилюли: токенов `--brand-on-primary` в `packages/ui/src/tokens/colors.css` нет
+ * (тот же обход, что и DTJ-404/`Chip`) — используется `var(--brand-surface)`, см. отчёт сдачи.
+ */
+.ui-language-switcher {
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.ui-language-switcher__pill {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--space-12);
+  min-height: var(--space-12);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--brand-border);
+  background-color: var(--brand-surface);
+  color: var(--brand-text);
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: none;
+}
+
+.ui-language-switcher__pill--motion {
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.ui-language-switcher__pill:hover:not(.ui-language-switcher__pill--active) {
+  background-color: var(--brand-bg);
+}
+
+.ui-language-switcher__pill:focus-visible {
+  outline: none;
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+.ui-language-switcher__pill--active {
+  background-color: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: var(--brand-surface);
+}

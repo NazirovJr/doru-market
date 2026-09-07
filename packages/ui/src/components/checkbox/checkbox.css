@@ -1,0 +1,66 @@
+/**
+ * `Checkbox` (`SRS-UX-021`, `SRS-UX-002`, `AC5`). Визуальный квадрат 20×20px, эффективная область
+ * попадания ≥48×48px через `padding` на `<label>` (`box-sizing: content-box`, вертикальный
+ * hit-slop — инлайн-стиль в `checkbox.tsx`, не CSS-токен, см. комментарий там). Нативный
+ * `<input type="checkbox">` скрыт визуально (`opacity: 0`), не `display: none` — сохраняет
+ * фокус/клавиатуру/screen-reader поведение.
+ */
+.ui-checkbox {
+  position: relative;
+  box-sizing: content-box;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: fit-content;
+  min-height: 20px;
+  padding-inline: var(--space-2);
+  cursor: pointer;
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-base);
+  color: var(--brand-text);
+}
+
+.ui-checkbox__input {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  opacity: 0;
+}
+
+.ui-checkbox__box {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--brand-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--brand-surface);
+  color: transparent;
+}
+
+.ui-checkbox__icon {
+  width: 14px;
+  height: 14px;
+}
+
+.ui-checkbox__input:checked + .ui-checkbox__box {
+  background-color: var(--brand-primary);
+  border-color: var(--brand-primary);
+  /* Нет токена контрастного текста/иконки поверх заливки `--brand-primary` — тот же обход, что
+   * DTJ-404 (см. отчёт DTJ-405 «токены, которых не хватило»). */
+  color: var(--brand-surface);
+}
+
+.ui-checkbox__input:focus-visible + .ui-checkbox__box {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.ui-checkbox__input:disabled + .ui-checkbox__box {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

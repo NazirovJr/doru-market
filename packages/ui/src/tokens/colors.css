@@ -1,0 +1,42 @@
+/**
+ * Цветовые токены дизайн-системы (`SRS-UX-011`, `SRS-UX-012`, `SRS-TEN-013/014/015`).
+ *
+ * `--brand-*` без суффикса `-success/-danger/-warning` — редактируются тенантом через
+ * `PATCH /tenant-settings` (allowlist HEX, `branding-allowlist.ts`). Значения ниже — нейтральный
+ * дефолт-фолбэк (`SRS-TEN-015`), НЕ пример брендирования.
+ *
+ * Семантические токены (`--brand-success/-danger/-warning` и их производные) физически не входят
+ * в allowlist White-Label payload (`SRS-UX-012`) — зелёный/красный/жёлтый не переопределяются
+ * тенантом ни при каких обстоятельствах.
+ */
+:root {
+  /* Брендовые токены — редактируемые тенантом */
+  --brand-primary: #64748b;
+  --brand-primary-hover: #475569;
+  --brand-secondary: #94a3b8;
+  --brand-accent: #0ea5e9;
+  --brand-bg: #f8fafc;
+  --brand-surface: #ffffff;
+  --brand-text: #0f172a;
+  --brand-text-muted: #64748b;
+  --brand-border: #e2e8f0;
+
+  /* Семантические токены — зафиксированы, не редактируются тенантом (SRS-UX-012) */
+  --brand-success: #16a34a;
+  --brand-danger: #dc2626;
+  --brand-warning: #d97706;
+  --brand-warning-fg: #b45309;
+  --brand-warning-strong: #92400e;
+
+  /* Расширенные семантические оттенки (фон/рамка/текст), 32-design-reference.md */
+  --brand-success-bg: #f0fdf4;
+  --brand-success-border: #bbf7d0;
+  --brand-success-text: #166534;
+
+  --brand-danger-bg: #fef2f2;
+  --brand-danger-border: #fecaca;
+  --brand-danger-text: #991b1b;
+
+  --brand-warning-bg: #fffbeb;
+  --brand-warning-border: #fde68a;
+}

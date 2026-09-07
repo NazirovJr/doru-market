@@ -1,0 +1,44 @@
+/**
+ * `PhoneInput` (`SRS-UX-021`, `SRS-DOM-069`). Префикс `+992` — статичный `<span>` слева от
+ * `<input>`, оба живут в одной рамке `.ui-field__control`-подобного контейнера, чтобы визуально
+ * читаться как единое поле (`AC4`), но `+992` физически не редактируем пользователем.
+ */
+.ui-phone-input {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--space-12);
+  padding-inline: var(--space-4);
+  background-color: var(--brand-surface);
+  border: 1px solid var(--brand-border);
+  border-radius: var(--radius-md);
+}
+
+.ui-phone-input:focus-within {
+  border-color: var(--brand-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.ui-phone-input__prefix {
+  flex: none;
+  color: var(--brand-text-muted);
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-base);
+  user-select: none;
+}
+
+/* Поле цифр живёт ВНУТРИ `.ui-phone-input` — своя рамка/фокус-кольцо от `.ui-field__control`
+ * отключены, обводка и фокус управляются обёрткой выше. */
+.ui-phone-input__control {
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+}
+
+.ui-phone-input__control:focus-visible {
+  box-shadow: none;
+}

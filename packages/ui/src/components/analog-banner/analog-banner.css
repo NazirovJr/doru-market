@@ -1,0 +1,32 @@
+/**
+ * `AnalogBanner` (`SRS-CAT-036..041`) — inline-плашка поверх `Card`, НЕ оверлей/модаль.
+ */
+.ui-analog-banner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Специфичность `.ui-card.ui-analog-banner` гарантирует победу над `.ui-card` из card.css
+ * независимо от порядка импорта модулей (тот же приём — `28-` н/д, локальное решение). */
+.ui-card.ui-analog-banner {
+  background-color: var(--brand-success-bg);
+  border-color: var(--brand-success-border);
+}
+
+.ui-analog-banner__text {
+  margin: 0;
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--brand-success-text);
+  line-height: var(--line-height-normal);
+}
+
+.ui-analog-banner__disclaimer {
+  margin: 0;
+  font-family: var(--brand-font-family);
+  font-size: var(--font-size-xs);
+  color: var(--brand-text-muted);
+  line-height: var(--line-height-normal);
+}

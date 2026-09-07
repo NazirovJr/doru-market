@@ -1,0 +1,49 @@
+/**
+ * `Skeleton` — плейсхолдер загрузки (`SRS-UX-021`), shimmer ~1.4s чистым CSS (не JS-таймер).
+ * `@media (prefers-reduced-motion: reduce)` — реальный браузерный канал отключения shimmer (даже
+ * если JS ещё не гидратировался). `useReducedMotion()` в `skeleton.tsx` дублирует это через inline
+ * `animationName`/`animationDuration` — не декоративное дублирование, а единственный способ
+ * проверить состояние в unit-тесте (`jsdom` не считает `@media` в `getComputedStyle`, см. AC5).
+ */
+.ui-skeleton {
+  display: block;
+  background-color: var(--brand-border);
+  border-radius: var(--radius-sm);
+  animation-name: ui-skeleton-shimmer;
+  animation-duration: 1.4s;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+.ui-skeleton--text {
+  height: var(--font-size-base);
+  border-radius: var(--radius-sm);
+}
+
+.ui-skeleton--row {
+  height: var(--space-12);
+  border-radius: var(--radius-md);
+}
+
+.ui-skeleton--card {
+  height: var(--space-16);
+  border-radius: var(--radius-lg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-skeleton {
+    animation: none;
+    background-color: var(--brand-border);
+    opacity: 0.6;
+  }
+}
+
+@keyframes ui-skeleton-shimmer {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
