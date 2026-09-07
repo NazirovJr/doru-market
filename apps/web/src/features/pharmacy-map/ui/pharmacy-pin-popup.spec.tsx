@@ -43,7 +43,9 @@ describe('PharmacyPinPopup (DTJ-198, критерий приёмки 4)', () => 
       offer: { priceDiram: 12550, stockQuantity: 7, lastSyncedAt: '2026-08-30T10:00:00Z', isStale: false },
     }
     renderPopup(pin)
-    expect(screen.getByTestId('pharmacy-pin-popup-price')).toHaveTextContent('125.50')
+    // DTJ-431: PriceTag/formatMoney (@dorutj/ui) маппит locale 'tj' → BCP-47 'tg' → запятая, не
+    // точка прежнего локального formatSomoni() (см. JSDoc `@dorutj/i18n/format-money.ts`).
+    expect(screen.getByTestId('pharmacy-pin-popup-price')).toHaveTextContent('125,50')
     expect(screen.getByTestId('pharmacy-pin-popup-stock')).toHaveTextContent('7')
     expect(screen.queryByTestId('pharmacy-pin-popup-stale')).not.toBeInTheDocument()
   })

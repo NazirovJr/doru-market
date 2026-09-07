@@ -1,22 +1,17 @@
 @import 'tailwindcss';
 
 /*
- * Временные токены дизайн-системы. Реальные значения (White-Label-перекраска, тёмная тема)
- * заводит packages/ui (EP-18) — этот тикет (DTJ-003) только гарантирует, что компоненты уже
- * используют @theme-токены (`bg-surface`, `text-ink`, ...), а не буквальный HEX/RGB.
- * TODO(EP-18): заменить значения токенов на итоговую дизайн-систему packages/ui.
+ * Мост Tailwind → packages/ui (DTJ-430). Экраны используют Tailwind-утилиты (`bg-surface`,
+ * `text-ink`, ...), генерируемые из `@theme`; значения не хардкодятся здесь, а ссылаются на
+ * канонические CSS-переменные `--brand-*`, заведённые `packages/ui/src/tokens/colors.css`
+ * (подключаются в main.tsx до этого файла). White-Label (`SRS-TEN-017`) работает за счёт
+ * этой ссылки: смена `--brand-primary` в рантайме перекрашивает интерфейс без пересборки.
  */
-@theme {
-  --color-surface: #ffffff;
-  --color-ink: #0f172a;
-  --color-ink-muted: #64748b;
-  --color-line: #e2e8f0;
-  /* [DTJ-028, SRS-UX-018] Брендовый primary — расхождение №5: фокус-кольцо
-     и primary-CTA рисуются ИЗ ЭТОГО токена, не из фиксированного rgba(14,165,233,.4) дизайна. */
-  --color-brand-primary: #0ea5e9;
-  /* [DTJ-234, SRS-TEN-014, 32-design-reference.md §«Реализационные заметки» п.1] `--brand-danger`
-     — ФИКСИРОВАННЫЙ токен (НЕ редактируется тенантом, в отличие от `--brand-primary`), нужен
-     красному баннеру дубля действующего вещества (`CartWarningBanner`). Первое использование в
-     кодовой базе — до этого тикета токена не существовало вовсе. */
-  --color-brand-danger: #dc2626;
+@theme inline {
+  --color-surface: var(--brand-surface);
+  --color-ink: var(--brand-text);
+  --color-ink-muted: var(--brand-text-muted);
+  --color-line: var(--brand-border);
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-danger: var(--brand-danger);
 }

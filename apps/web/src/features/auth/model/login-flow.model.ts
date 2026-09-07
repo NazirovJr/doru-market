@@ -22,6 +22,8 @@
  * (UI вызывает `tick(now)` через `setInterval`).
  */
 
+import type { TranslationKey } from '@dorutj/i18n'
+
 export const MAX_VERIFY_ATTEMPTS = 5 // SRS-API-022, дизайн-расхождение №1
 
 export type LoginStep = 'phone' | 'code' | 'locked'
@@ -132,7 +134,7 @@ export function loginFlowReducer(
  */
 export function errorCodeToI18nKey(
   code: string | null,
-): { key: string; params: Readonly<Record<string, string | number>> } | null {
+): { key: TranslationKey; params: Readonly<Record<string, string | number>> } | null {
   switch (code) {
     case 'OTP_MISMATCH':
       return { key: 'ux.error.otp_mismatch', params: { attemptsLeft: 0 } } // `attemptsLeft` подставляется в UI

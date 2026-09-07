@@ -2,6 +2,7 @@ import { useCallback, type ReactElement } from 'react'
 import { useNavigate, type NavigateFunction } from 'react-router'
 import { useT, type TranslateFunction } from '@dorutj/i18n'
 import { ErrorCode, type CartItemResponseDto } from '@dorutj/contracts'
+import { EmptyState } from '@dorutj/ui'
 import { useLocale } from '@/shared/config/locale-provider'
 import type { HttpError } from '@/shared/api/http-client'
 import { useCart } from '../api/use-cart'
@@ -10,7 +11,6 @@ import type { CartView } from '../api/cart.api'
 import { groupCartWarnings } from '../model/group-warnings'
 import { CartWarningBanner } from './cart-warning-banner'
 import { PharmacyGroupCard } from './pharmacy-group-card'
-import { EmptyState } from './empty-state'
 
 /**
  * `cart-screen.tsx` (DTJ-234, EP-09, `SRS-UX-002/045/046`, `SRS-ORD-002/005/010/012`) —
@@ -186,6 +186,7 @@ interface CartReadyContentProps {
 }
 
 const CartReadyContent = ({ cart, mutationError, actions, t }: CartReadyContentProps): ReactElement => {
+  const { locale } = useLocale()
   const grouped = groupCartWarnings(cart.warnings)
   const warningCartItemIds = new Set(grouped.byCartItemId.keys())
   return (
@@ -202,6 +203,7 @@ const CartReadyContent = ({ cart, mutationError, actions, t }: CartReadyContentP
             subtotalDiram={group.subtotalDiram}
             items={itemsForPharmacy(cart.items, group.pharmacyId)}
             warningCartItemIds={warningCartItemIds}
+            locale={locale}
             onRemove={actions.onRemove}
             onQuantityChange={actions.onQuantityChange}
             t={t}
@@ -235,8 +237,9 @@ export const CartScreen = (): ReactElement => {
   if (cart.items.length === 0) {
     return (
       <EmptyState
-        message={t('ux.empty.cart')}
-        ctaLabel={t('cart.empty_cta')}
+        t={t}
+        titleKey="ux.empty.cart"
+        ctaLabelKey="cart.empty_cta"
         onCtaClick={actions.onFindMedicine}
       />
     )

@@ -1,9 +1,9 @@
 import type { ReactElement } from 'react'
 import { useT, type Locale, type TranslateFunction } from '@dorutj/i18n'
+import { Skeleton } from '@dorutj/ui'
 import { useLocale } from '@/shared/config/locale-provider'
 import { useAnalogsQuery, type AnalogsDataDto, type UseAnalogsQueryGeo } from '../api/use-analogs-query'
 import { AnalogCard } from './analog-card'
-import { AnalogCardSkeleton } from './analog-card-skeleton'
 import { SavingsBanner } from './savings-banner'
 
 /**
@@ -41,7 +41,7 @@ export interface AnalogsBlockProps {
 const AnalogsBlockSkeleton = (): ReactElement => (
   <div data-testid="analogs-block-skeleton" className="flex flex-col gap-2">
     {SKELETON_KEYS.map((key) => (
-      <AnalogCardSkeleton key={key} />
+      <Skeleton key={key} variant="card" data-testid="analog-card-skeleton" />
     ))}
   </div>
 )

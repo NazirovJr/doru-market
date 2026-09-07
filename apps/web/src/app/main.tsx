@@ -5,6 +5,7 @@ import { RouterProvider } from 'react-router'
 import { queryClient } from '@/app/providers/query-client'
 import { LocaleProvider } from '@/shared/config/locale-provider'
 import { router } from '@/app/router'
+import '@dorutj/ui/styles.css'
 import '@/app/styles.css'
 
 const rootElement = document.getElementById('root')

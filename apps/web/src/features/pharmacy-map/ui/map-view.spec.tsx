@@ -1,124 +1,51 @@
 import { act } from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import type { ReactElement } from 'react'
+import type * as DorutjUi from '@dorutj/ui'
 import { LocaleProvider } from '@/shared/config/locale-provider'
 import { MapView, type MapPin } from './map-view'
 
 /**
- * `map-view.spec.tsx` (DTJ-198, тест-план: «монтирование без ошибок, рендер N маркеров по
- * пропсам, попап без XSS»). `maplibre-gl` реально WebGL-рендерит в браузере — недоступно в jsdom,
- * поэтому пакет мокается локальным фейком через `vi.hoisted` (обязателен для vi.mock — фабрика
- * поднимается ВЫШЕ обычных объявлений модуля, поэтому классы мока должны быть подняты тем же
- * механизмом, иначе ссылка на них из фабрики упадёт с ReferenceError).
+ * `map-view.spec.tsx` (DTJ-198/431).
+ *
+ * DTJ-431: `MapView` (`apps/web`) — тонкая обёртка над `MapView` (`@dorutj/ui`, DTJ-409), маппит
+ * `pins`↔`points`/`bbox`↔`BBox` и держит состояние выбранного пина. Мокается САМ `@dorutj/ui`
+ * (не `maplibre-gl` двумя уровнями глубже): `packages/ui` собирает `maplibre-gl` В СВОЙ
+ * `dist`-чанк (не остаётся `external`, см. отчёт сдачи DTJ-431 — числа `vite build`), поэтому
+ * `vi.mock('maplibre-gl', ...)` из `apps/web` не перехватывает динамический импорт ВНУТРИ уже
+ * собранного `@dorutj/ui/dist` — реальный `MapLibre GL JS` в jsdom не даёт детерминированно
+ * симулировать выбор точки/клик по кластеру (нет WebGL). Мок на границе пакета проверяет РОВНО
+ * то, за что отвечает этот файл (тонкая обёртка): маппинг пропсов и локальное состояние выбора —
+ * поведение самого общего `MapView` (кластеризация, GeoJSON-синхронизация, debounce viewport)
+ * уже покрыто 370 тестами `packages/ui` (включая новые `onViewportChange`/`minZoom`, DTJ-431).
  */
 
-type Handler = (...args: unknown[]) => void
+interface CapturedUiMapViewProps {
+  readonly points: readonly { readonly id: string; readonly lat: number; readonly lng: number; readonly label?: string }[]
+  readonly center?: { readonly lat: number; readonly lng: number }
+  readonly zoom?: number
+  readonly minZoom?: number
+  readonly mode: string
+  readonly styleUrl?: string
+  readonly onSelect?: (pointId: string) => void
+  readonly onViewportChange?: (bbox: { lonMin: number; latMin: number; lonMax: number; latMax: number }) => void
+}
 
-const { MockMap, MockMarker, MockPopup, createdMaps, createdMarkers } = vi.hoisted(() => {
-  interface MockMapOptions {
-    readonly container: HTMLElement
-    readonly style: string
-    readonly center: readonly [number, number]
-    readonly zoom: number
-    readonly minZoom?: number
+const { capturedProps, UiMapViewStub } = vi.hoisted(() => {
+  const captured: { current: CapturedUiMapViewProps | undefined } = { current: undefined }
+  const Stub = (props: CapturedUiMapViewProps): null => {
+    captured.current = props
+    return null
   }
-
-  const maps: InstanceType<typeof MapImpl>[] = []
-  const markers: InstanceType<typeof MarkerImpl>[] = []
-
-  class MapImpl {
-    public readonly options: MockMapOptions
-    private readonly handlers = new Map<string, Set<Handler>>()
-
-    constructor(options: MockMapOptions) {
-      this.options = options
-      maps.push(this)
-    }
-
-    on(event: string, handler: Handler): this {
-      const set = this.handlers.get(event) ?? new Set<Handler>()
-      set.add(handler)
-      this.handlers.set(event, set)
-      return this
-    }
-
-    off(event: string, handler: Handler): this {
-      this.handlers.get(event)?.delete(handler)
-      return this
-    }
-
-    getBounds(): { getWest: () => number; getSouth: () => number; getEast: () => number; getNorth: () => number } {
-      return { getWest: () => 68.5, getSouth: () => 38.5, getEast: () => 68.9, getNorth: () => 38.9 }
-    }
-
-    remove(): void {
-      // намеренно пусто: мок не держит реальных ресурсов
-    }
-
-    fire(event: string, ...args: unknown[]): void {
-      this.handlers.get(event)?.forEach((handler) => {
-        handler(...args)
-      })
-    }
-  }
-
-  class MarkerImpl {
-    public readonly element = document.createElement('div')
-    public lngLat: readonly [number, number] | undefined
-    public removed = false
-
-    constructor(_options?: { readonly color?: string }) {
-      markers.push(this)
-    }
-
-    setLngLat(lngLat: readonly [number, number]): this {
-      this.lngLat = lngLat
-      return this
-    }
-
-    addTo(): this {
-      return this
-    }
-
-    getElement(): HTMLElement {
-      return this.element
-    }
-
-    remove(): void {
-      this.removed = true
-    }
-  }
-
-  class PopupImpl {
-    public domContent: HTMLElement | undefined
-    private readonly handlers = new Map<string, Set<Handler>>()
-
-    setLngLat(): this {
-      return this
-    }
-
-    setDOMContent(node: HTMLElement): this {
-      this.domContent = node
-      document.body.appendChild(node)
-      return this
-    }
-
-    addTo(): this {
-      return this
-    }
-
-    on(event: string, handler: Handler): this {
-      const set = this.handlers.get(event) ?? new Set<Handler>()
-      set.add(handler)
-      this.handlers.set(event, set)
-      return this
-    }
-  }
-
-  return { MockMap: MapImpl, MockMarker: MarkerImpl, MockPopup: PopupImpl, createdMaps: maps, createdMarkers: markers }
+  return { capturedProps: captured, UiMapViewStub: Stub }
 })
 
-vi.mock('maplibre-gl', () => ({ Map: MockMap, Marker: MockMarker, Popup: MockPopup }))
+vi.mock('@dorutj/ui', async (importOriginal) => {
+  const actual = await importOriginal<typeof DorutjUi>()
+  return { ...actual, MapView: UiMapViewStub }
+})
+
 vi.mock('maplibre-gl/dist/maplibre-gl.css', () => ({}))
 
 const pin1: MapPin = {
@@ -131,135 +58,113 @@ const pin1: MapPin = {
   offer: { priceDiram: 12550, stockQuantity: 7, lastSyncedAt: '2026-08-30T10:00:00Z', isStale: false },
 }
 const pin2: MapPin = { ...pin1, pharmacyId: '22222222-2222-2222-2222-222222222222', name: 'Аптека №2', offer: null }
-const pin3: MapPin = { ...pin1, pharmacyId: '33333333-3333-3333-3333-333333333333', name: 'Аптека №3' }
 
-function renderMap(pins: readonly MapPin[]): ReturnType<typeof render> {
-  return render(
+function renderMap(pins: readonly MapPin[], extra: Partial<Parameters<typeof MapView>[0]> = {}): ReactElement {
+  return (
     <LocaleProvider>
-      <div style={{ height: 200, width: 200 }}>
-        <MapView center={{ lon: 68.78, lat: 38.55 }} zoom={12} pins={pins} />
-      </div>
-    </LocaleProvider>,
+      <MapView center={{ lon: 68.78, lat: 38.55 }} zoom={12} pins={pins} {...extra} />
+    </LocaleProvider>
   )
 }
 
-function assertDefined<T>(value: T | undefined): T {
-  expect(value).toBeDefined()
-  return value as T
-}
+afterEach(() => {
+  vi.unstubAllEnvs()
+  capturedProps.current = undefined
+})
 
-async function waitForMapLoaded(): Promise<InstanceType<typeof MockMap>> {
-  await waitFor(() => {
-    expect(createdMaps.length).toBeGreaterThan(0)
+describe('MapView (DTJ-198/431)', () => {
+  it('1. VITE_TILESERVER_URL не задан — фолбэк «карта недоступна», без падения UI, @dorutj/ui MapView не монтируется', () => {
+    vi.stubEnv('VITE_TILESERVER_URL', '')
+    render(renderMap([]))
+    expect(screen.getByTestId('map-view-unavailable')).toBeInTheDocument()
+    expect(capturedProps.current).toBeUndefined()
   })
-  const map = assertDefined(createdMaps[createdMaps.length - 1])
-  act(() => {
-    map.fire('load')
-  })
-  return map
-}
 
-describe('MapView (DTJ-198)', () => {
-  beforeEach(() => {
+  it('2. styleUrl задан — маппит pins в MapPoint[] (id/lat/lng/label) и центр lon/lat → lng/lat', () => {
     vi.stubEnv('VITE_TILESERVER_URL', 'http://localhost:8080/styles/basic/style.json')
-    createdMaps.length = 0
-    createdMarkers.length = 0
-  })
+    render(renderMap([pin1, pin2]))
 
-  afterEach(() => {
-    vi.unstubAllEnvs()
-    document.body.innerHTML = ''
-  })
-
-  it('1. pins=[] — рендерится без console-ошибок, без маркеров', async () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
-    renderMap([])
-    await waitForMapLoaded()
-
-    expect(screen.getByTestId('map-view-canvas')).toBeInTheDocument()
-    expect(createdMarkers).toHaveLength(0)
-    expect(consoleError).not.toHaveBeenCalled()
-    consoleError.mockRestore()
-  })
-
-  it('2. pins с 3 элементами — 3 маркера в соответствующих координатах', async () => {
-    renderMap([pin1, pin2, pin3])
-    await waitForMapLoaded()
-
-    await waitFor(() => {
-      expect(createdMarkers).toHaveLength(3)
-    })
-    expect(createdMarkers.map((marker) => marker.lngLat)).toEqual([
-      [pin1.lon, pin1.lat],
-      [pin2.lon, pin2.lat],
-      [pin3.lon, pin3.lat],
+    expect(capturedProps.current?.styleUrl).toBe('http://localhost:8080/styles/basic/style.json')
+    expect(capturedProps.current?.mode).toBe('full')
+    expect(capturedProps.current?.center).toEqual({ lat: 38.55, lng: 68.78 })
+    expect(capturedProps.current?.points).toEqual([
+      { id: pin1.pharmacyId, lat: pin1.lat, lng: pin1.lon, label: pin1.name },
+      { id: pin2.pharmacyId, lat: pin2.lat, lng: pin2.lon, label: pin2.name },
     ])
   })
 
-  it('3. клик по маркеру с offer !== null — попап открывается с ценой, остатком, именем', async () => {
-    renderMap([pin1])
-    await waitForMapLoaded()
-    await waitFor(() => {
-      expect(createdMarkers).toHaveLength(1)
-    })
-
-    act(() => {
-      assertDefined(createdMarkers[0])
-        .getElement()
-        .dispatchEvent(new MouseEvent('click', { bubbles: true }))
-    })
-
-    await waitFor(() => {
-      expect(screen.getByTestId('pharmacy-pin-popup')).toBeInTheDocument()
-    })
-    expect(screen.getByText(pin1.name)).toBeInTheDocument()
-    expect(screen.getByTestId('pharmacy-pin-popup-price')).toHaveTextContent('125.50')
+  it('3. minZoom прокидывается в @dorutj/ui MapView как есть', () => {
+    vi.stubEnv('VITE_TILESERVER_URL', 'http://localhost:8080/styles/basic/style.json')
+    render(renderMap([], { minZoom: 9 }))
+    expect(capturedProps.current?.minZoom).toBe(9)
   })
 
-  it('4. имя аптеки со спецсимволами в попапе не создаёт реальный <script> в DOM', async () => {
-    const maliciousPin: MapPin = { ...pin1, name: '<script>window.__xssFired = true</script>' }
-    renderMap([maliciousPin])
-    await waitForMapLoaded()
-    await waitFor(() => {
-      expect(createdMarkers).toHaveLength(1)
-    })
+  it('4. [AC4] onSelect(pointId) — рендерит карточку аптеки (панель снизу карты) с ценой/именем, зовёт onPinClick', () => {
+    vi.stubEnv('VITE_TILESERVER_URL', 'http://localhost:8080/styles/basic/style.json')
+    const onPinClick = vi.fn()
+    render(renderMap([pin1], { onPinClick }))
 
     act(() => {
-      assertDefined(createdMarkers[0])
-        .getElement()
-        .dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      capturedProps.current?.onSelect?.(pin1.pharmacyId)
     })
 
-    await waitFor(() => {
-      expect(screen.getByTestId('pharmacy-pin-popup')).toBeInTheDocument()
+    expect(onPinClick).toHaveBeenCalledWith(pin1.pharmacyId)
+    expect(screen.getByTestId('pharmacy-pin-popup')).toBeInTheDocument()
+    expect(screen.getByText(pin1.name)).toBeInTheDocument()
+    expect(screen.getByTestId('pharmacy-pin-popup-price')).toHaveTextContent('125,50')
+  })
+
+  it('5. onSelect по пину без offer — карточка аптеки рендерится, но без блока цены', () => {
+    vi.stubEnv('VITE_TILESERVER_URL', 'http://localhost:8080/styles/basic/style.json')
+    render(renderMap([pin1, pin2]))
+
+    act(() => {
+      capturedProps.current?.onSelect?.(pin2.pharmacyId)
     })
+
+    expect(screen.getByText(pin2.name)).toBeInTheDocument()
+    expect(screen.queryByTestId('pharmacy-pin-popup-price')).not.toBeInTheDocument()
+  })
+
+  it('6. имя аптеки со спецсимволами не создаёт реальный <script> в DOM при выборе пина', () => {
+    vi.stubEnv('VITE_TILESERVER_URL', 'http://localhost:8080/styles/basic/style.json')
+    const maliciousPin: MapPin = { ...pin1, name: '<script>window.__xssFired = true</script>' }
+    render(renderMap([maliciousPin]))
+
+    act(() => {
+      capturedProps.current?.onSelect?.(maliciousPin.pharmacyId)
+    })
+
+    expect(screen.getByTestId('pharmacy-pin-popup')).toBeInTheDocument()
     expect(document.querySelector('script')).not.toBeInTheDocument()
     expect((window as { __xssFired?: boolean }).__xssFired).toBeUndefined()
   })
 
-  it('5. VITE_TILESERVER_URL не задан — фолбэк «карта недоступна», без падения UI', async () => {
-    vi.stubEnv('VITE_TILESERVER_URL', '')
-    renderMap([])
-
-    await waitFor(() => {
-      expect(screen.getByTestId('map-view-unavailable')).toBeInTheDocument()
-    })
-    expect(createdMaps).toHaveLength(0)
-  })
-
-  it('6. карта фейлится ДО первого load ("error") — фолбэк «карта недоступна»', async () => {
-    renderMap([])
-    await waitFor(() => {
-      expect(createdMaps.length).toBeGreaterThan(0)
-    })
-    const map = assertDefined(createdMaps[createdMaps.length - 1])
+  it('7. onViewportChange — BBox (@dorutj/ui) маппится в BboxCoordinates (@dorutj/contracts) 1:1', () => {
+    vi.stubEnv('VITE_TILESERVER_URL', 'http://localhost:8080/styles/basic/style.json')
+    const onViewportChange = vi.fn()
+    render(renderMap([], { onViewportChange }))
 
     act(() => {
-      map.fire('error')
+      capturedProps.current?.onViewportChange?.({ lonMin: 68.6, latMin: 38.4, lonMax: 68.9, latMax: 38.6 })
     })
 
-    await waitFor(() => {
-      expect(screen.getByTestId('map-view-unavailable')).toBeInTheDocument()
+    expect(onViewportChange).toHaveBeenCalledWith({ lonMin: 68.6, latMin: 38.4, lonMax: 68.9, latMax: 38.6 })
+  })
+
+  it('8. выбор пина, затем другого — карточка переключается на новый пин', () => {
+    vi.stubEnv('VITE_TILESERVER_URL', 'http://localhost:8080/styles/basic/style.json')
+    render(renderMap([pin1, pin2]))
+
+    act(() => {
+      capturedProps.current?.onSelect?.(pin1.pharmacyId)
     })
+    expect(screen.getByText(pin1.name)).toBeInTheDocument()
+
+    act(() => {
+      capturedProps.current?.onSelect?.(pin2.pharmacyId)
+    })
+    expect(screen.queryByText(pin1.name)).not.toBeInTheDocument()
+    expect(screen.getByText(pin2.name)).toBeInTheDocument()
   })
 })

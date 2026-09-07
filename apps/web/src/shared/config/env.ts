@@ -11,7 +11,11 @@ interface ClientEnv {
 
 function readApiBaseUrl(): string {
   const value: string | undefined = import.meta.env.VITE_API_BASE_URL
-  if (typeof value !== 'string' || value.length === 0) {
+  // Пустая строка допустима и означает «API на том же origin»: `http-client` склеивает базу с
+  // путём (`${base}${path}`), поэтому пустая база даёт относительный `/api/v1/...`, который в
+  // compose-стенде проксирует nginx. Ошибка по-прежнему бросается на ОТСУТСТВУЮЩЕЙ переменной —
+  // именно она приводила к запросам на "undefined", ради чего проверка и заводилась.
+  if (typeof value !== 'string') {
     throw new Error(
       'VITE_API_BASE_URL не задан. Скопируй apps/web/.env.example в apps/web/.env и заполни значение ' +
         'перед запуском dev-сервера или сборки.',

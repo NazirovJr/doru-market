@@ -29,6 +29,7 @@ describe('PharmacyGroupCard (DTJ-234, AC1)', () => {
         subtotalDiram={1000}
         items={[item()]}
         warningCartItemIds={new Set()}
+        locale="ru"
         onRemove={vi.fn()}
         onQuantityChange={vi.fn()}
         t={t}
@@ -36,7 +37,9 @@ describe('PharmacyGroupCard (DTJ-234, AC1)', () => {
     )
     expect(screen.getByTestId('pharmacy-group-name')).toHaveTextContent('Аптека 1')
     expect(screen.getAllByTestId('cart-item-row')).toHaveLength(1)
-    expect(screen.getByTestId('pharmacy-group-subtotal')).toHaveTextContent('10.00')
+    // DTJ-431: подытог теперь formatMoney() (@dorutj/i18n) — locale='ru' даёт запятую, не точку
+    // прежнего локального formatSomoni().
+    expect(screen.getByTestId('pharmacy-group-subtotal')).toHaveTextContent('10,00')
     // DTJ-234 (дефект приёмки): строка показывает читаемое название препарата, НЕ medicineId (UUID).
     expect(screen.getByTestId('cart-item-medicine-name')).toHaveTextContent('Парацетамол 500мг')
     expect(screen.getByTestId('cart-item-medicine-name')).not.toHaveTextContent('m1')
@@ -50,6 +53,7 @@ describe('PharmacyGroupCard (DTJ-234, AC1)', () => {
         subtotalDiram={1000}
         items={[item()]}
         warningCartItemIds={new Set()}
+        locale="ru"
         onRemove={vi.fn()}
         onQuantityChange={vi.fn()}
         t={t}
@@ -67,6 +71,7 @@ describe('PharmacyGroupCard (DTJ-234, AC1)', () => {
         subtotalDiram={1000}
         items={[item({ id: 'item-9' })]}
         warningCartItemIds={new Set()}
+        locale="ru"
         onRemove={onRemove}
         onQuantityChange={vi.fn()}
         t={t}
@@ -85,6 +90,7 @@ describe('PharmacyGroupCard (DTJ-234, AC1)', () => {
         subtotalDiram={1000}
         items={[item({ id: 'item-1', quantity: 3 })]}
         warningCartItemIds={new Set()}
+        locale="ru"
         onRemove={vi.fn()}
         onQuantityChange={onQuantityChange}
         t={t}
@@ -104,6 +110,7 @@ describe('PharmacyGroupCard (DTJ-234, AC1)', () => {
         subtotalDiram={500}
         items={[item({ quantity: 1 })]}
         warningCartItemIds={new Set()}
+        locale="ru"
         onRemove={vi.fn()}
         onQuantityChange={vi.fn()}
         t={t}
@@ -120,6 +127,7 @@ describe('PharmacyGroupCard (DTJ-234, AC1)', () => {
         subtotalDiram={500}
         items={[item()]}
         warningCartItemIds={new Set()}
+        locale="ru"
         onRemove={vi.fn()}
         onQuantityChange={vi.fn()}
         t={t}
@@ -140,6 +148,7 @@ describe('PharmacyGroupCard (DTJ-234, AC1)', () => {
         subtotalDiram={500}
         items={[item({ id: 'item-1' })]}
         warningCartItemIds={new Set(['item-1'])}
+        locale="ru"
         onRemove={vi.fn()}
         onQuantityChange={vi.fn()}
         t={t}

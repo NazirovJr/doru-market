@@ -1,30 +1,31 @@
 import type { ReactElement } from 'react'
-import { useT } from '@dorutj/i18n'
+import { useT, type TranslateFunction } from '@dorutj/i18n'
+import { PriceTag } from '@dorutj/ui'
 import { useLocale } from '@/shared/config/locale-provider'
 import type { MapPin } from '../model/map-pin'
 
 /**
- * `pharmacy-pin-popup.tsx` (DTJ-198, критерий приёмки 4).
+ * `pharmacy-pin-popup.tsx` (DTJ-198/431, критерий приёмки 4).
  *
  * Содержимое maplibre-gl `Popup` — обычный React-компонент (рендерится через `createRoot` в
  * `map-view.tsx`, НЕ через HTML-строку `Popup.setHTML`). Имя аптеки выводится как текстовый
  * children JSX — React экранирует его при рендере, поэтому `<script>` в имени не исполняется
  * (негативный сценарий безопасности из тест-плана).
+ *
+ * DTJ-431: цена — `PriceTag` (`@dorutj/ui`, DTJ-407), не локальный `formatSomoni()`
+ * (`(priceDiram/100).toFixed(2)`, AGENTS.md §6 — единственный легальный способ печатать деньги).
+ * Ключ `map.pin.price` («{price} сомони») сюда больше не подставляется — `PriceTag` сам
+ * добавляет локализованный суффикс валюты через `formatMoney()`, задваивать его текстом словаря
+ * нельзя (тот же приём, что `SavingsBadge`, DTJ-407).
  */
-
-const DIRAM_PER_SOMONI = 100
 
 export interface PharmacyPinPopupProps {
   readonly pin: MapPin
 }
 
-function formatSomoni(priceDiram: number): string {
-  return (priceDiram / DIRAM_PER_SOMONI).toFixed(2)
-}
-
 interface OpeningHoursLabelProps {
   readonly pin: MapPin
-  readonly t: (key: string) => string
+  readonly t: TranslateFunction
 }
 
 const OpeningHoursLabel = ({ pin, t }: OpeningHoursLabelProps): ReactElement => {
@@ -35,7 +36,8 @@ const OpeningHoursLabel = ({ pin, t }: OpeningHoursLabelProps): ReactElement => 
 }
 
 export const PharmacyPinPopup = ({ pin }: PharmacyPinPopupProps): ReactElement => {
-  const { t } = useT(useLocale().locale)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
 
   return (
     <div
@@ -49,7 +51,7 @@ export const PharmacyPinPopup = ({ pin }: PharmacyPinPopupProps): ReactElement =
       {pin.offer !== null ? (
         <div className="mt-1 border-t border-line pt-1">
           <p className="text-sm font-medium" data-testid="pharmacy-pin-popup-price">
-            {t('map.pin.price', { price: formatSomoni(pin.offer.priceDiram) })}
+            <PriceTag amountDiram={pin.offer.priceDiram} locale={locale} />
           </p>
           <p className="text-xs text-ink-muted" data-testid="pharmacy-pin-popup-stock">
             {t('map.pin.stock', { count: pin.offer.stockQuantity })}

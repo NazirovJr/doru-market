@@ -33,7 +33,11 @@ const COVERAGE_FLOOR_LINES = 69
  * бандл, который в браузере будет слать запросы на "undefined" (рантайм-проверка — env.ts).
  */
 function assertBuildEnv(env: Record<string, string>): void {
-  const missing = REQUIRED_BUILD_ENV_VARS.filter((key) => !env[key])
+  // ПУСТАЯ строка — легитимное значение, а не пропуск: она означает «API на том же origin»
+  // (запросы уходят относительными путями `/api/v1/...`, их проксирует nginx). Отличать
+  // «не задано» от «задано пустым» обязательно: `!env[key]` заваливал сборку образа, где
+  // абсолютный адрес вреден — порт API наружу не публикуется.
+  const missing = REQUIRED_BUILD_ENV_VARS.filter((key) => env[key] === undefined)
   if (missing.length > 0) {
     throw new Error(
       `Сборка apps/web остановлена: не заданы обязательные переменные окружения: ${missing.join(', ')}. ` +

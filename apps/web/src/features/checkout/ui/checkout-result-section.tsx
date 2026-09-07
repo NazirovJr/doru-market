@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react'
 import { ErrorCode } from '@dorutj/contracts'
-import type { Locale, TranslateFunction } from '@dorutj/i18n'
+import type { Locale, TranslateFunction, TranslationKey } from '@dorutj/i18n'
 import type { CreateOrderFailedGroup, CreateOrderResponse, CreateOrderResultItem } from '../api/create-order.api'
 import { formatCheckoutMoney } from '../model/format-money'
 
@@ -15,7 +15,7 @@ import { formatCheckoutMoney } from '../model/format-money'
  * `FailedGroupResponseDto.reason` — `string` на границе ответа, не сам enum).
  */
 
-function resolveFailedGroupReasonKey(reason: string): string {
+function resolveFailedGroupReasonKey(reason: string): TranslationKey {
   switch (reason) {
     case ErrorCode.PRICE_OR_STOCK_CHANGED as string:
       return 'checkout.failed_group.price_or_stock_changed'

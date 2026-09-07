@@ -1,129 +1,51 @@
-import { act } from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, type ReactElement } from 'react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router'
+import type * as DorutjUi from '@dorutj/ui'
 import { LocaleProvider } from '@/shared/config/locale-provider'
 import { getClientEnv } from '@/shared/config/env'
 import MapPage from './map-page'
 
 /**
- * `map-page.spec.tsx` (DTJ-199).
+ * `map-page.spec.tsx` (DTJ-199/431).
  *
- * `maplibre-gl` мокается тем же способом, что и `features/pharmacy-map/ui/map-view.spec.tsx`
- * (`vi.hoisted` + `vi.mock`) — реальный WebGL-рендер недоступен в jsdom. Сеть мокается через
- * `vi.stubGlobal('fetch', ...)`, как в `shared/api/http-client.spec.ts` (тот же слой `httpGetJson`
- * → `httpRequestJson` → `fetch`, второй способ ходить в сеть не заводим).
- *
- * Тесты проверяют ПОВЕДЕНИЕ экрана (какое состояние показано и что реально ушло в fetch), а не
- * факт монтирования компонента.
+ * DTJ-431: `MapView` (`apps/web`) стал тонкой обёрткой над `MapView` (`@dorutj/ui`, DTJ-409) —
+ * `packages/ui` собирает `maplibre-gl` в СВОЙ `dist`-чанк (не остаётся `external`, отчёт сдачи
+ * DTJ-431), поэтому `vi.mock('maplibre-gl', ...)` из `apps/web` больше НЕ перехватывает
+ * динамический импорт внутри уже собранного `@dorutj/ui/dist` (см. JSDoc
+ * `features/pharmacy-map/ui/map-view.spec.tsx`, тот же приём здесь). Мок — на границе
+ * `@dorutj/ui`: `MapView` заменяется стабом, который рендерит контейнер с тем же
+ * `data-testid="map-view-canvas"` и запоминает пропы (`points`/`onViewportChange`/...) —
+ * `map-page.tsx` (вне `files_owned` DTJ-431, но сломан переносом `MapView` на `packages/ui`,
+ * чинится тем же тикетом) проверяется НА СВОЁМ уровне: какое состояние показано и что реально
+ * ушло в `fetch`, панорамирование эмулируется прямым вызовом захваченного `onViewportChange`
+ * (форма вызова у настоящего `@dorutj/ui/MapView` покрыта его собственными 370 тестами).
  */
 
-type Handler = (...args: unknown[]) => void
+interface CapturedUiMapViewProps {
+  readonly points: readonly { readonly id: string; readonly lat: number; readonly lng: number; readonly label?: string }[]
+  readonly onViewportChange?: (bbox: { lonMin: number; latMin: number; lonMax: number; latMax: number }) => void
+}
 
-const { MockMap, MockMarker, MockPopup, createdMaps, createdMarkers } = vi.hoisted(() => {
-  interface MockMapOptions {
-    readonly container: HTMLElement
+const { capturedProps, UiMapViewStub } = vi.hoisted(() => {
+  const captured: { current: CapturedUiMapViewProps | undefined } = { current: undefined }
+  const Stub = (props: CapturedUiMapViewProps): ReactElement => {
+    captured.current = props
+    return <div data-testid="map-view-canvas" />
   }
-
-  const maps: InstanceType<typeof MapImpl>[] = []
-  const markers: InstanceType<typeof MarkerImpl>[] = []
-
-  class MapImpl {
-    private readonly handlers = new Map<string, Set<Handler>>()
-    private bounds = { west: 68.65, south: 38.48, east: 68.92, north: 38.64 }
-
-    constructor(_options: MockMapOptions) {
-      maps.push(this)
-    }
-
-    on(event: string, handler: Handler): this {
-      const set = this.handlers.get(event) ?? new Set<Handler>()
-      set.add(handler)
-      this.handlers.set(event, set)
-      return this
-    }
-
-    off(event: string, handler: Handler): this {
-      this.handlers.get(event)?.delete(handler)
-      return this
-    }
-
-    getBounds(): { getWest: () => number; getSouth: () => number; getEast: () => number; getNorth: () => number } {
-      const { bounds } = this
-      return {
-        getWest: () => bounds.west,
-        getSouth: () => bounds.south,
-        getEast: () => bounds.east,
-        getNorth: () => bounds.north,
-      }
-    }
-
-    setBounds(next: { west: number; south: number; east: number; north: number }): void {
-      this.bounds = next
-    }
-
-    remove(): void {
-      // намеренно пусто
-    }
-
-    fire(event: string): void {
-      this.handlers.get(event)?.forEach((handler) => {
-        handler()
-      })
-    }
-  }
-
-  class MarkerImpl {
-    public readonly element = document.createElement('div')
-
-    constructor(_options?: { readonly color?: string }) {
-      markers.push(this)
-    }
-
-    setLngLat(): this {
-      return this
-    }
-
-    addTo(): this {
-      return this
-    }
-
-    getElement(): HTMLElement {
-      return this.element
-    }
-
-    remove(): void {
-      // намеренно пусто
-    }
-  }
-
-  class PopupImpl {
-    setLngLat(): this {
-      return this
-    }
-
-    setDOMContent(): this {
-      return this
-    }
-
-    addTo(): this {
-      return this
-    }
-
-    on(): this {
-      return this
-    }
-  }
-
-  return { MockMap: MapImpl, MockMarker: MarkerImpl, MockPopup: PopupImpl, createdMaps: maps, createdMarkers: markers }
+  return { capturedProps: captured, UiMapViewStub: Stub }
 })
 
-vi.mock('maplibre-gl', () => ({ Map: MockMap, Marker: MockMarker, Popup: MockPopup }))
+vi.mock('@dorutj/ui', async (importOriginal) => {
+  const actual = await importOriginal<typeof DorutjUi>()
+  return { ...actual, MapView: UiMapViewStub }
+})
+
 vi.mock('maplibre-gl/dist/maplibre-gl.css', () => ({}))
 
 const mapApiUrl = `${getClientEnv().apiBaseUrl}/api/v1/pharmacies/map`
-const DEBOUNCE_MS = 400
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status })
@@ -152,32 +74,16 @@ function renderMapPage(initialEntry = '/map'): ReturnType<typeof render> {
   )
 }
 
-async function waitForInitialMap(): Promise<InstanceType<typeof MockMap>> {
-  await waitFor(() => {
-    expect(createdMaps.length).toBeGreaterThan(0)
-  })
-  const map = createdMaps[createdMaps.length - 1]!
-  act(() => {
-    map.fire('load')
-  })
-  return map
-}
-
-beforeEach(() => {
-  vi.stubEnv('VITE_TILESERVER_URL', 'http://localhost:8080/styles/basic/style.json')
-  createdMaps.length = 0
-  createdMarkers.length = 0
-})
-
 afterEach(() => {
   vi.unstubAllEnvs()
   vi.unstubAllGlobals()
-  vi.useRealTimers()
+  capturedProps.current = undefined
   document.body.innerHTML = ''
 })
 
-describe('MapPage (DTJ-199)', () => {
+describe('MapPage (DTJ-199/431)', () => {
   it('1. загрузка — карта смонтирована сразу, баннер загрузки виден до ответа API', async () => {
+    vi.stubEnv('VITE_TILESERVER_URL', 'http://localhost:8080/styles/basic/style.json')
     let resolveFetch: (response: Response) => void = () => undefined
     stubFetchOnce(
       () =>
@@ -187,7 +93,6 @@ describe('MapPage (DTJ-199)', () => {
     )
 
     renderMapPage()
-    await waitForInitialMap()
 
     expect(screen.getByTestId('map-view-canvas')).toBeInTheDocument()
     expect(screen.getByTestId('map-page-loading')).toBeInTheDocument()
@@ -199,10 +104,10 @@ describe('MapPage (DTJ-199)', () => {
   })
 
   it('2. пустой результат — сообщение "аптек не найдено", карта остаётся интерактивной', async () => {
+    vi.stubEnv('VITE_TILESERVER_URL', 'http://localhost:8080/styles/basic/style.json')
     stubFetchOnce(() => Promise.resolve(jsonResponse({ data: [] })))
 
     renderMapPage()
-    await waitForInitialMap()
 
     await waitFor(() => {
       expect(screen.getByTestId('map-page-empty')).toBeInTheDocument()
@@ -212,10 +117,10 @@ describe('MapPage (DTJ-199)', () => {
   })
 
   it('3. ошибка сети — сообщение об ошибке + кнопка "Повторить" вызывает повторный fetch', async () => {
+    vi.stubEnv('VITE_TILESERVER_URL', 'http://localhost:8080/styles/basic/style.json')
     const fetchMock = stubFetchOnce(() => Promise.reject(new TypeError('network down')))
 
     renderMapPage()
-    await waitForInitialMap()
 
     await waitFor(() => {
       expect(screen.getByTestId('map-page-error')).toBeInTheDocument()
@@ -231,11 +136,11 @@ describe('MapPage (DTJ-199)', () => {
   })
 
   it('4. bbox превышает лимит площади (400 VALIDATION_ERROR field=bbox) — понятное сообщение, не белый экран', async () => {
+    vi.stubEnv('VITE_TILESERVER_URL', 'http://localhost:8080/styles/basic/style.json')
     const errorBody = { error: { code: 'VALIDATION_ERROR', message: 'bbox too large', details: { field: 'bbox' } } }
     stubFetchOnce(() => Promise.resolve(jsonResponse(errorBody, 400)))
 
     renderMapPage()
-    await waitForInitialMap()
 
     await waitFor(() => {
       expect(screen.getByTestId('map-page-bbox-too-large')).toBeInTheDocument()
@@ -246,7 +151,8 @@ describe('MapPage (DTJ-199)', () => {
     expect(screen.queryByTestId('map-page-retry')).not.toBeInTheDocument()
   })
 
-  it('5. успешная отрисовка пинов — маркеры соответствуют ответу API, баннер не показан', async () => {
+  it('5. успешная отрисовка пинов — пины из ответа API попадают в points (@dorutj/ui MapView), баннер не показан', async () => {
+    vi.stubEnv('VITE_TILESERVER_URL', 'http://localhost:8080/styles/basic/style.json')
     const pin = {
       pharmacyId: '11111111-1111-1111-1111-111111111111',
       name: 'Аптека №1',
@@ -259,21 +165,20 @@ describe('MapPage (DTJ-199)', () => {
     stubFetchOnce(() => Promise.resolve(jsonResponse({ data: [pin] })))
 
     renderMapPage()
-    await waitForInitialMap()
 
     await waitFor(() => {
-      expect(createdMarkers).toHaveLength(1)
+      expect(capturedProps.current?.points).toEqual([{ id: pin.pharmacyId, lat: pin.lat, lng: pin.lon, label: pin.name }])
     })
     expect(screen.queryByTestId('map-page-empty')).not.toBeInTheDocument()
     expect(screen.queryByTestId('map-page-error')).not.toBeInTheDocument()
     expect(screen.queryByTestId('map-page-loading')).not.toBeInTheDocument()
   })
 
-  it('6. панорамирование карты — новый запрос уходит с новым bbox (через debounce use-map-viewport)', async () => {
+  it('6. панорамирование карты — новый запрос уходит с новым bbox (onViewportChange, debounce внутри @dorutj/ui MapView)', async () => {
+    vi.stubEnv('VITE_TILESERVER_URL', 'http://localhost:8080/styles/basic/style.json')
     const fetchMock = stubFetchOnce(() => Promise.resolve(jsonResponse({ data: [] })))
 
     renderMapPage()
-    const map = await waitForInitialMap()
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -281,28 +186,24 @@ describe('MapPage (DTJ-199)', () => {
     const [initialUrl] = fetchMock.mock.calls[0] ?? []
     expect(initialUrl?.startsWith(mapApiUrl)).toBe(true)
 
-    map.setBounds({ west: 69.0, south: 38.9, east: 69.2, north: 39.0 })
+    // Debounce/извлечение bbox — ответственность MapView (@dorutj/ui, покрыто там же); здесь
+    // проверяется, что MapPage правильно реагирует на УЖЕ debounce-нутый вызов колбэка.
     act(() => {
-      map.fire('moveend')
+      capturedProps.current?.onViewportChange?.({ lonMin: 69.0, latMin: 38.9, lonMax: 69.2, latMax: 39.0 })
     })
 
-    // Дебаунс use-map-viewport (400мс) — реальное время, а не fake timers: смешивать
-    // vi.useFakeTimers с testing-library waitFor на уровне целой страницы ненадёжно.
-    await waitFor(
-      () => {
-        expect(fetchMock).toHaveBeenCalledTimes(2)
-      },
-      { timeout: DEBOUNCE_MS + 500 },
-    )
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
     const [secondUrl] = fetchMock.mock.calls[1] ?? []
     expect(secondUrl).toContain(encodeURIComponent('69,38.9,69.2,39'))
   })
 
   it('7. medicineId из query-строки страницы передаётся в запрос API', async () => {
+    vi.stubEnv('VITE_TILESERVER_URL', 'http://localhost:8080/styles/basic/style.json')
     const fetchMock = stubFetchOnce(() => Promise.resolve(jsonResponse({ data: [] })))
 
     renderMapPage('/map?medicineId=22222222-2222-2222-2222-222222222222')
-    await waitForInitialMap()
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(1)

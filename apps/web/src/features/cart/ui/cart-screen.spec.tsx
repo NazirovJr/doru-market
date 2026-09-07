@@ -11,8 +11,8 @@ import { CartScreen } from './cart-screen'
  * `cart-screen.spec.tsx` (DTJ-234).
  *
  * Покрывает AC1 (2 группы по аптекам, суммарный баннер), AC2 (красный баннер duplicate_substance,
- * НЕ дословный текст дизайна), AC3 (пустая корзина — EmptyState с CTA), AC4 (тап-зоны ≥48×48px —
- * см. JSDoc `empty-state.spec.tsx`/`pharmacy-group-card.spec.tsx` про ограничение jsdom: без
+ * НЕ дословный текст дизайна), AC3 (пустая корзина — EmptyState из `@dorutj/ui` с CTA),
+ * AC4 (тап-зоны ≥48×48px — см. JSDoc `pharmacy-group-card.spec.tsx` про ограничение jsdom: без
  * реального layout-движка проверяется КЛАСС, гарантирующий 48px в Tailwind-шкале проекта
  * (`min-h-12`/`min-w-12` = 3rem = 48px), не вычисленный `getBoundingClientRect`), тест-план
  * «снапшот на 1/2/3 аптеки» (здесь — количество `PharmacyGroupCard`, не буквальный snapshot-файл).
@@ -121,15 +121,14 @@ describe('CartScreen (DTJ-234)', () => {
     expect(screen.getByTestId('cart-retry')).toBeInTheDocument()
   })
 
-  it('3. [AC3] пустая корзина — EmptyState с CTA, клик ведёт на "/" (ux.empty.cart, не калька дизайна)', async () => {
+  it('3. [AC3] пустая корзина — EmptyState (@dorutj/ui) с CTA, клик ведёт на "/" (ux.empty.cart, не калька дизайна)', async () => {
     stubCartResponse([], [])
     renderCartScreen()
     await waitFor(() => {
-      expect(screen.getByTestId('cart-empty-state')).toBeInTheDocument()
+      expect(screen.getByText('Корзина пуста. Найдите лекарство дешевле рядом с вами.')).toBeInTheDocument()
     })
-    expect(screen.getByText('Корзина пуста. Найдите лекарство дешевле рядом с вами.')).toBeInTheDocument()
     expect(screen.queryByText('Найдите нужное лекарство по низкой цене')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByTestId('cart-empty-cta'))
+    fireEvent.click(screen.getByRole('button', { name: 'Найти лекарство' }))
     await waitFor(() => {
       expect(screen.getByTestId('home-stub')).toBeInTheDocument()
     })

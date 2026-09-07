@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useId, type ReactElement, type KeyboardEvent } from 'react'
-import { useT } from '@dorutj/i18n'
+import { useT, type TranslateFunction } from '@dorutj/i18n'
 import { useLocale } from '@/shared/config/locale-provider'
 import { useVerifyOtp } from '@/features/auth/api/use-verify-otp'
 import { HttpError } from '@/shared/api/http-client'
@@ -195,21 +195,17 @@ export const CodeStep = ({
   )
 }
 
-function useErrorText(
-  state: LoginFlowState,
-  t: (key: string, params?: Readonly<Record<string, string | number>>) => string,
-  networkError: string,
-): string | null {
+function useErrorText(state: LoginFlowState, t: TranslateFunction, networkError: string): string | null {
   if (networkError.length > 0) {
     return networkError
   }
   const mapping = errorCodeToI18nKey(state.errorCode)
+  if (mapping === null) {
+    return null
+  }
   // Подставляем `attemptsLeft` для OTP_MISMATCH.
-  if (state.errorCode === 'OTP_MISMATCH' && mapping !== null) {
+  if (state.errorCode === 'OTP_MISMATCH') {
     return t(mapping.key, { ...mapping.params, attemptsLeft: state.attemptsLeft })
   }
-  if (mapping !== null) {
-    return t(mapping.key, mapping.params)
-  }
-  return null
+  return t(mapping.key, mapping.params)
 }

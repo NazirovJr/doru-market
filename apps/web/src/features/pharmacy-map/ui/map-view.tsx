@@ -1,31 +1,45 @@
-import { useEffect, useRef, useState, type ReactElement } from 'react'
-import { createRoot } from 'react-dom/client'
-import type * as MapLibreGL from 'maplibre-gl'
+import { useMemo, useState, type ReactElement } from 'react'
 import type { BboxCoordinates } from '@dorutj/contracts'
 import { useT } from '@dorutj/i18n'
-import { LocaleProvider, useLocale } from '@/shared/config/locale-provider'
-import { useMapViewport } from '../model/use-map-viewport'
+import { MapView as UiMapView, type BBox, type MapPoint } from '@dorutj/ui'
+// CSS карты — импорт потребителем, не `packages/ui` (DTJ-431, «Отдельный пункт: CSS карты», см.
+// JSDoc ниже, пункт про CSS).
+import 'maplibre-gl/dist/maplibre-gl.css'
+import { useLocale } from '@/shared/config/locale-provider'
 import type { MapPin } from '../model/map-pin'
 import { PharmacyPinPopup } from './pharmacy-pin-popup'
 
 export type { MapPin } from '../model/map-pin'
 
 /**
- * `map-view.tsx` (DTJ-198, `SRS-CAT-053`).
+ * `map-view.tsx` (DTJ-198/431, `SRS-CAT-053`).
  *
- * Тонкая обёртка над `maplibre-gl` поверх self-hosted vector-tile источника (`REQ-GEO-1` запрещает
- * Yandex/Google — только self-hosted, `VITE_TILESERVER_URL`). Компонент не знает про HTTP: `bbox`
- * уходит наружу через `onViewportChange` (`use-map-viewport.ts`), сетевой вызов — забота
- * `features/pharmacy-map/api` (DTJ-199).
+ * DTJ-431: тонкая обёртка над `MapView` (`@dorutj/ui`, DTJ-409) вместо самостоятельной реализации
+ * поверх `maplibre-gl` — маппит доменные `MapPin` (`@dorutj/contracts`) на нейтральные `MapPoint`
+ * общего компонента и обратно. Известные расхождения (зафиксированы постановкой тикета, отчёт
+ * сдачи раздел «Известные расхождения»):
  *
- * ВРЕМЕННО реализован локально (не `packages/ui`) — EP-18 ещё не выпустил базовый `MapView` на
- * момент этого тикета (волна 6). Перенос — DTJ-200 (`tickets/ep05-search-map/DTJ-200.md`,
- * `SRS-UX-034`), карта используется минимум на 5 экранах (courier/home/checkout/order/`/map`).
+ * 1. **Пины/попап.** Локальная версия рисовала `Marker`+`Popup` (React-портал в DOM-узел
+ *    maplibre-gl) — общий `MapView` рендерит точки через GeoJSON-источник со встроенной
+ *    кластеризацией (`use-map-markers.ts`, `packages/ui`) и отдаёт только `onSelect(pointId)`.
+ *    Содержимое попапа (`PharmacyPinPopup`) переехало в СОБСТВЕННУЮ карточку этого файла,
+ *    открываемую по `onSelect` (см. `selectedPin` ниже) — не floating popup у пина (у общего
+ *    `MapView` нет доступа к экземпляру карты наружу для позиционирования), а закреплённая
+ *    панель снизу карты. Кластеризация — ОСОЗНАННОЕ изменение UX (`SRS-CAT-053`): на малом зуме
+ *    близкие пины сливаются в кружок с числом, разворачиваются кликом (zoom-to-expansion,
+ *    `use-map-markers.ts`) — раньше каждый пин был отдельным маркером всегда.
+ * 2. **URL тайлов.** Локальная версия сама читала `import.meta.env.VITE_TILESERVER_URL` — общий
+ *    компонент принимает `styleUrl` пропом и в `env` не лезет (по заданию тикета DTJ-409,
+ *    домен-агностичность). Чтение `env` осталось здесь, на границе фичи.
+ * 3. **`onViewportChange`/`minZoom`.** Локальная версия имела оба (нужны экрану `/map`, DTJ-199) —
+ *    общий `MapView` их не нёс. Добавлены В `packages/ui/src/components/map-view/map-view.tsx`
+ *    ЭТИМ тикетом (прямо разрешено постановкой DTJ-431) — `BBox` (`@dorutj/ui`) структурно
+ *    идентичен `BboxCoordinates` (`@dorutj/contracts`), проброс без маппинга полей.
  *
- * Перф (дешёвый Android, слабый интернет): `maplibre-gl` (JS+CSS) грузится ЛЕНИВО через
- * динамический `import()` внутри эффекта, а не статическим импортом — модуль не попадает в
- * основной бандл и не блокирует первую отрисовку остального интерфейса, пока `MapView` не
- * смонтирован в реальном viewport.
+ * CSS: `maplibre-gl/dist/maplibre-gl.css` импортируется ЗДЕСЬ, потребителем (DTJ-431, «Отдельный
+ * пункт: CSS карты») — `packages/ui` его больше не тянет в свой library-bundle (Vite в
+ * library-mode не делит CSS по чанкам динамических импортов, раздувало `dist/ui.css` на ~70 КБ на
+ * КАЖДОМ экране приложения, включая экраны без карты; см. отчёт сдачи, числа до/после).
  */
 
 export interface MapViewProps {
@@ -37,150 +51,32 @@ export interface MapViewProps {
   readonly onPinClick?: (pharmacyId: string) => void
 }
 
-type MapStatus = 'loading' | 'ready' | 'unavailable'
-
-const PIN_MARKER_COLOR = 'var(--color-brand-primary)'
-const POPUP_OFFSET_PX = 24
-const NOOP_VIEWPORT_CHANGE = (): void => undefined
-
 function readTileServerStyleUrl(): string | undefined {
   const value = import.meta.env.VITE_TILESERVER_URL
   return typeof value === 'string' && value.length > 0 ? value : undefined
 }
 
-async function loadMapLibre(): Promise<typeof MapLibreGL> {
-  const [mapLibreModule] = await Promise.all([
-    import('maplibre-gl'),
-    import('maplibre-gl/dist/maplibre-gl.css'),
-  ])
-  return mapLibreModule
+function pinToPoint(pin: MapPin): MapPoint {
+  return { id: pin.pharmacyId, lat: pin.lat, lng: pin.lon, label: pin.name }
 }
 
-interface OpenPinPopupArgs {
-  readonly map: MapLibreGL.Map
-  readonly maplibregl: typeof MapLibreGL
-  readonly pin: MapPin
-}
-
-function openPinPopup({ map, maplibregl, pin }: OpenPinPopupArgs): void {
-  const container = document.createElement('div')
-  const root = createRoot(container)
-  // Попап монтируется в ОТДЕЛЬНОЕ React-дерево (createRoot на DOM-узле maplibre-gl, вне дерева
-  // MapView) — контекст родителя (LocaleProvider) сюда не долетает. Регресс DTJ-198: без своего
-  // LocaleProvider `useLocale()` внутри PharmacyPinPopup падал с "должен использоваться внутри
-  // LocaleProvider". Персистентная локаль читается из того же localStorage, что и у родителя.
-  root.render(
-    <LocaleProvider>
-      <PharmacyPinPopup pin={pin} />
-    </LocaleProvider>,
-  )
-
-  const popup = new maplibregl.Popup({ offset: POPUP_OFFSET_PX })
-    .setLngLat([pin.lon, pin.lat])
-    .setDOMContent(container)
-    .addTo(map)
-
-  popup.on('close', () => {
-    root.unmount()
-  })
-}
-
-interface CreatePinMarkerArgs {
-  readonly map: MapLibreGL.Map
-  readonly maplibregl: typeof MapLibreGL
-  readonly pin: MapPin
-  readonly onPinClick?: ((pharmacyId: string) => void) | undefined
-}
-
-function createPinMarker({ map, maplibregl, pin, onPinClick }: CreatePinMarkerArgs): MapLibreGL.Marker {
-  const marker = new maplibregl.Marker({ color: PIN_MARKER_COLOR }).setLngLat([pin.lon, pin.lat]).addTo(map)
-
-  marker.getElement().addEventListener('click', () => {
-    onPinClick?.(pin.pharmacyId)
-    openPinPopup({ map, maplibregl, pin })
-  })
-
-  return marker
+/** `BBox` (`@dorutj/ui`) и `BboxCoordinates` (`@dorutj/contracts`) — одинаковые 4 поля
+ * (`lonMin`/`latMin`/`lonMax`/`latMax`), см. JSDoc файла п.3. Явная функция вместо `as`-каста —
+ * ловит расхождение форм на этапе компиляции, если один из типов когда-нибудь разойдётся. */
+function toBboxCoordinates(bbox: BBox): BboxCoordinates {
+  return { lonMin: bbox.lonMin, latMin: bbox.latMin, lonMax: bbox.lonMax, latMax: bbox.latMax }
 }
 
 export const MapView = ({ center, zoom, minZoom, pins, onViewportChange, onPinClick }: MapViewProps): ReactElement => {
-  const { t } = useT(useLocale().locale)
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const mapRef = useRef<MapLibreGL.Map | null>(null)
-  const mapLibreModuleRef = useRef<typeof MapLibreGL | null>(null)
-  const initialViewRef = useRef({ center, zoom })
-  const [status, setStatus] = useState<MapStatus>('loading')
-  const [readyMap, setReadyMap] = useState<MapLibreGL.Map | null>(null)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
+  const [selectedPharmacyId, setSelectedPharmacyId] = useState<string | null>(null)
 
-  useEffect(() => {
-    const container = containerRef.current
-    const styleUrl = readTileServerStyleUrl()
-    if (container === null || styleUrl === undefined) {
-      setStatus('unavailable')
-      return undefined
-    }
+  const points = useMemo(() => pins.map(pinToPoint), [pins])
+  const selectedPin = pins.find((pin) => pin.pharmacyId === selectedPharmacyId) ?? null
+  const styleUrl = readTileServerStyleUrl()
 
-    let cancelled = false
-    let hasLoadedOnce = false
-
-    loadMapLibre()
-      .then((maplibregl) => {
-        if (cancelled) {
-          return
-        }
-        mapLibreModuleRef.current = maplibregl
-        const { center: initialCenter, zoom: initialZoom } = initialViewRef.current
-        const map = new maplibregl.Map({
-          container,
-          style: styleUrl,
-          center: [initialCenter.lon, initialCenter.lat],
-          zoom: initialZoom,
-          ...(minZoom !== undefined ? { minZoom } : {}),
-        })
-        map.on('load', () => {
-          hasLoadedOnce = true
-          if (!cancelled) {
-            mapRef.current = map
-            setReadyMap(map)
-            setStatus('ready')
-          }
-        })
-        map.on('error', () => {
-          if (!hasLoadedOnce && !cancelled) {
-            setStatus('unavailable')
-          }
-        })
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setStatus('unavailable')
-        }
-      })
-
-    return () => {
-      cancelled = true
-      mapRef.current?.remove()
-      mapRef.current = null
-      setReadyMap(null)
-    }
-  }, [minZoom])
-
-  useEffect(() => {
-    const maplibregl = mapLibreModuleRef.current
-    if (readyMap === null || maplibregl === null) {
-      return undefined
-    }
-    const markers = pins.map((pin) => createPinMarker({ map: readyMap, maplibregl, pin, onPinClick }))
-    return () => {
-      markers.forEach((marker) => {
-        marker.remove()
-      })
-    }
-  }, [readyMap, pins, onPinClick])
-
-  useMapViewport({ map: readyMap, onViewportChange: onViewportChange ?? NOOP_VIEWPORT_CHANGE })
-
-  if (status === 'unavailable') {
+  if (styleUrl === undefined) {
     return (
       <div
         className="flex h-full w-full items-center justify-center bg-surface p-4 text-center text-sm text-ink-muted"
@@ -192,5 +88,33 @@ export const MapView = ({ center, zoom, minZoom, pins, onViewportChange, onPinCl
     )
   }
 
-  return <div ref={containerRef} className="h-full w-full" data-testid="map-view-canvas" />
+  const handleSelect = (pointId: string): void => {
+    setSelectedPharmacyId(pointId)
+    onPinClick?.(pointId)
+  }
+
+  const handleViewportChange = (bbox: BBox): void => {
+    onViewportChange?.(toBboxCoordinates(bbox))
+  }
+
+  return (
+    <div className="relative h-full w-full">
+      <UiMapView
+        points={points}
+        center={{ lat: center.lat, lng: center.lon }}
+        zoom={zoom}
+        {...(minZoom !== undefined ? { minZoom } : {})}
+        mode="full"
+        styleUrl={styleUrl}
+        onSelect={handleSelect}
+        onViewportChange={handleViewportChange}
+        className="h-full w-full"
+      />
+      {selectedPin !== null ? (
+        <div className="absolute inset-x-2 bottom-2" data-testid="map-view-selected-pin-panel">
+          <PharmacyPinPopup pin={selectedPin} />
+        </div>
+      ) : null}
+    </div>
+  )
 }

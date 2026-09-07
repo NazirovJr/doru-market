@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react'
 import type { CartItemResponseDto } from '@dorutj/contracts'
-import type { TranslateFunction } from '@dorutj/i18n'
+import { formatMoney, type Locale, type TranslateFunction } from '@dorutj/i18n'
+import { Card, PriceTag } from '@dorutj/ui'
 
 /**
  * `pharmacy-group-card.tsx` (DTJ-234, «Что сделать» §3) — одна карточка-группа по аптеке:
@@ -22,19 +23,29 @@ import type { TranslateFunction } from '@dorutj/i18n'
  * Тап-зоны ≥48×48px (SRS-UX-002) — `min-h-12 min-w-12` (Tailwind-шкала: `12` = 3rem = 48px)
  * на каждой кнопке, hit-slop через padding/центрирование содержимого, не через раздувание
  * видимого символа (`−`/`+`/`×` остаются обычного размера внутри увеличенной тап-зоны).
+ *
+ * DTJ-431: `formatSomoni()` (`(priceDiram/100).toFixed(2)`) удалён — цена строки корзины теперь
+ * `PriceTag` (`@dorutj/ui`, DTJ-407), подытог аптеки — `formatMoney()` (`@dorutj/i18n`, DTJ-402),
+ * единственные легальные способы печатать деньги (AGENTS.md §6). `PharmacyOfferRow` (общий
+ * компонент строки предложения аптеки, DTJ-407) НЕ используется здесь: у него нет степпера
+ * количества/кнопки удаления — только одиночный CTA «В корзину», не подходит для строки, которая
+ * УЖЕ в корзине и требует +/−/удалить (см. отчёт сдачи DTJ-431, известное расхождение API, не
+ * зафиксированное тикетом заранее). `Card` (DTJ-404) применён как внешний контейнер — часть
+ * сопоставления таблицы тикета выполнена, часть (`PharmacyOfferRow`) — нет, обоснованно.
+ *
+ * `locale` — ОБЯЗАТЕЛЬНЫЙ проп (не `useLocale()` внутри компонента): `pharmacy-group-card.spec.tsx`
+ * рендерит компонент изолированно, без `LocaleProvider` (тот же приём, что `AnalogCard`), поэтому
+ * локаль приходит явным пропом, как и `t`; `cart-screen.tsx` уже вызывает `useLocale()` для `t` —
+ * передаёт то же значение `locale` дальше.
  */
 
-const DIRAM_PER_SOMONI = 100
 const MIN_QUANTITY = 1
 const TAP_ZONE_CLASS = 'inline-flex min-h-12 min-w-12 items-center justify-center rounded-md text-base'
-
-function formatSomoni(priceDiram: number): string {
-  return (priceDiram / DIRAM_PER_SOMONI).toFixed(2)
-}
 
 interface CartItemRowProps {
   readonly item: CartItemResponseDto
   readonly hasStockWarning: boolean
+  readonly locale: Locale
   readonly onRemove: (cartItemId: string) => void
   readonly onQuantityChange: (cartItemId: string, quantity: number) => void
   readonly t: TranslateFunction
@@ -49,6 +60,7 @@ interface CartItemRowProps {
 const CartItemRow = ({
   item,
   hasStockWarning,
+  locale,
   onRemove,
   onQuantityChange,
   t,
@@ -66,7 +78,7 @@ const CartItemRow = ({
           {item.medicineTradeName}
         </span>
         <span className="text-xs text-ink-muted" data-testid="cart-item-price">
-          {t('catalog.search.price', { price: formatSomoni(item.priceDiram) })}
+          <PriceTag amountDiram={item.priceDiram} locale={locale} />
         </span>
       </div>
       <div className="flex items-center gap-1">
@@ -119,6 +131,7 @@ export interface PharmacyGroupCardProps {
   readonly items: readonly CartItemResponseDto[]
   /** `group-warnings.ts#GroupedCartWarnings.byCartItemId` — см. JSDoc `CartItemRow`. */
   readonly warningCartItemIds: ReadonlySet<string>
+  readonly locale: Locale
   readonly onRemove: (cartItemId: string) => void
   readonly onQuantityChange: (cartItemId: string, quantity: number) => void
   readonly t: TranslateFunction
@@ -130,15 +143,12 @@ export const PharmacyGroupCard = ({
   subtotalDiram,
   items,
   warningCartItemIds,
+  locale,
   onRemove,
   onQuantityChange,
   t,
 }: PharmacyGroupCardProps): ReactElement => (
-  <section
-    className="rounded-md border border-line bg-surface p-3"
-    data-testid="pharmacy-group-card"
-    data-pharmacy-id={pharmacyId}
-  >
+  <Card data-testid="pharmacy-group-card" data-pharmacy-id={pharmacyId}>
     <h3 className="text-sm font-semibold text-ink" data-testid="pharmacy-group-name">
       {pharmacyName ?? t('cart.pharmacy_unknown_name')}
     </h3>
@@ -148,6 +158,7 @@ export const PharmacyGroupCard = ({
           key={item.id}
           item={item}
           hasStockWarning={warningCartItemIds.has(item.id)}
+          locale={locale}
           onRemove={onRemove}
           onQuantityChange={onQuantityChange}
           t={t}
@@ -155,7 +166,7 @@ export const PharmacyGroupCard = ({
       ))}
     </ul>
     <p className="mt-2 text-right text-sm font-semibold text-ink" data-testid="pharmacy-group-subtotal">
-      {t('cart.pharmacy_subtotal', { amount: formatSomoni(subtotalDiram) })}
+      {t('cart.pharmacy_subtotal', { amount: formatMoney(subtotalDiram, locale) })}
     </p>
-  </section>
+  </Card>
 )

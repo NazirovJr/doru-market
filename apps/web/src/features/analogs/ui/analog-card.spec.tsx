@@ -70,9 +70,10 @@ describe('AnalogCard (DTJ-104)', () => {
     expect(screen.getByText('ОАО ФармПром')).toBeInTheDocument()
   })
 
-  it('5. цена форматируется через formatSavings и подставляется в ключ catalog.search.price', () => {
+  it('5. [DTJ-431] цена форматируется через PriceTag/formatMoney (@dorutj/ui), не локальным formatSavings', () => {
     render(<AnalogCard item={buildItem({ cheapestOffer: { ...buildItem().cheapestOffer, priceDiram: 6500 } })} locale="tj" t={stubT} />)
-    // Запятая, не точка — locale="tj" маппится на реальный BCP-47 `'tg'` (см. JSDoc model/format-savings.ts).
-    expect(screen.getByTestId('analog-card-price')).toHaveTextContent('catalog.search.price:price=65,00')
+    // Запятая, не точка — locale="tj" маппится на реальный BCP-47 `'tg'` (см. JSDoc `@dorutj/i18n/format-money.ts`).
+    // Суффикс "сомонӣ" — часть вывода formatMoney (в отличие от прежнего catalog.search.price, который его не добавлял).
+    expect(screen.getByTestId('analog-card-price')).toHaveTextContent('65,00 сомонӣ')
   })
 })

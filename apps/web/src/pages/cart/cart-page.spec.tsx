@@ -45,8 +45,9 @@ describe('CartPage (DTJ-234)', () => {
         </LocaleProvider>
       </QueryClientProvider>,
     )
+    // DTJ-431: EmptyState теперь @dorutj/ui (role="status"), без testid прежнего локального компонента.
     await waitFor(() => {
-      expect(screen.getByTestId('cart-empty-state')).toBeInTheDocument()
+      expect(screen.getByRole('status')).toBeInTheDocument()
     })
   })
 })
