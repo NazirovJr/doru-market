@@ -7,7 +7,6 @@
  * `no-cross-module-deep-import`). Тот же приём, что `modules/payments/index.ts`
  * (`PAYMENTS_FACADE`)/`modules/returns/index.ts` (`RETURNS_FACADE`).
  */
-
 /** DI-токен провайдера `SupportFacade` (`{ provide: SUPPORT_FACADE, useFactory: ... }`, см. `support.module.ts`). */
 export const SUPPORT_FACADE = Symbol.for('@dorutj/support/support-facade')
 
@@ -19,6 +18,13 @@ export const SUPPORT_FACADE = Symbol.for('@dorutj/support/support-facade')
  * `support.module.ts`, оборачивающий `CreateSupportTicketUseCase`/`CreateAutoSupportTicketUseCase`/
  * `EscalateTicketPriorityUseCase`. Домен/application НЕ реэкспортируются целиком — только
  * перечисленное ниже (`02` §1.2: «Всё остальное внутри модуля — приватно»).
+ *
+ * При слиянии `feat/ep-11-returns-flow` в `development` (EP-11, DTJ-273) выяснилось, что этот
+ * же метод нужен параллельно разрабатывавшемуся `returns → support` потребителю
+ * (`ReturnsSupportFacadeAdapter`, SRS-RET-003) — под другим, временным именем
+ * `createAutoOrManualTicket`. Оставлен единственный, уже реализованный (DTJ-281) метод
+ * `createAutoTicket` — `ReturnsSupportFacadeAdapter` адаптирован под его реальную сигнатуру
+ * при разрешении конфликта слияния, свой временный метод не заводит.
  */
 export type {
   SupportFacade,

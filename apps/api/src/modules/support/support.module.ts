@@ -39,6 +39,14 @@
  * контроллер первый в этом модуле использующий `AuthGuard`/`RolesGuard` (`EscalateTicketPriorityController`,
  * DTJ-280, использует отдельный `SupportInternalServiceGuard`, не `AuthModule`) — тот же приём,
  * что `imports: [AuthModule, ...]` в `payments.module.ts`/`orders.module.ts`.
+ *
+ * При слиянии `feat/ep-11-returns-flow` (EP-11, DTJ-273) в `development`: та ветка независимо
+ * добавляла ПЕРВЫЙ провайдер `SUPPORT_FACADE` через `useFactory`, оборачивающий только
+ * `CreateSupportTicketUseCase.execute` в метод `createAutoOrManualTicket` — более ранний и бедный
+ * вариант той же идеи, что уже реализованный ниже (DTJ-281) трёхметодный фасад. Оставлена версия
+ * DTJ-281 (полнее, независимо верифицирована `pnpm verify` — apps/api 2171 тестов, см.
+ * `docs/STATE-AND-RESUME-POINT.md` §13.25); `returns`-сторона (`ReturnsSupportFacadeAdapter`)
+ * адаптирована под неё при разрешении конфликта.
  */
 import { Module } from '@nestjs/common'
 import { AuthModule } from '@/modules/auth/index.js'
@@ -90,6 +98,10 @@ import { SUPPORT_FACADE, type SupportFacade } from './index.js'
       inject: [CreateSupportTicketUseCase, CreateAutoSupportTicketUseCase, EscalateTicketPriorityUseCase],
     },
   ],
+  // DTJ-273 — `SUPPORT_FACADE` виден `ReturnsModule` через `imports: [SupportModule]` (её module-local,
+  // НЕ `@Global()` — единственный сегодняшний межмодульный потребитель, тот же явный приём, что
+  // `TenancyModule`/`PaymentsModule` в `orders.module.ts`, не расширение видимости молча).
+  exports: [SUPPORT_FACADE],
 })
 // NestJS module marker class: Nest требует класс-носитель декоратора @Module, providers
 // регистрируются декоратором, а не телом класса (тот же приём, что modules/payments/orders).

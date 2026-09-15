@@ -1,5 +1,5 @@
 /**
- * Интеграционный тест миграции `0037_returns_disputes_support.sql` (EP-11/14, DTJ-270,
+ * Интеграционный тест миграции `0039_returns_disputes_support.sql` (EP-11/14, DTJ-270,
  * тест-план тикета) — РЕАЛЬНЫЙ Postgres. Testcontainers НЕ используется (решение архитектора,
  * D-EP09-14/D-EP09-31, `reports/EP09-CTO-BRIEF.md` — повтор обоснования из
  * `payments-migration.integration.spec.ts`, ближайший прецедент для Группы E/F): тикет
@@ -56,7 +56,7 @@ async function isPostgresReachable(url: string): Promise<boolean> {
 const postgresAvailable = await isPostgresReachable(TEST_DATABASE_URL)
 const migratorAvailable = postgresAvailable && (await isPostgresReachable(MIGRATOR_DATABASE_URL))
 
-const MIGRATION_SQL_PATH = fileURLToPath(new URL('../../../migrations/0037_returns_disputes_support.sql', import.meta.url))
+const MIGRATION_SQL_PATH = fileURLToPath(new URL('../../../migrations/0039_returns_disputes_support.sql', import.meta.url))
 const MIGRATION_SQL = readFileSync(MIGRATION_SQL_PATH, 'utf8')
 
 const RETURNS_TABLES = ['order_returns', 'order_disputes', 'dispute_status_history'] as const
@@ -98,7 +98,7 @@ async function seedOrderAndTicket(
   return { orderId, userId, ticketId }
 }
 
-describe.skipIf(!postgresAvailable)('0037_returns_disputes_support.sql — Группа F (DTJ-270)', () => {
+describe.skipIf(!postgresAvailable)('0039_returns_disputes_support.sql — Группа F (DTJ-270)', () => {
   let pool: Pool
   let migratorPool: Pool
 
