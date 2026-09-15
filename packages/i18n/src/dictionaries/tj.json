@@ -161,5 +161,20 @@
   "customer.support.form.description_label": "Мушкилиро тасвир кунед",
   "customer.support.form.submit": "Фиристодан",
   "customer.support.form.submit_pending": "Фиристода мешавад…",
-  "customer.support.form.success": "Мурожиат фиристода шуд. Мо ба зудӣ ҷавоб медиҳем."
+  "customer.support.form.success": "Мурожиат фиристода шуд. Мо ба зудӣ ҷавоб медиҳем.",
+  "admin.nav.tenants": "Тенантҳо",
+  "admin.nav.feature_flags": "Фича-флагҳо",
+  "admin.nav.pharmacies": "Дорухонаҳо",
+  "admin.nav.users": "Корбарон",
+  "admin.nav.orders": "Фармоишҳо",
+  "admin.nav.finance": "Молия",
+  "admin.nav.settings": "Танзимот",
+  "admin.nav.my_pharmacies": "Нуқтаҳои ман",
+  "admin.nav.my_orders": "Фармоишҳо",
+  "admin.nav.staff": "Кормандон",
+  "admin.nav.integration_keys": "Калидҳои 1С",
+  "admin.nav.reports": "Ҳисоботҳо",
+  "admin.nav.schedule": "Ҷадвал",
+  "admin.forbidden.title": "Дастрасӣ манъ аст",
+  "admin.forbidden.message": "Шумо ба ин бахш дастрасӣ надоред."
 }

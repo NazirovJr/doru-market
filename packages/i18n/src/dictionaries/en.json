@@ -161,5 +161,20 @@
   "customer.support.form.description_label": "Describe the issue",
   "customer.support.form.submit": "Send",
   "customer.support.form.submit_pending": "Sending…",
-  "customer.support.form.success": "Your ticket has been sent. We'll respond soon."
+  "customer.support.form.success": "Your ticket has been sent. We'll respond soon.",
+  "admin.nav.tenants": "Tenants",
+  "admin.nav.feature_flags": "Feature flags",
+  "admin.nav.pharmacies": "Pharmacies",
+  "admin.nav.users": "Users",
+  "admin.nav.orders": "Orders",
+  "admin.nav.finance": "Finance",
+  "admin.nav.settings": "Settings",
+  "admin.nav.my_pharmacies": "My locations",
+  "admin.nav.my_orders": "Orders",
+  "admin.nav.staff": "Staff",
+  "admin.nav.integration_keys": "1C integration keys",
+  "admin.nav.reports": "Reports",
+  "admin.nav.schedule": "Schedule",
+  "admin.forbidden.title": "Access denied",
+  "admin.forbidden.message": "You don't have access to this section."
 }

@@ -161,5 +161,20 @@
   "customer.support.form.description_label": "Опишите проблему",
   "customer.support.form.submit": "Отправить",
   "customer.support.form.submit_pending": "Отправляем…",
-  "customer.support.form.success": "Обращение отправлено. Мы ответим в ближайшее время."
+  "customer.support.form.success": "Обращение отправлено. Мы ответим в ближайшее время.",
+  "admin.nav.tenants": "Тенанты",
+  "admin.nav.feature_flags": "Фиче-флаги",
+  "admin.nav.pharmacies": "Аптеки",
+  "admin.nav.users": "Пользователи",
+  "admin.nav.orders": "Заказы",
+  "admin.nav.finance": "Финансы",
+  "admin.nav.settings": "Настройки",
+  "admin.nav.my_pharmacies": "Мои точки",
+  "admin.nav.my_orders": "Заказы",
+  "admin.nav.staff": "Сотрудники",
+  "admin.nav.integration_keys": "Ключи 1С",
+  "admin.nav.reports": "Отчёты",
+  "admin.nav.schedule": "Расписание",
+  "admin.forbidden.title": "Доступ запрещён",
+  "admin.forbidden.message": "У вас нет доступа к этому разделу."
 }

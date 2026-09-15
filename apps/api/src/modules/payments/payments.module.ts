@@ -398,7 +398,10 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
     },
     TransferPayoutBatchUseCase,
   ],
-  exports: [PaymentInvoiceAdapter, RefundFacadeAdapter],
+  // DTJ-350 (EP-15, admin) — `PAYMENTS_FACADE` был забинжен (DTJ-249), но не экспортирован:
+  // ничто вне `payments` ещё не потребляло его. `admin.module.ts` — первый внешний потребитель
+  // (`useExisting` на свой узкий `PAYMENTS_FACADE_PORT`), гостевая правка одной строки.
+  exports: [PaymentInvoiceAdapter, RefundFacadeAdapter, PAYMENTS_FACADE],
 })
 export class PaymentsModule implements OnModuleDestroy {
   public constructor(@Inject(MOCK_BANK_AUTO_PAY_QUEUE) private readonly autoPayQueue: Queue<MockBankAutoPayJobData>) {}

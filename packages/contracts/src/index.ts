@@ -33,3 +33,4 @@ export * from './support.js'
 // директория — избегает коллизии с существующим './orders.js', см. отчёт сдачи тикета).
 export * from './orders-pharmacy-terminal.contracts.js'
 export * from './delivery/delivery.contracts.js'
+export * from './admin/index.js'
