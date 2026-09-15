@@ -49,7 +49,9 @@ export const inventorySyncErrors = pgTable(
         'barcode_invalid',
         'medicine_not_found',
         'unmatched_medicine',
-        'duplicate_in_batch'
+        'duplicate_in_batch',
+        'ambiguous_date_format',
+        'missing_required_field'
       )`,
     ),
   ],

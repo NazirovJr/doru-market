@@ -62,6 +62,8 @@ export interface InventorySyncBatchCreateProps {
   readonly fullSyncSessionId?: string
   readonly pageNumber?: number
   readonly isLastPage?: boolean
+  /** DTJ-161/163/164 — группирующий UUID Excel-загрузки. `undefined` → `null` (каналы без группировки). */
+  readonly sourceUploadId?: string
 }
 
 export interface InventorySyncBatchSnapshot {
@@ -80,6 +82,8 @@ export interface InventorySyncBatchSnapshot {
   readonly completedAt: Date | null
   readonly errorSummary: readonly { readonly rowIndex: number; readonly reason: string }[] | null
   readonly note: string | null
+  /** Optional (не все существующие вызовы `restore(...)` его знают) — `undefined` трактуется как `null`. */
+  readonly sourceUploadId?: string | null
 }
 
 const MAX_TOTAL_ROWS = 100_000
@@ -101,6 +105,7 @@ export class InventorySyncBatch {
   readonly pageNumber: number
   readonly isLastPage: boolean
   readonly note: string | null
+  readonly sourceUploadId: string | null
 
   /** Единственный параметр-снапшот (C1/max-params) — поля см. `InventorySyncBatchSnapshot`. */
   private constructor(snapshot: InventorySyncBatchSnapshot) {
@@ -113,6 +118,7 @@ export class InventorySyncBatch {
     this.pageNumber = snapshot.pageNumber
     this.isLastPage = snapshot.isLastPage
     this.note = snapshot.note
+    this.sourceUploadId = snapshot.sourceUploadId ?? null
     this._receivedAt = snapshot.receivedAt
     this._status = snapshot.status
     this._acceptedRows = snapshot.acceptedRows
@@ -149,6 +155,7 @@ export class InventorySyncBatch {
       completedAt: null,
       errorSummary: null,
       note,
+      sourceUploadId: props.sourceUploadId ?? null,
     })
   }
 
@@ -305,6 +312,7 @@ export class InventorySyncBatch {
       completedAt: this._completedAt,
       errorSummary: this._errorSummary,
       note: this.note,
+      sourceUploadId: this.sourceUploadId,
     }
   }
 }

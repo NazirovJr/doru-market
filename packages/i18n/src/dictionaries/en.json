@@ -96,5 +96,14 @@
   "checkout.failed_group.insufficient_stock": "Not enough stock available.",
   "checkout.failed_group.controlled_substance_forbidden": "This medicine is controlled and cannot be ordered online.",
   "checkout.failed_group.generic": "This pharmacy's order could not be placed.",
-  "pharmacy.page.coming_soon": "Screen coming soon"
+  "pharmacy.page.coming_soon": "Screen coming soon",
+  "inventory.sync_row_error.invalid_price": "Invalid price",
+  "inventory.sync_row_error.invalid_quantity": "Invalid quantity",
+  "inventory.sync_row_error.expires_at_invalid": "Invalid expiry date",
+  "inventory.sync_row_error.barcode_invalid": "Invalid barcode",
+  "inventory.sync_row_error.medicine_not_found": "Medicine not found in the catalog",
+  "inventory.sync_row_error.unmatched_medicine": "Could not match to the catalog",
+  "inventory.sync_row_error.duplicate_in_batch": "Duplicate row in the batch",
+  "inventory.sync_row_error.ambiguous_date_format": "Ambiguous date format — use DD.MM.YYYY",
+  "inventory.sync_row_error.missing_required_field": "A required field is missing"
 }

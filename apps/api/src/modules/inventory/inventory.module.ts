@@ -45,6 +45,8 @@ import { PHARMACY_SKU_MAPPING_REPOSITORY } from './application/ports/pharmacy-sk
 import { INVENTORY_OUTBOX } from './application/ports/inventory-outbox.port.js'
 import { FULL_SYNC_COMPLETION } from './application/ports/full-sync-completion.port.js'
 import { INVENTORY_SYNC_QUEUE } from './application/ports/inventory-sync-queue.port.js'
+import { EXCEL_INVENTORY_PARSER } from './application/ports/excel-inventory-parser.port.js'
+import { CATALOG_MATCH_QUEUE_READ } from './application/ports/catalog-match-queue-read.port.js'
 import { PHARMACY_API_KEY_VERIFICATION } from './application/ports/pharmacy-api-key-verification.port.js'
 import { InMemoryPharmacyApiKeyVerificationAdapter } from './infrastructure/adapters/in-memory-pharmacy-api-key-verification.adapter.js'
 import { PharmacyApiKeyGuard } from './presentation/guards/pharmacy-api-key.guard.js'
@@ -56,7 +58,15 @@ import { InMemoryFullSyncCompletion } from './infrastructure/adapters/in-memory-
 import { IngestInventoryBatchUseCase } from './application/use-cases/ingest-inventory-batch.use-case.js'
 import { IngestInventoryBatchWithMatchingUseCase } from './application/use-cases/ingest-inventory-batch-with-matching.use-case.js'
 import { InventoryBatchUpdateController } from './presentation/controllers/inventory-batch-update.controller.js'
+import { InventorySyncBatchStatusController } from './presentation/controllers/inventory-sync-batch-status.controller.js'
+import { InventoryImportTemplateController } from './presentation/controllers/inventory-import-template.controller.js'
+import { InventoryExcelImportController } from './presentation/controllers/inventory-excel-import.controller.js'
+import { InventoryManualEntryController } from './presentation/controllers/inventory-manual-entry.controller.js'
+import { InventorySyncBatchesReportController } from './presentation/controllers/inventory-sync-batches-report.controller.js'
+import { InventoryExcelErrorReportController } from './presentation/controllers/inventory-excel-error-report.controller.js'
 import { CompositeInventoryMatcherService } from './application/services/composite-inventory-matcher.service.js'
+import { InventorySyncReportQueryService } from './application/services/inventory-sync-report-query.service.js'
+import { PersistInventorySyncBatchService } from './application/services/persist-inventory-sync-batch.service.js'
 import { DetectStuckFullSyncSessionsUseCase } from './application/use-cases/detect-stuck-full-sync-sessions.use-case.js'
 import { FullSyncSessionWatchdogCron } from './infrastructure/jobs/full-sync-session-watchdog.cron.js'
 import { BullmqInventorySyncQueueAdapter } from './infrastructure/adapters/bullmq-inventory-sync-queue.adapter.js'
@@ -66,7 +76,11 @@ import { DrizzlePharmacyInventoryRepository } from './infrastructure/adapters/dr
 import { DrizzlePharmacySkuMappingRepository } from './infrastructure/adapters/drizzle-pharmacy-sku-mapping.repository.js'
 import { DrizzleInventoryOutboxAdapter } from './infrastructure/adapters/drizzle-inventory-outbox.adapter.js'
 import { DrizzleInventorySyncBatchRepository } from './infrastructure/adapters/drizzle-inventory-sync-batch.repository.js'
+import { DrizzleInventorySyncReportRepository } from './infrastructure/adapters/drizzle-inventory-sync-report.repository.js'
 import { DrizzlePharmacyApiKeyVerificationAdapter } from './infrastructure/adapters/drizzle-pharmacy-api-key-verification.adapter.js'
+import { XlsxExcelInventoryParserAdapter } from './infrastructure/adapters/xlsx-excel-inventory-parser.adapter.js'
+import { DrizzleCatalogMatchQueueReadAdapter } from './infrastructure/adapters/drizzle-catalog-match-queue-read.adapter.js'
+import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/in-memory-catalog-match-queue-read.adapter.js'
 
 @Module({
   imports: [AuthModule, RedisModule],
@@ -81,6 +95,11 @@ import { DrizzlePharmacyApiKeyVerificationAdapter } from './infrastructure/adapt
     { provide: FULL_SYNC_COMPLETION, useClass: DrizzleFullSyncCompletionAdapter },
     { provide: INVENTORY_SYNC_QUEUE, useClass: BullmqInventorySyncQueueAdapter },
     { provide: PHARMACY_API_KEY_VERIFICATION, useClass: DrizzlePharmacyApiKeyVerificationAdapter },
+    // DTJ-160: единственная реализация — `exceljs`, тот же пакет, что генератор шаблона DTJ-159.
+    { provide: EXCEL_INVENTORY_PARSER, useClass: XlsxExcelInventoryParserAdapter },
+    // DTJ-163: узкий read-порт к catalog_match_queue (чужая таблица, см. JSDoc порта).
+    { provide: CATALOG_MATCH_QUEUE_READ, useClass: DrizzleCatalogMatchQueueReadAdapter },
+    InMemoryCatalogMatchQueueReadAdapter,
     InMemoryPharmacyApiKeyVerificationAdapter,
     PharmacyApiKeyGuard,
     InMemoryPharmacyInventoryRepository,
@@ -91,6 +110,10 @@ import { DrizzlePharmacyApiKeyVerificationAdapter } from './infrastructure/adapt
     IngestInventoryBatchUseCase,
     IngestInventoryBatchWithMatchingUseCase,
     CompositeInventoryMatcherService,
+    InventorySyncReportQueryService,
+    // DTJ-161: общий шаг «создать батч + raw items + outbox queued» — REST (DTJ-157) и
+    // Excel-import (этот тикет), см. её JSDoc.
+    PersistInventorySyncBatchService,
     DetectStuckFullSyncSessionsUseCase,
     FullSyncSessionWatchdogCron,
     BullmqInventorySyncQueueAdapter,
@@ -102,8 +125,20 @@ import { DrizzlePharmacyApiKeyVerificationAdapter } from './infrastructure/adapt
     // `DrizzleInventorySyncBatchRepository.appendErrors` (делегирование,
     // см. JSDoc `drizzle-inventory-sync-batch.repository.ts`).
     DrizzleInventorySyncErrorsRepository,
+    // DTJ-163/164: read-side отчёта кабинета, делегирование из
+    // `DrizzleInventorySyncBatchRepository` (см. её JSDoc) — самостоятельный
+    // провайдер, тот же приём, что `DrizzleInventorySyncErrorsRepository`.
+    DrizzleInventorySyncReportRepository,
   ],
-  controllers: [InventoryBatchUpdateController],
+  controllers: [
+    InventoryBatchUpdateController,
+    InventorySyncBatchStatusController,
+    InventoryImportTemplateController,
+    InventoryExcelImportController,
+    InventoryManualEntryController,
+    InventorySyncBatchesReportController,
+    InventoryExcelErrorReportController,
+  ],
   exports: [
     PHARMACY_INVENTORY_REPOSITORY,
     INVENTORY_SYNC_BATCH_REPOSITORY,

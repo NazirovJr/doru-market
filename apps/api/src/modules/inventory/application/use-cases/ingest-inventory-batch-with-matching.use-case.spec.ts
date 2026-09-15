@@ -164,6 +164,27 @@ class FakeInventorySyncBatchRepository implements InventorySyncBatchRepository {
     throw new Error('not used in ingest tests')
   }
 
+  findPharmacyChainId(_pharmacyId: string): Promise<string | null> {
+    throw new Error('not used in ingest tests')
+  }
+
+  findManyForReport(_input: {
+    readonly pharmacyId: string | null
+    readonly chainId: string | null
+    readonly cursor: { readonly v: string; readonly id: string } | null
+    readonly limit: number
+  }): ReturnType<InventorySyncBatchRepository['findManyForReport']> {
+    throw new Error('not used in ingest tests')
+  }
+
+  findRowErrorsByBatchId(_batchId: string): ReturnType<InventorySyncBatchRepository['findRowErrorsByBatchId']> {
+    throw new Error('not used in ingest tests')
+  }
+
+  findBySourceUploadId(_sourceUploadId: string): ReturnType<InventorySyncBatchRepository['findBySourceUploadId']> {
+    throw new Error('not used in ingest tests')
+  }
+
   /** TEST-ONLY: прочитать все накопленные ошибки. */
   getAllErrors(): readonly InventorySyncRowError[] {
     return this.errors
