@@ -58,6 +58,8 @@ export interface SupportTicketSnapshot {
   readonly description: string | null
   readonly firstResponseDueAt: Date | null
   readonly firstRespondedAt: Date | null
+  /** DTJ-280 — последняя эскалация приоритета джобой `SupportSlaMonitorJob`, анти-дребезг повторной эскалации (SQL-скан воркера фильтрует по этому полю). */
+  readonly lastEscalatedAt: Date | null
   readonly createdAt: Date
   readonly updatedAt: Date
 }
@@ -66,6 +68,7 @@ export class SupportTicket {
   private _status: SupportTicketStatus
   private _priority: number
   private _firstRespondedAt: Date | null
+  private _lastEscalatedAt: Date | null
   private _updatedAt: Date
 
   readonly id: string
@@ -91,6 +94,7 @@ export class SupportTicket {
     this._status = snapshot.status
     this._priority = snapshot.priority
     this._firstRespondedAt = snapshot.firstRespondedAt
+    this._lastEscalatedAt = snapshot.lastEscalatedAt
     this._updatedAt = snapshot.updatedAt
   }
 
@@ -113,6 +117,7 @@ export class SupportTicket {
       description: command.description ?? null,
       firstResponseDueAt: shiftDateByMinutes(now, command.firstResponseSlaMinutes),
       firstRespondedAt: null,
+      lastEscalatedAt: null,
       createdAt: now,
       updatedAt: now,
     })
@@ -132,6 +137,11 @@ export class SupportTicket {
 
   get firstRespondedAt(): Date | null {
     return this._firstRespondedAt
+  }
+
+  /** DTJ-280 — момент последней эскалации приоритета (`null`, если тикет ещё ни разу не эскалирован). */
+  get lastEscalatedAt(): Date | null {
+    return this._lastEscalatedAt
   }
 
   get updatedAt(): Date {
@@ -170,9 +180,17 @@ export class SupportTicket {
     this._firstRespondedAt ??= respondedAt
   }
 
-  /** Вызывается джобой эскалации просрочки SLA (DTJ-280, вне периметра этой волны), не пользователем напрямую. */
-  escalatePriority(): void {
+  /**
+   * Вызывается джобой эскалации просрочки SLA (DTJ-280, `SupportSlaMonitorJob` через
+   * `EscalateTicketPriorityUseCase`). Анти-дребезг повторной эскалации (не расти
+   * `priority` на каждый тик шедулера для уже эскалированного, но всё ещё просроченного
+   * тикета) — забота SQL-скана воркера (`last_escalated_at` в `WHERE`, см.
+   * `pg-support-sla-scanner.adapter.ts`), НЕ этого метода: домен здесь остаётся простой
+   * командой "эскалируй сейчас", вызывающий код решает, когда её уместно вызвать.
+   */
+  escalatePriority(now: Date): void {
     this._priority += 1
+    this._lastEscalatedAt = now
   }
 
   /**
@@ -200,6 +218,7 @@ export class SupportTicket {
       description: this.description,
       firstResponseDueAt: this.firstResponseDueAt,
       firstRespondedAt: this._firstRespondedAt,
+      lastEscalatedAt: this._lastEscalatedAt,
       createdAt: this.createdAt,
       updatedAt: this._updatedAt,
     }

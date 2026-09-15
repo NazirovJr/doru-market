@@ -50,6 +50,11 @@ const DEFAULT_BILLING_INVOICE_OVERDUE_GRACE_PERIOD_DAYS = 3
 // DTJ-254, SRS-ORD-035, ticket «Что сделать» п.1: ASSUMPTION буквально из тикета — каждые
 // 2 минуты (короче минимального разумного `pickup_sla_minutes`, дефолт 7).
 const DEFAULT_PICKUP_SLA_TIMEOUT_CRON = '*/2 * * * *'
+// DTJ-280, SRS-ADM-076, ticket «Что сделать» п.4: ASSUMPTION буквально из тикета — каждые 5 минут.
+const DEFAULT_SUPPORT_SLA_MONITOR_CRON = '*/5 * * * *'
+// DTJ-280, ticket «Что сделать» п.3: ASSUMPTION буквально из тикета — 30 минут анти-дребезг
+// повторной эскалации (не растить priority на каждый тик шедулера для уже эскалированного тикета).
+const DEFAULT_SUPPORT_SLA_RE_ESCALATION_MINUTES = 30
 // DTJ-250: ASSUMPTION этого тикета (не зафиксирована буквально в тексте) — ежечасно, ТА ЖЕ
 // каденция, что сосед `PayoutSchedulerJob` (DTJ-249, ticket DTJ-249 «Технический контекст»).
 const DEFAULT_PAYOUT_EXECUTION_CRON = '0 * * * *'
@@ -106,6 +111,13 @@ export const envSchema = z.object({
   UNPAID_ORDER_TIMEOUT_CRON: z.string().min(1).default(DEFAULT_UNPAID_ORDER_TIMEOUT_CRON),
   // DTJ-254, DoD «PickupSlaTimeoutJob интервал — именованная ENV-константа».
   PICKUP_SLA_TIMEOUT_CRON: z.string().min(1).default(DEFAULT_PICKUP_SLA_TIMEOUT_CRON),
+  // DTJ-280, DoD «интервал шедулера и анти-дребезг эскалации — через конфигурацию/ENV».
+  SUPPORT_SLA_MONITOR_CRON: z.string().min(1).default(DEFAULT_SUPPORT_SLA_MONITOR_CRON),
+  SUPPORT_SLA_RE_ESCALATION_MINUTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(DEFAULT_SUPPORT_SLA_RE_ESCALATION_MINUTES),
   // DTJ-250, DoD «PAYOUT_BATCH_SIZE/MOCK_PAYOUT_DELAY_MS — именованные ENV-константы» (интервал
   // джобы — тот же приём, хоть и не назван буквально тикетом, см. DEFAULT_PAYOUT_EXECUTION_CRON).
   PAYOUT_EXECUTION_CRON: z.string().min(1).default(DEFAULT_PAYOUT_EXECUTION_CRON),

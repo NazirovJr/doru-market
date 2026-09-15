@@ -205,6 +205,15 @@ export enum ErrorCode {
   // Файл превышает `EXCEL_IMPORT_MAX_ROWS` строк (ASSUMPTION 20000) — тоже отклоняется
   // целиком ДО построчного разбора (структурная ошибка, не построчная), DTJ-160.
   EXCEL_IMPORT_ROW_LIMIT_EXCEEDED = 'EXCEL_IMPORT_ROW_LIMIT_EXCEEDED', // 400, SRS-INV-014
+
+  // ---- Доменные: модуль support (DTJ-282, EP-14, SRS-ADM-076) — новые коды в конец
+  // каталога (D-27), тот же класс добавления, что модуль 24. Ни один из трёх не найден
+  // среди уже существующих кодов (`TicketNotFoundError`/`TicketAlreadyTerminalError`/
+  // `InvalidTicketStatusTransitionError`, DTJ-278, ранее локальные `Error`-потомки —
+  // централизованы здесь, см. `domain-errors-support.ts`). ----
+  TICKET_NOT_FOUND = 'TICKET_NOT_FOUND', // 404
+  TICKET_ALREADY_TERMINAL = 'TICKET_ALREADY_TERMINAL', // 409
+  INVALID_TICKET_STATUS_TRANSITION = 'INVALID_TICKET_STATUS_TRANSITION', // 409
 }
 
 /** HTTP-статус для каждого `ErrorCode` (`AllExceptionsFilter`, DTJ-018 — единственный фильтр приложения). */
@@ -333,4 +342,8 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
 
   [ErrorCode.EXCEL_TEMPLATE_HEADER_MISMATCH]: 400,
   [ErrorCode.EXCEL_IMPORT_ROW_LIMIT_EXCEEDED]: 400,
+
+  [ErrorCode.TICKET_NOT_FOUND]: 404,
+  [ErrorCode.TICKET_ALREADY_TERMINAL]: 409,
+  [ErrorCode.INVALID_TICKET_STATUS_TRANSITION]: 409,
 }

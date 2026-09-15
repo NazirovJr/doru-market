@@ -16,21 +16,51 @@
  * DTJ-279 (`CreateSupportTicketUseCase` + порты + адаптеры) добавляет провайдеры сюда строками
  * (D-27) — единственная точка создания обращения (SRS-ADM-053/074).
  *
+ * DTJ-280 (`EscalateTicketPriorityUseCase` + `EscalateTicketPriorityController` internal-мост
+ * `apps/worker → apps/api`) добавляет провайдер/контроллер той же строчной аддитивной техникой.
+ *
+ * DTJ-281 (`SupportFacade` реальный, `CreateAutoSupportTicketUseCase`) — `SUPPORT_FACADE`
+ * (`index.ts`) забинжен `useFactory`, оборачивающим три use case'а модуля в форму `SupportFacade`
+ * (тот же приём, что `PAYMENTS_FACADE` в `payments.module.ts`, DTJ-249). С этого тикета
+ * `EscalateTicketPriorityController` тоже вызывает `EscalateTicketPriorityUseCase` ТОЛЬКО через
+ * этот фасад (единообразие точки входа, ticket «Что сделать» п.3) — поэтому порядок объявления
+ * провайдеров ниже важен: `SUPPORT_FACADE` объявлен ПОСЛЕ трёх use case'ов, от которых зависит.
+ *
  * Модуль `disputes` (EP-14, `order_disputes`/`dispute_status_history`) НЕ заводится этим файлом
  * и НЕ входит в этот диапазон тикетов (D-EP11-6) — таблицы существуют как фундамент
  * (`db/schema/support.ts`), домен/use case поверх них — R3-3 за флагом
  * `disputes_workflow_enabled`.
+ *
+ * DTJ-282 — `SupportTicketsController` (REST API обращений, `GET`/`POST .../messages`/
+ * `POST .../status`, `presentation/support-tickets.controller.ts`) + 3 новых use case'а
+ * (`ListSupportTicketsUseCase`/`GetSupportTicketUseCase`/`AddSupportTicketMessageUseCase`/
+ * `ChangeSupportTicketStatusUseCase` — сверх буквального `files_owned` тикета, см. их JSDoc, тот
+ * же приём, что `support-unit-of-work.port.ts` DTJ-279). `imports: [AuthModule]` — ДОБАВЛЕНО:
+ * контроллер первый в этом модуле использующий `AuthGuard`/`RolesGuard` (`EscalateTicketPriorityController`,
+ * DTJ-280, использует отдельный `SupportInternalServiceGuard`, не `AuthModule`) — тот же приём,
+ * что `imports: [AuthModule, ...]` в `payments.module.ts`/`orders.module.ts`.
  */
 import { Module } from '@nestjs/common'
+import { AuthModule } from '@/modules/auth/index.js'
 import { CreateSupportTicketUseCase } from './application/use-cases/create-support-ticket.use-case.js'
+import { CreateAutoSupportTicketUseCase } from './application/use-cases/create-auto-support-ticket.use-case.js'
+import { EscalateTicketPriorityUseCase } from './application/use-cases/escalate-ticket-priority.use-case.js'
+import { ListSupportTicketsUseCase } from './application/use-cases/list-support-tickets.use-case.js'
+import { GetSupportTicketUseCase } from './application/use-cases/get-support-ticket.use-case.js'
+import { AddSupportTicketMessageUseCase } from './application/use-cases/add-support-ticket-message.use-case.js'
+import { ChangeSupportTicketStatusUseCase } from './application/use-cases/change-support-ticket-status.use-case.js'
 import { SUPPORT_TICKETS_REPOSITORY_PROVIDER } from './infrastructure/repositories/drizzle-support-tickets.repository.js'
 import { SUPPORT_ORDERS_FACADE_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-support-orders-facade.adapter.js'
 import { SUPPORT_TENANT_SETTINGS_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-support-tenant-settings.adapter.js'
 import { SUPPORT_UNIT_OF_WORK_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-support-unit-of-work.adapter.js'
 import { SUPPORT_OUTBOX_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-support-outbox.adapter.js'
+import { EscalateTicketPriorityController } from './presentation/internal/escalate-ticket-priority.controller.js'
+import { SupportTicketsController } from './presentation/support-tickets.controller.js'
+import { SUPPORT_FACADE, type SupportFacade } from './index.js'
 
 @Module({
-  controllers: [],
+  imports: [AuthModule],
+  controllers: [EscalateTicketPriorityController, SupportTicketsController],
   providers: [
     SUPPORT_TICKETS_REPOSITORY_PROVIDER,
     SUPPORT_ORDERS_FACADE_DRIZZLE_PROVIDER,
@@ -38,6 +68,27 @@ import { SUPPORT_OUTBOX_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizz
     SUPPORT_UNIT_OF_WORK_DRIZZLE_PROVIDER,
     SUPPORT_OUTBOX_DRIZZLE_PROVIDER,
     CreateSupportTicketUseCase,
+    CreateAutoSupportTicketUseCase,
+    EscalateTicketPriorityUseCase,
+    // DTJ-282 — см. JSDoc блока providers выше.
+    ListSupportTicketsUseCase,
+    GetSupportTicketUseCase,
+    AddSupportTicketMessageUseCase,
+    ChangeSupportTicketStatusUseCase,
+    // DTJ-281 — см. JSDoc блока providers выше.
+    {
+      provide: SUPPORT_FACADE,
+      useFactory: (
+        createTicket: CreateSupportTicketUseCase,
+        createAutoTicket: CreateAutoSupportTicketUseCase,
+        escalatePriority: EscalateTicketPriorityUseCase,
+      ): SupportFacade => ({
+        createTicket: (input) => createTicket.execute(input),
+        createAutoTicket: (input) => createAutoTicket.execute(input),
+        escalateTicketPriority: (ticketId) => escalatePriority.execute({ ticketId }),
+      }),
+      inject: [CreateSupportTicketUseCase, CreateAutoSupportTicketUseCase, EscalateTicketPriorityUseCase],
+    },
   ],
 })
 // NestJS module marker class: Nest требует класс-носитель декоратора @Module, providers

@@ -56,6 +56,14 @@ export const PERMISSIONS = {
   MODERATION_RESOLVE_CATALOG_MATCH: 'moderation:resolve-catalog-match',
   AUDIT_LOG_READ: 'audit-log:read',
   ONE_C_SYNC_HISTORY_READ: '1c-sync:history:read',
+  // DTJ-282 (EP-14, SRS-API-038) — раздел `support:*` не входил в исходную RBAC-матрицу
+  // `12-api-conventions-auth-tenancy.md` §4.1 (только `disputes:*`/`returns:*`), та же ситуация,
+  // что `returns:mark-in-transit` в DTJ-275 — новые строки одной группой в конец каталога (D-27).
+  SUPPORT_CREATE: 'support:create',
+  SUPPORT_READ_OWN: 'support:read:own',
+  SUPPORT_READ_ANY: 'support:read:any',
+  SUPPORT_RESPOND: 'support:respond',
+  SUPPORT_RESOLVE: 'support:resolve',
 } as const
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS]

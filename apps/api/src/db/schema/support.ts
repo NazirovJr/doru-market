@@ -55,6 +55,10 @@ export const supportTickets = pgTable(SUPPORT_TICKETS_TABLE, {
   firstResponseDueAt: timestamp('first_response_due_at', { withTimezone: true }),
   firstRespondedAt: timestamp('first_responded_at', { withTimezone: true }),
   priority: smallint('priority').notNull().default(0),
+  // DTJ-280 (0045_support_ticket_last_escalated_at.sql) — анти-дребезг повторной эскалации
+  // SupportSlaMonitorJob: SQL-скан воркера фильтрует по этому полю (см. JSDoc entity-метода
+  // SupportTicket.escalatePriority()).
+  lastEscalatedAt: timestamp('last_escalated_at', { withTimezone: true }),
 })
 
 export type SupportTicketRow = typeof supportTickets.$inferSelect

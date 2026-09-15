@@ -1,19 +1,12 @@
 /**
- * `TicketNotFoundError` (EP-14, DTJ-278).
- *
- * Локальное определение (не `packages/contracts`) — тот же приём, что `modules/payments/
- * domain/errors/adjustment-requires-reason.error.ts` (DTJ-240): `domain/` `support` не
- * зависит от общего каталога ошибок EP-01, остаётся переносимым без инфраструктуры. Проверено
- * (`grep -rn "TicketNotFoundError" packages/contracts`) — эквивалента нет, дублирования не
- * происходит.
+ * Ре-экспорт `TicketNotFoundError` (`@dorutj/contracts`, `domain-errors-support.ts`, DTJ-282) —
+ * централизован при реализации DTJ-282: `AllExceptionsFilter` (DTJ-018) распознаёт ТОЛЬКО
+ * `instanceof DomainError`, а этот класс изначально (DTJ-278) был обычным `Error`-потомком
+ * («домен остаётся переносимым без инфраструктуры») — DTJ-282 «Что сделать» п.5/DoD прямо
+ * требует `404 TICKET_NOT_FOUND` через «уже установленный единый фильтр», не третий фильтр
+ * ошибок для этого модуля. Тот же приём, что `modules/returns/domain/errors/
+ * duplicate-active-return.error.ts` — `modules/support/domain/errors/` остаётся полным
+ * внутренним справочником ошибок модуля (используется `domain/index.ts`), без второй копии
+ * реализации класса под тем же именем (правило 12 AGENTS.md).
  */
-const TICKET_NOT_FOUND_CODE = 'TICKET_NOT_FOUND'
-
-export class TicketNotFoundError extends Error {
-  public readonly code = TICKET_NOT_FOUND_CODE
-
-  public constructor(public readonly ticketId: string) {
-    super(`SupportTicket "${ticketId}" not found`)
-    this.name = new.target.name
-  }
-}
+export { TicketNotFoundError } from '@dorutj/contracts'

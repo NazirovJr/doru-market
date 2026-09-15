@@ -79,6 +79,23 @@ const routes: RouteObject[] = [
           return { Component }
         },
       },
+      {
+        // DTJ-284: список своих обращений в поддержку + вход в создание нового.
+        path: 'support',
+        lazy: async () => {
+          const { default: Component } = await import('@/pages/support/support-page')
+          return { Component }
+        },
+      },
+      {
+        // DTJ-284: форма создания обращения — пункт назначения `ContactSupportButton`
+        // (`?orderId=` — если открыт с экрана заказа).
+        path: 'support/new',
+        lazy: async () => {
+          const { default: Component } = await import('@/pages/support/create-ticket-page')
+          return { Component }
+        },
+      },
     ],
   },
 ]

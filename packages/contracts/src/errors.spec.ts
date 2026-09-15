@@ -138,6 +138,11 @@ const EXPECTED: readonly (readonly [ErrorCode, number])[] = [
   // EP-05 inventory (DTJ-160/161) — см. `docs/spec/22-module-inventory-sync-1c.md` SRS-INV-014.
   [ErrorCode.EXCEL_TEMPLATE_HEADER_MISMATCH, 400],
   [ErrorCode.EXCEL_IMPORT_ROW_LIMIT_EXCEEDED, 400],
+
+  // ---- Доменные: модуль support (DTJ-282, EP-14, SRS-ADM-076) ----
+  [ErrorCode.TICKET_NOT_FOUND, 404],
+  [ErrorCode.TICKET_ALREADY_TERMINAL, 409],
+  [ErrorCode.INVALID_TICKET_STATUS_TRANSITION, 409],
 ]
 
 describe('ErrorCode / ERROR_HTTP_STATUS — сверка с источниками', () => {
