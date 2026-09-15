@@ -17,6 +17,9 @@ export * from './domain-errors-inventory.js'
 // DTJ-282 (EP-14) — тот же приём split по max-lines, НЕ реэкспортируется из domain-errors.js
 // (циклический импорт, см. JSDoc domain-errors-support.js).
 export * from './domain-errors-support.js'
+// Слияние feat/ep-11-returns-flow (EP-11) — та же причина (max-lines), см. JSDoc
+// domain-errors-delivery.ts.
+export * from './domain-errors-delivery.js'
 export * from './permissions.js'
 export * from './pagination.js'
 export * from './envelope.js'

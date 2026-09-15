@@ -25,13 +25,22 @@
  * появления первого потребителя.
  *
  * DTJ-273 — первые use case'ы/адаптеры модуля. `imports: [TenancyModule, SupportModule]` — оба
- * НЕ `@Global()` (в отличие от `OrdersModule`/`AuthModule`), тот же явный приём, что
+ * НЕ `@Global()`, тот же явный приём, что
  * `orders.module.ts`/`payments.module.ts` для `TenancyModule`. `RETURNS_DELIVERY_PORT` биндится
  * NullAdapter'ом (правило 15 AGENTS.md, TODO(EP-13) — см. JSDoc адаптера): модуль `delivery` на
  * этой волне содержит только domain-слой, реального провайдера ещё нет.
+ *
+ * ИСПРАВЛЕНО при слиянии `feat/ep-11-returns-flow` в `development`: `imports` не содержал
+ * `AuthModule`, хотя `OrderReturnsController` (DTJ-275) использует `@UseGuards(AuthGuard,
+ * RolesGuard)` — `AuthGuard` не мог зарезолвить `JWT_SIGNER` (`AuthModule` НЕ `@Global()`, в
+ * отличие от `DatabaseModule`/`RedisModule`). Найдено `apps/api/src/app.module.spec.ts`
+ * («AppModule — сборка DI-графа (Ж2)») — гейтом, специально проверяющим, что каждая зависимость
+ * каждого провайдера резолвится, именно тем классом дефекта, для которого этот тест и заведён.
+ * Добавлен `AuthModule` в `imports` (тот же приём, что `support.module.ts`).
  */
 import { Module } from '@nestjs/common'
 import { TenancyModule } from '@/modules/tenancy/tenancy.module.js'
+import { AuthModule } from '@/modules/auth/auth.module.js'
 import { SupportModule } from '@/modules/support/support.module.js'
 import { ReturnFinancialOutcomeResolver } from './application/policies/return-financial-outcome.policy.js'
 import { RequestReturnUseCase } from './application/use-cases/request-return.use-case.js'
@@ -57,7 +66,7 @@ import { UnimplementedReturnsPaymentsAdapter } from './infrastructure/adapters/u
 import { OrderReturnsController } from './presentation/order-returns.controller.js'
 
 @Module({
-  imports: [TenancyModule, SupportModule],
+  imports: [TenancyModule, AuthModule, SupportModule],
   controllers: [OrderReturnsController],
   providers: [
     ReturnFinancialOutcomeResolver,

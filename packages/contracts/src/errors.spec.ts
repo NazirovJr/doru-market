@@ -125,6 +125,10 @@ const EXPECTED: readonly (readonly [ErrorCode, number])[] = [
   // DTJ-271 (EP-11), SRS-RET-003, решение CTO D-EP11-5 (reports/EP11-EP14-CTO-BRIEF.md) —
   // reason='undelivered' переадресуется на SupportFacade/OrderDispute, не создаёт OrderReturn.
   [ErrorCode.UNSUPPORTED_RETURN_REASON, 422],
+  // DTJ-273 (EP-11), SRS-RET-012 — окно подачи спора после вручения истекло.
+  [ErrorCode.RETURN_WINDOW_EXPIRED, 422],
+  // DTJ-275 (EP-11), SRS-API-038 — returnId в пути не резолвится ни в один возврат тенанта.
+  [ErrorCode.RETURN_NOT_FOUND, 404],
 
   // DTJ-300 (EP-12), docs/spec/24-module-pharmacy-terminal.md §«Дополнения к схеме БД»,
   // таблица «Новые доменные ошибки».
