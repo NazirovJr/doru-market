@@ -8,6 +8,7 @@
  * строки 134-142). Денежные поля — целые дирамы (`*Diram`, правило 6 AGENTS.md). Даты —
  * ISO-8601 UTC-строки (граница JSON, конвенция `orders.ts`/`pharmacies-map.ts`).
  */
+import type { ControlCategoryPublic } from './catalog.js'
 
 /** 1:1 с enum `return_status`. `returned_to_pharmacy` — в типе есть, R1 не ведёт в него переходов (D-EP11-4). */
 export const RETURN_STATUS_VALUES = [
@@ -53,4 +54,15 @@ export interface OrderReturnDto {
   readonly packagingIntact: boolean | null
   readonly requestedAt: string
   readonly resolvedAt: string | null
+  /**
+   * Аддитивное расширение контракта (DTJ-277, EP-11, SRS-DOM-054) — самая строгая
+   * `controlCategory` (`catalog`, см. `CONTROL_CATEGORY_VALUES_PUBLIC` в `catalog.ts`) среди
+   * позиций заказа этого возврата; `'none'`, если ни одна позиция не подконтрольна.
+   * `returns` не хранит категорию контроля сам (домен `catalog`) — поле опционально ИМЕННО
+   * потому, что существующий маппер `apps/api/.../order-return.mapper.ts` (DTJ-275, уже
+   * смёржен) его пока не заполняет; `apps/pharmacy/features/returns` (DTJ-277) — единственный
+   * потребитель на момент введения поля. Заполнение на `GET /:id` — координируется отдельным
+   * PR к `order-return.mapper.ts` (DTJ-277 «Риски»), не входит в периметр этого файла.
+   */
+  readonly controlCategory?: ControlCategoryPublic
 }
