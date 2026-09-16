@@ -10,7 +10,7 @@
  * (`orders/infrastructure/repositories/drizzle-tx.util.ts`).
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { and, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { type DrizzleDb, DRIZZLE_DB } from '@/infrastructure/database/drizzle.provider.js'
 import {
   orderPartialFulfillmentRequests,
@@ -62,6 +62,22 @@ export class DrizzlePartialFulfillmentRequestRepository implements PartialFulfil
       .from(orderPartialFulfillmentRequests)
       .innerJoin(orders, eq(orders.id, orderPartialFulfillmentRequests.orderId))
       .where(and(eq(orderPartialFulfillmentRequests.id, requestId), eq(orders.tenantId, tenantId)))
+      .limit(1)
+    const row = rows[0]
+    if (row === undefined) return null
+    return toRecord(row.request)
+  }
+
+  /** ДОБАВЛЕНО (DTJ-305) — см. JSDoc порта. `requestedAt DESC LIMIT 1` — не более одной
+   *  `awaiting_customer` строки на заказ гарантирована `ux_partial_fulfillment_one_active` (DTJ-300). */
+  async findLatestByOrderId(tenantId: string, orderId: string, tx?: OrderUnitOfWorkTx): Promise<PartialFulfillmentRequestRecord | null> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const rows = await client
+      .select({ request: orderPartialFulfillmentRequests })
+      .from(orderPartialFulfillmentRequests)
+      .innerJoin(orders, eq(orders.id, orderPartialFulfillmentRequests.orderId))
+      .where(and(eq(orderPartialFulfillmentRequests.orderId, orderId), eq(orders.tenantId, tenantId)))
+      .orderBy(desc(orderPartialFulfillmentRequests.requestedAt))
       .limit(1)
     const row = rows[0]
     if (row === undefined) return null

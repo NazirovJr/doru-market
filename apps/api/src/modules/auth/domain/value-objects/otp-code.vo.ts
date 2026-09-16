@@ -28,6 +28,9 @@ import { type Clock } from '@/shared-kernel/index.js'
 /** 6 цифр — дефолт (SRS-API-022, коды OTP длиной 4-8 цифр, R1 — 6). */
 export const OTP_CODE_LENGTH = 6
 export const OTP_TTL_SECONDS = 300 // SRS-API-018
+/** ДОБАВЛЕНО (DTJ-305, SRS-DOM-080) — `purpose='delivery_handover'`: 4 цифры, УЖЕ у порога перебора
+ *  (SRS-NFR-012), поэтому короче TTL (`CompletePickingUseCase`, 900с) и не расширяется до 6. */
+export const HANDOVER_OTP_CODE_LENGTH = 4
 const MS_PER_SECOND = 1000
 
 interface OtpCodeProps {

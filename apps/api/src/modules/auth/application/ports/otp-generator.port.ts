@@ -9,7 +9,14 @@
  */
 export const OTP_GENERATOR = Symbol.for('@dorutj/auth/otp-generator')
 
-export type OtpPurpose = 'login' | 'onboarding_contact'
+/**
+ * ДОБАВЛЕНО (DTJ-305, EP-12 §A.5, SRS-DOM-080) — `'delivery_handover'`: OTP вручения заказа
+ * курьером клиенту, генерируется `CompletePickingUseCase` (`modules/orders`) ЧЕРЕЗ этот же порт
+ * (межмодульное переиспользование — тот же приём, что `JWT_SIGNER`, реэкспортирован
+ * `auth/index.ts`), 4 цифры вместо 6 у `'login'` (см. `CryptoOtpGeneratorAdapter`/
+ * `HANDOVER_OTP_CODE_LENGTH`).
+ */
+export type OtpPurpose = 'login' | 'onboarding_contact' | 'delivery_handover'
 
 export interface OtpGeneratorPort {
   /** Возвращает сырой код (например, `'847293'`) и его криптографически-стойкий хеш. */

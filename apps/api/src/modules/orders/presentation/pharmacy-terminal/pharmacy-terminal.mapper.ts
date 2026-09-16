@@ -17,12 +17,14 @@ import type {
   PharmacyTerminalQueueGroupedByDto,
   PharmacyTerminalQueueItemDto,
   PartialFulfillmentRequestDto,
+  HandoverOtpDto,
 } from '@dorutj/contracts'
 import type { OrderQueueRow } from '@/modules/orders/application/ports/order-repository.port.js'
 import type { GetOrderQueueResult } from '@/modules/orders/application/pharmacy-terminal/get-order-queue.use-case.js'
 import type { AcceptOrderResult } from '@/modules/orders/application/pharmacy-terminal/accept-order.use-case.js'
 import type { ReclaimOrderResult } from '@/modules/orders/application/pharmacy-terminal/reclaim-order.use-case.js'
 import type { ProposePartialFulfillmentResult } from '@/modules/orders/application/pharmacy-terminal/propose-partial-fulfillment.use-case.js'
+import type { CompletePickingResult } from '@/modules/orders/application/pharmacy-terminal/complete-picking.use-case.js'
 
 export function toQueueItemDto(row: OrderQueueRow): PharmacyTerminalQueueItemDto {
   return {
@@ -113,5 +115,24 @@ export function toPartialFulfillmentResponseData(result: ProposePartialFulfillme
     itemsTotalAfterDiram: Number(result.itemsTotalAfterDiram),
     refundAmountDiram: Number(result.refundAmountDiram),
     expiresAt: result.expiresAt.toISOString(),
+  }
+}
+
+/** DTJ-305 (SRS-PHT-027) — `POST /orders/:id/complete-picking` ответ (`200`): код вручения СРАЗУ в ответе. */
+export interface CompletePickingResponseData {
+  readonly orderId: string
+  readonly status: 'picked_up'
+  readonly handoverOtp: HandoverOtpDto
+}
+
+export function toCompletePickingResponseData(result: CompletePickingResult): CompletePickingResponseData {
+  return {
+    orderId: result.orderId,
+    status: result.status,
+    handoverOtp: {
+      code: result.handoverOtp.code,
+      expiresAt: result.handoverOtp.expiresAt.toISOString(),
+      purpose: result.handoverOtp.purpose,
+    },
   }
 }

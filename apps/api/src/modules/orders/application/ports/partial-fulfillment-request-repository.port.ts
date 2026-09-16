@@ -86,4 +86,17 @@ export interface PartialFulfillmentRequestRepositoryPort {
   /** См. JSDoc файла — CAS-переход, `false` при проигранной гонке (TC-PHT-013). `tx` ОБЯЗАТЕЛЕН —
    *  переход ВСЕГДА сопровождается пересчётом суммы заказа/outbox в той же транзакции. */
   transitionStatus(input: TransitionPartialFulfillmentStatusInput, tx: OrderUnitOfWorkTx): Promise<boolean>
+
+  /**
+   * ДОБАВЛЕНО (DTJ-305, EP-12 §A.5, SRS-PHT-026 п.2) — необходимое расширение порта (тот же
+   * класс решения, что `InventoryFacadePort.getStockQuantity`/`reserveForOrder`, DTJ-224/302):
+   * `CompletePickingUseCase` обязан убедиться, что для заказа с ≥1 `unavailable`-позицией
+   * существует строка со `status ∈ {'confirmed', 'auto_confirmed_timeout'}` — ни один
+   * существующий метод порта не отвечает на «есть ли строка для ЭТОГО orderId» (`findById`
+   * требует `requestId`, который вызывающий на этом шаге не знает). `uxPartialFulfillmentOneActive`
+   * (частичный уникальный индекс схемы, DTJ-300) гарантирует не более одной `awaiting_customer`
+   * строки на заказ — `requestedAt DESC LIMIT 1` возвращает единственную практически возможную
+   * «актуальную» строку. См. JSDoc файла про `tenantId`-скоуп через JOIN `orders`.
+   */
+  findLatestByOrderId(tenantId: string, orderId: string, tx?: OrderUnitOfWorkTx): Promise<PartialFulfillmentRequestRecord | null>
 }

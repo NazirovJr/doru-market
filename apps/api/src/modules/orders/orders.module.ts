@@ -222,6 +222,16 @@ import { ProposePartialFulfillmentUseCase } from './application/pharmacy-termina
 import { ResolvePartialFulfillmentUseCase } from './application/pharmacy-terminal/resolve-partial-fulfillment.use-case.js'
 import { PartialFulfillmentController } from './presentation/pharmacy-terminal/partial-fulfillment.controller.js'
 import { PartialFulfillmentTimeoutController } from './presentation/internal/partial-fulfillment-timeout.controller.js'
+// DTJ-305 (EP-12, терминал фармацевта §A.5) — CompletePickingUseCase + CompletePickingController
+// (`POST /orders/:id/complete-picking`). Новых провайдеров сверх уже забинженных DTJ-227/301/304
+// (см. их комментарии выше) не требует — `OTP_GENERATOR`/`OTP_CODES_REPOSITORY` резолвятся из
+// уже импортированного `AuthModule` (см. `imports:` ниже, экспортированы `auth.module.ts`), тот
+// же приём межмодульного потребления, что `JWT_SIGNER` в `CartIdentityGuard`.
+// `PARTIAL_FULFILLMENT_REQUEST_REPOSITORY` получил новый метод порта (`findLatestByOrderId`,
+// см. её JSDoc) — необходимое расширение, тот же класс решения, что `InventoryFacadePort.
+// getStockQuantity`/`reserveForOrder` (DTJ-224/302).
+import { CompletePickingUseCase } from './application/pharmacy-terminal/complete-picking.use-case.js'
+import { CompletePickingController } from './presentation/pharmacy-terminal/complete-picking.controller.js'
 
 /**
  * `UnimplementedCatalogFacadeAdapter`/`UnimplementedOrderRepositoryAdapter` (DTJ-220/222) —
@@ -418,6 +428,7 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     PharmacyTerminalItemsController,
     PartialFulfillmentController,
     PartialFulfillmentTimeoutController,
+    CompletePickingController,
   ],
   providers: [
     CART_REPOSITORY_DRIZZLE_PROVIDER,
@@ -484,6 +495,8 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     PARTIAL_FULFILLMENT_TIMEOUT_QUEUE_PROVIDER,
     ProposePartialFulfillmentUseCase,
     ResolvePartialFulfillmentUseCase,
+    // DTJ-305 (EP-12, терминал фармацевта §A.5, см. JSDoc импортов выше).
+    CompletePickingUseCase,
   ],
   // DTJ-226 (правка приёмки CTO, правило 2 AGENTS.md): без `exports` `OrdersFacade`/
   // `ORDERS_FACADE` были написаны, но физически недостижимы через `imports: [OrdersModule]` —
