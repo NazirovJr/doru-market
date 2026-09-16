@@ -128,6 +128,7 @@ function makeHarness(): Harness {
   const requestRepository: PartialFulfillmentRequestRepositoryPort = {
     create: createRequest,
     findById: vi.fn(),
+    findLatestByOrderId: vi.fn(),
     transitionStatus: vi.fn(),
   }
   const schedule = vi.fn<PartialFulfillmentTimeoutQueuePort['schedule']>().mockResolvedValue(undefined)
@@ -334,6 +335,7 @@ describe('ProposePartialFulfillmentUseCase — снэпшот названия �
     const requestRepository: PartialFulfillmentRequestRepositoryPort = {
       create: vi.fn().mockImplementation((input: CreatePartialFulfillmentRequestInput) => Promise.resolve(toRecord(input))),
       findById: vi.fn(),
+      findLatestByOrderId: vi.fn(),
       transitionStatus: vi.fn(),
     }
     const timeoutQueue: PartialFulfillmentTimeoutQueuePort = { schedule: vi.fn().mockResolvedValue(undefined) }
