@@ -25,6 +25,7 @@ function makeOrder(overrides: Partial<PaymentsOrderSnapshot> = {}): PaymentsOrde
     totalAmountDiram: 20_000n,
     pharmacyChainId: null,
     items: [{ platformFeeDiram: 1_600n }],
+    billingStrategy: 'single_invoice',
     ...overrides,
   }
 }

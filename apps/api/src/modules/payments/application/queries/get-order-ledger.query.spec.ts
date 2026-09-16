@@ -27,6 +27,7 @@ function fakeOrder(overrides: Partial<PaymentsOrderSnapshot> = {}): PaymentsOrde
     totalAmountDiram: 10_000n,
     pharmacyChainId: OWN_CHAIN_ID,
     items: [],
+    billingStrategy: 'single_invoice',
     ...overrides,
   }
 }

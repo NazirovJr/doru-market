@@ -37,6 +37,7 @@ function snapshot(overrides: Partial<PaymentsOrderSnapshot> = {}): PaymentsOrder
     totalAmountDiram: HOLD_AMOUNT_DIRAM,
     pharmacyChainId: null,
     items: [],
+    billingStrategy: 'single_invoice',
     ...overrides,
   }
 }

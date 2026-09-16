@@ -195,7 +195,7 @@ describe.skipIf(!postgresAvailable)('CancelOrderUseCase — integration (DTJ-232
       reconcileZeroStock: vi.fn(),
     }
     refundFull = vi.fn<RefundFacadePort['refundFull']>().mockResolvedValue(ok(undefined))
-    const refundFacade: RefundFacadePort = { refundFull }
+    const refundFacade: RefundFacadePort = { refundFull, refundPartialFulfillment: vi.fn() }
     const ordersFacade = new OrdersFacade(new DrizzleOrderRepository(db))
     useCase = new CancelOrderUseCase(ordersFacade, inventoryFacade, refundFacade, new FixedClock(), SILENT_LOGGER)
   })

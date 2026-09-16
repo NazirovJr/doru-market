@@ -17,6 +17,7 @@ function makeService(enabled: readonly OrderPaymentMethod[]): PaymentMethodEnabl
     getCodLimitDiram: vi.fn(),
     getEnabledPaymentMethods: vi.fn().mockResolvedValue(enabled),
     getPickupSlaMinutes: vi.fn(),
+    getPartialFulfillmentConfirmationTimeoutMinutes: vi.fn(),
   }
   return new PaymentMethodEnabledPolicyService(tenancyFacade)
 }

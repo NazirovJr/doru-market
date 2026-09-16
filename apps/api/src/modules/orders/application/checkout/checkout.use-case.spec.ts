@@ -243,6 +243,7 @@ function makeHarness(overrides: Partial<HarnessOverrides> = {}): Harness {
     getCodLimitDiram,
     getEnabledPaymentMethods,
     getPickupSlaMinutes: vi.fn(),
+    getPartialFulfillmentConfirmationTimeoutMinutes: vi.fn(),
   }
 
   const deliveryFacade: DeliveryFacadePort = { calculateFee: vi.fn<DeliveryFacadePort['calculateFee']>().mockResolvedValue(0n) }

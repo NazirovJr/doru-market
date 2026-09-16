@@ -46,6 +46,7 @@ function makeOrderSnapshot(overrides: Partial<PaymentsOrderSnapshot> = {}): Paym
     totalAmountDiram: 15_000n,
     pharmacyChainId: null,
     items: [],
+    billingStrategy: 'single_invoice',
     ...overrides,
   }
 }

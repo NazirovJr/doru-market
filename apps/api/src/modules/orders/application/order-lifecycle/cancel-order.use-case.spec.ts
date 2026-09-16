@@ -83,7 +83,7 @@ function makeHarness(): Harness {
     reconcileZeroStock: vi.fn(),
   }
   const refundFull = vi.fn<RefundFacadePort['refundFull']>().mockResolvedValue(ok(undefined))
-  const refundFacade: RefundFacadePort = { refundFull }
+  const refundFacade: RefundFacadePort = { refundFull, refundPartialFulfillment: vi.fn() }
   const useCase = new CancelOrderUseCase(ordersFacade, inventoryFacade, refundFacade, new FixedClock(), SILENT_LOGGER)
   return { useCase, repo, inventoryFacade, refundFacade, releaseStock, refundFull }
 }
@@ -286,7 +286,7 @@ describe('CancelOrderUseCase — отказ RefundFacadePort', () => {
     }
     const refundError: RefundError = { code: ErrorCode.PAYMENT_PROVIDER_UNAVAILABLE, message: 'bank down' }
     const refundFull = vi.fn<RefundFacadePort['refundFull']>().mockResolvedValue(err(refundError))
-    const refundFacade: RefundFacadePort = { refundFull }
+    const refundFacade: RefundFacadePort = { refundFull, refundPartialFulfillment: vi.fn() }
     const useCase = new CancelOrderUseCase(ordersFacade, inventoryFacade, refundFacade, new FixedClock(), SILENT_LOGGER)
     const order = orderAtStatus('paid_escrow')
     repo.seed(order)

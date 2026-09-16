@@ -19,6 +19,7 @@ describe('ORDER_CANCEL_REASON_VALUES (SRS-ORD-030)', () => {
       'fraud_or_safety_force_cancel',
       'license_revoked_force_cancel',
       'late_payment_after_cancellation',
+      'customer_rejected_partial_fulfillment',
     ])
   })
 })
@@ -52,11 +53,13 @@ const ALL_EVENT_TYPES: Record<OrderDomainEvent['type'], true> = {
   PartialFulfillmentConfirmedEvent: true,
   PartialFulfillmentRejectedEvent: true,
   PartialFulfillmentAutoConfirmedEvent: true,
+  // ДОБАВЛЕНО (DTJ-304, «Что сделать» п.5, SRS-PHT-075) — см. её JSDoc в order-domain-event.ts.
+  PartialFulfillmentRefundRetryRequestedEvent: true,
   HandoverOtpRegeneratedEvent: true,
 }
 
-describe('OrderDomainEvent — реестр вариантов исчерпывающий (DTJ-300)', () => {
-  it('9 вариантов union (4 существующих + 5 новых DTJ-300), без дублей', () => {
+describe('OrderDomainEvent — реестр вариантов исчерпывающий (DTJ-300/304)', () => {
+  it('10 вариантов union (4 существующих + 5 новых DTJ-300 + 1 новый DTJ-304), без дублей', () => {
     expect(Object.keys(ALL_EVENT_TYPES).sort()).toEqual(
       [
         'OrderConfirmedEvent',
@@ -69,6 +72,7 @@ describe('OrderDomainEvent — реестр вариантов исчерпыв�
         'PartialFulfillmentConfirmedEvent',
         'PartialFulfillmentRejectedEvent',
         'PartialFulfillmentAutoConfirmedEvent',
+        'PartialFulfillmentRefundRetryRequestedEvent',
         'HandoverOtpRegeneratedEvent',
       ].sort(),
     )

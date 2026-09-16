@@ -47,6 +47,7 @@ import { DrizzleEscrowLedgerRepository } from '@/modules/payments/infrastructure
 import { DrizzlePayoutScheduleRepository } from '@/modules/payments/infrastructure/repositories/payout-schedule.repository.js'
 import { RefundOrderUseCase } from '@/modules/payments/application/use-cases/refund-order.use-case.js'
 import { RefundFacadeAdapter } from '@/modules/payments/infrastructure/adapters/refund-facade.adapter.js'
+import type { PartiallyRefundOrderUseCase } from '@/modules/payments/application/use-cases/partially-refund-order.use-case.js'
 import type { PaymentsOrderSnapshot, PaymentsOrdersPort } from '@/modules/payments/application/ports/orders-facade.port.js'
 import { Money } from '@/shared-kernel/domain/value-objects/money.vo.js'
 
@@ -87,6 +88,7 @@ interface OrderRow {
   readonly status: string | null
   readonly paymentMethod: string
   readonly totalAmountTjs: string
+  readonly billingStrategy: string
 }
 
 /** См. JSDoc файла — минимальный read-only `PaymentsOrdersPort` поверх общей Drizzle-схемы. */
@@ -102,6 +104,7 @@ class TestOrdersPort implements PaymentsOrdersPort {
         status: orders.status,
         paymentMethod: orders.paymentMethod,
         totalAmountTjs: orders.totalAmountTjs,
+        billingStrategy: orders.billingStrategy,
       })
       .from(orders)
       .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)))
@@ -131,6 +134,7 @@ function toSnapshot(row: OrderRow): PaymentsOrderSnapshot {
     totalAmountDiram: Money.fromDbDecimalTjs(row.totalAmountTjs).diram,
     pharmacyChainId: null,
     items: [], // DTJ-244 — не нужно RefundOrderUseCase (не читает .items).
+    billingStrategy: row.billingStrategy === 'split_items_delivery' ? 'split_items_delivery' : 'single_invoice',
   }
 }
 
@@ -220,7 +224,10 @@ describe.skipIf(!postgresAvailable)('RefundOrderUseCase/RefundFacadeAdapter — 
     const ordersPort = new TestOrdersPort(db)
     const silentLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as Logger
     const useCase = new RefundOrderUseCase(ordersPort, mockProvider, escrowRepo, payoutRepo, silentLogger)
-    refundFacadeAdapter = new RefundFacadeAdapter(db, useCase)
+    // DTJ-304 — RefundFacadeAdapter несёт ВТОРОЙ use case (`refundPartialFulfillment`), не
+    // задействован этим файлом (фокус — `refundFull`/DTJ-245) — стаб, никогда не вызывается.
+    const partiallyRefundUseCase = { execute: vi.fn() } as unknown as PartiallyRefundOrderUseCase
+    refundFacadeAdapter = new RefundFacadeAdapter(db, useCase, partiallyRefundUseCase)
   })
 
   afterEach(async () => {

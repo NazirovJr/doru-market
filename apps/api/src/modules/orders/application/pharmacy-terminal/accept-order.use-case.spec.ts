@@ -80,6 +80,7 @@ function makeHarness(pickupSlaMinutes = 7): Harness {
     getCodLimitDiram: vi.fn(),
     getEnabledPaymentMethods: vi.fn(),
     getPickupSlaMinutes,
+    getPartialFulfillmentConfirmationTimeoutMinutes: vi.fn(),
   }
   const useCase = new AcceptOrderUseCase(repo, new PassthroughUnitOfWork(), ordersOutbox, inventoryFacade, tenancyFacade, new FixedClock())
   return { useCase, repo, appendAll, hasExpiredReservedBatch, getPickupSlaMinutes }

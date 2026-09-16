@@ -412,3 +412,64 @@ describe('Инвариант типов: markPaidEscrow требует ledgerHol
     order.markPaidEscrow('tx-1', NOW)
   })
 })
+
+/**
+ * DTJ-304 (EP-12 §A.4, SRS-PHT-020/022, D-10) — `recalculateTotals()`. Заказ на 2 позиции
+ * (`unitPrice=10_000, quantity=2` каждая, см. `validOrderItemCommand` — `totalPrice=20_000`
+ * на позицию), `deliveryFee=1_500` (см. `validOrderCreateCommand`).
+ */
+describe('Order.recalculateTotals() (DTJ-304, SRS-PHT-020/022, D-10)', () => {
+  function twoItemOrder(statuses: readonly [OrderSnapshot['items'][number]['fulfillmentStatus'], OrderSnapshot['items'][number]['fulfillmentStatus']]): Order {
+    const created = Order.create(
+      validOrderCreateCommand({ items: [validOrderItemCommand(), validOrderItemCommand()], paymentMethod: 'alif_mobi' }),
+    )
+    if (!isOk(created)) throw new Error('fixture: expected Ok')
+    const snapshot = created.value.toSnapshot()
+    const [firstItem, secondItem] = snapshot.items
+    if (firstItem === undefined || secondItem === undefined) throw new Error('fixture: expected 2 items')
+    const [firstStatus, secondStatus] = statuses
+    return Order.restore({
+      ...snapshot,
+      items: [
+        { ...firstItem, fulfillmentStatus: firstStatus },
+        { ...secondItem, fulfillmentStatus: secondStatus },
+      ],
+    })
+  }
+
+  it('без unavailable-позиций — итог не меняется (тождественный пересчёт)', () => {
+    const order = twoItemOrder(['scanned_ok', 'scanned_ok'])
+    order.recalculateTotals(NOW)
+    expect(order.itemsTotal).toEqual(Money.fromDiram(40_000n))
+    expect(order.totalAmount).toEqual(Money.fromDiram(41_500n)) // + deliveryFee 1_500
+  })
+
+  it('1 unavailable из 2 — itemsTotal/totalAmount уменьшены РОВНО на totalPrice unavailable-позиции', () => {
+    const order = twoItemOrder(['scanned_ok', 'unavailable'])
+    order.recalculateTotals(NOW)
+    expect(order.itemsTotal).toEqual(Money.fromDiram(20_000n))
+    expect(order.totalAmount).toEqual(Money.fromDiram(21_500n))
+  })
+
+  it('обе unavailable — itemsTotal=0, totalAmount=deliveryFee (доставка не зависит от товара)', () => {
+    const order = twoItemOrder(['unavailable', 'unavailable'])
+    order.recalculateTotals(NOW)
+    expect(order.itemsTotal).toEqual(Money.fromDiram(0n))
+    expect(order.totalAmount).toEqual(Money.fromDiram(1_500n))
+  })
+
+  it('идемпотентна — повторный вызов на тех же позициях даёт тот же результат (безопасно для propose-предпросмотра ДВАЖДЫ)', () => {
+    const order = twoItemOrder(['scanned_ok', 'unavailable'])
+    order.recalculateTotals(NOW)
+    const first = order.itemsTotal
+    order.recalculateTotals(NOW)
+    expect(order.itemsTotal).toEqual(first)
+  })
+
+  it('НЕ проверяет/меняет order.status — чистый пересчёт суммы, не переход состояния', () => {
+    const order = twoItemOrder(['scanned_ok', 'unavailable'])
+    const statusBefore = order.status
+    order.recalculateTotals(NOW)
+    expect(order.status).toBe(statusBefore)
+  })
+})
