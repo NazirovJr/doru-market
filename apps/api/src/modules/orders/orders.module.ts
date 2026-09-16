@@ -208,6 +208,20 @@ import { PharmacyTerminalItemsController } from './presentation/pharmacy-termina
 // ORDERS_UNIT_OF_WORK_DRIZZLE_PROVIDER/INVENTORY_FACADE_PORT_PROVIDER — все уже в providers[]
 // ниже) + PINO_LOGGER (`LoggerModule`, `@Global()` — тот же приём, что `CancelOrderUseCase`).
 import { ReportItemIssueUseCase } from './application/pharmacy-terminal/report-item-issue.use-case.js'
+// DTJ-304 (EP-12, терминал фармацевта §A.4) — ProposePartialFulfillmentUseCase/
+// ResolvePartialFulfillmentUseCase + PartialFulfillmentController (клиентский propose) +
+// PartialFulfillmentTimeoutController (мост apps/worker → apps/api для BullMQ-таймаута, см.
+// JSDoc PartialFulfillmentTimeoutProcessor «DISPUTED»). Новые провайдеры сверх уже забинженных
+// DTJ-227/228/301/303 (см. их комментарии выше): PARTIAL_FULFILLMENT_REQUEST_REPOSITORY (порт+
+// Drizzle-репозиторий, необходимое расширение — DTJ-300 завела только схему, см. JSDoc порта) и
+// PARTIAL_FULFILLMENT_TIMEOUT_QUEUE (BullMQ-producer, необходимое расширение). CATALOG_FACADE_PORT/
+// TENANCY_FACADE_PORT/INVENTORY_FACADE_PORT/REFUND_FACADE_PORT — уже забинжены выше.
+import { PARTIAL_FULFILLMENT_REQUEST_REPOSITORY_DRIZZLE_PROVIDER } from './infrastructure/repositories/partial-fulfillment-request.repository.js'
+import { PARTIAL_FULFILLMENT_TIMEOUT_QUEUE_PROVIDER } from './infrastructure/jobs/partial-fulfillment-timeout.processor.js'
+import { ProposePartialFulfillmentUseCase } from './application/pharmacy-terminal/propose-partial-fulfillment.use-case.js'
+import { ResolvePartialFulfillmentUseCase } from './application/pharmacy-terminal/resolve-partial-fulfillment.use-case.js'
+import { PartialFulfillmentController } from './presentation/pharmacy-terminal/partial-fulfillment.controller.js'
+import { PartialFulfillmentTimeoutController } from './presentation/internal/partial-fulfillment-timeout.controller.js'
 
 /**
  * `UnimplementedCatalogFacadeAdapter`/`UnimplementedOrderRepositoryAdapter` (DTJ-220/222) —
@@ -402,6 +416,8 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     SystemCancelOrderController,
     PharmacyTerminalQueueController,
     PharmacyTerminalItemsController,
+    PartialFulfillmentController,
+    PartialFulfillmentTimeoutController,
   ],
   providers: [
     CART_REPOSITORY_DRIZZLE_PROVIDER,
@@ -463,6 +479,11 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     ScanOrderItemUseCase,
     // DTJ-303 (EP-12, терминал фармацевта §A.4, см. JSDoc импортов выше).
     ReportItemIssueUseCase,
+    // DTJ-304 (EP-12, терминал фармацевта §A.4, см. JSDoc импортов выше).
+    PARTIAL_FULFILLMENT_REQUEST_REPOSITORY_DRIZZLE_PROVIDER,
+    PARTIAL_FULFILLMENT_TIMEOUT_QUEUE_PROVIDER,
+    ProposePartialFulfillmentUseCase,
+    ResolvePartialFulfillmentUseCase,
   ],
   // DTJ-226 (правка приёмки CTO, правило 2 AGENTS.md): без `exports` `OrdersFacade`/
   // `ORDERS_FACADE` были написаны, но физически недостижимы через `imports: [OrdersModule]` —

@@ -26,4 +26,11 @@ export const QUEUE_NAMES = {
    * notification-dispatch.processor.ts` (скелет, `TODO(DTJ-370)`).
    */
   NOTIFICATION_DISPATCH: 'notification-dispatch',
+  /**
+   * DTJ-304, EP-12 (модуль 24, «Терминал фармацевта»). Producer — `apps/api/src/modules/orders/
+   * infrastructure/jobs/partial-fulfillment-timeout.processor.ts`
+   * (`PARTIAL_FULFILLMENT_TIMEOUT_QUEUE_NAME`, СВОЯ копия этой же строки, тот же приём, что
+   * `MOCK_BANK_AUTO_PAY`). Consumer — `jobs/escrow-timeouts/partial-fulfillment-timeout.job.ts`.
+   */
+  PARTIAL_FULFILLMENT_TIMEOUT: 'partial-fulfillment-timeout',
 } as const

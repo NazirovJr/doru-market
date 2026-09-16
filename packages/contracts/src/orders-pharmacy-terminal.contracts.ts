@@ -78,6 +78,33 @@ export type ReportItemIssueRequestDto = z.infer<typeof ReportItemIssueRequestSch
 export const ProposePartialFulfillmentRequestSchema = z.object({}).strict()
 export type ProposePartialFulfillmentRequestDto = z.infer<typeof ProposePartialFulfillmentRequestSchema>
 
+/**
+ * ДОБАВЛЕНО (DTJ-304) — ответ `201` `propose-partial-fulfillment` (SRS-PHT-020) и форма строки
+ * `order_partial_fulfillment_requests` для будущих клиентских эндпоинтов `confirm`/`reject`
+ * (владелец `apps/web`, вне этого эпика — см. «Технический контекст» DTJ-304). Деньги —
+ * `number` на границе JSON, тот же приём, что `OrderDto`/`CartItemResponseDto` (`orders.ts`).
+ */
+export interface PartialFulfillmentSnapshotItemDto {
+  readonly orderItemId: string
+  readonly medicineName: string
+  readonly quantity: number
+  readonly reason: ReportItemIssueReason
+}
+
+export const PARTIAL_FULFILLMENT_STATUS_VALUES = ['awaiting_customer', 'confirmed', 'rejected', 'auto_confirmed_timeout'] as const
+export type PartialFulfillmentStatusDto = (typeof PARTIAL_FULFILLMENT_STATUS_VALUES)[number]
+
+export interface PartialFulfillmentRequestDto {
+  readonly id: string
+  readonly orderId: string
+  readonly status: PartialFulfillmentStatusDto
+  readonly itemsSnapshot: readonly PartialFulfillmentSnapshotItemDto[]
+  readonly itemsTotalBeforeDiram: number
+  readonly itemsTotalAfterDiram: number
+  readonly refundAmountDiram: number
+  readonly expiresAt: string
+}
+
 // ==================== A.5 — complete-picking ====================
 
 /**

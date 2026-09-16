@@ -16,6 +16,7 @@ import { PickupSlaTimeoutModule } from './jobs/escrow-timeouts/pickup-sla-timeou
 import { PayoutExecutionModule } from './jobs/payout/payout-execution.module.js'
 import { SupportSlaMonitorModule } from './jobs/support-sla-monitor/support-sla-monitor.module.js'
 import { NotificationDispatchModule } from './jobs/notifications/notification-dispatch.module.js'
+import { PartialFulfillmentTimeoutModule } from './jobs/escrow-timeouts/partial-fulfillment-timeout.module.js'
 
 /**
  * Барабанный модуль (D-27) — корневой `AppModule` apps/worker. Каждый новый тикет,
@@ -41,6 +42,7 @@ import { NotificationDispatchModule } from './jobs/notifications/notification-di
     PayoutExecutionModule,
     SupportSlaMonitorModule,
     NotificationDispatchModule,
+    PartialFulfillmentTimeoutModule,
   ],
 })
 // Класс существует только как носитель декоратора @Module для графа DI NestJS — штатный паттерн.
