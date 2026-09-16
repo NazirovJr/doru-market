@@ -1,0 +1,11 @@
+-- Down-миграция для 0046_audit_log_revoke_update_delete.sql (DTJ-374).
+--
+-- ВНИМАНИЕ (симметрично предупреждению `0030_escrow_ledger_grants.down.sql` для ПАРНОГО
+-- случая escrow_ledger): `0034_support_tickets_audit_log.sql` уже выполнила ТОТ ЖЕ REVOKE
+-- раньше и остаётся применённой независимо от отката этого файла (см. шапку
+-- `0046_audit_log_revoke_update_delete.sql`). GRANT ниже возвращает app_role полный
+-- DML-доступ к audit_log — откат ЭТОГО файла В ИЗОЛЯЦИИ (без отката 0034) ОСЛАБЛЯЕТ
+-- append-only ниже уровня, установленного 0034. Предполагается запуск ТОЛЬКО при полном
+-- согласованном откате обеих привилегий-миграций audit_log (EP-10 и EP-16) одновременно,
+-- никогда по отдельности.
+GRANT UPDATE, DELETE ON audit_log TO app_role;
