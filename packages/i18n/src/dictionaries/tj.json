@@ -234,5 +234,21 @@
   "admin.nav.reports": "Ҳисоботҳо",
   "admin.nav.schedule": "Ҷадвал",
   "admin.forbidden.title": "Дастрасӣ манъ аст",
-  "admin.forbidden.message": "Шумо ба ин бахш дастрасӣ надоред."
+  "admin.forbidden.message": "Шумо ба ин бахш дастрасӣ надоред.",
+  "admin.feature_flags.title": "Фича-флагҳо",
+  "admin.feature_flags.loading": "Флагҳо бор карда истодаанд…",
+  "admin.feature_flags.error": "Флагҳоро бор карда натавонист",
+  "admin.feature_flags.column.flag_key": "Флаг",
+  "admin.feature_flags.column.scope": "Миқёс",
+  "admin.feature_flags.column.tenant": "Тенант",
+  "admin.feature_flags.column.enabled": "Фаъол",
+  "admin.feature_flags.column.rollout": "Дарсади тадриҷ, %",
+  "admin.feature_flags.add_button": "Илова кардани флаг",
+  "admin.feature_flags.form.flag_key_label": "Калиди флаг",
+  "admin.feature_flags.form.scope_label": "Миқёс",
+  "admin.feature_flags.form.tenant_id_label": "ID-и тенант",
+  "admin.feature_flags.form.submit": "Нигоҳ доштан",
+  "admin.feature_flags.form.cancel": "Бекор кардан",
+  "admin.feature_flags.scope.global": "Глобалӣ",
+  "admin.feature_flags.scope.tenant": "Тенант"
 }

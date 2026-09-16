@@ -234,5 +234,21 @@
   "admin.nav.reports": "Отчёты",
   "admin.nav.schedule": "Расписание",
   "admin.forbidden.title": "Доступ запрещён",
-  "admin.forbidden.message": "У вас нет доступа к этому разделу."
+  "admin.forbidden.message": "У вас нет доступа к этому разделу.",
+  "admin.feature_flags.title": "Фиче-флаги",
+  "admin.feature_flags.loading": "Загружаем флаги…",
+  "admin.feature_flags.error": "Не удалось загрузить флаги",
+  "admin.feature_flags.column.flag_key": "Флаг",
+  "admin.feature_flags.column.scope": "Скоуп",
+  "admin.feature_flags.column.tenant": "Тенант",
+  "admin.feature_flags.column.enabled": "Включён",
+  "admin.feature_flags.column.rollout": "Rollout, %",
+  "admin.feature_flags.add_button": "Добавить флаг",
+  "admin.feature_flags.form.flag_key_label": "Ключ флага",
+  "admin.feature_flags.form.scope_label": "Скоуп",
+  "admin.feature_flags.form.tenant_id_label": "ID тенанта",
+  "admin.feature_flags.form.submit": "Сохранить",
+  "admin.feature_flags.form.cancel": "Отмена",
+  "admin.feature_flags.scope.global": "Глобальный",
+  "admin.feature_flags.scope.tenant": "Тенант"
 }

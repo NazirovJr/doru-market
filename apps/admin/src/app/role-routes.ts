@@ -9,6 +9,13 @@
  * названия/иконка уже зафиксированы этим тикетом и не меняются. До замены все 13 разделов
  * используют общий `SectionPlaceholderPage` (`shared/ui/section-placeholder.page.tsx`).
  *
+ * DTJ-352 (EP-15) — запись `feature-flags` заменена на реальную `FeatureFlagsPage`
+ * (`features/feature-flags/ui/feature-flags-page.tsx`), лениво загружаемую тем же приёмом, что
+ * `SectionPlaceholder` выше. `FeatureFlagsPage` не принимает пропсы (не читает `titleKey` — сама
+ * рендерит свой заголовок) — структурно совместима с `ComponentType<SectionPlaceholderPageProps>`
+ * (функция с МЕНЬШИМ числом параметров присваивается типу с большим, TS позволяет это для
+ * функциональных типов), обёртка не нужна.
+ *
  * Иконки — временно строковый ключ (`packages/ui` пока не содержит ни одного компонента,
  * `packages/ui/src/index.ts` — пустой барабан, заглушка EP-18/DTJ-400). Рендеринг реальной
  * иконки по ключу — задача будущего меню-компонента, когда `packages/ui` их получит.
@@ -31,6 +38,11 @@ const SectionPlaceholder: LazyExoticComponent<ComponentType<SectionPlaceholderPa
   import('@/shared/ui/section-placeholder.page').then((m) => ({ default: m.SectionPlaceholderPage })),
 )
 
+/** DTJ-352 — см. JSDoc файла про совместимость без пропсов. */
+const FeatureFlagsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/feature-flags/ui/feature-flags-page').then((m) => ({ default: m.FeatureFlagsPage })),
+)
+
 function section(path: string, titleKey: string, icon: string): RouteConfig {
   return { path, titleKey, icon, Component: SectionPlaceholder }
 }
@@ -38,7 +50,7 @@ function section(path: string, titleKey: string, icon: string): RouteConfig {
 /** `super_admin` (тикет DTJ-350 «Что сделать» п.5): Тенанты/Фиче-флаги/Аптеки/Пользователи/Заказы/Финансы/Настройки. */
 const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
   section('tenants', 'admin.nav.tenants', 'tenants'),
-  section('feature-flags', 'admin.nav.feature_flags', 'flags'),
+  { path: 'feature-flags', titleKey: 'admin.nav.feature_flags', icon: 'flags', Component: FeatureFlagsPage },
   section('pharmacies', 'admin.nav.pharmacies', 'pharmacies'),
   section('users', 'admin.nav.users', 'users'),
   section('orders', 'admin.nav.orders', 'orders'),

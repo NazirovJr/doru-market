@@ -261,6 +261,26 @@ async function seedI18nOverridesCatalogViaCli(dbUrl: string): Promise<number> {
   }
 }
 
+/**
+ * DTJ-352 (EP-15): сидит 2 обязательных R1-флага `feature_flags` той же командой `pnpm db:seed`
+ * (правило 2 AGENTS.md). Отдельное короткоживущее соединение — тот же приём, что
+ * `seedI18nOverridesCatalogViaCli` выше (см. её JSDoc про причину).
+ */
+async function seedFeatureFlagsViaCli(dbUrl: string): Promise<number> {
+  const { drizzle } = await import('drizzle-orm/node-postgres')
+  const { Pool } = await import('pg')
+  const { seedRequiredFeatureFlags } = await import('./feature-flags.seed.js')
+
+  const pool = new Pool({ connectionString: dbUrl })
+  try {
+    const db = drizzle(pool)
+    const result = await seedRequiredFeatureFlags(db)
+    return result.inserted
+  } finally {
+    await pool.end().catch(() => undefined)
+  }
+}
+
 async function main(): Promise<void> {
   // Защита от двойного запуска при импорте из тестов.
   if (process.env.DORUTJ_SEED_SKIP_MAIN === '1') return
@@ -288,6 +308,9 @@ async function main(): Promise<void> {
     const i18nUpserted = await seedI18nOverridesCatalogViaCli(dbUrl)
     // eslint-disable-next-line no-console -- CLI-скрипт.
     console.log(`[db:seed] OK — upserted ${String(i18nUpserted)} catalog.analogs.* i18n_overrides rows (DTJ-103)`)
+    const featureFlagsInserted = await seedFeatureFlagsViaCli(dbUrl)
+    // eslint-disable-next-line no-console -- CLI-скрипт.
+    console.log(`[db:seed] OK — inserted ${String(featureFlagsInserted)} required R1 feature_flags rows (DTJ-352)`)
     process.exitCode = 0
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
