@@ -59,6 +59,13 @@ export interface PaymentsOrderSnapshot {
    * этой правки (YAGNI — не полная проекция `OrderItem`).
    */
   readonly items: readonly PaymentsOrderItemSnapshot[]
+  /**
+   * ДОБАВЛЕНО (DTJ-304, аддитивно — тот же класс правки, что `pharmacyChainId`/`items` выше).
+   * Нужно `PartiallyRefundOrderUseCase` для ветвления D-10/SRS-DOM-162 (`split_items_delivery`
+   * vs `single_invoice`) — `orders.billing_strategy` уже существует в схеме (DTJ-228), просто
+   * не было нужно ни одному потребителю `payments` до этого тикета.
+   */
+  readonly billingStrategy: 'single_invoice' | 'split_items_delivery'
 }
 
 /** См. JSDoc `PaymentsOrderSnapshot.items` (DTJ-244). */

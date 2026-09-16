@@ -31,6 +31,7 @@
  * ARRAY['cash_courier']`) — см. JSDoc порта, то же обоснование не повторяется здесь.
  */
 import { Inject, Injectable } from '@nestjs/common'
+import { eq } from 'drizzle-orm'
 import type { OrderPaymentMethod } from '@dorutj/contracts'
 import { TENANT_SETTINGS_REPOSITORY, TenantId, type TenantSettingsRepositoryPort } from '@/modules/tenancy/index.js'
 import { COD_LIMIT_DEFAULT_DIRAM } from '@/modules/orders/domain/order-create-command.js'
@@ -39,6 +40,8 @@ import {
   type CommissionCategory,
   type TenancyFacadePort,
 } from '@/modules/orders/application/ports/tenancy-facade.port.js'
+import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
+import { tenantSettings } from '@/db/schema/tenants.js'
 
 /**
  * SRS-DOM-160 (`docs/spec/10-domain-model.md:1109`) — ASSUMPTION-дефолты платформенной
@@ -60,10 +63,20 @@ const DEFAULT_ENABLED_PAYMENT_METHODS: readonly OrderPaymentMethod[] = ['cash_co
  *  `DEFAULT_PICKUP_SLA_MINUTES`) — тот же фолбэк-приём, что `COD_LIMIT_DEFAULT_DIRAM` выше. */
 const PICKUP_SLA_MINUTES_DEFAULT = 7
 
+/** DTJ-304 — 1:1 с DB-дефолтом `tenant_settings.partial_fulfillment_confirmation_timeout_minutes`
+ *  (`db/schema/tenants.ts` `DEFAULT_PARTIAL_FULFILLMENT_CONFIRMATION_TIMEOUT_MINUTES = 10`). */
+const PARTIAL_FULFILLMENT_CONFIRMATION_TIMEOUT_MINUTES_DEFAULT = 10
+
 @Injectable()
 export class TenancyFacadeAdapter implements TenancyFacadePort {
   constructor(
     @Inject(TENANT_SETTINGS_REPOSITORY) private readonly tenantSettingsRepository: TenantSettingsRepositoryPort,
+    // DTJ-304 — прямое чтение `tenant_settings.partial_fulfillment_confirmation_timeout_minutes`
+    // (см. JSDoc `getPartialFulfillmentConfirmationTimeoutMinutes` ниже: тот же приём, что
+    // `DrizzleSupportTenantSettingsAdapter`, EP-14/DTJ-279 — не расширяет доменную сущность
+    // `TenantSettings`/`TenantSettingsRepositoryPort` (модуль `tenancy`, чужой периметр) ради
+    // ОДНОГО скалярного поля, читает колонку напрямую).
+    @Inject(DRIZZLE_DB) private readonly db: DrizzleDb,
   ) {}
 
   /**
@@ -103,6 +116,23 @@ export class TenancyFacadeAdapter implements TenancyFacadePort {
   async getPickupSlaMinutes(tenantId: string): Promise<number> {
     const settings = await this.tenantSettingsRepository.findByTenantId(TenantId.from(tenantId))
     return settings?.pickupSlaMinutes ?? PICKUP_SLA_MINUTES_DEFAULT
+  }
+
+  /**
+   * DTJ-304 (SRS-PHT-019/073) — прямое чтение колонки, НЕ через `TenantSettingsRepositoryPort`
+   * (см. конструктор): `TenantSettings` (домен `tenancy`) не несёт этого поля, а расширять
+   * value entity ЧУЖОГО модуля ради единственного скаляра — больший периметр, чем нужно этому
+   * тикету. Тот же приём, что `DrizzleSupportTenantSettingsAdapter.getFirstResponseSlaMinutes`
+   * (EP-14, DTJ-279) — fallback-дефолт ТОЛЬКО если строка `tenant_settings` отсутствует
+   * (не должно случаться в норме, `tenants`/`tenant_settings` создаются атомарно).
+   */
+  async getPartialFulfillmentConfirmationTimeoutMinutes(tenantId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ minutes: tenantSettings.partialFulfillmentConfirmationTimeoutMinutes })
+      .from(tenantSettings)
+      .where(eq(tenantSettings.tenantId, tenantId))
+      .limit(1)
+    return row?.minutes ?? PARTIAL_FULFILLMENT_CONFIRMATION_TIMEOUT_MINUTES_DEFAULT
   }
 }
 

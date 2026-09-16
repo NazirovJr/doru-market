@@ -70,6 +70,7 @@ export class OrdersReadOnlyAdapter implements PaymentsOrdersPort {
         status: orders.status,
         paymentMethod: orders.paymentMethod,
         totalAmountTjs: orders.totalAmountTjs,
+        billingStrategy: orders.billingStrategy,
       })
       .from(orders)
       .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId), isNull(orders.deletedAt)))
@@ -106,6 +107,8 @@ interface OrderReadRow {
   readonly status: string | null
   readonly paymentMethod: string
   readonly totalAmountTjs: string
+  /** DTJ-304 (аддитивное поле порта) — см. комментарий у `items: []` ниже, тот же класс правки. */
+  readonly billingStrategy: string
 }
 
 function toSnapshot(row: OrderReadRow, pharmacyChainId: string | null): PaymentsOrderSnapshot {
@@ -125,5 +128,9 @@ function toSnapshot(row: OrderReadRow, pharmacyChainId: string | null): Payments
     // отчёт сдачи) — реальных позиций заказа не носит ни один текущий вызывающий код, т.к.
     // такого кода физически нет.
     items: [],
+    // DTJ-304 (аддитивное поле порта) — минимальная правка ради компиляции, тот же класс, что
+    // `items: []` выше (адаптер не забинжен, точный parse/guard — забота канонического
+    // `OrdersFacadeAdapter.toBillingStrategyOrThrow`, не дублируется здесь ради мёртвого кода).
+    billingStrategy: row.billingStrategy === 'split_items_delivery' ? 'split_items_delivery' : 'single_invoice',
   }
 }

@@ -56,9 +56,7 @@ export class Order {
   readonly customerId: string
   readonly pharmacyId: string
   readonly items: readonly OrderItem[]
-  readonly itemsTotal: Money
   readonly deliveryFee: Money
-  readonly totalAmount: Money
   readonly deliveryAddress: string
   readonly deliveryLandmark: string | null
   readonly deliveryGeoPoint: GeoPoint | null
@@ -68,6 +66,17 @@ export class Order {
   readonly checkoutAttemptId: string
   readonly createdAt: Date
 
+  /**
+   * DTJ-304 (EP-12 §A.4, SRS-PHT-020/022, D-10) — `readonly` → приватное поле + геттер
+   * (мутирует `recalculateTotals()` ниже). До этого тикета оба поля были `readonly`
+   * (DTJ-221: заказ создаётся один раз, сумма после этого не меняется) — терминал
+   * фармацевта делает это предположение неверным: частичная сборка ЗАКОННО уменьшает
+   * `items_total`/`total_amount` уже СУЩЕСТВУЮЩЕГО заказа. Тот же приём, что `OrderItem`
+   * уже применила к своим полям (DTJ-302/303, см. её JSDoc «РАСШИРЕНИЕ») — приватное поле
+   * + геттер + метод-намерение, не голый сеттер (`02` §2.2).
+   */
+  private _itemsTotal: Money
+  private _totalAmount: Money
   private _status: OrderStatus
   private _paymentTransactionId: string | null
   private _cancelReason: OrderCancelReason | null
@@ -87,9 +96,9 @@ export class Order {
     this.customerId = s.customerId
     this.pharmacyId = s.pharmacyId
     this.items = items
-    this.itemsTotal = s.itemsTotal
+    this._itemsTotal = s.itemsTotal
     this.deliveryFee = s.deliveryFee
-    this.totalAmount = s.totalAmount
+    this._totalAmount = s.totalAmount
     this.deliveryAddress = s.deliveryAddress
     this.deliveryLandmark = s.deliveryLandmark
     this.deliveryGeoPoint = s.deliveryGeoPoint
@@ -113,6 +122,16 @@ export class Order {
   /** Единственный самостоятельный getter — читается `OrderPolicy`/`OrdersFacade` напрямую и часто. */
   get status(): OrderStatus {
     return this._status
+  }
+
+  /** DTJ-304 — см. JSDoc поля `_itemsTotal` выше (мутирует `recalculateTotals()`). */
+  get itemsTotal(): Money {
+    return this._itemsTotal
+  }
+
+  /** DTJ-304 — см. JSDoc поля `_totalAmount` выше (мутирует `recalculateTotals()`). */
+  get totalAmount(): Money {
+    return this._totalAmount
   }
 
   /** Инварианты ПО ПОРЯДКУ (DTJ-221 п.4) — первая ошибка обрывает, без побочных эффектов. */
@@ -284,6 +303,32 @@ export class Order {
       cancelledBy: this._cancelledBy,
       at: now,
     })
+  }
+
+  /**
+   * DTJ-304 (EP-12 §A.4, SRS-PHT-020/022, D-10) — пересчитывает `itemsTotal`/`totalAmount`
+   * БЕЗ позиций `fulfillmentStatus === 'unavailable'` (частичная сборка). Чистая функция
+   * текущего состояния позиций — детерминированная и идемпотентная (повторный вызов на тех
+   * же позициях даёт тот же результат), поэтому безопасно вызывается ДВАЖДЫ за жизненный
+   * цикл одного запроса частичной сборки: (1) `ProposePartialFulfillmentUseCase` — ТОЛЬКО
+   * для предпросмотра `itemsTotalAfterDiram`, сохраняемого в `order_partial_fulfillment_
+   * requests`, БЕЗ последующего `OrderRepositoryPort.save(order)` — заказ в БД не меняется;
+   * (2) `ResolvePartialFulfillmentUseCase` (`confirmed=true`) — фиксирует результат, ЗА ней
+   * следует `save(order)`. Не проверяет статус заказа/переход (`assertTransition`) — это не
+   * переход состояния машины `orders.status`, только пересчёт денежной суммы, вызывающий use
+   * case решает, когда её вызывать.
+   *
+   * НЕ проверяет и не требует ни одной `unavailable`-позиции — на пустом множестве
+   * unavailable результат тривиально равен исходной сумме (используется как чистый
+   * предпросмотр без побочных эффектов на любых позициях).
+   */
+  recalculateTotals(now: Date): void {
+    const itemsTotal = this.items
+      .filter((item) => item.fulfillmentStatus !== 'unavailable')
+      .reduce((sum, item) => sum.add(item.totalPrice), Money.fromDiram(ZERO_DIRAM))
+    this._itemsTotal = itemsTotal
+    this._totalAmount = itemsTotal.add(this.deliveryFee)
+    this._updatedAt = now
   }
 
   /** Заготовка EP-11 (`tickets/00-EPICS.md:30` — эпик документирован, тикеты не нарезаны;
