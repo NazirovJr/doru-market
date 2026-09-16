@@ -234,5 +234,21 @@
   "admin.nav.reports": "Reports",
   "admin.nav.schedule": "Schedule",
   "admin.forbidden.title": "Access denied",
-  "admin.forbidden.message": "You don't have access to this section."
+  "admin.forbidden.message": "You don't have access to this section.",
+  "admin.feature_flags.title": "Feature flags",
+  "admin.feature_flags.loading": "Loading flags…",
+  "admin.feature_flags.error": "Failed to load flags",
+  "admin.feature_flags.column.flag_key": "Flag",
+  "admin.feature_flags.column.scope": "Scope",
+  "admin.feature_flags.column.tenant": "Tenant",
+  "admin.feature_flags.column.enabled": "Enabled",
+  "admin.feature_flags.column.rollout": "Rollout, %",
+  "admin.feature_flags.add_button": "Add flag",
+  "admin.feature_flags.form.flag_key_label": "Flag key",
+  "admin.feature_flags.form.scope_label": "Scope",
+  "admin.feature_flags.form.tenant_id_label": "Tenant ID",
+  "admin.feature_flags.form.submit": "Save",
+  "admin.feature_flags.form.cancel": "Cancel",
+  "admin.feature_flags.scope.global": "Global",
+  "admin.feature_flags.scope.tenant": "Tenant"
 }
