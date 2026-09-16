@@ -177,16 +177,22 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
     const { TENANCY_FACADE_PORT } = await import('@/modules/orders/application/ports/tenancy-facade.port.js')
     const { TenancyFacadeAdapter } = await import('@/modules/orders/infrastructure/adapters/tenancy-facade.adapter.js')
     const { TENANT_SETTINGS_REPOSITORY } = await import('@/modules/tenancy/index.js')
+    const { DRIZZLE_DB } = await import('@/infrastructure/database/drizzle.provider.js')
     builder.overrideProvider(TENANCY_FACADE_PORT).useFactory({
-      factory: (tenantSettingsRepository: unknown) => {
-        const real = new TenancyFacadeAdapter(tenantSettingsRepository as ConstructorParameters<typeof TenancyFacadeAdapter>[0])
+      factory: (tenantSettingsRepository: unknown, db: unknown) => {
+        const real = new TenancyFacadeAdapter(
+          tenantSettingsRepository as ConstructorParameters<typeof TenancyFacadeAdapter>[0],
+          db as ConstructorParameters<typeof TenancyFacadeAdapter>[1],
+        )
         return {
           resolveCommissionRate: real.resolveCommissionRate.bind(real),
           getCodLimitDiram: real.getCodLimitDiram.bind(real),
           getEnabledPaymentMethods: () => Promise.resolve(options.enabledPaymentMethods),
+          getPickupSlaMinutes: real.getPickupSlaMinutes.bind(real),
+          getPartialFulfillmentConfirmationTimeoutMinutes: real.getPartialFulfillmentConfirmationTimeoutMinutes.bind(real),
         }
       },
-      inject: [TENANT_SETTINGS_REPOSITORY],
+      inject: [TENANT_SETTINGS_REPOSITORY, DRIZZLE_DB],
     })
   }
   const moduleRef = await builder.compile()

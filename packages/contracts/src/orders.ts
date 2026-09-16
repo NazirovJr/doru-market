@@ -131,10 +131,13 @@ export interface CartDto {
  * `POST /api/v1/orders/:id/cancel` (EP-09, DTJ-232, SRS-ORD-029/030) — причины отмены,
  * доступные РУЧНОМУ инициатору (`customer`/`pharmacist`/`pharmacy_admin`/`super_admin`) через
  * этот единый эндпоинт. Подмножество полного канонического enum `OrderCancelReason`
- * (`apps/api/.../orders/domain/order-domain-event.ts`, DTJ-222, 8 значений, SRS-ORD-030) — два
- * значения этого домена-enum'а НЕ входят сюда намеренно: `payment_timeout` (`UnpaidOrderTimeoutJob`,
- * SRS-ORD-032) и `late_payment_after_cancellation` (SRS-PAY-027) — обе ставятся ТОЛЬКО системой
- * (`actor.kind === 'system'`), человек не выбирает их в форме отмены. Значения синхронизированы
+ * (`apps/api/.../orders/domain/order-domain-event.ts`, DTJ-222/304, 9 значений, SRS-ORD-030) —
+ * ТРИ значения этого домена-enum'а НЕ входят сюда намеренно: `payment_timeout`
+ * (`UnpaidOrderTimeoutJob`, SRS-ORD-032), `late_payment_after_cancellation` (SRS-PAY-027) — обе
+ * ставятся ТОЛЬКО системой (`actor.kind === 'system'`); и `customer_rejected_partial_fulfillment`
+ * (DTJ-304, SRS-PHT-023) — ставится ТОЛЬКО `ResolvePartialFulfillmentUseCase` через СВОЙ,
+ * отдельный от этого эндпоинта, клиентский `confirm`/`reject` (`apps/web`, вне этого барабана),
+ * человек её тоже не выбирает через ЭТУ форму. Значения синхронизированы
  * буквально с доменным enum (значения дублируются между `packages/contracts` и `apps/api`
  * умышленно — `orders`-домен `apps/api` не имеет права импортировать `packages/contracts`
  * настолько тесно и наоборот `packages/contracts` не может импортировать `apps/api`; тот же

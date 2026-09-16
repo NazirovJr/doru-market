@@ -35,8 +35,37 @@ export interface RefundError {
   readonly message: string
 }
 
+/**
+ * ДОБАВЛЕНО (DTJ-304, EP-12 §A.4, SRS-PHT-022, D-10/SRS-DOM-162) — команда частичного рефанда
+ * разницы (`items_total_before - items_total_after`) при подтверждённой частичной сборке.
+ * Комментарий текста тикета «Частичный рефанд идёт через PaymentsFacade/EscrowLedger
+ * (существующие методы)» — DISPUTED (см. отчёт сдачи): на момент этого тикета ни
+ * `PaymentsFacade` (`modules/payments/index.ts`, DTJ-249, только `holdPayout`), ни
+ * `RefundFacadePort` (этот файл, DTJ-232, только `refundFull` — цельная отмена заказа) не
+ * несли метода для ЧАСТИЧНОГО денежного эффекта БЕЗ отмены заказа — тот же класс пробела, что
+ * `ReturnsPaymentsPort`/`UnimplementedReturnsPaymentsAdapter` уже задокументировал для EP-11
+ * (DTJ-274). Здесь пробел закрыт РЕАЛЬНОЙ реализацией (не заглушкой) — `PaymentProvider.
+ * refund()`/`EscrowLedgerRepository` (`entryType='partially_refunded'`/`'adjustment'`)
+ * физически существуют в `payments` (EP-10, закрыт) и переиспользуются `PartiallyRefundOrder
+ * UseCase` (`modules/payments/application/use-cases/`, тот же модуль, что `RefundOrderUseCase`).
+ *
+ * `refundAmountDiram` — ЕДИНСТВЕННАЯ денежная величина, нужная `payments`: недополученная
+ * аптекой/платформой часть (`holdAmount - refundAmountDiram`, `holdAmount` — из
+ * `escrow_ledger.hold_created`, ЕДИНСТВЕННЫЙ источник истины по уже удержанной сумме, тот же
+ * приём, что `RefundOrderUseCase`) вычисляется ВНУТРИ `payments`, не передаётся отдельным
+ * полем — `itemsTotalAfterDiram`/`deliveryFee` не нужны этой границе (YAGNI, `02` C15).
+ */
+export interface PartialFulfillmentRefundCommand {
+  readonly orderId: string
+  readonly refundAmountDiram: bigint
+}
+
 export interface RefundFacadePort {
   /** Полный возврат суммы заказа (SRS-ORD-029: `paid_escrow`/`processing`-non-cash → 100% возврат,
    * частичного возврата в этом контракте нет — он принадлежит EP-11 `OrderDispute`/`OrderReturn`). */
   refundFull(orderId: string, reason: OrderCancelReason): Promise<Result<void, RefundError>>
+
+  /** ДОБАВЛЕНО (DTJ-304) — см. JSDoc `PartialFulfillmentRefundCommand` выше. Идемпотентна:
+   *  повторный вызов на уже обработанном заказе — no-op (см. JSDoc `PartiallyRefundOrderUseCase`). */
+  refundPartialFulfillment(command: PartialFulfillmentRefundCommand): Promise<Result<void, RefundError>>
 }

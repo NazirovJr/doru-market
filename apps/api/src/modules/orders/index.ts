@@ -39,5 +39,10 @@ export {
  * refund-facade.port.ts`/`orders/domain/order-domain-event.ts` напрямую
  * (`no-cross-module-deep-import`, depcruise).
  */
-export { REFUND_FACADE_PORT, type RefundFacadePort, type RefundError } from './application/ports/refund-facade.port.js'
+export {
+  REFUND_FACADE_PORT,
+  type RefundFacadePort,
+  type RefundError,
+  type PartialFulfillmentRefundCommand,
+} from './application/ports/refund-facade.port.js'
 export { type OrderCancelReason } from './domain/order-domain-event.js'

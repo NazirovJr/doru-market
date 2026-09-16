@@ -12,11 +12,17 @@
  * (`common/http/pipes/cursor-query.pipe.ts`) — тот декодирует ЛЮБОЙ `base64url(JSON{v,...})` и
  * читает только `.v`, лишние/отсутствующие поля не мешают.
  */
-import type { EnvelopeMeta, PharmacyTerminalQueueGroupedByDto, PharmacyTerminalQueueItemDto } from '@dorutj/contracts'
+import type {
+  EnvelopeMeta,
+  PharmacyTerminalQueueGroupedByDto,
+  PharmacyTerminalQueueItemDto,
+  PartialFulfillmentRequestDto,
+} from '@dorutj/contracts'
 import type { OrderQueueRow } from '@/modules/orders/application/ports/order-repository.port.js'
 import type { GetOrderQueueResult } from '@/modules/orders/application/pharmacy-terminal/get-order-queue.use-case.js'
 import type { AcceptOrderResult } from '@/modules/orders/application/pharmacy-terminal/accept-order.use-case.js'
 import type { ReclaimOrderResult } from '@/modules/orders/application/pharmacy-terminal/reclaim-order.use-case.js'
+import type { ProposePartialFulfillmentResult } from '@/modules/orders/application/pharmacy-terminal/propose-partial-fulfillment.use-case.js'
 
 export function toQueueItemDto(row: OrderQueueRow): PharmacyTerminalQueueItemDto {
   return {
@@ -89,5 +95,23 @@ export function toReclaimResponseData(result: ReclaimOrderResult): ReclaimOrderR
     id: result.orderId,
     assignedPharmacistId: result.assignedPharmacistId,
     slaDeadlineAt: result.slaDeadlineAt === null ? null : result.slaDeadlineAt.toISOString(),
+  }
+}
+
+/**
+ * DTJ-304 (SRS-PHT-020) — `POST /orders/:id/propose-partial-fulfillment` ответ (`201`). Деньги —
+ * `Number(bigint)` на границе JSON, тот же приём, что `order.mapper.ts`/`toQueueItemDto` выше
+ * (значения заведомо в пределах `Number.MAX_SAFE_INTEGER` для реалистичных сумм заказа).
+ */
+export function toPartialFulfillmentResponseData(result: ProposePartialFulfillmentResult): PartialFulfillmentRequestDto {
+  return {
+    id: result.id,
+    orderId: result.orderId,
+    status: result.status,
+    itemsSnapshot: result.itemsSnapshot,
+    itemsTotalBeforeDiram: Number(result.itemsTotalBeforeDiram),
+    itemsTotalAfterDiram: Number(result.itemsTotalAfterDiram),
+    refundAmountDiram: Number(result.refundAmountDiram),
+    expiresAt: result.expiresAt.toISOString(),
   }
 }

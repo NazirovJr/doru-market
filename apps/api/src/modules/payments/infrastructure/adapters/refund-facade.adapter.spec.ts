@@ -12,6 +12,7 @@ import { ErrorCode } from '@dorutj/contracts'
 import type { DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { PaymentProviderError } from '@/modules/payments/domain/errors/payment-provider.error.js'
 import type { RefundOrderUseCase } from '@/modules/payments/application/use-cases/refund-order.use-case.js'
+import type { PartiallyRefundOrderUseCase } from '@/modules/payments/application/use-cases/partially-refund-order.use-case.js'
 import { RefundFacadeAdapter } from './refund-facade.adapter.js'
 
 function fakeDb(tenantIdRow: { tenantId: string } | undefined): DrizzleDb {
@@ -28,10 +29,17 @@ function fakeUseCase(execute: (...args: unknown[]) => Promise<void>): RefundOrde
   return { execute } as unknown as RefundOrderUseCase
 }
 
+/** DTJ-304 — `RefundFacadeAdapter` теперь несёт ВТОРОЙ use case (`refundPartialFulfillment`),
+ *  не задействован тестами `refundFull` этого файла — своя фабрика ниже (см. `describe`
+ *  «refundPartialFulfillment»), собственный набор use case-специфичных проверок. */
+function fakePartiallyRefundUseCase(execute: (...args: unknown[]) => Promise<void> = vi.fn()): PartiallyRefundOrderUseCase {
+  return { execute } as unknown as PartiallyRefundOrderUseCase
+}
+
 describe('RefundFacadeAdapter (DTJ-245)', () => {
   it('happy path — резолвит tenantId, делегирует RefundOrderUseCase.execute, возвращает ok(undefined)', async () => {
     const execute = vi.fn().mockResolvedValue(undefined)
-    const adapter = new RefundFacadeAdapter(fakeDb({ tenantId: 'tenant-1' }), fakeUseCase(execute))
+    const adapter = new RefundFacadeAdapter(fakeDb({ tenantId: 'tenant-1' }), fakeUseCase(execute), fakePartiallyRefundUseCase())
 
     const result = await adapter.refundFull('order-1', 'customer_changed_mind')
 
@@ -41,7 +49,7 @@ describe('RefundFacadeAdapter (DTJ-245)', () => {
 
   it('заказ не найден (пустой SELECT) → Err(PAYMENT_PROVIDER_UNAVAILABLE), RefundOrderUseCase.execute НЕ вызван', async () => {
     const execute = vi.fn()
-    const adapter = new RefundFacadeAdapter(fakeDb(undefined), fakeUseCase(execute))
+    const adapter = new RefundFacadeAdapter(fakeDb(undefined), fakeUseCase(execute), fakePartiallyRefundUseCase())
 
     const result = await adapter.refundFull('order-missing', 'customer_changed_mind')
 
@@ -56,7 +64,7 @@ describe('RefundFacadeAdapter (DTJ-245)', () => {
   it('RefundOrderUseCase.execute бросает PaymentProviderError(TIMEOUT) → Err(SERVICE_UNAVAILABLE)', async () => {
     const timeoutError = new PaymentProviderError('TIMEOUT', 'PaymentProvider.refund timed out')
     const execute = vi.fn().mockRejectedValue(timeoutError)
-    const adapter = new RefundFacadeAdapter(fakeDb({ tenantId: 'tenant-1' }), fakeUseCase(execute))
+    const adapter = new RefundFacadeAdapter(fakeDb({ tenantId: 'tenant-1' }), fakeUseCase(execute), fakePartiallyRefundUseCase())
 
     const result = await adapter.refundFull('order-1', 'customer_changed_mind')
 
@@ -66,7 +74,7 @@ describe('RefundFacadeAdapter (DTJ-245)', () => {
   it('RefundOrderUseCase.execute бросает НЕ-таймаут PaymentProviderError → Err(PAYMENT_PROVIDER_UNAVAILABLE)', async () => {
     const bankError = new PaymentProviderError('BANK_REQUEST_FAILED', 'HTTP 502')
     const execute = vi.fn().mockRejectedValue(bankError)
-    const adapter = new RefundFacadeAdapter(fakeDb({ tenantId: 'tenant-1' }), fakeUseCase(execute))
+    const adapter = new RefundFacadeAdapter(fakeDb({ tenantId: 'tenant-1' }), fakeUseCase(execute), fakePartiallyRefundUseCase())
 
     const result = await adapter.refundFull('order-1', 'customer_changed_mind')
 
@@ -76,10 +84,42 @@ describe('RefundFacadeAdapter (DTJ-245)', () => {
   it('RefundOrderUseCase.execute бросает произвольный Error → Err(PAYMENT_PROVIDER_UNAVAILABLE) с тем же message', async () => {
     const genericError = new Error('unexpected failure')
     const execute = vi.fn().mockRejectedValue(genericError)
-    const adapter = new RefundFacadeAdapter(fakeDb({ tenantId: 'tenant-1' }), fakeUseCase(execute))
+    const adapter = new RefundFacadeAdapter(fakeDb({ tenantId: 'tenant-1' }), fakeUseCase(execute), fakePartiallyRefundUseCase())
 
     const result = await adapter.refundFull('order-1', 'customer_changed_mind')
 
     expect(result).toEqual({ ok: false, error: { code: ErrorCode.PAYMENT_PROVIDER_UNAVAILABLE, message: 'unexpected failure' } })
+  })
+})
+
+describe('RefundFacadeAdapter.refundPartialFulfillment (DTJ-304)', () => {
+  it('happy path — резолвит tenantId, делегирует PartiallyRefundOrderUseCase.execute, возвращает ok(undefined)', async () => {
+    const execute = vi.fn().mockResolvedValue(undefined)
+    const adapter = new RefundFacadeAdapter(fakeDb({ tenantId: 'tenant-1' }), fakeUseCase(vi.fn()), fakePartiallyRefundUseCase(execute))
+
+    const result = await adapter.refundPartialFulfillment({ orderId: 'order-1', refundAmountDiram: 20_000n })
+
+    expect(result).toEqual({ ok: true, value: undefined })
+    expect(execute).toHaveBeenCalledWith({ tenantId: 'tenant-1', orderId: 'order-1', refundAmountDiram: 20_000n })
+  })
+
+  it('заказ не найден → Err(PAYMENT_PROVIDER_UNAVAILABLE), PartiallyRefundOrderUseCase.execute НЕ вызван', async () => {
+    const execute = vi.fn()
+    const adapter = new RefundFacadeAdapter(fakeDb(undefined), fakeUseCase(vi.fn()), fakePartiallyRefundUseCase(execute))
+
+    const result = await adapter.refundPartialFulfillment({ orderId: 'order-missing', refundAmountDiram: 20_000n })
+
+    expect(result.ok).toBe(false)
+    expect(execute).not.toHaveBeenCalled()
+  })
+
+  it('PartiallyRefundOrderUseCase.execute бросает → Err(PAYMENT_PROVIDER_UNAVAILABLE)', async () => {
+    const bankError = new PaymentProviderError('BANK_REQUEST_FAILED', 'HTTP 502')
+    const execute = vi.fn().mockRejectedValue(bankError)
+    const adapter = new RefundFacadeAdapter(fakeDb({ tenantId: 'tenant-1' }), fakeUseCase(vi.fn()), fakePartiallyRefundUseCase(execute))
+
+    const result = await adapter.refundPartialFulfillment({ orderId: 'order-1', refundAmountDiram: 20_000n })
+
+    expect(result).toEqual({ ok: false, error: { code: ErrorCode.PAYMENT_PROVIDER_UNAVAILABLE, message: bankError.message } })
   })
 })

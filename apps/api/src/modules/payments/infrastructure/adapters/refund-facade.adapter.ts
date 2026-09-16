@@ -36,10 +36,17 @@ import { Inject, Injectable } from '@nestjs/common'
 import { eq } from 'drizzle-orm'
 import type { Result } from '@dorutj/domain-kernel'
 import { ErrorCode } from '@dorutj/contracts'
-import { REFUND_FACADE_PORT, type RefundFacadePort, type RefundError, type OrderCancelReason } from '@/modules/orders/index.js'
+import {
+  REFUND_FACADE_PORT,
+  type RefundFacadePort,
+  type RefundError,
+  type OrderCancelReason,
+  type PartialFulfillmentRefundCommand,
+} from '@/modules/orders/index.js'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { orders } from '@/db/schema/orders.js'
 import { RefundOrderUseCase } from '@/modules/payments/application/use-cases/refund-order.use-case.js'
+import { PartiallyRefundOrderUseCase } from '@/modules/payments/application/use-cases/partially-refund-order.use-case.js'
 import { PaymentProviderError } from '@/modules/payments/domain/errors/payment-provider.error.js'
 
 export { REFUND_FACADE_PORT }
@@ -51,12 +58,30 @@ export class RefundFacadeAdapter implements RefundFacadePort {
   public constructor(
     @Inject(DRIZZLE_DB) private readonly db: DrizzleDb,
     @Inject(RefundOrderUseCase) private readonly refundOrderUseCase: RefundOrderUseCase,
+    // DTJ-304 — см. JSDoc `refundPartialFulfillment` ниже.
+    @Inject(PartiallyRefundOrderUseCase) private readonly partiallyRefundOrderUseCase: PartiallyRefundOrderUseCase,
   ) {}
 
   public async refundFull(orderId: string, reason: OrderCancelReason): Promise<Result<void, RefundError>> {
     try {
       const tenantId = await this.resolveTenantId(orderId)
       await this.refundOrderUseCase.execute({ tenantId, orderId, reason })
+      return { ok: true, value: undefined }
+    } catch (error) {
+      return { ok: false, error: toRefundError(error) }
+    }
+  }
+
+  /** ДОБАВЛЕНО (DTJ-304) — см. JSDoc `PartialFulfillmentRefundCommand` (`orders/application/ports/
+   *  refund-facade.port.ts`) и `PartiallyRefundOrderUseCase`. Тонкая обёртка, 1:1 приём `refundFull` выше. */
+  public async refundPartialFulfillment(command: PartialFulfillmentRefundCommand): Promise<Result<void, RefundError>> {
+    try {
+      const tenantId = await this.resolveTenantId(command.orderId)
+      await this.partiallyRefundOrderUseCase.execute({
+        tenantId,
+        orderId: command.orderId,
+        refundAmountDiram: command.refundAmountDiram,
+      })
       return { ok: true, value: undefined }
     } catch (error) {
       return { ok: false, error: toRefundError(error) }

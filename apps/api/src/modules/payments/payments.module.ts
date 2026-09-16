@@ -180,6 +180,10 @@ import { PaymentsWebhookController } from './presentation/webhook/payments-webho
 import { PAYOUT_SCHEDULE_REPOSITORY_PROVIDER } from './infrastructure/repositories/payout-schedule.repository.js'
 import { RefundOrderUseCase } from './application/use-cases/refund-order.use-case.js'
 import { RefundFacadeAdapter } from './infrastructure/adapters/refund-facade.adapter.js'
+// DTJ-304 (EP-12) — PartiallyRefundOrderUseCase, второй провайдер `RefundFacadeAdapter`
+// (см. её JSDoc и JSDoc блока providers ниже) — D-10/SRS-DOM-162, частичный рефанд разницы
+// при подтверждённой частичной сборке терминала фармацевта.
+import { PartiallyRefundOrderUseCase } from './application/use-cases/partially-refund-order.use-case.js'
 // DTJ-243 — AuditLogPort/SupportTicketPort (сырой SQL, см. JSDoc адаптеров про DISPUTED
 // отношение к DTJ-270) + LatePaymentRefundService, оба потребляются HandlePaymentWebhookUseCase.
 import { AUDIT_LOG_PORT_PROVIDER } from './infrastructure/repositories/raw-sql-audit-log.repository.js'
@@ -357,6 +361,8 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
     // DTJ-245 — рефанд (см. JSDoc блока providers выше).
     PAYOUT_SCHEDULE_REPOSITORY_PROVIDER,
     RefundOrderUseCase,
+    // DTJ-304 — PartiallyRefundOrderUseCase, второй конструктор-параметр RefundFacadeAdapter.
+    PartiallyRefundOrderUseCase,
     RefundFacadeAdapter,
     // DTJ-243 — пограничные случаи вебхука (см. JSDoc блока providers выше).
     AUDIT_LOG_PORT_PROVIDER,

@@ -7,16 +7,23 @@
  */
 import { describe, expect, it, vi } from 'vitest'
 import type { TenantSettingsRepositoryPort } from '@/modules/tenancy/index.js'
+import type { DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { TenancyFacadeAdapter } from './tenancy-facade.adapter.js'
 
 const TENANT_ID = '11111111-1111-4111-8111-111111111111'
+
+/** DTJ-304 — `getPartialFulfillmentConfirmationTimeoutMinutes` читает Drizzle напрямую (см. её JSDoc)
+ *  — ни один тест ЭТОГО файла (без живого Postgres) её не вызывает, стаб никогда не разрешается. */
+function stubDrizzleDb(): DrizzleDb {
+  return {} as DrizzleDb
+}
 
 function makeAdapter(): TenancyFacadeAdapter {
   const repo: TenantSettingsRepositoryPort = {
     findByTenantId: vi.fn().mockResolvedValue(null),
     save: vi.fn(),
   }
-  return new TenancyFacadeAdapter(repo)
+  return new TenancyFacadeAdapter(repo, stubDrizzleDb())
 }
 
 describe('TenancyFacadeAdapter.resolveCommissionRate (SRS-DOM-160, решение CTO спор №1)', () => {
@@ -62,7 +69,7 @@ describe('TenancyFacadeAdapter.getPickupSlaMinutes (DTJ-301, SRS-PHT-008/030)', 
       findByTenantId: vi.fn().mockResolvedValue({ pickupSlaMinutes: 12 }),
       save: vi.fn(),
     }
-    const adapter = new TenancyFacadeAdapter(repo)
+    const adapter = new TenancyFacadeAdapter(repo, stubDrizzleDb())
     await expect(adapter.getPickupSlaMinutes(TENANT_ID)).resolves.toBe(12)
   })
 })

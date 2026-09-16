@@ -46,7 +46,7 @@ describe.skipIf(!postgresAvailable)('TenancyFacadeAdapter — integration (DTJ-2
   beforeAll(() => {
     pool = new Pool({ connectionString: TEST_DATABASE_URL })
     db = drizzle(pool)
-    adapter = new TenancyFacadeAdapter(new DrizzleTenantSettingsRepository(db))
+    adapter = new TenancyFacadeAdapter(new DrizzleTenantSettingsRepository(db), db)
   })
 
   afterAll(async () => {

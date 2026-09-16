@@ -87,6 +87,8 @@ interface OrderLockRow {
   readonly status: string | null
   readonly paymentMethod: string
   readonly totalAmountTjs: string
+  /** DTJ-304 — см. JSDoc `PaymentsOrderSnapshot.billingStrategy`. */
+  readonly billingStrategy: string
 }
 
 @Injectable()
@@ -112,6 +114,9 @@ export class OrdersFacadeAdapter implements PaymentsOrdersPort {
       totalAmountDiram: order.totalAmount.diram,
       pharmacyChainId,
       items: order.items.map((item) => ({ platformFeeDiram: item.platformFeeDiram })),
+      // DTJ-304 — см. JSDoc `PaymentsOrderSnapshot.billingStrategy`. `OrdersFacade.getOrderById`
+      // возвращает полный доменный `Order`, который уже несёт это поле (DTJ-228).
+      billingStrategy: order.billingStrategy,
     }
   }
 
@@ -126,6 +131,7 @@ export class OrdersFacadeAdapter implements PaymentsOrdersPort {
         status: orders.status,
         paymentMethod: orders.paymentMethod,
         totalAmountTjs: orders.totalAmountTjs,
+        billingStrategy: orders.billingStrategy,
       })
       .from(orders)
       .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)))
@@ -205,7 +211,20 @@ function toSnapshot(
     totalAmountDiram: Money.fromDbDecimalTjs(row.totalAmountTjs).diram,
     pharmacyChainId,
     items,
+    billingStrategy: toBillingStrategyOrThrow(row.billingStrategy, row.id),
   }
+}
+
+/**
+ * DTJ-304 — `orders.billing_strategy` — `varchar` + CHECK в БД (миграция `0028`, не pg `enum`),
+ * тот же класс защиты, что `isKnownCancelReason` выше в этом файле (payments не импортирует
+ * `orders/domain/**`, полагается на runtime-guard + `satisfies` для расхождения на этом файле).
+ */
+function toBillingStrategyOrThrow(value: string, orderId: string): PaymentsOrderSnapshot['billingStrategy'] {
+  if (value === 'single_invoice' || value === 'split_items_delivery') {
+    return value
+  }
+  throw new Error(`orders.billing_strategy "${value}" is not a recognized billing strategy for order ${orderId} — data integrity violation`)
 }
 
 /**

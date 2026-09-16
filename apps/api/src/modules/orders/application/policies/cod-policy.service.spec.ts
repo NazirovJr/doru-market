@@ -17,6 +17,7 @@ function makeService(codLimitDiram = COD_LIMIT_DIRAM): { service: CodPolicyServi
     getCodLimitDiram,
     getEnabledPaymentMethods: vi.fn(),
     getPickupSlaMinutes: vi.fn(),
+    getPartialFulfillmentConfirmationTimeoutMinutes: vi.fn(),
   }
   return { service: new CodPolicyService(tenancyFacade), getCodLimitDiram }
 }

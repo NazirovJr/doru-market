@@ -102,6 +102,24 @@ export type OrderDomainEvent =
       readonly requestId: string
       readonly at: Date
     }
+  /**
+   * ДОБАВЛЕНО (DTJ-304, «Что сделать» п.5 тикета, SRS-PHT-075) — `PaymentProvider.refund()`
+   * недоступен (circuit breaker) ПОСЛЕ того, как `order_partial_fulfillment_requests.status`
+   * уже необратимо перешёл в `confirmed`/`auto_confirmed_timeout` (статус НЕ откатывается, см.
+   * JSDoc `ResolvePartialFulfillmentUseCase`). Сигнал для ОТДЕЛЬНОЙ, вне периметра ЭТОГО
+   * тикета, retry-задачи (реконсиляция/повторный частичный рефанд) — ЭТОТ тикет только
+   * публикует факт в `outbox` (SRS-DOM-151), реальный consumer (периодический sweep, тот же
+   * класс, что `EscrowReconciliationJob`) — задел на будущий тикет, не изобретается здесь
+   * (`02` C15: нет абстракции без реального потребителя сегодня, а спецификация ЭТОГО тикета
+   * требует именно факт публикации, не полный retry-пайплайн).
+   */
+  | {
+      readonly type: 'PartialFulfillmentRefundRetryRequestedEvent'
+      readonly orderId: string
+      readonly requestId: string
+      readonly refundAmountDiram: bigint
+      readonly at: Date
+    }
   /** SRS-PHT-029 — новый `otp_codes`-ряд заменил предыдущий действующий код вручения (append-only,
    *  старый ряд теряет силу проверкой ТОЛЬКО против текущего FK, не удаляется). */
   | {
@@ -112,7 +130,17 @@ export type OrderDomainEvent =
       readonly regenerationsUsed: number
     }
 
-/** SRS-ORD-030 — канонический enum причин отмены (не свободная строка). */
+/**
+ * SRS-ORD-030 — канонический enum причин отмены (не свободная строка).
+ *
+ * `customer_rejected_partial_fulfillment` — ДОБАВЛЕНО (DTJ-304, EP-12 §A.4, SRS-PHT-023):
+ * клиент отклонил изменённый (частичный) состав заказа — `ResolvePartialFulfillmentUseCase`
+ * (`confirmed=false`) вызывает `order.cancel(...)` именно с этой причиной. `actor.kind='user'`
+ * (клиент), НЕ `system` — отказ явно исходит от клиента, даже если сам вызов пришёл через
+ * `source='customer'`-путь (единственный реализуемый в этом тикете источник `confirmed=false`,
+ * см. JSDoc `ResolvePartialFulfillmentUseCase` — `source='timeout'` трактует молчание как
+ * СОГЛАСИЕ, SRS-PHT-023a, никогда не производит `confirmed=false`).
+ */
 export const ORDER_CANCEL_REASON_VALUES = [
   'customer_changed_mind',
   'found_cheaper_elsewhere',
@@ -122,6 +150,7 @@ export const ORDER_CANCEL_REASON_VALUES = [
   'fraud_or_safety_force_cancel',
   'license_revoked_force_cancel',
   'late_payment_after_cancellation',
+  'customer_rejected_partial_fulfillment',
 ] as const
 export type OrderCancelReason = (typeof ORDER_CANCEL_REASON_VALUES)[number]
 
