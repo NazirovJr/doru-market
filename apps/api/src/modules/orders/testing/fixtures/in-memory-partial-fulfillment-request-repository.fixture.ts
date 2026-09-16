@@ -34,6 +34,14 @@ export class InMemoryPartialFulfillmentRequestRepository implements PartialFulfi
     return Promise.resolve(this.requests.get(requestId) ?? null)
   }
 
+  /** ДОБАВЛЕНО (DTJ-305) — см. JSDoc порта. `requestedAt` DESC — тот же порядок, что Drizzle-реализация. */
+  findLatestByOrderId(_tenantId: string, orderId: string): Promise<PartialFulfillmentRequestRecord | null> {
+    const matches = [...this.requests.values()]
+      .filter((request) => request.orderId === orderId)
+      .sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime())
+    return Promise.resolve(matches[0] ?? null)
+  }
+
   transitionStatus(input: TransitionPartialFulfillmentStatusInput): Promise<boolean> {
     const current = this.requests.get(input.id)
     if (current?.status !== input.fromStatus) {

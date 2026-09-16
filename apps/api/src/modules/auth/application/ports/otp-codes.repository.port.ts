@@ -39,7 +39,9 @@ export interface OtpCodeRecord {
   readonly id: string
   readonly tenantId: string
   readonly subjectRef: string
-  readonly purpose: 'login' | 'onboarding_contact'
+  /** `'delivery_handover'` — ДОБАВЛЕНО (DTJ-305, EP-12 §A.5): `CompletePickingUseCase`
+   *  (`modules/orders`) переиспользует ЭТОТ порт межмодульно, тем же приёмом, что `JWT_SIGNER`. */
+  readonly purpose: 'login' | 'onboarding_contact' | 'delivery_handover'
   readonly codeHash: string
   readonly attempts: number
   readonly issuedAt: Date
@@ -52,7 +54,7 @@ export interface CreateOtpCodeInput {
   readonly id: string
   readonly tenantId: string
   readonly subjectRef: string
-  readonly purpose: 'login' | 'onboarding_contact'
+  readonly purpose: 'login' | 'onboarding_contact' | 'delivery_handover'
   readonly codeHash: string
   readonly issuedAt: Date
   readonly expiresAt: Date
