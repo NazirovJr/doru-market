@@ -48,6 +48,15 @@ const routes: RouteObject[] = [
           return { Component }
         },
       },
+      // DTJ-277 (EP-11) — единственная строка, которой этот тикет касается общего каркаса
+      // (files_owned DTJ-277 — только features/returns/**): очередь возвратов своей аптеки.
+      {
+        path: 'pharmacy/returns',
+        lazy: async () => {
+          const { IncomingReturnsList: Component } = await import('@/features/returns/ui/IncomingReturnsList')
+          return { Component }
+        },
+      },
     ],
   },
 ]
