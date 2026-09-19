@@ -244,6 +244,8 @@ function makeHarness(overrides: Partial<HarnessOverrides> = {}): Harness {
     getEnabledPaymentMethods,
     getPickupSlaMinutes: vi.fn(),
     getPartialFulfillmentConfirmationTimeoutMinutes: vi.fn(),
+    getHandoverOtpMaxRegenerationsPerOrder: vi.fn(),
+    getHandoverOtpRegenerateMinIntervalSeconds: vi.fn(),
   }
 
   const deliveryFacade: DeliveryFacadePort = { calculateFee: vi.fn<DeliveryFacadePort['calculateFee']>().mockResolvedValue(0n) }

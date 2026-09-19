@@ -25,6 +25,8 @@ import type { AcceptOrderResult } from '@/modules/orders/application/pharmacy-te
 import type { ReclaimOrderResult } from '@/modules/orders/application/pharmacy-terminal/reclaim-order.use-case.js'
 import type { ProposePartialFulfillmentResult } from '@/modules/orders/application/pharmacy-terminal/propose-partial-fulfillment.use-case.js'
 import type { CompletePickingResult } from '@/modules/orders/application/pharmacy-terminal/complete-picking.use-case.js'
+import type { GetHandoverOtpResult } from '@/modules/orders/application/pharmacy-terminal/get-handover-otp.use-case.js'
+import type { RegenerateHandoverOtpResult } from '@/modules/orders/application/pharmacy-terminal/regenerate-handover-otp.use-case.js'
 
 export function toQueueItemDto(row: OrderQueueRow): PharmacyTerminalQueueItemDto {
   return {
@@ -134,5 +136,30 @@ export function toCompletePickingResponseData(result: CompletePickingResult): Co
       expiresAt: result.handoverOtp.expiresAt.toISOString(),
       purpose: result.handoverOtp.purpose,
     },
+  }
+}
+
+/** DTJ-306 (SRS-PHT-028) — `GET .../handover-otp`, форма 1:1 с `HandoverOtpDto`. */
+export function toHandoverOtpDto(result: GetHandoverOtpResult): HandoverOtpDto {
+  return {
+    code: result.code,
+    expiresAt: result.expiresAt.toISOString(),
+    purpose: result.purpose,
+  }
+}
+
+export interface RegenerateHandoverOtpResponseData extends HandoverOtpDto {
+  readonly regenerationsUsed: number
+}
+
+/** DTJ-306 (SRS-PHT-029) — `POST .../handover-otp/regenerate`. */
+export function toRegenerateHandoverOtpResponseData(
+  result: RegenerateHandoverOtpResult,
+): RegenerateHandoverOtpResponseData {
+  return {
+    code: result.code,
+    expiresAt: result.expiresAt.toISOString(),
+    purpose: result.purpose,
+    regenerationsUsed: result.regenerationsUsed,
   }
 }

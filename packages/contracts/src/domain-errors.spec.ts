@@ -70,6 +70,7 @@ import {
 import {
   BatchNotAvailableForSubstitutionError,
   HandoverOtpNotFoundError,
+  HandoverOtpRegenerationRateLimitedError,
   ItemAlreadyScannedError,
   ItemNotInOrderError,
   OrderAlreadyClaimedError,
@@ -181,6 +182,7 @@ const EXPECTED_CONCRETE_CLASSES: ReadonlySet<string> = new Set<string>([
   'SealConfirmationRequiredError',
   'PendingCustomerConfirmationError',
   'HandoverOtpNotFoundError',
+  'HandoverOtpRegenerationRateLimitedError',
   // Delivery — модуль 25 §A.9 (EP-13, DTJ-313).
   'OfferExpiredError',
   'OfferAlreadyRespondedError',
@@ -274,6 +276,7 @@ const CASES: readonly (readonly [() => DomainError, ErrorCode])[] = [
   [() => new SealConfirmationRequiredError(), ErrorCode.SEAL_CONFIRMATION_REQUIRED],
   [() => new PendingCustomerConfirmationError(), ErrorCode.PARTIAL_FULFILLMENT_PENDING],
   [() => new HandoverOtpNotFoundError(), ErrorCode.HANDOVER_OTP_NOT_FOUND],
+  [() => new HandoverOtpRegenerationRateLimitedError(), ErrorCode.RATE_LIMITED],
   // Delivery — модуль 25 §A.9 (EP-13, DTJ-313).
   [() => new OfferExpiredError(), ErrorCode.OFFER_EXPIRED],
   [() => new OfferAlreadyRespondedError(), ErrorCode.OFFER_ALREADY_RESPONDED],

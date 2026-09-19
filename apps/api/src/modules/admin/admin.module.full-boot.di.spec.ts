@@ -75,6 +75,11 @@ describe('AdminModule — DI-резолвинг целиком (реальный
     const { DatabaseModule } = await import('@/infrastructure/database/database.module.js')
     const { RedisModule } = await import('@/infrastructure/redis/redis.module.js')
     const { IdempotencyModule } = await import('@/common/idempotency/idempotency.module.js')
+    // ДОБАВЛЕНО (DTJ-306, EP-12 §A.5) — AdminModule импортирует OrdersModule, которая теперь
+    // (GetHandoverOtpUseCase/RegenerateHandoverOtpUseCase) требует AUDIT_LOG_PORT. AuditLogModule
+    // — @Global() в реальном AppModule, но этот тест поднимает минимальный граф, не AppModule
+    // целиком, поэтому его нужно перечислить явно (см. JSDoc orders.module.full-boot.di.spec.ts).
+    const { AuditLogModule } = await import('@/common/audit/audit-log.module.js')
     const { AdminModule } = await import('./admin.module.js')
     const { ONBOARDING_FACADE_PORT } = await import('./application/ports/onboarding-facade.port.js')
     const { ORDERS_FACADE_PORT } = await import('./application/ports/orders-facade.port.js')
@@ -82,7 +87,16 @@ describe('AdminModule — DI-резолвинг целиком (реальный
     const { OnboardingFacade } = await import('@/modules/onboarding/index.js')
 
     const moduleRef = await Test.createTestingModule({
-      imports: [AppConfigModule, LoggerModule, SharedKernelModule, DatabaseModule, RedisModule, IdempotencyModule, AdminModule],
+      imports: [
+        AppConfigModule,
+        LoggerModule,
+        SharedKernelModule,
+        DatabaseModule,
+        RedisModule,
+        IdempotencyModule,
+        AuditLogModule,
+        AdminModule,
+      ],
     }).compile()
 
     expect(moduleRef).toBeDefined()

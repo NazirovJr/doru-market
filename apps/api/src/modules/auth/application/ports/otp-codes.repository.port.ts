@@ -26,6 +26,11 @@
  *     `VerifyOtpUseCase`); используется для аудита и консистентности.
  *   - `findActiveBySubject(input)` — последний НЕпотреблённый (`consumedAt IS NULL`)
  *     и НЕистёкший код для `subjectRef + purpose` (для будущих сценариев).
+ *   - `findById(id)` (ДОБАВЛЕНО DTJ-306, EP-12 §A.5) — простое НЕблокирующее чтение по
+ *     `id` (= `orders.handover_otp_id`), без `tx`. `GetHandoverOtpUseCase` только
+ *     отображает код фармацевту — держать транзакцию/строчную блокировку ради
+ *     чтения одной строки было бы избыточно (`findByIdForUpdate` — для сценариев,
+ *     где за чтением следует запись в той же транзакции, здесь такого нет).
  *
  * R1: InMemory-реализация достаточна (DB недоступна в песочнице, см.
  * STATE-AND-RESUME §5.1). Drizzle-реализация появится, когда БД подключится —
@@ -43,6 +48,10 @@ export interface OtpCodeRecord {
    *  (`modules/orders`) переиспользует ЭТОТ порт межмодульно, тем же приёмом, что `JWT_SIGNER`. */
   readonly purpose: 'login' | 'onboarding_contact' | 'delivery_handover'
   readonly codeHash: string
+  /** ДОБАВЛЕНО (DTJ-306, EP-12 §A.5) — код в открытом виде, заполнен ТОЛЬКО когда
+   *  `purpose === 'delivery_handover'` (см. JSDoc миграции `0049_otp_codes_plain_code_for_handover.sql`).
+   *  `null` для `login`/`onboarding_contact` — те остаются хеш-only. */
+  readonly plainCode: string | null
   readonly attempts: number
   readonly issuedAt: Date
   readonly expiresAt: Date
@@ -56,12 +65,15 @@ export interface CreateOtpCodeInput {
   readonly subjectRef: string
   readonly purpose: 'login' | 'onboarding_contact' | 'delivery_handover'
   readonly codeHash: string
+  /** См. `OtpCodeRecord.plainCode` — передавать ТОЛЬКО для `purpose='delivery_handover'`. */
+  readonly plainCode?: string
   readonly issuedAt: Date
   readonly expiresAt: Date
 }
 
 export interface OtpCodesRepository {
   create(input: CreateOtpCodeInput): Promise<OtpCodeRecord>
+  findById(id: string): Promise<OtpCodeRecord | null>
   findByIdForUpdate(tx: UnitOfWorkTx, id: string): Promise<OtpCodeRecord | null>
   markConsumed(tx: UnitOfWorkTx, id: string, now: Date): Promise<void>
   incrementAttempts(tx: UnitOfWorkTx, id: string): Promise<void>
@@ -71,4 +83,9 @@ export interface OtpCodesRepository {
     readonly purpose: 'login' | 'onboarding_contact'
     readonly now: Date
   }): Promise<OtpCodeRecord | null>
+  /** ДОБАВЛЕНО (DTJ-306, EP-12 §A.5) — сколько строк `otp_codes` когда-либо создано для
+   *  `subjectRef+purpose` (включая самую первую) — `RegenerateHandoverOtpUseCase` считает
+   *  `regenerationsUsed`/rate-limit по этому числу, не по отдельному денормализованному
+   *  счётчику (append-only таблица уже несёт эту информацию, `02` C15). */
+  countBySubjectAndPurpose(tenantId: string, subjectRef: string, purpose: 'delivery_handover'): Promise<number>
 }

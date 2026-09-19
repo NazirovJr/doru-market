@@ -116,6 +116,8 @@ function makeHarness(): Harness {
     getEnabledPaymentMethods: vi.fn(),
     getPickupSlaMinutes: vi.fn(),
     getPartialFulfillmentConfirmationTimeoutMinutes: getTimeoutMinutes,
+    getHandoverOtpMaxRegenerationsPerOrder: vi.fn(),
+    getHandoverOtpRegenerateMinIntervalSeconds: vi.fn(),
   }
   const catalogFacade: CatalogFacadePort = {
     getMedicineSnapshot: vi.fn<CatalogFacadePort['getMedicineSnapshot']>().mockResolvedValue(new Map<string, MedicineOrderSnapshot>()),
@@ -321,6 +323,8 @@ describe('ProposePartialFulfillmentUseCase — снэпшот названия �
       getEnabledPaymentMethods: vi.fn(),
       getPickupSlaMinutes: vi.fn(),
       getPartialFulfillmentConfirmationTimeoutMinutes: vi.fn().mockResolvedValue(TIMEOUT_MINUTES),
+      getHandoverOtpMaxRegenerationsPerOrder: vi.fn(),
+      getHandoverOtpRegenerateMinIntervalSeconds: vi.fn(),
     }
     const snapshotMap = new Map<string, MedicineOrderSnapshot>([
       [

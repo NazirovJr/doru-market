@@ -31,6 +31,7 @@ export class InMemoryOtpCodesRepository implements OtpCodesRepository {
       subjectRef: input.subjectRef,
       purpose: input.purpose,
       codeHash: input.codeHash,
+      plainCode: input.plainCode ?? null,
       attempts: 0,
       issuedAt: input.issuedAt,
       expiresAt: input.expiresAt,
@@ -40,7 +41,11 @@ export class InMemoryOtpCodesRepository implements OtpCodesRepository {
     return Promise.resolve(record)
   }
 
-   
+  async findById(id: string): Promise<OtpCodeRecord | null> {
+    return Promise.resolve(this.rows.get(id) ?? null)
+  }
+
+
   async findByIdForUpdate(_tx: UnitOfWorkTx, id: string): Promise<OtpCodeRecord | null> {
     return Promise.resolve(this.rows.get(id) ?? null)
   }
@@ -83,6 +88,16 @@ export class InMemoryOtpCodesRepository implements OtpCodesRepository {
       }
     }
     return Promise.resolve(null)
+  }
+
+  countBySubjectAndPurpose(tenantId: string, subjectRef: string, purpose: 'delivery_handover'): Promise<number> {
+    let count = 0
+    for (const row of this.rows.values()) {
+      if (row.tenantId === tenantId && row.subjectRef === subjectRef && row.purpose === purpose) {
+        count += 1
+      }
+    }
+    return Promise.resolve(count)
   }
 }
 

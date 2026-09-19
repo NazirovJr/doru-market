@@ -38,6 +38,12 @@
  * ссылающегося на неё — ТОТ ЖЕ класс риска, что `RequestOtpUseCase` уже принимает (код создан,
  * `SmsProvider.sendOtp` мог бы не отправиться), не новый класс дефекта.
  *
+ * ДОБАВЛЕНО (DTJ-306, EP-12 §A.5) — `issueHandoverOtp` ниже также передаёт `plainCode: code`
+ * в `create()` (новое опциональное поле `CreateOtpCodeInput.plainCode`, см. её JSDoc): `code_hash`
+ * необратим, а `GetHandoverOtpUseCase` (DTJ-306) должен уметь повторно показать этот же код
+ * фармацевту позже — без этого поля строка, созданная ЭТИМ use case'ом, была бы невидима для
+ * последующего `GET .../handover-otp` (404, «код потерян», хотя заказ реально `picked_up`).
+ *
  * Аудит (`Что сделать` п.1 тикета, DoD «аудит-запись на КАЖДУЮ попытку, включая отклонённую»)
  * — `PINO_LOGGER` структурным логом (1:1 приём `RefreshTokenUseCase`'s security-лог при
  * detect-reuse, SRS-API-027), НЕ отдельная запись `audit_log` (`payments.AuditLogPort` —
@@ -207,6 +213,9 @@ export class CompletePickingUseCase {
       subjectRef: orderId,
       purpose: HANDOVER_OTP_PURPOSE,
       codeHash,
+      // ДОБАВЛЕНО (DTJ-306, EP-12 §A.5) — без этого GetHandoverOtpUseCase не может повторно
+      // показать код, выпущенный ЗДЕСЬ (codeHash необратим, см. JSDoc CreateOtpCodeInput.plainCode).
+      plainCode: code,
       issuedAt: now,
       expiresAt,
     })

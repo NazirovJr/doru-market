@@ -56,6 +56,8 @@ function makeHarness(commissionByCategory: Partial<Record<'rx' | 'otc', number>>
     getEnabledPaymentMethods: vi.fn(),
     getPickupSlaMinutes: vi.fn(),
     getPartialFulfillmentConfirmationTimeoutMinutes: vi.fn(),
+    getHandoverOtpMaxRegenerationsPerOrder: vi.fn(),
+    getHandoverOtpRegenerateMinIntervalSeconds: vi.fn(),
   }
   const calculateFee = vi.fn<DeliveryFacadePort['calculateFee']>().mockResolvedValue(1_500n)
   const deliveryFacade: DeliveryFacadePort = { calculateFee }

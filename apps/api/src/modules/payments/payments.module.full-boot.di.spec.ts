@@ -91,11 +91,24 @@ describe('PaymentsModule — DI-резолвинг целиком (реальн�
     const { DatabaseModule } = await import('@/infrastructure/database/database.module.js')
     const { RedisModule } = await import('@/infrastructure/redis/redis.module.js')
     const { IdempotencyModule } = await import('@/common/idempotency/idempotency.module.js')
+    // ДОБАВЛЕНО (DTJ-306, EP-12 §A.5) — OrdersModule теперь требует AUDIT_LOG_PORT
+    // (GetHandoverOtpUseCase/RegenerateHandoverOtpUseCase), см. JSDoc orders.module.full-boot.di.spec.ts.
+    const { AuditLogModule } = await import('@/common/audit/audit-log.module.js')
     const { OrdersModule } = await import('@/modules/orders/orders.module.js')
     const { PaymentsModule } = await import('./payments.module.js')
 
     const moduleRef = await Test.createTestingModule({
-      imports: [AppConfigModule, LoggerModule, SharedKernelModule, DatabaseModule, RedisModule, IdempotencyModule, OrdersModule, PaymentsModule],
+      imports: [
+        AppConfigModule,
+        LoggerModule,
+        SharedKernelModule,
+        DatabaseModule,
+        RedisModule,
+        IdempotencyModule,
+        AuditLogModule,
+        OrdersModule,
+        PaymentsModule,
+      ],
     }).compile()
 
     expect(moduleRef).toBeDefined()

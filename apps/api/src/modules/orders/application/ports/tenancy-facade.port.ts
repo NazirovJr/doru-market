@@ -68,4 +68,16 @@ export interface TenancyFacadePort {
    * `pickupSlaBufferMinutes` (SRS-PHT-073) НЕ проверяется — см. «Риски» тикета DTJ-304.
    */
   getPartialFulfillmentConfirmationTimeoutMinutes(tenantId: string): Promise<number>
+
+  /**
+   * DTJ-306 (EP-12 §A.5, SRS-PHT-028) — `tenant_settings.handover_otp_max_regenerations_per_order`
+   * (DB-дефолт 20, см. `db/schema/tenants.ts`), используется в `RegenerateHandoverOtpUseCase`.
+   */
+  getHandoverOtpMaxRegenerationsPerOrder(tenantId: string): Promise<number>
+
+  /**
+   * DTJ-306 (EP-12 §A.5, SRS-PHT-028) — `tenant_settings.handover_otp_regenerate_min_interval_seconds`
+   * (DB-дефолт 60, см. `db/schema/tenants.ts`), используется в `RegenerateHandoverOtpUseCase`.
+   */
+  getHandoverOtpRegenerateMinIntervalSeconds(tenantId: string): Promise<number>
 }

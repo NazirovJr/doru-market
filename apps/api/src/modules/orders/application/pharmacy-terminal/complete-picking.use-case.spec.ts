@@ -133,14 +133,16 @@ function makeHarness(): Harness {
   const otpGenerate = vi.fn<OtpGeneratorPort['generate']>().mockReturnValue({ code: '4821', codeHash: 'unsalted-hash' })
   const otpGenerator: OtpGeneratorPort = { generate: otpGenerate }
   const otpCodesCreate = vi.fn<OtpCodesRepository['create']>().mockImplementation((input) =>
-    Promise.resolve({ ...input, attempts: 0, consumedAt: null }),
+    Promise.resolve({ ...input, plainCode: input.plainCode ?? null, attempts: 0, consumedAt: null }),
   )
   const otpCodesRepository: OtpCodesRepository = {
     create: otpCodesCreate,
+    findById: vi.fn(),
     findByIdForUpdate: vi.fn(),
     markConsumed: vi.fn(),
     incrementAttempts: vi.fn(),
     findActiveBySubject: vi.fn(),
+    countBySubjectAndPurpose: vi.fn(),
   }
   const useCase = new CompletePickingUseCase(
     orderRepo,
