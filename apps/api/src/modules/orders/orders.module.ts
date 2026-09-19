@@ -233,6 +233,15 @@ import { PartialFulfillmentTimeoutController } from './presentation/internal/par
 import { CompletePickingUseCase } from './application/pharmacy-terminal/complete-picking.use-case.js'
 import { CompletePickingController } from './presentation/pharmacy-terminal/complete-picking.controller.js'
 
+// DTJ-306 (EP-12, терминал фармацевта §A.5) — GetHandoverOtpUseCase/RegenerateHandoverOtpUseCase +
+// HandoverOtpController (`GET .../handover-otp`, `POST .../handover-otp/regenerate`). Новых
+// провайдеров сверх уже забинженных DTJ-227/301/304/305 не требует — `AUDIT_LOG_PORT` резолвится
+// из `@Global()` `AuditLogModule` (DTJ-374, без явного import), `OTP_GENERATOR`/`OTP_CODES_REPOSITORY`
+// — из уже импортированного `AuthModule`, тот же приём, что `CompletePickingUseCase` выше.
+import { GetHandoverOtpUseCase } from './application/pharmacy-terminal/get-handover-otp.use-case.js'
+import { RegenerateHandoverOtpUseCase } from './application/pharmacy-terminal/regenerate-handover-otp.use-case.js'
+import { HandoverOtpController } from './presentation/pharmacy-terminal/handover-otp.controller.js'
+
 /**
  * `UnimplementedCatalogFacadeAdapter`/`UnimplementedOrderRepositoryAdapter` (DTJ-220/222) —
  * СНЯТЫ этим тикетом (D-EP09-19): реальные `CatalogFacadeAdapter`
@@ -429,6 +438,7 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     PartialFulfillmentController,
     PartialFulfillmentTimeoutController,
     CompletePickingController,
+    HandoverOtpController,
   ],
   providers: [
     CART_REPOSITORY_DRIZZLE_PROVIDER,
@@ -497,6 +507,9 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     ResolvePartialFulfillmentUseCase,
     // DTJ-305 (EP-12, терминал фармацевта §A.5, см. JSDoc импортов выше).
     CompletePickingUseCase,
+    // DTJ-306 (EP-12, терминал фармацевта §A.5, см. JSDoc импортов выше).
+    GetHandoverOtpUseCase,
+    RegenerateHandoverOtpUseCase,
   ],
   // DTJ-226 (правка приёмки CTO, правило 2 AGENTS.md): без `exports` `OrdersFacade`/
   // `ORDERS_FACADE` были написаны, но физически недостижимы через `imports: [OrdersModule]` —

@@ -99,4 +99,16 @@ export const OrderPolicy = {
   canManagePicking(order: Order, actor: OrderPolicyActor): boolean {
     return actor.role === 'pharmacist' && actor.pharmacyId === order.pharmacyId
   },
+
+  /**
+   * DTJ-306 (SRS-PHT-028) — просмотр/регенерация OTP вручения. В ОТЛИЧИЕ от `canManagePicking`
+   * выше (строго `pharmacist`), тикет прямо называет ОБЕ роли терминала («Доступ:
+   * pharmacist/pharmacy_admin своей аптеки») — переиспользован `isTerminalStaff`, как в
+   * `canAccept`/`canReclaim`. Без проверки `order.status` — use case сам решает
+   * `HandoverOtpNotFoundError` (404) по статусу, эта policy отвечает только на вопрос
+   * «своя ли аптека», чтобы не путать 403 (чужая аптека) с 404 (код недоступен по статусу).
+   */
+  canViewHandoverOtp(order: Order, actor: OrderPolicyActor): boolean {
+    return isTerminalStaff(actor.role) && actor.pharmacyId === order.pharmacyId
+  },
 }

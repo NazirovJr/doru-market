@@ -69,10 +69,25 @@ describe('OrdersModule — DI-резолвинг целиком (реальны�
     const { DatabaseModule } = await import('@/infrastructure/database/database.module.js')
     const { RedisModule } = await import('@/infrastructure/redis/redis.module.js')
     const { IdempotencyModule } = await import('@/common/idempotency/idempotency.module.js')
+    // ДОБАВЛЕНО (DTJ-306, EP-12 §A.5) — GetHandoverOtpUseCase/RegenerateHandoverOtpUseCase
+    // первыми в orders ввели реальную зависимость от AUDIT_LOG_PORT. AuditLogModule — @Global()
+    // в реальном AppModule (см. её JSDoc), но этот тест поднимает МИНИМАЛЬНЫЙ граф модулей, не
+    // AppModule целиком — @Global() распространяется только на модули, реально входящие в ТЕКУЩИЙ
+    // скомпилированный граф, поэтому его нужно явно перечислить здесь тоже.
+    const { AuditLogModule } = await import('@/common/audit/audit-log.module.js')
     const { OrdersModule } = await import('./orders.module.js')
 
     const moduleRef = await Test.createTestingModule({
-      imports: [AppConfigModule, LoggerModule, SharedKernelModule, DatabaseModule, RedisModule, IdempotencyModule, OrdersModule],
+      imports: [
+        AppConfigModule,
+        LoggerModule,
+        SharedKernelModule,
+        DatabaseModule,
+        RedisModule,
+        IdempotencyModule,
+        AuditLogModule,
+        OrdersModule,
+      ],
     }).compile()
 
     expect(moduleRef).toBeDefined()

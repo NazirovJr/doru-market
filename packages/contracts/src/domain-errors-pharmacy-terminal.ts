@@ -20,6 +20,7 @@
  */
 import { ErrorCode } from './errors.js'
 import { BusinessRuleViolationError, ConflictError, NotFoundError, ValidationError } from './domain-errors.js'
+import { DomainError } from './domain-error-base.js'
 
 /** SRS-PHT-009 — заказ уже принят другим фармацевтом (`accept` после чужого `accept`). */
 export class OrderAlreadyClaimedError extends ConflictError {
@@ -87,5 +88,19 @@ export class PendingCustomerConfirmationError extends ConflictError {
 export class HandoverOtpNotFoundError extends NotFoundError {
   constructor(details?: Record<string, unknown>) {
     super(details, ErrorCode.HANDOVER_OTP_NOT_FOUND, 'Handover OTP not found for this order')
+  }
+}
+
+/**
+ * DTJ-306 (SRS-PHT-028, EP-12 §A.5) — `RegenerateHandoverOtpUseCase` отклоняет попытку
+ * регенерации: либо `tenant_settings.handover_otp_max_regenerations_per_order` уже исчерпан
+ * для заказа, либо `tenant_settings.handover_otp_regenerate_min_interval_seconds` с прошлой
+ * регенерации ещё не прошёл. Наследует `DomainError` напрямую (не `BusinessRuleViolationError`
+ * — тот мапится в 422, а это 429, отдельный `ErrorCode.RATE_LIMITED`, уже сматппленный
+ * `ERROR_HTTP_STATUS`, `errors.ts`).
+ */
+export class HandoverOtpRegenerationRateLimitedError extends DomainError {
+  constructor(details?: Record<string, unknown>) {
+    super(ErrorCode.RATE_LIMITED, 'Handover OTP regeneration rate limit exceeded', details)
   }
 }

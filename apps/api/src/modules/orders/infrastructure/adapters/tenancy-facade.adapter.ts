@@ -67,6 +67,12 @@ const PICKUP_SLA_MINUTES_DEFAULT = 7
  *  (`db/schema/tenants.ts` `DEFAULT_PARTIAL_FULFILLMENT_CONFIRMATION_TIMEOUT_MINUTES = 10`). */
 const PARTIAL_FULFILLMENT_CONFIRMATION_TIMEOUT_MINUTES_DEFAULT = 10
 
+/** DTJ-306 — 1:1 с DB-дефолтом `tenant_settings.handover_otp_max_regenerations_per_order` */
+const DEFAULT_HANDOVER_OTP_MAX_REGENERATIONS_PER_ORDER = 20
+
+/** DTJ-306 — 1:1 с DB-дефолтом `tenant_settings.handover_otp_regenerate_min_interval_seconds` */
+const DEFAULT_HANDOVER_OTP_REGENERATE_MIN_INTERVAL_SECONDS = 60
+
 @Injectable()
 export class TenancyFacadeAdapter implements TenancyFacadePort {
   constructor(
@@ -133,6 +139,32 @@ export class TenancyFacadeAdapter implements TenancyFacadePort {
       .where(eq(tenantSettings.tenantId, tenantId))
       .limit(1)
     return row?.minutes ?? PARTIAL_FULFILLMENT_CONFIRMATION_TIMEOUT_MINUTES_DEFAULT
+  }
+
+  /**
+   * DTJ-306 (EP-12 §A.5, SRS-PHT-028) — прямое чтение колонки `handover_otp_max_regenerations_per_order`
+   * (см. `db/schema/tenants.ts`).
+   */
+  async getHandoverOtpMaxRegenerationsPerOrder(tenantId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ maxRegenerations: tenantSettings.handoverOtpMaxRegenerationsPerOrder })
+      .from(tenantSettings)
+      .where(eq(tenantSettings.tenantId, tenantId))
+      .limit(1)
+    return row?.maxRegenerations ?? DEFAULT_HANDOVER_OTP_MAX_REGENERATIONS_PER_ORDER
+  }
+
+  /**
+   * DTJ-306 (EP-12 §A.5, SRS-PHT-028) — прямое чтение колонки `handover_otp_regenerate_min_interval_seconds`
+   * (см. `db/schema/tenants.ts`).
+   */
+  async getHandoverOtpRegenerateMinIntervalSeconds(tenantId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ intervalSeconds: tenantSettings.handoverOtpRegenerateMinIntervalSeconds })
+      .from(tenantSettings)
+      .where(eq(tenantSettings.tenantId, tenantId))
+      .limit(1)
+    return row?.intervalSeconds ?? DEFAULT_HANDOVER_OTP_REGENERATE_MIN_INTERVAL_SECONDS
   }
 }
 

@@ -301,6 +301,12 @@
       "when": 1700000510000,
       "tag": "0047_feature_flags",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "when": 1700000520000,
+      "tag": "0048_otp_codes_plain_code_for_handover",
+      "breakpoints": true
     }
   ]
 }

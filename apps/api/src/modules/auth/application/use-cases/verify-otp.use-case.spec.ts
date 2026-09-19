@@ -76,6 +76,7 @@ class StubOtpCodesRepository implements OtpCodesRepository {
       subjectRef: input.subjectRef,
       purpose: input.purpose,
       codeHash: input.codeHash,
+      plainCode: input.plainCode ?? null,
       attempts: 0,
       issuedAt: input.issuedAt,
       expiresAt: input.expiresAt,
@@ -85,7 +86,12 @@ class StubOtpCodesRepository implements OtpCodesRepository {
     return Promise.resolve(record)
   }
 
-   
+
+  findById(id: string): Promise<OtpCodeRecord | null> {
+    return Promise.resolve(this.rows.get(id) ?? null)
+  }
+
+
   findByIdForUpdate(_tx: UnitOfWorkTx, id: string): Promise<OtpCodeRecord | null> {
     return Promise.resolve(this.rows.get(id) ?? null)
   }
@@ -120,6 +126,11 @@ class StubOtpCodesRepository implements OtpCodesRepository {
     return Promise.resolve(null)
   }
 
+
+  countBySubjectAndPurpose(): Promise<number> {
+    return Promise.resolve(0)
+  }
+
   seed(input: SeedOtpInput): void {
     const codeHash = createHash('sha256')
       .update(`${input.codeRaw}:${input.id}`)
@@ -131,6 +142,7 @@ class StubOtpCodesRepository implements OtpCodesRepository {
       subjectRef: input.phone,
       purpose: 'login',
       codeHash,
+      plainCode: null,
       attempts: 0,
       issuedAt: input.issuedAt,
       expiresAt: input.expiresAt,

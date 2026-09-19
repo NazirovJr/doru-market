@@ -121,11 +121,16 @@ export type OrderDomainEvent =
       readonly at: Date
     }
   /** SRS-PHT-029 — новый `otp_codes`-ряд заменил предыдущий действующий код вручения (append-only,
-   *  старый ряд теряет силу проверкой ТОЛЬКО против текущего FK, не удаляется). */
+   *  старый ряд теряет силу проверкой ТОЛЬКО против текущего FK, не удаляется).
+   *  `deliveryAssignmentId` — ИЗМЕНЕНО (DTJ-306, EP-12 §A.5) с обязательного `string` на
+   *  `string | null`: на момент DTJ-306 модуль `delivery` (EP-13) несёт только `domain/`-слой,
+   *  без репозитория/фасада, пишущего `delivery_assignments` — `RegenerateHandoverOtpUseCase`
+   *  физически не может узнать `deliveryAssignmentId` заказа и публикует `null` (TODO(EP-13):
+   *  заполнить, когда появится `DeliveryFacadePort`-метод чтения назначения по `orderId`). */
   | {
       readonly type: 'HandoverOtpRegeneratedEvent'
       readonly orderId: string
-      readonly deliveryAssignmentId: string
+      readonly deliveryAssignmentId: string | null
       readonly regeneratedAt: Date
       readonly regenerationsUsed: number
     }

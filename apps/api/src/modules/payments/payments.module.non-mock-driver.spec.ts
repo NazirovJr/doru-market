@@ -101,13 +101,25 @@ describe('PaymentsModule — PAYMENT_DRIVER=alif_mobi (DTJ-239)', () => {
     const { DatabaseModule } = await import('@/infrastructure/database/database.module.js')
     const { RedisModule } = await import('@/infrastructure/redis/redis.module.js')
     const { IdempotencyModule } = await import('@/common/idempotency/idempotency.module.js')
+    // ДОБАВЛЕНО (DTJ-306) — OrdersModule требует AUDIT_LOG_PORT, см. JSDoc orders.module.full-boot.di.spec.ts.
+    const { AuditLogModule } = await import('@/common/audit/audit-log.module.js')
     const { OrdersModule } = await import('@/modules/orders/orders.module.js')
     const { PaymentsModule } = await import('./payments.module.js')
     const { PAYMENT_PROVIDER_TOKEN } = await import('./application/ports/payment-provider.port.js')
     const { BANK_WEBHOOK_VERIFIER_PORT } = await import('./application/ports/bank-webhook-verifier.port.js')
 
     const moduleRef = await Test.createTestingModule({
-      imports: [AppConfigModule, LoggerModule, SharedKernelModule, DatabaseModule, RedisModule, IdempotencyModule, OrdersModule, PaymentsModule],
+      imports: [
+        AppConfigModule,
+        LoggerModule,
+        SharedKernelModule,
+        DatabaseModule,
+        RedisModule,
+        IdempotencyModule,
+        AuditLogModule,
+        OrdersModule,
+        PaymentsModule,
+      ],
     }).compile()
 
     const provider = moduleRef.get<PaymentProvider>(PAYMENT_PROVIDER_TOKEN)

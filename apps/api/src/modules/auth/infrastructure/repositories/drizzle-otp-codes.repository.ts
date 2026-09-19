@@ -12,7 +12,7 @@
  * принимает `tx`, см. JSDoc `OtpCodesRepository.create`), всегда на `this.db`.
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { and, eq, gt, isNull, sql } from 'drizzle-orm'
+import { and, count, eq, gt, isNull, sql } from 'drizzle-orm'
 import { type DrizzleDb, DRIZZLE_DB } from '@/infrastructure/database/drizzle.provider.js'
 import { otpCodes, type OtpCodeRow } from '@/db/schema/otp-codes.js'
 import {
@@ -37,6 +37,7 @@ export class DrizzleOtpCodesRepository implements OtpCodesRepository {
         subjectRef: input.subjectRef,
         purpose: input.purpose,
         codeHash: input.codeHash,
+        plainCode: input.plainCode ?? null,
         issuedAt: input.issuedAt,
         expiresAt: input.expiresAt,
       })
@@ -46,6 +47,12 @@ export class DrizzleOtpCodesRepository implements OtpCodesRepository {
       throw new Error('otp_codes insert returned no rows')
     }
     return rowToRecord(row)
+  }
+
+  async findById(id: string): Promise<OtpCodeRecord | null> {
+    const rows = await this.db.select().from(otpCodes).where(eq(otpCodes.id, id)).limit(1)
+    const row = rows[0]
+    return row === undefined ? null : rowToRecord(row)
   }
 
   async findByIdForUpdate(tx: UnitOfWorkTx, id: string): Promise<OtpCodeRecord | null> {
@@ -90,6 +97,14 @@ export class DrizzleOtpCodesRepository implements OtpCodesRepository {
     const row = rows[0]
     return row === undefined ? null : rowToRecord(row)
   }
+
+  async countBySubjectAndPurpose(tenantId: string, subjectRef: string, purpose: 'delivery_handover'): Promise<number> {
+    const rows = await this.db
+      .select({ value: count() })
+      .from(otpCodes)
+      .where(and(eq(otpCodes.tenantId, tenantId), eq(otpCodes.subjectRef, subjectRef), eq(otpCodes.purpose, purpose)))
+    return rows[0]?.value ?? 0
+  }
 }
 
 function rowToRecord(row: OtpCodeRow): OtpCodeRecord {
@@ -99,6 +114,7 @@ function rowToRecord(row: OtpCodeRow): OtpCodeRecord {
     subjectRef: row.subjectRef,
     purpose: row.purpose as OtpCodeRecord['purpose'],
     codeHash: row.codeHash,
+    plainCode: row.plainCode,
     attempts: row.attempts,
     issuedAt: toDate(row.issuedAt),
     expiresAt: toDate(row.expiresAt),

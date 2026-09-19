@@ -280,6 +280,23 @@ export class Order {
     this._domainEvents.push({ type: 'OrderPickedUpEvent', orderId: this.id, handoverOtpId, at: now })
   }
 
+  /**
+   * DTJ-306 (EP-12 §A.5, SRS-PHT-029) — регенерация OTP вручения, разрешена ТОЛЬКО в
+   * `picked_up`. НЕ публикует `HandoverOtpRegeneratedEvent` сама (в отличие от `markPickedUp`
+   * выше) — `regenerationsUsed` считает вызывающий (`OtpCodesRepository.
+   * countBySubjectAndPurpose`, append-only таблица уже несёт эту информацию, отдельный счётчик
+   * на `Order` был бы денормализацией без потребителя, `02` C15), поэтому use case строит
+   * событие сам и публикует напрямую через `OrdersOutboxPort` — тот же приём, что
+   * `ProposePartialFulfillmentUseCase` для событий, не завязанных на простую мутацию поля.
+   */
+  switchHandoverOtp(newHandoverOtpId: string, now: Date): void {
+    if (this._status !== 'picked_up') {
+      this.throwInvalidTransition('picked_up', 'requires the order to already be picked_up')
+    }
+    this._handoverOtpId = newHandoverOtpId
+    this._updatedAt = now
+  }
+
   /** `picked_up → delivered` (SRS-DOM-095). `OrderDeliveredEvent` публикует `delivery`. */
   markDelivered(now: Date): void {
     this.assertTransition('delivered')

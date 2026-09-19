@@ -57,6 +57,14 @@ export const otpCodes = pgTable(
     subjectRef: varchar('subject_ref', { length: 64 }).notNull(),
     purpose: varchar('purpose', { length: 32 }).notNull().default('login'),
     codeHash: varchar('code_hash', { length: 64 }).notNull(),
+    // DTJ-306 (EP-12 §A.5, миграция 0048) — ТОЛЬКО для purpose='delivery_handover'. Осознанное
+    // отступление от «хранит ТОЛЬКО хеш» выше: терминал должен уметь повторно показать код
+    // фармацевту (GetHandoverOtpUseCase, SRS-PHT-028) — в отличие от login/onboarding_contact,
+    // это НЕ учётные данные для входа, а код, который и так устно называется клиенту при
+    // вручении (секретность важна от посторонних, не от самого фармацевта/курьера/клиента,
+    // которым он адресован). NULL для всех остальных purpose — хеш-only гарантия для
+    // аутентификационных OTP не ослабляется.
+    plainCode: varchar('plain_code', { length: 16 }),
     attempts: integer('attempts').notNull().default(0),
     issuedAt: TIMESTAMPTZ('issued_at').notNull().default(sql`NOW()`),
     expiresAt: TIMESTAMPTZ('expires_at').notNull(),

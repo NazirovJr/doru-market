@@ -18,6 +18,8 @@ function makeService(enabled: readonly OrderPaymentMethod[]): PaymentMethodEnabl
     getEnabledPaymentMethods: vi.fn().mockResolvedValue(enabled),
     getPickupSlaMinutes: vi.fn(),
     getPartialFulfillmentConfirmationTimeoutMinutes: vi.fn(),
+    getHandoverOtpMaxRegenerationsPerOrder: vi.fn(),
+    getHandoverOtpRegenerateMinIntervalSeconds: vi.fn(),
   }
   return new PaymentMethodEnabledPolicyService(tenancyFacade)
 }
