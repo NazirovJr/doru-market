@@ -242,6 +242,10 @@ import { GetHandoverOtpUseCase } from './application/pharmacy-terminal/get-hando
 import { RegenerateHandoverOtpUseCase } from './application/pharmacy-terminal/regenerate-handover-otp.use-case.js'
 import { HandoverOtpController } from './presentation/pharmacy-terminal/handover-otp.controller.js'
 
+// DTJ-307 (EP-12, SLA сборки) — мягкое нарушение SLA: internal-эндпоинт для apps/worker.
+import { ReportPickingSlaBreachUseCase } from './application/pharmacy-terminal/report-picking-sla-breach.use-case.js'
+import { PickingSlaBreachController } from './presentation/internal/picking-sla-breach.controller.js'
+
 /**
  * `UnimplementedCatalogFacadeAdapter`/`UnimplementedOrderRepositoryAdapter` (DTJ-220/222) —
  * СНЯТЫ этим тикетом (D-EP09-19): реальные `CatalogFacadeAdapter`
@@ -439,6 +443,7 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     PartialFulfillmentTimeoutController,
     CompletePickingController,
     HandoverOtpController,
+    PickingSlaBreachController,
   ],
   providers: [
     CART_REPOSITORY_DRIZZLE_PROVIDER,
@@ -510,6 +515,8 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     // DTJ-306 (EP-12, терминал фармацевта §A.5, см. JSDoc импортов выше).
     GetHandoverOtpUseCase,
     RegenerateHandoverOtpUseCase,
+    // DTJ-307 (EP-12, SLA сборки, см. JSDoc импортов выше).
+    ReportPickingSlaBreachUseCase,
   ],
   // DTJ-226 (правка приёмки CTO, правило 2 AGENTS.md): без `exports` `OrdersFacade`/
   // `ORDERS_FACADE` были написаны, но физически недостижимы через `imports: [OrdersModule]` —

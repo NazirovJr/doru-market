@@ -56,6 +56,7 @@ const ALL_EVENT_TYPES: Record<OrderDomainEvent['type'], true> = {
   // ДОБАВЛЕНО (DTJ-304, «Что сделать» п.5, SRS-PHT-075) — см. её JSDoc в order-domain-event.ts.
   PartialFulfillmentRefundRetryRequestedEvent: true,
   HandoverOtpRegeneratedEvent: true,
+  SlaBreachedEvent: true,
 }
 
 describe('OrderDomainEvent — реестр вариантов исчерпывающий (DTJ-300/304)', () => {
@@ -74,6 +75,7 @@ describe('OrderDomainEvent — реестр вариантов исчерпыв�
         'PartialFulfillmentAutoConfirmedEvent',
         'PartialFulfillmentRefundRetryRequestedEvent',
         'HandoverOtpRegeneratedEvent',
+        'SlaBreachedEvent',
       ].sort(),
     )
   })
