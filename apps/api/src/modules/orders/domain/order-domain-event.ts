@@ -134,6 +134,15 @@ export type OrderDomainEvent =
       readonly regeneratedAt: Date
       readonly regenerationsUsed: number
     }
+  /** DTJ-307 (SRS-PHT-032/034) — мягкое нарушение SLA сборки. Поля как у `SlaBreachedEvent` модуля support + `orderId` для outbox. */
+  | {
+      readonly type: 'SlaBreachedEvent'
+      readonly orderId: string
+      readonly entityType: 'pharmacy_order'
+      readonly entityId: string
+      readonly breachedAt: Date
+      readonly slaMinutes: number
+    }
 
 /**
  * SRS-ORD-030 — канонический enum причин отмены (не свободная строка).

@@ -46,4 +46,24 @@ describe('SystemCancelOrderController (DTJ-253/254)', () => {
 
     expect(response.data).toEqual(result)
   })
+
+  it('пропускает expectedFromStatus: processing (DTJ-307, мягкое нарушение SLA сборки)', async () => {
+    const result: SystemCancelOrderResult = { orderId: 'order-3', status: 'cancelled', refundIssued: true }
+    const execute = vi.fn().mockResolvedValue(result)
+    const controller = new SystemCancelOrderController(fakeUseCase(execute))
+
+    const response = await controller.systemCancel('order-3', {
+      tenantId: 'tenant-1',
+      expectedFromStatus: 'processing',
+      reason: 'pickup_sla_timeout',
+    })
+
+    expect(execute).toHaveBeenCalledExactlyOnceWith({
+      tenantId: 'tenant-1',
+      orderId: 'order-3',
+      expectedFromStatus: 'processing',
+      reason: 'pickup_sla_timeout',
+    })
+    expect(response).toEqual({ data: result })
+  })
 })

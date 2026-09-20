@@ -40,7 +40,7 @@ const SYSTEM_CANCEL_REASON_VALUES = ['payment_timeout', 'pickup_sla_timeout'] as
 
 const SystemCancelOrderRequestSchema = z.object({
   tenantId: z.uuid(),
-  expectedFromStatus: z.enum(['pending_payment', 'paid_escrow', 'confirmed']),
+  expectedFromStatus: z.enum(['pending_payment', 'paid_escrow', 'confirmed', 'processing']),
   reason: z.enum(SYSTEM_CANCEL_REASON_VALUES),
 })
 type SystemCancelOrderRequest = z.infer<typeof SystemCancelOrderRequestSchema>
