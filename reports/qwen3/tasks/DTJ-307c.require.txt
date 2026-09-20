@@ -1,0 +1,11 @@
+# Критерии раздела 5 как проверяемые строки: путь::текст, который обязан быть в файле.
+# Читает гейт (-RequireFile). Пропущенный критерий красит гейт, коммита не будет.
+apps/api/src/modules/orders/infrastructure/jobs/sla-watchdog.processor.spec.ts::sla-soft-order-1
+apps/api/src/modules/orders/infrastructure/jobs/sla-watchdog.processor.spec.ts::sla-hard-order-1
+apps/api/src/modules/orders/infrastructure/jobs/sla-watchdog.processor.spec.ts::not.toContain(':')
+apps/api/src/modules/orders/infrastructure/jobs/sla-watchdog.processor.spec.ts::onModuleDestroy
+apps/api/src/modules/orders/application/pharmacy-terminal/schedule-sla-watchdog.use-case.spec.ts::hardDelayMinutes: 12
+apps/api/src/modules/orders/application/pharmacy-terminal/schedule-sla-watchdog.use-case.spec.ts::hardDelayMinutes: 13
+apps/api/src/modules/orders/application/pharmacy-terminal/schedule-sla-watchdog.use-case.spec.ts::redis down
+apps/api/src/modules/orders/application/pharmacy-terminal/accept-order.use-case.spec.ts::SLA watchdog (DTJ-307
+apps/api/src/modules/orders/application/pharmacy-terminal/accept-order.use-case.spec.ts::scheduleSlaWatchdog

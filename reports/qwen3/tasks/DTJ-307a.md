@@ -58,7 +58,7 @@ DTJ-307c и DTJ-307d.
    `write` с шапкой и первым тестом, дальше `edit` — по одному тесту.
 7. Проверка — только эта команда (в `workdir` = рабочая папка). Свои способы проверки не
    придумывай, кэши не чисти:
-   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed 'apps/api/src/modules/orders/domain/order-domain-event*','apps/api/src/modules/orders/application/pharmacy-terminal/report-picking-sla-breach.use-case*','apps/api/src/modules/orders/presentation/internal/picking-sla-breach.controller*','apps/api/src/modules/orders/presentation/internal/system-cancel-order.controller*','apps/api/src/modules/orders/orders.module.ts'`
+   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed 'apps/api/src/modules/orders/domain/order-domain-event*','apps/api/src/modules/orders/application/pharmacy-terminal/report-picking-sla-breach.use-case*','apps/api/src/modules/orders/presentation/internal/picking-sla-breach.controller*','apps/api/src/modules/orders/presentation/internal/system-cancel-order.controller*','apps/api/src/modules/orders/orders.module.ts' -RequireFile reports/qwen3/tasks/DTJ-307a.require.txt`
    В вызове `pwsh` обязательно укажи `timeoutMs: 600000`: полный гейт идёт до 4 минут, а без этого
    dsh обрывает команду через 2.
    Последняя строка вывода — `GATE: PASS` или `GATE: FAIL -> <что упало>`. Над ней — ошибки с `файл(строка)`.
@@ -405,6 +405,9 @@ function fakeUseCase(execute: ReturnType<typeof vi.fn>): ReportPickingSlaBreachU
 
 ## 5. Тесты — что именно должно быть проверено
 
+Каждый критерий ниже проверяется механически: гейт читает `reports/qwen3/tasks/DTJ-307a.require.txt`
+и ищет в файлах спеков соответствующий текст. Пропущенный критерий — красный гейт и нет коммита.
+
 `report-picking-sla-breach.use-case.spec.ts` (`describe('ReportPickingSlaBreachUseCase (DTJ-307, TC-PHT-021)', …)`):
 - `processing` → `appendAll` вызван один раз с `TENANT_ID` и массивом из одного события
   `{ type: 'SlaBreachedEvent', orderId, entityType: 'pharmacy_order', entityId: orderId, breachedAt: NOW, slaMinutes: 7 }`,
@@ -458,7 +461,7 @@ BLOCKED с точной причиной — нормальный результ
 1. Сдача — одна команда: тот же гейт, что в разделе 1, но с `-Commit`:
 
 ```
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed 'apps/api/src/modules/orders/domain/order-domain-event*','apps/api/src/modules/orders/application/pharmacy-terminal/report-picking-sla-breach.use-case*','apps/api/src/modules/orders/presentation/internal/picking-sla-breach.controller*','apps/api/src/modules/orders/presentation/internal/system-cancel-order.controller*','apps/api/src/modules/orders/orders.module.ts' -Commit "feat(orders): DTJ-307a — SlaBreachedEvent и internal-эндпоинт мягкого нарушения SLA сборки"
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed 'apps/api/src/modules/orders/domain/order-domain-event*','apps/api/src/modules/orders/application/pharmacy-terminal/report-picking-sla-breach.use-case*','apps/api/src/modules/orders/presentation/internal/picking-sla-breach.controller*','apps/api/src/modules/orders/presentation/internal/system-cancel-order.controller*','apps/api/src/modules/orders/orders.module.ts' -RequireFile reports/qwen3/tasks/DTJ-307a.require.txt -Commit "feat(orders): DTJ-307a — SlaBreachedEvent и internal-эндпоинт мягкого нарушения SLA сборки"
 ```
 
    В вызове `pwsh` обязательно `timeoutMs: 600000`. Гейт сам включает полный режим и коммитит

@@ -1,0 +1,6 @@
+# Критерии раздела 5 как проверяемые строки: путь::текст, который обязан быть в файле.
+# Читает гейт (-RequireFile). Пропущенный критерий красит гейт, коммита не будет.
+apps/api/src/modules/orders/application/ports/tenancy-facade.port.ts::getPickupSlaBufferMinutes
+apps/api/src/modules/orders/infrastructure/adapters/tenancy-facade.adapter.ts::getPickupSlaBufferMinutes
+apps/api/src/modules/orders/infrastructure/adapters/tenancy-facade.adapter.spec.ts::getPickupSlaBufferMinutes(TENANT_ID)).resolves.toBe(5)
+apps/api/src/modules/orders/infrastructure/adapters/tenancy-facade.adapter.spec.ts::getPickupSlaBufferMinutes(TENANT_ID)).resolves.toBe(3)

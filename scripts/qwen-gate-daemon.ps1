@@ -33,12 +33,13 @@ $exchange = Join-Path $Repo 'node_modules\.cache\qwen-gate'
 New-Item -ItemType Directory -Force -Path $exchange | Out-Null
 $heartbeat = Join-Path $exchange 'daemon.heartbeat'
 $safePattern = '^[A-Za-z0-9_./*-]+$'
-# Сообщение коммита — свободный текст, но без кавычек, обратных апострофов, $ и управляющих
-# символов: они ломают передачу аргументов в powershell -File.
-function Test-CommitMessage([string] $message) {
-  if ($message.Length -lt 10 -or $message.Length -gt 200) { return $false }
-  if ($message -match '[\x00-\x1f]') { return $false }
-  foreach ($bad in @('"', '`', '$')) { if ($message.Contains($bad)) { return $false } }
+# Свободный текст (сообщение коммита, критерии -Require) — без кавычек, обратных апострофов,
+# знака доллара и управляющих символов: они ломают передачу аргументов в powershell -File.
+function Test-FreeText([string] $text, [int] $min, [int] $max, [switch] $NoComma) {
+  if ($text.Length -lt $min -or $text.Length -gt $max) { return $false }
+  if ($text -match '[\x00-\x1f]') { return $false }
+  if ($NoComma -and $text.Contains(',')) { return $false }
+  foreach ($bad in @('"', '`', '$')) { if ($text.Contains($bad)) { return $false } }
   return $true
 }
 
@@ -58,8 +59,18 @@ function Invoke-GateRequest([System.IO.FileInfo] $requestFile) {
     }
     if ($allowed.Count -gt 0) { $gateArgs += @('-Allowed', ($allowed -join ',')) }
     if ($body.Full -eq $true) { $gateArgs += '-Full' }
+    $require = @($body.Require | Where-Object { $_ })
+    foreach ($entry in $require) {
+      if (-not (Test-FreeText ([string]$entry) 3 200 -NoComma)) { throw "недопустимый критерий Require: $entry" }
+      if ($entry -notlike '*::*') { throw "критерий Require без разделителя ::  $entry" }
+    }
+    if ($require.Count -gt 0) { $gateArgs += @('-Require', ($require -join ',')) }
+    if ($body.RequireFile) {
+      if ($body.RequireFile -notmatch $safePattern) { throw "недопустимый RequireFile: $($body.RequireFile)" }
+      $gateArgs += @('-RequireFile', $body.RequireFile)
+    }
     if ($body.Commit) {
-      if (-not (Test-CommitMessage ([string]$body.Commit))) { throw 'недопустимое сообщение коммита' }
+      if (-not (Test-FreeText ([string]$body.Commit) 10 200)) { throw 'недопустимое сообщение коммита' }
       $gateArgs += @('-Commit', $body.Commit)
     }
     "$(Get-Date -Format HH:mm:ss) запрос ${id}: $($gateArgs[5..($gateArgs.Count - 1)] -join ' ')"

@@ -1,0 +1,9 @@
+# Критерии раздела 5 как проверяемые строки: путь::текст, который обязан быть в файле.
+# Читает гейт (-RequireFile). Пропущенный критерий красит гейт, коммита не будет.
+apps/worker/src/jobs/escrow-timeouts/picking-sla-watchdog.job.spec.ts::picking-sla-breach
+apps/worker/src/jobs/escrow-timeouts/picking-sla-watchdog.job.spec.ts::HTTP 503
+apps/worker/src/jobs/escrow-timeouts/picking-sla-watchdog.job.spec.ts::INTERNAL_API_KEY
+apps/worker/src/jobs/escrow-timeouts/picking-sla-watchdog.job.spec.ts::system-cancel
+apps/worker/src/jobs/escrow-timeouts/picking-sla-watchdog.job.spec.ts::'skipped'
+apps/worker/src/jobs/escrow-timeouts/picking-sla-watchdog.job.spec.ts::unknown job name
+apps/worker/src/jobs/escrow-timeouts/picking-sla-watchdog.module.spec.ts::PickingSlaWatchdogModule

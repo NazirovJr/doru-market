@@ -1,0 +1,11 @@
+# Критерии раздела 5 как проверяемые строки: путь::текст, который обязан быть в файле.
+# Читает гейт (-RequireFile). Пропущенный критерий красит гейт, коммита не будет.
+apps/api/src/modules/orders/application/pharmacy-terminal/report-picking-sla-breach.use-case.spec.ts::slaMinutes: 7
+apps/api/src/modules/orders/application/pharmacy-terminal/report-picking-sla-breach.use-case.spec.ts::slaMinutes: 10
+apps/api/src/modules/orders/application/pharmacy-terminal/report-picking-sla-breach.use-case.spec.ts::'picked_up'
+apps/api/src/modules/orders/application/pharmacy-terminal/report-picking-sla-breach.use-case.spec.ts::'cancelled'
+apps/api/src/modules/orders/application/pharmacy-terminal/report-picking-sla-breach.use-case.spec.ts::'paid_escrow'
+apps/api/src/modules/orders/application/pharmacy-terminal/report-picking-sla-breach.use-case.spec.ts::NotFoundError
+apps/api/src/modules/orders/presentation/internal/picking-sla-breach.controller.spec.ts::'published'
+apps/api/src/modules/orders/presentation/internal/picking-sla-breach.controller.spec.ts::'skipped'
+apps/api/src/modules/orders/presentation/internal/system-cancel-order.controller.spec.ts::expectedFromStatus: 'processing'

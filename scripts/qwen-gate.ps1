@@ -11,6 +11,10 @@
     - vitest по изменённым *.spec.ts и спекам-соседям изменённых файлов, без порогов покрытия
       (точечный прогон с порогами падает всегда и заливает вывод таблицей покрытия).
   -Full добавляет arch:check, test:arch, полный vitest и build затронутых пакетов.
+  -Require 'путь::текст' проверяет, что критерий задания действительно написан: в файле есть такой
+  текст. Пропущенный критерий красит гейт, а значит и коммита не будет. -RequireFile <файл> берёт
+  те же строки из файла (по одной на строку, # — комментарий): так команда в задании остаётся
+  короткой, а список критериев живёт рядом с заданием.
   -Commit <сообщение> включает -Full и, ТОЛЬКО при GATE: PASS, коммитит изменённые файлы в текущую
   ветку. Красный гейт — коммита нет; ветка development/main/master — коммита нет; без -Allowed
   коммит запрещён (иначе в коммит уедет что угодно из рабочей копии).
@@ -31,6 +35,8 @@ param(
   [string] $Base = 'development',
   [string[]] $Allowed = @(),
   [switch] $Full,
+  [string[]] $Require = @(),
+  [string] $RequireFile = '',
   [string] $Commit = ''
 )
 
@@ -38,6 +44,7 @@ $ErrorActionPreference = 'Continue'
 if ($Commit) { $Full = $true }
 # `powershell -File ... -Allowed 'a','b'` передаёт массив одной строкой через запятую.
 $Allowed = @($Allowed | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim().Trim("'").Trim('"') } | Where-Object { $_ })
+$Require = @($Require | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim().Trim("'").Trim('"') } | Where-Object { $_ })
 # Корень — репозиторий, в котором лежит сам скрипт, а не текущая папка (демон может стартовать откуда угодно).
 $root = & git -C $PSScriptRoot rev-parse --show-toplevel 2>$null
 if (-not $root) { 'GATE: FAIL -> not a git repository'; exit 2 }
@@ -50,7 +57,7 @@ $heartbeatFresh = (Test-Path -LiteralPath $heartbeat) -and
   (((Get-Date) - (Get-Item -LiteralPath $heartbeat).LastWriteTime).TotalSeconds -lt 15)
 if ($env:DSH_SHELL -and -not $env:QWEN_GATE_IN_DAEMON -and $heartbeatFresh) {
   $id = (New-Guid).Guid -replace '-', ''
-  $request = @{ Base = $Base; Allowed = @($Allowed); Full = [bool]$Full; Commit = $Commit } | ConvertTo-Json -Compress
+  $request = @{ Base = $Base; Allowed = @($Allowed); Full = [bool]$Full; Require = @($Require); RequireFile = $RequireFile; Commit = $Commit } | ConvertTo-Json -Compress
   Set-Content -LiteralPath (Join-Path $exchange "request-$id.tmp") -Value $request -Encoding UTF8
   Rename-Item -LiteralPath (Join-Path $exchange "request-$id.tmp") -NewName "request-$id.json"
   $exitFile = Join-Path $exchange "result-$id.exit"
@@ -65,6 +72,16 @@ if ($env:DSH_SHELL -and -not $env:QWEN_GATE_IN_DAEMON -and $heartbeatFresh) {
   $code = [int]((Get-Content -LiteralPath $exitFile -Raw).Trim())
   Remove-Item -LiteralPath $exitFile, $resultFile -Force
   exit $code
+}
+
+if ($RequireFile) {
+  if (-not (Test-Path -LiteralPath $RequireFile -PathType Leaf)) {
+    "GATE: FAIL -> нет файла критериев: $RequireFile"
+    exit 2
+  }
+  $Require += @(Get-Content -LiteralPath $RequireFile -Encoding UTF8 |
+      ForEach-Object { $_.Trim() } |
+      Where-Object { $_ -and -not $_.StartsWith('#') })
 }
 
 if ($Commit -and $Allowed.Count -eq 0) {
@@ -135,6 +152,27 @@ if ($Allowed.Count -gt 0) {
     $outside | ForEach-Object { "       $_" }
   }
   else { '[OK]   scope' }
+}
+
+if ($Require.Count -gt 0) {
+  $missing = New-Object System.Collections.Generic.List[string]
+  foreach ($entry in $Require) {
+    $parts = $entry -split '::', 2
+    if ($parts.Count -ne 2) { $missing.Add("$entry -> неверный формат, нужно путь::текст"); continue }
+    $file = $parts[0].Trim()
+    $needle = $parts[1].Trim()
+    if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { $missing.Add("$file -> файла нет"); continue }
+    $content = Get-Content -LiteralPath $file -Raw -Encoding UTF8
+    if ((-not $content) -or ($content.IndexOf($needle, [StringComparison]::OrdinalIgnoreCase) -lt 0)) {
+      $missing.Add("$file -> нет: $needle")
+    }
+  }
+  if ($missing.Count -gt 0) {
+    $failed.Add('require')
+    '[FAIL] require: критерии задания не выполнены (раздел 5):'
+    $missing | ForEach-Object { "       $_" }
+  }
+  else { "[OK]   require ($($Require.Count))" }
 }
 
 $touched = @($packageByPrefix.Keys | Where-Object {
