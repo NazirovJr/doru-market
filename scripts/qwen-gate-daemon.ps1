@@ -8,7 +8,9 @@
   в обычном окне PowerShell и слушает папку node_modules/.cache/qwen-gate рабочей копии.
   qwen-gate.ps1, запущенный внутри dsh, кладёт туда запрос и ждёт результат.
   Демон выполняет ТОЛЬКО гейт — никаких произвольных команд; параметры проверяются по белому
-  списку символов и передаются аргументами, а не текстом команды.
+  списку символов и передаются аргументами, а не текстом команды. Сюда же уходит -Commit: сам гейт
+  коммитит лишь при GATE: PASS, в своей ветке и только файлы из -Allowed, а хуки husky работают,
+  потому что демон живёт вне песочницы dsh.
 
 .EXAMPLE
   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate-daemon.ps1
@@ -18,7 +20,9 @@
 [CmdletBinding()]
 param([string] $Repo = '')
 
-$ErrorActionPreference = 'Stop'
+# 'Continue': дочерние процессы пишут в stderr (git — предупреждения о переводах строк),
+# при 'Stop' любая такая строка превращалась бы в отказ демона. Проверки бросают throw явно.
+$ErrorActionPreference = 'Continue'
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 if (-not $Repo) { $Repo = & git -C $PSScriptRoot rev-parse --show-toplevel }
 $Repo = (Resolve-Path -LiteralPath $Repo).Path
@@ -29,6 +33,14 @@ $exchange = Join-Path $Repo 'node_modules\.cache\qwen-gate'
 New-Item -ItemType Directory -Force -Path $exchange | Out-Null
 $heartbeat = Join-Path $exchange 'daemon.heartbeat'
 $safePattern = '^[A-Za-z0-9_./*-]+$'
+# Сообщение коммита — свободный текст, но без кавычек, обратных апострофов, $ и управляющих
+# символов: они ломают передачу аргументов в powershell -File.
+function Test-CommitMessage([string] $message) {
+  if ($message.Length -lt 10 -or $message.Length -gt 200) { return $false }
+  if ($message -match '[\x00-\x1f]') { return $false }
+  foreach ($bad in @('"', '`', '$')) { if ($message.Contains($bad)) { return $false } }
+  return $true
+}
 
 function Invoke-GateRequest([System.IO.FileInfo] $requestFile) {
   $id = $requestFile.BaseName.Substring('request-'.Length)
@@ -46,6 +58,10 @@ function Invoke-GateRequest([System.IO.FileInfo] $requestFile) {
     }
     if ($allowed.Count -gt 0) { $gateArgs += @('-Allowed', ($allowed -join ',')) }
     if ($body.Full -eq $true) { $gateArgs += '-Full' }
+    if ($body.Commit) {
+      if (-not (Test-CommitMessage ([string]$body.Commit))) { throw 'недопустимое сообщение коммита' }
+      $gateArgs += @('-Commit', $body.Commit)
+    }
     "$(Get-Date -Format HH:mm:ss) запрос ${id}: $($gateArgs[5..($gateArgs.Count - 1)] -join ' ')"
     $env:QWEN_GATE_IN_DAEMON = '1'
     $output = & powershell @gateArgs 2>&1 | ForEach-Object { "$_" }

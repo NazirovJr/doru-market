@@ -11,6 +11,9 @@
     - vitest по изменённым *.spec.ts и спекам-соседям изменённых файлов, без порогов покрытия
       (точечный прогон с порогами падает всегда и заливает вывод таблицей покрытия).
   -Full добавляет arch:check, test:arch, полный vitest и build затронутых пакетов.
+  -Commit <сообщение> включает -Full и, ТОЛЬКО при GATE: PASS, коммитит изменённые файлы в текущую
+  ветку. Красный гейт — коммита нет; ветка development/main/master — коммита нет; без -Allowed
+  коммит запрещён (иначе в коммит уедет что угодно из рабочей копии).
   Интеграционные спеки (нужны Postgres/Redis) не запускает — их гоняет координатор.
   Внутри dsh (DSH_SHELL=1) при живом scripts/qwen-gate-daemon.ps1 гейт выполняет демон: в песочнице
   dsh vitest и esbuild не запускаются (spawn EPERM).
@@ -20,15 +23,19 @@
   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1
 .EXAMPLE
   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Full -Allowed 'apps/api/src/modules/orders/*'
+.EXAMPLE
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed 'apps/api/src/modules/orders/*' -Commit 'feat(orders): DTJ-307a — ...'
 #>
 [CmdletBinding()]
 param(
   [string] $Base = 'development',
   [string[]] $Allowed = @(),
-  [switch] $Full
+  [switch] $Full,
+  [string] $Commit = ''
 )
 
 $ErrorActionPreference = 'Continue'
+if ($Commit) { $Full = $true }
 # `powershell -File ... -Allowed 'a','b'` передаёт массив одной строкой через запятую.
 $Allowed = @($Allowed | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim().Trim("'").Trim('"') } | Where-Object { $_ })
 # Корень — репозиторий, в котором лежит сам скрипт, а не текущая папка (демон может стартовать откуда угодно).
@@ -43,7 +50,7 @@ $heartbeatFresh = (Test-Path -LiteralPath $heartbeat) -and
   (((Get-Date) - (Get-Item -LiteralPath $heartbeat).LastWriteTime).TotalSeconds -lt 15)
 if ($env:DSH_SHELL -and -not $env:QWEN_GATE_IN_DAEMON -and $heartbeatFresh) {
   $id = (New-Guid).Guid -replace '-', ''
-  $request = @{ Base = $Base; Allowed = @($Allowed); Full = [bool]$Full } | ConvertTo-Json -Compress
+  $request = @{ Base = $Base; Allowed = @($Allowed); Full = [bool]$Full; Commit = $Commit } | ConvertTo-Json -Compress
   Set-Content -LiteralPath (Join-Path $exchange "request-$id.tmp") -Value $request -Encoding UTF8
   Rename-Item -LiteralPath (Join-Path $exchange "request-$id.tmp") -NewName "request-$id.json"
   $exitFile = Join-Path $exchange "result-$id.exit"
@@ -58,6 +65,11 @@ if ($env:DSH_SHELL -and -not $env:QWEN_GATE_IN_DAEMON -and $heartbeatFresh) {
   $code = [int]((Get-Content -LiteralPath $exitFile -Raw).Trim())
   Remove-Item -LiteralPath $exitFile, $resultFile -Force
   exit $code
+}
+
+if ($Commit -and $Allowed.Count -eq 0) {
+  'GATE: FAIL -> -Commit без -Allowed запрещён: коммитить можно только файлы из периметра задания'
+  exit 2
 }
 
 $packageByPrefix = [ordered]@{
@@ -187,6 +199,30 @@ if ($Full) {
   }
 }
 
-if ($failed.Count -eq 0) { 'GATE: PASS'; exit 0 }
-"GATE: FAIL -> $($failed -join ', ')"
-exit 1
+if ($failed.Count -gt 0) {
+  "GATE: FAIL -> $($failed -join ', ')"
+  if ($Commit) { 'КОММИТ НЕ СДЕЛАН: гейт красный. Почини ошибки выше и запусти ту же команду снова.' }
+  exit 1
+}
+
+if ($Commit) {
+  $branch = "$(& git rev-parse --abbrev-ref HEAD)".Trim()
+  if ($branch -in @('development', 'main', 'master', 'HEAD')) {
+    "GATE: FAIL -> коммит в '$branch' запрещён: работай в своей ветке"
+    exit 2
+  }
+  & git add -A -- $changed
+  if ($LASTEXITCODE -ne 0) { 'GATE: FAIL -> git add не прошёл'; exit 2 }
+  $commitOutput = & git commit -m $Commit 2>&1 | ForEach-Object { "$_" }
+  if ($LASTEXITCODE -ne 0) {
+    'GATE: FAIL -> коммит не прошёл:'
+    $commitOutput | Select-Object -Last 15 | ForEach-Object { "       $_" }
+    exit 1
+  }
+  'КОММИТ:'
+  "       $(& git log --oneline -1)"
+  & git show --stat --format='' HEAD | Where-Object { $_ -match '\S' } | ForEach-Object { "       $_" }
+}
+
+'GATE: PASS'
+exit 0
