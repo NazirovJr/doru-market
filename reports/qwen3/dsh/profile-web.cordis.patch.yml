@@ -1,0 +1,11 @@
+# Your patch layer for this dsh profile, applied after every bundle layer:
+# a top-level YAML array of loader patch entries (id-targeted config
+# overrides, disables, and insert lists; `!!js` expressions allowed).
+
+# Предел раундов у цели (`/goal`). Дефолт плагина — 256, а это часы работы вхолостую,
+# если модель зациклилась: на прогоне DTJ-307a она повторила один и тот же сломанный
+# вызов сорок раз подряд. Любому заданию из reports/qwen3/tasks хватает нескольких
+# раундов, двадцать — с запасом.
+- id: goal
+  config:
+    defaultMaxGoalRounds: 20

@@ -251,14 +251,21 @@ if ($Commit) {
   }
   & git add -A -- $changed
   if ($LASTEXITCODE -ne 0) { 'GATE: FAIL -> git add не прошёл'; exit 2 }
-  $commitOutput = & git commit -m $Commit 2>&1 | ForEach-Object { "$_" }
-  if ($LASTEXITCODE -ne 0) {
-    'GATE: FAIL -> коммит не прошёл:'
-    $commitOutput | Select-Object -Last 15 | ForEach-Object { "       $_" }
-    exit 1
+  # Повторный прогон после удачного коммита ничего не коммитит, но и не ошибка: печатаем тот же
+  # `КОММИТ:` и выходим зелёными, иначе модель приняла бы «нечего коммитить» за поломку.
+  & git diff --cached --quiet
+  $nothingToCommit = ($LASTEXITCODE -eq 0)
+  if (-not $nothingToCommit) {
+    $commitOutput = & git commit -m $Commit 2>&1 | ForEach-Object { "$_" }
+    if ($LASTEXITCODE -ne 0) {
+      'GATE: FAIL -> коммит не прошёл:'
+      $commitOutput | Select-Object -Last 15 | ForEach-Object { "       $_" }
+      exit 1
+    }
   }
   'КОММИТ:'
   "       $(& git log --oneline -1)"
+  if ($nothingToCommit) { '       (повторный прогон: всё уже в этом коммите, новых изменений нет)' }
   & git show --stat --format='' HEAD | Where-Object { $_ -match '\S' } | ForEach-Object { "       $_" }
 }
 
