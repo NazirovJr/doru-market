@@ -19,7 +19,7 @@ export interface SystemOrderCancelDeps {
   readonly internalApiKey: string | undefined
 }
 
-export type SystemCancelExpectedStatus = 'pending_payment' | 'paid_escrow' | 'confirmed'
+export type SystemCancelExpectedStatus = 'pending_payment' | 'paid_escrow' | 'confirmed' | 'processing'
 export type SystemCancelReason = 'payment_timeout' | 'pickup_sla_timeout'
 
 export interface SystemOrderCancelInput {

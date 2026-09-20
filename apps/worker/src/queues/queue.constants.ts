@@ -33,4 +33,6 @@ export const QUEUE_NAMES = {
    * `MOCK_BANK_AUTO_PAY`). Consumer — `jobs/escrow-timeouts/partial-fulfillment-timeout.job.ts`.
    */
   PARTIAL_FULFILLMENT_TIMEOUT: 'partial-fulfillment-timeout',
+  /** DTJ-307 (EP-12). Producer — apps/api `infrastructure/jobs/sla-watchdog.processor.ts` (`SLA_WATCHDOG_QUEUE_NAME`, своя копия строки). Consumer — `jobs/escrow-timeouts/picking-sla-watchdog.job.ts`. */
+  PICKING_SLA_WATCHDOG: 'picking-sla-watchdog',
 } as const
