@@ -1,0 +1,12 @@
+# Критерии раздела 5 как проверяемые строки: путь::текст, который обязан быть в файле.
+# Читает гейт (-RequireFile). Пропущенный критерий красит гейт, коммита не будет.
+apps/api/src/modules/notifications/application/use-cases/list-own-notifications.use-case.spec.ts::userId из актора
+apps/api/src/modules/notifications/application/use-cases/list-own-notifications.use-case.spec.ts::nextCursor
+apps/api/src/modules/notifications/application/use-cases/list-own-notifications.use-case.spec.ts::hasMore
+apps/api/src/modules/notifications/application/use-cases/list-own-notifications.use-case.spec.ts::failed
+apps/api/src/modules/notifications/application/use-cases/list-own-notifications.use-case.spec.ts::createdAt
+apps/api/src/modules/notifications/presentation/notifications-feed.controller.spec.ts::courier
+apps/api/src/modules/notifications/presentation/notifications-feed.controller.spec.ts::pagination
+apps/api/src/modules/notifications/notifications.module.ts::NotificationsFeedController
+packages/contracts/src/notifications.ts::NotificationSummarySchema
+packages/contracts/src/index.ts::notifications.js
