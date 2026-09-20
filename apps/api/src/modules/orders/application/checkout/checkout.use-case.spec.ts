@@ -243,6 +243,7 @@ function makeHarness(overrides: Partial<HarnessOverrides> = {}): Harness {
     getCodLimitDiram,
     getEnabledPaymentMethods,
     getPickupSlaMinutes: vi.fn(),
+    getPickupSlaBufferMinutes: vi.fn(),
     getPartialFulfillmentConfirmationTimeoutMinutes: vi.fn(),
     getHandoverOtpMaxRegenerationsPerOrder: vi.fn(),
     getHandoverOtpRegenerateMinIntervalSeconds: vi.fn(),
