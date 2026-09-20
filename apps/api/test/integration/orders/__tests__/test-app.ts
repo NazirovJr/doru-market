@@ -189,6 +189,7 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
           getCodLimitDiram: real.getCodLimitDiram.bind(real),
           getEnabledPaymentMethods: () => Promise.resolve(options.enabledPaymentMethods),
           getPickupSlaMinutes: real.getPickupSlaMinutes.bind(real),
+          getPickupSlaBufferMinutes: real.getPickupSlaBufferMinutes.bind(real),
           getPartialFulfillmentConfirmationTimeoutMinutes: real.getPartialFulfillmentConfirmationTimeoutMinutes.bind(real),
         }
       },

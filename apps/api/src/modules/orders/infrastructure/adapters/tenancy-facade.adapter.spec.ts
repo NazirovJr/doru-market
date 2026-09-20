@@ -73,3 +73,19 @@ describe('TenancyFacadeAdapter.getPickupSlaMinutes (DTJ-301, SRS-PHT-008/030)', 
     await expect(adapter.getPickupSlaMinutes(TENANT_ID)).resolves.toBe(12)
   })
 })
+
+describe('TenancyFacadeAdapter.getPickupSlaBufferMinutes (DTJ-307, SRS-PHT-033)', () => {
+  it('настройки тенанта отсутствуют (findByTenantId → null) → дефолт 5 минут (D-19)', async () => {
+    const adapter = makeAdapter()
+    await expect(adapter.getPickupSlaBufferMinutes(TENANT_ID)).resolves.toBe(5)
+  })
+
+  it('настройки тенанта есть → читает pickupSlaBufferMinutes, не дефолт', async () => {
+    const repo: TenantSettingsRepositoryPort = {
+      findByTenantId: vi.fn().mockResolvedValue({ pickupSlaBufferMinutes: 3 }),
+      save: vi.fn(),
+    }
+    const adapter = new TenancyFacadeAdapter(repo, stubDrizzleDb())
+    await expect(adapter.getPickupSlaBufferMinutes(TENANT_ID)).resolves.toBe(3)
+  })
+})

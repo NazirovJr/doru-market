@@ -80,6 +80,7 @@ function makeHarness(pickupSlaMinutes = 7): Harness {
     getCodLimitDiram: vi.fn(),
     getEnabledPaymentMethods: vi.fn(),
     getPickupSlaMinutes,
+    getPickupSlaBufferMinutes: vi.fn(),
     getPartialFulfillmentConfirmationTimeoutMinutes: vi.fn(),
     getHandoverOtpMaxRegenerationsPerOrder: vi.fn(),
     getHandoverOtpRegenerateMinIntervalSeconds: vi.fn(),

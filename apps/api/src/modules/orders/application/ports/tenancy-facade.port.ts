@@ -60,6 +60,9 @@ export interface TenancyFacadePort {
    */
   getPickupSlaMinutes(tenantId: string): Promise<number>
 
+  /** DTJ-307 (SRS-PHT-033, D-19) — `tenant_settings.pickup_sla_buffer_minutes` (дефолт 5): жёсткий автоотказ через SLA + буфер. */
+  getPickupSlaBufferMinutes(tenantId: string): Promise<number>
+
   /**
    * DTJ-304 (EP-12 §A.4, SRS-PHT-019/073) — `tenant_settings.partial_fulfillment_confirmation_
    * timeout_minutes` (DB-дефолт 10, миграция `0041_pharmacy_terminal_schema.sql`, DTJ-300),

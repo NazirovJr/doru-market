@@ -17,6 +17,7 @@ function makeService(codLimitDiram = COD_LIMIT_DIRAM): { service: CodPolicyServi
     getCodLimitDiram,
     getEnabledPaymentMethods: vi.fn(),
     getPickupSlaMinutes: vi.fn(),
+    getPickupSlaBufferMinutes: vi.fn(),
     getPartialFulfillmentConfirmationTimeoutMinutes: vi.fn(),
     getHandoverOtpMaxRegenerationsPerOrder: vi.fn(),
     getHandoverOtpRegenerateMinIntervalSeconds: vi.fn(),

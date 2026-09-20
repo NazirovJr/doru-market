@@ -55,6 +55,7 @@ function makeHarness(commissionByCategory: Partial<Record<'rx' | 'otc', number>>
     getCodLimitDiram: vi.fn(),
     getEnabledPaymentMethods: vi.fn(),
     getPickupSlaMinutes: vi.fn(),
+    getPickupSlaBufferMinutes: vi.fn(),
     getPartialFulfillmentConfirmationTimeoutMinutes: vi.fn(),
     getHandoverOtpMaxRegenerationsPerOrder: vi.fn(),
     getHandoverOtpRegenerateMinIntervalSeconds: vi.fn(),
