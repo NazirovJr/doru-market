@@ -15,6 +15,9 @@
   текст. Пропущенный критерий красит гейт, а значит и коммита не будет. -RequireFile <файл> берёт
   те же строки из файла (по одной на строку, # — комментарий): так команда в задании остаётся
   короткой, а список критериев живёт рядом с заданием.
+  Если аргументы не переданы, периметр, критерии и базу гейт берёт из активного задания
+  (node_modules/.cache/qwen-gate/active.json, пишет scripts/qwen-task.ps1) и там же проверяет, что
+  работа идёт в нужной ветке. Удачный коммит активное задание снимает.
   -Commit <сообщение> включает -Full и, ТОЛЬКО при GATE: PASS, коммитит изменённые файлы в текущую
   ветку. Красный гейт — коммита нет; ветка development/main/master — коммита нет; без -Allowed
   коммит запрещён (иначе в коммит уедет что угодно из рабочей копии).
@@ -53,6 +56,21 @@ Set-Location -LiteralPath $root
 # Внутри песочницы dsh гейт не может запустить vitest — отдаём запрос демону, если он запущен.
 $exchange = Join-Path $root 'node_modules\.cache\qwen-gate'
 $heartbeat = Join-Path $exchange 'daemon.heartbeat'
+# Активное задание (пишет координатор через scripts/qwen-task.ps1). Периметр и критерии берутся
+# отсюда, если их не передали аргументами: команду набирает модель, а значит может и не набрать —
+# на DTJ-372 она запустила гейт без -Allowed и -RequireFile и тем отключила обе проверки.
+$activeFile = Join-Path $exchange 'active.json'
+$active = $null
+if (Test-Path -LiteralPath $activeFile) {
+  try { $active = Get-Content -LiteralPath $activeFile -Raw -Encoding UTF8 | ConvertFrom-Json }
+  catch { 'GATE: FAIL -> не читается active.json активного задания'; exit 2 }
+}
+if ($active) {
+  if ($Allowed.Count -eq 0 -and $active.allowed) { $Allowed = @($active.allowed) }
+  if (-not $RequireFile -and $active.requireFile) { $RequireFile = [string]$active.requireFile }
+  if (-not $PSBoundParameters.ContainsKey('Base') -and $active.base) { $Base = [string]$active.base }
+}
+
 $heartbeatFresh = (Test-Path -LiteralPath $heartbeat) -and
   (((Get-Date) - (Get-Item -LiteralPath $heartbeat).LastWriteTime).TotalSeconds -lt 15)
 if ($env:DSH_SHELL -and -not $env:QWEN_GATE_IN_DAEMON -and $heartbeatFresh) {
@@ -140,6 +158,16 @@ $changed = @($changed | Where-Object { $_ } | ForEach-Object { $_ -replace '\\',
 "Изменённые файлы ($($changed.Count)):"
 $changed | ForEach-Object { "  $_" }
 if ($changed.Count -eq 0) { 'GATE: FAIL -> нет изменений (гейт нечего проверять)'; exit 1 }
+
+if ($active -and $active.branch) {
+  $currentBranch = "$(& git rev-parse --abbrev-ref HEAD)".Trim()
+  if ($currentBranch -ne [string]$active.branch) {
+    $failed.Add('branch')
+    "[FAIL] branch: сейчас '$currentBranch', а задание делается в ветке '$($active.branch)'"
+    "       Создай её от development и перенеси работу туда: git checkout -b $($active.branch) development"
+  }
+  else { '[OK]   branch' }
+}
 
 if ($Allowed.Count -gt 0) {
   $outside = @($changed | Where-Object {
@@ -262,6 +290,10 @@ if ($Commit) {
       $commitOutput | Select-Object -Last 15 | ForEach-Object { "       $_" }
       exit 1
     }
+  }
+  # Задание сдано — активное задание снимается, иначе проверка ветки мешала бы приёмке.
+  if ((-not $nothingToCommit) -and (Test-Path -LiteralPath $activeFile)) {
+    Remove-Item -LiteralPath $activeFile -Force -ErrorAction SilentlyContinue
   }
   'КОММИТ:'
   "       $(& git log --oneline -1)"
