@@ -41,6 +41,7 @@ import { TENANCY_FACADE_PORT, type TenancyFacadePort } from '@/modules/orders/ap
 import { OrderPolicy, type OrderPolicyActor } from '@/modules/orders/application/policies/order.policy.js'
 import type { Order } from '@/modules/orders/domain/order.entity.js'
 import type { OrderDomainEvent } from '@/modules/orders/domain/order-domain-event.js'
+import { ScheduleSlaWatchdogUseCase } from '@/modules/orders/application/pharmacy-terminal/schedule-sla-watchdog.use-case.js'
 
 const MS_PER_MINUTE = 60_000
 
@@ -65,7 +66,7 @@ export interface AcceptOrderResult {
 
 @Injectable()
 export class AcceptOrderUseCase {
-  // eslint-disable-next-line max-params -- 5 портов + Clock, тот же приём, что CancelOrderUseCase (явные @Inject, граф виден в providers[]).
+  // eslint-disable-next-line max-params -- 5 портов + Clock + ScheduleSlaWatchdogUseCase (DTJ-307), тот же приём, что CancelOrderUseCase (явные @Inject, граф виден в providers[]).
   constructor(
     @Inject(ORDER_REPOSITORY_PORT) private readonly orderRepository: OrderRepositoryPort,
     @Inject(ORDERS_UNIT_OF_WORK) private readonly unitOfWork: OrdersUnitOfWorkPort,
@@ -73,6 +74,7 @@ export class AcceptOrderUseCase {
     @Inject(INVENTORY_FACADE_PORT) private readonly inventoryFacade: InventoryFacadePort,
     @Inject(TENANCY_FACADE_PORT) private readonly tenancyFacade: TenancyFacadePort,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(ScheduleSlaWatchdogUseCase) private readonly scheduleSlaWatchdog: ScheduleSlaWatchdogUseCase,
   ) {}
 
   async execute(cmd: AcceptOrderCommand): Promise<AcceptOrderResult> {
@@ -103,6 +105,8 @@ export class AcceptOrderUseCase {
         claimedAt: now,
       }
       await this.ordersOutbox.appendAll(cmd.actor.tenantId, [...order.pullDomainEvents(), claimedEvent], tx)
+      // DTJ-307: внутри транзакции, как schedule в ProposePartialFulfillmentUseCase — сбой Redis откатывает accept.
+      await this.scheduleSlaWatchdog.execute({ orderId: cmd.orderId, tenantId: cmd.actor.tenantId })
 
       return { orderId: cmd.orderId, status: 'processing', slaDeadlineAt, assignedPharmacistId: cmd.actor.userId }
     })
