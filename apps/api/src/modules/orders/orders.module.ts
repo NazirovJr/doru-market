@@ -245,6 +245,9 @@ import { HandoverOtpController } from './presentation/pharmacy-terminal/handover
 // DTJ-307 (EP-12, SLA сборки) — мягкое нарушение SLA: internal-эндпоинт для apps/worker.
 import { ReportPickingSlaBreachUseCase } from './application/pharmacy-terminal/report-picking-sla-breach.use-case.js'
 import { PickingSlaBreachController } from './presentation/internal/picking-sla-breach.controller.js'
+// DTJ-307 (EP-12, SLA сборки) — постановка мягкого и жёсткого watchdog-джоба при accept.
+import { ScheduleSlaWatchdogUseCase } from './application/pharmacy-terminal/schedule-sla-watchdog.use-case.js'
+import { SLA_WATCHDOG_QUEUE_PROVIDER } from './infrastructure/jobs/sla-watchdog.processor.js'
 
 /**
  * `UnimplementedCatalogFacadeAdapter`/`UnimplementedOrderRepositoryAdapter` (DTJ-220/222) —
@@ -517,6 +520,8 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     RegenerateHandoverOtpUseCase,
     // DTJ-307 (EP-12, SLA сборки, см. JSDoc импортов выше).
     ReportPickingSlaBreachUseCase,
+    SLA_WATCHDOG_QUEUE_PROVIDER,
+    ScheduleSlaWatchdogUseCase,
   ],
   // DTJ-226 (правка приёмки CTO, правило 2 AGENTS.md): без `exports` `OrdersFacade`/
   // `ORDERS_FACADE` были написаны, но физически недостижимы через `imports: [OrdersModule]` —

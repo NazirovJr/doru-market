@@ -17,6 +17,7 @@ import type { OrdersOutboxPort } from '@/modules/orders/application/ports/orders
 import type { InventoryFacadePort } from '@/modules/orders/application/ports/inventory-facade.port.js'
 import type { TenancyFacadePort } from '@/modules/orders/application/ports/tenancy-facade.port.js'
 import { AcceptOrderUseCase, type AcceptOrderActor } from './accept-order.use-case.js'
+import type { ScheduleSlaWatchdogUseCase } from './schedule-sla-watchdog.use-case.js'
 
 const NOW = new Date('2026-09-05T12:00:00.000Z')
 const TENANT_ID = 'tenant-1'
@@ -59,6 +60,7 @@ interface Harness {
   readonly appendAll: ReturnType<typeof vi.fn<OrdersOutboxPort['appendAll']>>
   readonly hasExpiredReservedBatch: ReturnType<typeof vi.fn<InventoryFacadePort['hasExpiredReservedBatch']>>
   readonly getPickupSlaMinutes: ReturnType<typeof vi.fn<TenancyFacadePort['getPickupSlaMinutes']>>
+  readonly scheduleSlaWatchdog: ReturnType<typeof vi.fn<ScheduleSlaWatchdogUseCase['execute']>>
 }
 
 function makeHarness(pickupSlaMinutes = 7): Harness {
@@ -75,6 +77,7 @@ function makeHarness(pickupSlaMinutes = 7): Harness {
     reconcileZeroStock: vi.fn(),
   }
   const getPickupSlaMinutes = vi.fn<TenancyFacadePort['getPickupSlaMinutes']>().mockResolvedValue(pickupSlaMinutes)
+  const scheduleSlaWatchdog = vi.fn<ScheduleSlaWatchdogUseCase['execute']>().mockResolvedValue(undefined)
   const tenancyFacade: TenancyFacadePort = {
     resolveCommissionRate: vi.fn(),
     getCodLimitDiram: vi.fn(),
@@ -85,8 +88,16 @@ function makeHarness(pickupSlaMinutes = 7): Harness {
     getHandoverOtpMaxRegenerationsPerOrder: vi.fn(),
     getHandoverOtpRegenerateMinIntervalSeconds: vi.fn(),
   }
-  const useCase = new AcceptOrderUseCase(repo, new PassthroughUnitOfWork(), ordersOutbox, inventoryFacade, tenancyFacade, new FixedClock())
-  return { useCase, repo, appendAll, hasExpiredReservedBatch, getPickupSlaMinutes }
+  const useCase = new AcceptOrderUseCase(
+    repo,
+    new PassthroughUnitOfWork(),
+    ordersOutbox,
+    inventoryFacade,
+    tenancyFacade,
+    new FixedClock(),
+    { execute: scheduleSlaWatchdog } as unknown as ScheduleSlaWatchdogUseCase,
+  )
+  return { useCase, repo, appendAll, hasExpiredReservedBatch, getPickupSlaMinutes, scheduleSlaWatchdog }
 }
 
 beforeEach(() => {
@@ -234,5 +245,49 @@ describe('AcceptOrderUseCase — партия просрочена (SRS-DOM-006,
 
     const saved = await repo.findById(TENANT_ID, order.id)
     expect(saved?.status).toBe('paid_escrow')
+  })
+})
+
+describe('AcceptOrderUseCase — SLA watchdog (DTJ-307, TC-PHT-021/022)', () => {
+  it('успешный accept (paid_escrow, pharmacist A) → scheduleSlaWatchdog вызван ровно один раз с { orderId, tenantId }', async () => {
+    const { useCase, repo, scheduleSlaWatchdog } = makeHarness()
+    const order = orderAtStatus('paid_escrow')
+    repo.seed(order)
+
+    await useCase.execute({ orderId: order.id, actor: PHARMACIST_A })
+
+    expect(scheduleSlaWatchdog).toHaveBeenCalledTimes(1)
+    expect(scheduleSlaWatchdog).toHaveBeenCalledWith({ orderId: order.id, tenantId: TENANT_ID })
+  })
+
+  it('заказ уже принят другим фармацевтом (как в тесте «гонка») → scheduleSlaWatchdog не вызван', async () => {
+    const { useCase, repo, scheduleSlaWatchdog } = makeHarness()
+    const order = orderAtStatus('processing', { processingStartedAt: NOW })
+    repo.seed(order, { id: PHARMACIST_A.userId, name: 'Фарзона М.' })
+
+    await expect(useCase.execute({ orderId: order.id, actor: PHARMACIST_B })).rejects.toBeInstanceOf(OrderAlreadyClaimedError)
+
+    expect(scheduleSlaWatchdog).not.toHaveBeenCalled()
+  })
+
+  it('фармацевт чужой аптеки → ForbiddenError, scheduleSlaWatchdog не вызван', async () => {
+    const { useCase, repo, scheduleSlaWatchdog } = makeHarness()
+    const order = orderAtStatus('paid_escrow')
+    repo.seed(order)
+
+    await expect(useCase.execute({ orderId: order.id, actor: PHARMACIST_OTHER_PHARMACY })).rejects.toBeInstanceOf(ForbiddenError)
+
+    expect(scheduleSlaWatchdog).not.toHaveBeenCalled()
+  })
+
+  it('scheduleSlaWatchdog.mockRejectedValueOnce(new Error("redis down")) → execute отклоняется с "redis down" (планирование внутри транзакции)', async () => {
+    const { useCase, repo, scheduleSlaWatchdog } = makeHarness()
+    const order = orderAtStatus('paid_escrow')
+    repo.seed(order)
+    scheduleSlaWatchdog.mockRejectedValueOnce(new Error('redis down'))
+
+    await expect(useCase.execute({ orderId: order.id, actor: PHARMACIST_A })).rejects.toThrow('redis down')
+
+    expect(scheduleSlaWatchdog).toHaveBeenCalledTimes(1)
   })
 })
