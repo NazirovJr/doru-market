@@ -276,23 +276,25 @@ if ($skippedIntegration.Count -gt 0) {
 }
 
 # --- полный режим -------------------------------------------------------------------------
-# Полный vitest пакета запускает десятки процессов. Когда в памяти висит локальная модель (Next —
-# 39 ГБ из 64), они падают с «heap out of memory», и гейт краснеет не из-за кода. Модель в этот
-# момент ждёт ответа гейта, поэтому выгрузка безопасна: следующий запрос dsh загрузит её заново.
+# Полный vitest пакета api на пике выделяет 5,3 ГБ (замер 21.09). Когда локальная модель держит
+# 38 ГБ, а рядом сервер dsh и браузер, лимит выделяемой памяти Windows (ОЗУ + файл подкачки)
+# кончается, и vitest падает с «heap out of memory» — гейт краснеет не из-за кода. Мерить надо
+# именно выделяемую память: физической при таком сбое было свободно 8,5 ГБ. Модель в этот момент
+# ждёт ответа гейта, выгрузка безопасна: следующий запрос dsh загрузит её заново.
 function Clear-ModelMemory([double] $minFreeGb) {
   try {
-    $freeGb = (Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB
+    $freeGb = (Get-CimInstance Win32_OperatingSystem).FreeVirtualMemory / 1MB
     if ($freeGb -ge $minFreeGb -or -not (Get-Command ollama -ErrorAction SilentlyContinue)) { return }
     $models = @(& ollama ps 2>$null | Select-Object -Skip 1 | ForEach-Object { ($_ -split '\s+')[0] } | Where-Object { $_ })
     if ($models.Count -eq 0) { return }
     foreach ($model in $models) { & ollama stop $model 2>&1 | Out-Null }
-    "[INFO] свободно $([math]::Round($freeGb, 1)) ГБ — на время полного прогона выгружена модель $($models -join ', ')"
+    "[INFO] выделяемой памяти свободно $([math]::Round($freeGb, 1)) ГБ — на время полного прогона выгружена модель $($models -join ', ')"
   }
   catch { "[INFO] не удалось проверить память или выгрузить модель: $($_.Exception.Message)" }
 }
 
 if ($Full) {
-  Clear-ModelMemory 16
+  Clear-ModelMemory 10
   Invoke-Step -Name 'arch:check' -Keep Last -Lines 25 -Arguments @('arch:check')
   Invoke-Step -Name 'test:arch' -Keep Last -Lines 25 -Arguments @('test:arch')
   foreach ($prefix in $touched) {
