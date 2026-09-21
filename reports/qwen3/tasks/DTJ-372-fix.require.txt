@@ -1,0 +1,57 @@
+# Критерии DTJ-372-fix: путь::текст — строка обязана быть в файле; путь::!текст — её там быть не должно.
+# Читает гейт (-RequireFile). Строка ищется буквально, без учёта регистра.
+
+# 2.1 контракт — поля тикета, без лишних
+packages/contracts/src/notifications.ts::eventType: z.string().nullable()
+packages/contracts/src/notifications.ts::subject: z.string().optional()
+packages/contracts/src/notifications.ts::body: z.string()
+packages/contracts/src/notifications.ts::!failedReason
+packages/contracts/src/notifications.ts::!tenantId
+packages/contracts/src/notifications.ts::!userId
+
+# 2.2 порт
+apps/api/src/modules/notifications/application/ports/notifications-repository.port.ts::'createdAt:desc'
+apps/api/src/modules/notifications/application/ports/notifications-repository.port.ts::tenantId: string | null
+apps/api/src/modules/notifications/application/ports/notifications-repository.port.ts::statuses?:
+
+# 2.3 use case — без DTO и своего курсора
+apps/api/src/modules/notifications/application/use-cases/list-own-notifications.use-case.ts::order: 'createdAt:desc'
+apps/api/src/modules/notifications/application/use-cases/list-own-notifications.use-case.ts::!NotificationSummary
+apps/api/src/modules/notifications/application/use-cases/list-own-notifications.use-case.ts::!toISOString
+apps/api/src/modules/notifications/application/use-cases/list-own-notifications.use-case.ts::!ListOwnNotificationsCursor
+apps/api/src/modules/notifications/application/use-cases/list-own-notifications.use-case.spec.ts::userId из актора
+apps/api/src/modules/notifications/application/use-cases/list-own-notifications.use-case.spec.ts::tenantId: null
+apps/api/src/modules/notifications/application/use-cases/list-own-notifications.use-case.spec.ts::createdAt:desc
+apps/api/src/modules/notifications/application/use-cases/list-own-notifications.use-case.spec.ts::nextCursor и hasMore приходят из порта без изменений
+apps/api/src/modules/notifications/application/use-cases/list-own-notifications.use-case.spec.ts::!больше, чем limit
+
+# 2.4 разбор query
+apps/api/src/modules/notifications/presentation/notifications-query.util.spec.ts::InvalidCursorError
+apps/api/src/modules/notifications/presentation/notifications-query.util.spec.ts::ValidationError
+apps/api/src/modules/notifications/presentation/notifications-query.util.spec.ts::queued,sent
+apps/api/src/modules/notifications/presentation/notifications-query.util.spec.ts::not-a-cursor
+apps/api/src/modules/notifications/presentation/notifications-query.util.spec.ts::deleted
+
+# 2.5 маппер
+apps/api/src/modules/notifications/presentation/notification-summary.mapper.spec.ts::toStrictEqual
+apps/api/src/modules/notifications/presentation/notification-summary.mapper.spec.ts::eventType: null
+
+# 2.6 контроллер
+apps/api/src/modules/notifications/presentation/notifications-feed.controller.ts::@Roles(...USER_ROLES)
+apps/api/src/modules/notifications/presentation/notifications-feed.controller.ts::@Query('filter[status]')
+apps/api/src/modules/notifications/presentation/notifications-feed.controller.ts::parseStatusFilter
+apps/api/src/modules/notifications/presentation/notifications-feed.controller.ts::parseListCursor
+apps/api/src/modules/notifications/presentation/notifications-feed.controller.ts::toNotificationSummary
+apps/api/src/modules/notifications/presentation/notifications-feed.controller.ts::claims.tenantId
+apps/api/src/modules/notifications/presentation/notifications-feed.controller.ts::!requireTenantId
+apps/api/src/modules/notifications/presentation/notifications-feed.controller.ts::!AuthSizePolicy
+apps/api/src/modules/notifications/presentation/notifications-feed.controller.ts::!Ранее контроллер
+apps/api/src/modules/notifications/presentation/notifications-feed.controller.ts::!ListOwnNotificationsCursor
+apps/api/src/modules/notifications/presentation/notifications-feed.controller.spec.ts::ROLES_METADATA_KEY
+apps/api/src/modules/notifications/presentation/notifications-feed.controller.spec.ts::super_admin
+apps/api/src/modules/notifications/presentation/notifications-feed.controller.spec.ts::queued,sent
+apps/api/src/modules/notifications/presentation/notifications-feed.controller.spec.ts::encodeCursor
+
+# 2.7 мелочи
+apps/api/src/modules/notifications/infrastructure/providers/in-app-notify.provider.spec.ts::!_ListNotificationsPage
+apps/api/src/modules/notifications/notifications.module.ts::!DTJ-368/372

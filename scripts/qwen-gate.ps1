@@ -119,7 +119,10 @@ function Invoke-Step {
     [string] $Name,
     [string[]] $Arguments,
     [ValidateSet('First', 'Last')] [string] $Keep = 'First',
-    [int] $Lines = 40
+    [int] $Lines = 40,
+    # Строки с причиной падения печатаются первыми: у полного vitest хвост вывода — таблица
+    # покрытия, и сама причина в 40 последних строк не попадала.
+    [string] $Cause = ''
   )
   # "$_" превращает stderr-записи PowerShell 5.1 в чистые строки без NativeCommandError-шума.
   $output = & pnpm @Arguments 2>&1 | ForEach-Object { "$_" }
@@ -132,8 +135,19 @@ function Invoke-Step {
     '       Нужен демон гейта (scripts/qwen-gate-daemon.ps1) — это СТОП, сдай отчёт со статусом BLOCKED.'
     return
   }
+  if ($output -match 'heap out of memory|Allocation failed') {
+    '       ЭТО НЕ ОШИБКА КОДА: процессам vitest не хватило оперативной памяти. Код не трогай:'
+    '       запусти ту же команду ещё раз. Повторилось — это СТОП, сдай отчёт со статусом BLOCKED.'
+    return
+  }
   $noise = @('System.Management.Automation.RemoteException', 'undefined')
   $meaningful = @($output | Where-Object { ($_ -match '\S') -and ($noise -notcontains $_.Trim()) })
+  if ($Cause) {
+    # ECONNREFUSED — шум зелёных тестов, которые стучатся в Redis; причиной он не бывает.
+    $causes = @($meaningful | Where-Object { ($_ -match $Cause) -and ($_ -notmatch 'ECONNREFUSED') } | Select-Object -Unique -First 20)
+    $causes | ForEach-Object { "       $_" }
+    if ($causes.Count -gt 0) { $Lines = [Math]::Min($Lines, 12) }
+  }
   if ($Keep -eq 'First') { $meaningful = @($meaningful | Select-Object -First $Lines) }
   else { $meaningful = @($meaningful | Select-Object -Last $Lines) }
   $meaningful | ForEach-Object { "       $_" }
@@ -189,15 +203,22 @@ if ($Require.Count -gt 0) {
     if ($parts.Count -ne 2) { $missing.Add("$entry -> неверный формат, нужно путь::текст"); continue }
     $file = $parts[0].Trim()
     $needle = $parts[1].Trim()
-    if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { $missing.Add("$file -> файла нет"); continue }
-    $content = Get-Content -LiteralPath $file -Raw -Encoding UTF8
-    if ((-not $content) -or ($content.IndexOf($needle, [StringComparison]::OrdinalIgnoreCase) -lt 0)) {
-      $missing.Add("$file -> нет: $needle")
+    # `путь::!текст` — запрет: этой строки в файле быть не должно (лишнее поле, обход линтера).
+    $forbidden = $needle.StartsWith('!')
+    if ($forbidden) { $needle = $needle.Substring(1) }
+    if (-not (Test-Path -LiteralPath $file -PathType Leaf)) {
+      if (-not $forbidden) { $missing.Add("$file -> файла нет") }
+      continue
     }
+    $content = Get-Content -LiteralPath $file -Raw -Encoding UTF8
+    $found = $content -and ($content.IndexOf($needle, [StringComparison]::OrdinalIgnoreCase) -ge 0)
+    if ($forbidden -and $found) { $missing.Add("$file -> лишнее: «$needle» — этой строки в файле быть не должно") }
+    if ((-not $forbidden) -and (-not $found)) { $missing.Add("$file -> нет дословно: «$needle»") }
   }
   if ($missing.Count -gt 0) {
     $failed.Add('require')
-    '[FAIL] require: критерии задания не выполнены (раздел 5):'
+    '[FAIL] require: критерии задания не выполнены (раздел 5). Строка ищется в файле буквально,'
+    '       перефраз не засчитывается:'
     $missing | ForEach-Object { "       $_" }
   }
   else { "[OK]   require ($($Require.Count))" }
@@ -242,11 +263,12 @@ foreach ($file in $changed) {
   $relative = $spec.Substring($prefix.Length)
   if (-not $specsByPrefix[$prefix].Contains($relative)) { $specsByPrefix[$prefix].Add($relative) }
 }
+$vitestCause = '\bFAIL\b|Failed Tests|(Assertion|Type|Reference)Error|does not meet|Test Files|^\s*Tests\s'
 foreach ($prefix in $specsByPrefix.Keys) {
   $name = $packageByPrefix[$prefix]
   $specs = @($specsByPrefix[$prefix])
   $vitestArgs = @('--filter', $name, 'exec', 'vitest', 'run', '--coverage.enabled=false', '--reporter=dot')
-  Invoke-Step -Name "vitest $name ($($specs.Count) спеков)" -Keep Last -Lines 60 -Arguments ($vitestArgs + $specs)
+  Invoke-Step -Name "vitest $name ($($specs.Count) спеков)" -Keep Last -Lines 60 -Cause $vitestCause -Arguments ($vitestArgs + $specs)
 }
 if ($skippedIntegration.Count -gt 0) {
   '[SKIP] интеграционные спеки (нужны Postgres/Redis, гоняет координатор):'
@@ -254,13 +276,29 @@ if ($skippedIntegration.Count -gt 0) {
 }
 
 # --- полный режим -------------------------------------------------------------------------
+# Полный vitest пакета запускает десятки процессов. Когда в памяти висит локальная модель (Next —
+# 39 ГБ из 64), они падают с «heap out of memory», и гейт краснеет не из-за кода. Модель в этот
+# момент ждёт ответа гейта, поэтому выгрузка безопасна: следующий запрос dsh загрузит её заново.
+function Clear-ModelMemory([double] $minFreeGb) {
+  try {
+    $freeGb = (Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB
+    if ($freeGb -ge $minFreeGb -or -not (Get-Command ollama -ErrorAction SilentlyContinue)) { return }
+    $models = @(& ollama ps 2>$null | Select-Object -Skip 1 | ForEach-Object { ($_ -split '\s+')[0] } | Where-Object { $_ })
+    if ($models.Count -eq 0) { return }
+    foreach ($model in $models) { & ollama stop $model 2>&1 | Out-Null }
+    "[INFO] свободно $([math]::Round($freeGb, 1)) ГБ — на время полного прогона выгружена модель $($models -join ', ')"
+  }
+  catch { "[INFO] не удалось проверить память или выгрузить модель: $($_.Exception.Message)" }
+}
+
 if ($Full) {
+  Clear-ModelMemory 16
   Invoke-Step -Name 'arch:check' -Keep Last -Lines 25 -Arguments @('arch:check')
   Invoke-Step -Name 'test:arch' -Keep Last -Lines 25 -Arguments @('test:arch')
   foreach ($prefix in $touched) {
     $name = $packageByPrefix[$prefix]
     $fullArgs = @('--filter', $name, 'exec', 'vitest', 'run', '--reporter=dot')
-    Invoke-Step -Name "vitest $name (весь пакет, с порогами покрытия)" -Keep Last -Lines 40 -Arguments $fullArgs
+    Invoke-Step -Name "vitest $name (весь пакет, с порогами покрытия)" -Keep Last -Lines 40 -Cause $vitestCause -Arguments $fullArgs
     Invoke-Step -Name "build $name" -Keep Last -Lines 25 -Arguments @('--filter', $name, 'build')
   }
 }
