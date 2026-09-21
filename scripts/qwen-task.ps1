@@ -47,6 +47,15 @@ $taskFile = Join-Path $root "reports\qwen3\tasks\$Task.md"
 if (-not (Test-Path -LiteralPath $taskFile)) { throw "нет файла задания: $taskFile" }
 $text = Get-Content -LiteralPath $taskFile -Raw -Encoding UTF8
 
+# Под давлением контекста dsh режет результаты read длиннее 8192 символов: остаются первые 4096 и
+# последние 1024 (tool-result-pruner в пресете executor). Путь и номера строк в выводе read съедают
+# часть начала, поэтому запас — 3500 символов файла. На DTJ-372 команда гейта стояла глубже,
+# и модель, дойдя до сдачи, выдумала свою.
+$head = $text.Substring(0, [Math]::Min(3500, $text.Length))
+if ($head.IndexOf('-File scripts/qwen-gate.ps1') -lt 0 -or $head.IndexOf('-Commit "') -lt 0) {
+  throw 'команды проверки и сдачи должны стоять в первых 3500 символах задания, иначе dsh вырежет их при сжатии'
+}
+
 $allowedMatch = [regex]::Match($text, "-Allowed\s+(.+?)\s+-RequireFile")
 if (-not $allowedMatch.Success) { throw "в задании не найден -Allowed ... -RequireFile" }
 $allowed = @($allowedMatch.Groups[1].Value -split ',' | ForEach-Object { $_.Trim().Trim("'") } | Where-Object { $_ })
