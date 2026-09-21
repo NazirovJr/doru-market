@@ -9,6 +9,8 @@
 import { Injectable } from '@nestjs/common'
 import {
   type CreateNotificationInput,
+  type ListNotificationsInput,
+  type ListNotificationsPage,
   type NotificationRecord,
   type NotificationsRepositoryPort,
 } from '@/modules/notifications/application/ports/notifications-repository.port.js'
@@ -18,6 +20,12 @@ export class UnimplementedNotificationsRepositoryAdapter implements Notification
   public create(_input: CreateNotificationInput): Promise<NotificationRecord> {
     return Promise.reject(
       new Error('NotificationsRepositoryPort.create() has no implementation yet — TODO(DTJ-369/370): bind a real adapter.'),
+    )
+  }
+
+  public list(_input: ListNotificationsInput): Promise<ListNotificationsPage> {
+    return Promise.reject(
+      new Error('NotificationsRepositoryPort.list() has no implementation yet — TODO(DTJ-369/370): bind a real adapter.'),
     )
   }
 }

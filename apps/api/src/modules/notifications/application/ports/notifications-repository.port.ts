@@ -41,6 +41,26 @@ export interface NotificationRecord extends CreateNotificationInput {
 
 export const NOTIFICATIONS_REPOSITORY_PORT = Symbol.for('@dorutj/notifications/notifications-repository-port')
 
+export interface ListNotificationsCursor {
+  readonly v: string
+  readonly id: string
+}
+
+export interface ListNotificationsInput {
+  readonly userId: string
+  readonly tenantId: string
+  readonly limit: number
+  readonly cursor?: ListNotificationsCursor | null
+  readonly status?: NotificationStatus | undefined
+}
+
+export interface ListNotificationsPage {
+  readonly items: readonly NotificationRecord[]
+  readonly nextCursor: ListNotificationsCursor | null
+  readonly hasMore: boolean
+}
+
 export interface NotificationsRepositoryPort {
   create(input: CreateNotificationInput): Promise<NotificationRecord>
+  list(input: ListNotificationsInput): Promise<ListNotificationsPage>
 }

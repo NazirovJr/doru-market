@@ -1,5 +1,5 @@
 /**
- * NestJS-модуль `notifications` (EP-16, DTJ-368). Barrel-файл (D-27): правится ТОЛЬКО добавлением
+ * NestJS-модуль `notifications` (EP-16, DTJ-368/372). Barrel-файл (D-27): правится ТОЛЬКО добавлением
  * строк, перечитать перед правкой, конфликты слияния — за архитектором.
  *
  * `notifications` — application-уровня контекст БЕЗ богатого домена (`10-domain-model.md`:
@@ -26,6 +26,9 @@
  * `imports: [AuthModule]` — ТОЛЬКО модуль (не барабан) во избежание цикла `module → barrel →
  * module` (тот же приём, что `admin.module.ts`); `USERS_REPOSITORY` использован через барабан
  * `@/modules/auth/index.js` в самом адаптере.
+ *
+ * На этом тикете добавлен `ListOwnNotificationsUseCase` и `NotificationsFeedController` для
+ * `GET /api/v1/notifications` (DTJ-372).
  */
 import { Module } from '@nestjs/common'
 import { AuthModule } from '@/modules/auth/auth.module.js'
@@ -36,6 +39,8 @@ import { UsersRepositoryIdentityFacadeAdapter } from './infrastructure/adapters/
 import { UnimplementedNotificationsRepositoryAdapter } from './infrastructure/adapters/unimplemented-notifications-repository.adapter.js'
 import { TelegramNotifyProvider } from './infrastructure/providers/telegram-notify.provider.js'
 import { InAppNotifyProvider } from './infrastructure/providers/in-app-notify.provider.js'
+import { ListOwnNotificationsUseCase } from './application/use-cases/list-own-notifications.use-case.js'
+import { NotificationsFeedController } from './presentation/notifications-feed.controller.js'
 
 @Module({
   imports: [AuthModule],
@@ -44,12 +49,14 @@ import { InAppNotifyProvider } from './infrastructure/providers/in-app-notify.pr
     { provide: NOTIFICATIONS_REPOSITORY_PORT, useClass: UnimplementedNotificationsRepositoryAdapter },
     { provide: NOTIFY_PROVIDER_TELEGRAM, useClass: TelegramNotifyProvider },
     { provide: NOTIFY_PROVIDER_IN_APP, useClass: InAppNotifyProvider },
+    { provide: ListOwnNotificationsUseCase, useClass: ListOwnNotificationsUseCase },
     UsersRepositoryIdentityFacadeAdapter,
     UnimplementedNotificationsRepositoryAdapter,
     TelegramNotifyProvider,
     InAppNotifyProvider,
   ],
   exports: [IDENTITY_FACADE_PORT, NOTIFICATIONS_REPOSITORY_PORT, NOTIFY_PROVIDER_TELEGRAM, NOTIFY_PROVIDER_IN_APP],
+  controllers: [NotificationsFeedController],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.
 export class NotificationsModule {}
