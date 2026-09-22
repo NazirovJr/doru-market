@@ -19,7 +19,12 @@ describe('InAppNotifyProvider', () => {
   it('критерий приёмки 3 DTJ-368: синхронная запись с channel=in_app, status=sent НЕМЕДЛЕННО', async () => {
     const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: null })
     const create = vi.fn().mockImplementation((input: CreateNotificationInput) => Promise.resolve(fakeRecord(input)))
-    const repository: NotificationsRepositoryPort = { create }
+    const list = vi.fn<NotificationsRepositoryPort['list']>().mockResolvedValue({
+      items: [],
+      nextCursor: null,
+      hasMore: false,
+    })
+    const repository: NotificationsRepositoryPort = { create, list }
     const provider = new InAppNotifyProvider(identityFacade, repository)
 
     const result = await provider.send('user-1', 'in_app', { subject: 'Заказ №1', body: 'Готов к выдаче' })
@@ -37,7 +42,12 @@ describe('InAppNotifyProvider', () => {
   it('без subject — payload содержит только body', async () => {
     const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: null })
     const create = vi.fn().mockImplementation((input: CreateNotificationInput) => Promise.resolve(fakeRecord(input)))
-    const repository: NotificationsRepositoryPort = { create }
+    const list = vi.fn<NotificationsRepositoryPort['list']>().mockResolvedValue({
+      items: [],
+      nextCursor: null,
+      hasMore: false,
+    })
+    const repository: NotificationsRepositoryPort = { create, list }
     const provider = new InAppNotifyProvider(identityFacade, repository)
 
     await provider.send('user-1', 'in_app', { body: 'Готов к выдаче' })
@@ -48,7 +58,12 @@ describe('InAppNotifyProvider', () => {
   it('пользователь не найден — { success: false }, запись НЕ создаётся', async () => {
     const identityFacade = stubIdentityFacade(null)
     const create = vi.fn()
-    const repository: NotificationsRepositoryPort = { create }
+    const list = vi.fn<NotificationsRepositoryPort['list']>().mockResolvedValue({
+      items: [],
+      nextCursor: null,
+      hasMore: false,
+    })
+    const repository: NotificationsRepositoryPort = { create, list }
     const provider = new InAppNotifyProvider(identityFacade, repository)
 
     const result = await provider.send('user-missing', 'in_app', { body: 'привет' })

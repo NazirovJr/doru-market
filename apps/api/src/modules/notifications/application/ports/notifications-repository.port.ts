@@ -41,6 +41,42 @@ export interface NotificationRecord extends CreateNotificationInput {
 
 export const NOTIFICATIONS_REPOSITORY_PORT = Symbol.for('@dorutj/notifications/notifications-repository-port')
 
+export interface ListNotificationsCursor {
+  readonly v: string
+  readonly id: string
+}
+
+/**
+ * Страничная выборка ленты пользователя:
+ * - `userId` — чья лента;
+ * - `tenantId` — `null` — актор без тенанта (`super_admin`): фильтр только по `userId`;
+ * - `statuses` — не передан — все статусы;
+ * - `order` — единственный порядок ленты: новые сверху (`createdAt` по убыванию, при равенстве — `id` по убыванию);
+ * - `limit` — число записей на странице;
+ * - `cursor` — `{ v: createdAt в ISO, id }` последней записи.
+ */
+export interface ListNotificationsInput {
+  readonly userId: string
+  readonly tenantId: string | null
+  readonly statuses?: readonly NotificationStatus[] | undefined
+  readonly order: 'createdAt:desc'
+  readonly limit: number
+  readonly cursor: ListNotificationsCursor | null
+}
+
+export interface ListNotificationsPage {
+  readonly items: readonly NotificationRecord[]
+  readonly nextCursor: ListNotificationsCursor | null
+  readonly hasMore: boolean
+}
+
 export interface NotificationsRepositoryPort {
   create(input: CreateNotificationInput): Promise<NotificationRecord>
+  /**
+   * Страница ленты пользователя.
+   * Сортировка `createdAt` по убыванию, при равенстве — `id` по убыванию.
+   * Курсор — `{ v: createdAt в ISO, id }` последней записи.
+   * Реализация — DTJ-370.
+   */
+  list(input: ListNotificationsInput): Promise<ListNotificationsPage>
 }
