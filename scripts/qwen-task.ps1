@@ -73,10 +73,16 @@ if (-not (Test-Path -LiteralPath (Join-Path $root $requireFile))) {
   throw "файл критериев не найден: $requireFile"
 }
 
-$payload = [ordered]@{ task = $Task; branch = $branch; base = $base; requireFile = $requireFile; allowed = $allowed }
+# Сообщение коммита гейт печатает в готовой команде сдачи, когда проверка зелёная.
+$commitMatch = [regex]::Match($text, '-Commit "([^"]+)"')
+if (-not $commitMatch.Success) { throw 'в задании не найдена команда сдачи с -Commit "..."' }
+$commit = $commitMatch.Groups[1].Value
+
+$payload = [ordered]@{ task = $Task; branch = $branch; base = $base; requireFile = $requireFile; allowed = $allowed; commit = $commit }
 Set-Content -LiteralPath $activeFile -Value ($payload | ConvertTo-Json -Depth 4) -Encoding UTF8
 
 "активное задание: $Task"
 "  ветка:     $branch (от $base)"
 "  критериев: $((Get-Content -LiteralPath (Join-Path $root $requireFile) | Where-Object { $_.Trim() -and -not $_.StartsWith('#') }).Count)"
 "  периметр:  $($allowed.Count) шаблонов"
+"  коммит:    $commit"

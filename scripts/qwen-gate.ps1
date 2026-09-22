@@ -196,6 +196,38 @@ if ($Allowed.Count -gt 0) {
   else { '[OK]   scope' }
 }
 
+# Обходы проверок в добавленных строках. Упёршись в линтер, модель начинает его глушить: на
+# DTJ-372-fix полтора часа ушло на `eslint-disable` и поиски `.eslintrc`. Смотрим только добавленное
+# относительно базы — старые директивы с причиной в существующем коде остаются законными.
+$bypassPattern = 'eslint-disable|@ts-ignore|@ts-expect-error|\bas any\b|\b(it|describe|test)\.(skip|only)\('
+$mergeBase = "$(& git merge-base $Base HEAD 2>$null)".Trim()
+$untracked = @(& git ls-files --others --exclude-standard | ForEach-Object { $_ -replace '\\', '/' })
+$bypasses = New-Object System.Collections.Generic.List[string]
+foreach ($file in @($changed | Where-Object { ($_ -match '\.(ts|tsx|js|mjs|cjs)$') -and (Test-Path -LiteralPath $_ -PathType Leaf) })) {
+  if (($untracked -contains $file) -or (-not $mergeBase)) {
+    $number = 0
+    foreach ($line in (Get-Content -LiteralPath $file -Encoding UTF8)) {
+      $number++
+      if ($line -match $bypassPattern) { $bypasses.Add("${file}:${number}: $($line.Trim())") }
+    }
+    continue
+  }
+  $newLine = 0
+  foreach ($line in (& git diff --unified=0 $mergeBase -- $file)) {
+    if ($line -match '^@@ -\d+(?:,\d+)? \+(\d+)') { $newLine = [int]$Matches[1]; continue }
+    if ($line.StartsWith('+++') -or -not $line.StartsWith('+')) { continue }
+    if ($line -match $bypassPattern) { $bypasses.Add("${file}:${newLine}: $($line.Substring(1).Trim())") }
+    $newLine++
+  }
+}
+if ($bypasses.Count -gt 0) {
+  $failed.Add('bypass')
+  '[FAIL] bypass: добавлены обходы проверок (eslint-disable, @ts-ignore, as any, .skip/.only) —'
+  '       они запрещены. Убери их и почини саму ошибку:'
+  $bypasses | Select-Object -First 20 | ForEach-Object { "       $_" }
+}
+else { '[OK]   bypass' }
+
 if ($Require.Count -gt 0) {
   $missing = New-Object System.Collections.Generic.List[string]
   foreach ($entry in $Require) {
@@ -339,6 +371,16 @@ if ($Commit) {
   "       $(& git log --oneline -1)"
   if ($nothingToCommit) { '       (повторный прогон: всё уже в этом коммите, новых изменений нет)' }
   & git show --stat --format='' HEAD | Where-Object { $_ -match '\S' } | ForEach-Object { "       $_" }
+}
+
+# Зелёная проверка без -Commit — ещё не сдача: на DTJ-372 и DTJ-372-fix модель оба раза приняла такой
+# PASS за конец работы и пошла в `git commit`. Печатаем готовую команду сдачи — вспоминать нечего.
+if ((-not $Commit) -and $active) {
+  $allowedArg = ($Allowed | ForEach-Object { "'$_'" }) -join ','
+  $requireArg = if ($RequireFile) { " -RequireFile $RequireFile" } else { '' }
+  $message = if ($active.commit) { [string]$active.commit } else { '<сообщение из раздела 8 задания>' }
+  'ПРОВЕРКА ЗЕЛЁНАЯ, НО РАБОТА НЕ СДАНА. Сдай её этой командой, дословно (в pwsh — timeoutMs: 600000):'
+  "  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed $allowedArg$requireArg -Commit `"$message`""
 }
 
 'GATE: PASS'
