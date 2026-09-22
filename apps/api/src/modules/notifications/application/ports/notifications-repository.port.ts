@@ -46,12 +46,22 @@ export interface ListNotificationsCursor {
   readonly id: string
 }
 
+/**
+ * Страничная выборка ленты пользователя:
+ * - `userId` — чья лента;
+ * - `tenantId` — `null` — актор без тенанта (`super_admin`): фильтр только по `userId`;
+ * - `statuses` — не передан — все статусы;
+ * - `order` — единственный порядок ленты: новые сверху (`createdAt` по убыванию, при равенстве — `id` по убыванию);
+ * - `limit` — число записей на странице;
+ * - `cursor` — `{ v: createdAt в ISO, id }` последней записи.
+ */
 export interface ListNotificationsInput {
   readonly userId: string
-  readonly tenantId: string
+  readonly tenantId: string | null
+  readonly statuses?: readonly NotificationStatus[] | undefined
+  readonly order: 'createdAt:desc'
   readonly limit: number
-  readonly cursor?: ListNotificationsCursor | null
-  readonly status?: NotificationStatus | undefined
+  readonly cursor: ListNotificationsCursor | null
 }
 
 export interface ListNotificationsPage {
@@ -62,5 +72,11 @@ export interface ListNotificationsPage {
 
 export interface NotificationsRepositoryPort {
   create(input: CreateNotificationInput): Promise<NotificationRecord>
+  /**
+   * Страница ленты пользователя.
+   * Сортировка `createdAt` по убыванию, при равенстве — `id` по убыванию.
+   * Курсор — `{ v: createdAt в ISO, id }` последней записи.
+   * Реализация — DTJ-370.
+   */
   list(input: ListNotificationsInput): Promise<ListNotificationsPage>
 }

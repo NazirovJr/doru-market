@@ -1,5 +1,5 @@
 /**
- * Публичные контракты модуля `notifications` (EP-16, DTJ-368/372) — DTO presentation-слоя
+ * Публичные контракты модуля `notifications` (EP-16, DTJ-368) — DTO presentation-слоя
  * (`notifications-feed.controller.ts`, DTJ-372).
  */
 import { z } from 'zod'
@@ -19,13 +19,14 @@ export type NotificationChannel = (typeof NOTIFICATION_CHANNEL_VALUES)[number]
  */
 export const NotificationSummarySchema = z.object({
   id: z.string(),
-  userId: z.string(),
-  tenantId: z.string(),
+  eventType: z.string().nullable(),
   channel: z.enum(NOTIFICATION_CHANNEL_VALUES),
   status: z.enum(NOTIFICATION_STATUS_VALUES),
-  payload: z.record(z.string(), z.unknown()),
+  payload: z.object({
+    subject: z.string().optional(),
+    body: z.string(),
+  }),
   sentAt: z.string().nullable(),
-  failedReason: z.string().nullable(),
   createdAt: z.string(),
 })
 

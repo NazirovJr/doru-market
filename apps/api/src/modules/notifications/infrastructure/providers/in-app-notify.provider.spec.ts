@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { type IdentityFacadePort, type NotificationRecipientProfile } from '@/modules/notifications/application/ports/identity-facade.port.js'
 import {
   type CreateNotificationInput,
-  type ListNotificationsPage as _ListNotificationsPage,
   type NotificationRecord,
   type NotificationsRepositoryPort,
 } from '@/modules/notifications/application/ports/notifications-repository.port.js'

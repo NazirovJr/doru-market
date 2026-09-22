@@ -6,26 +6,23 @@
  * из JWT, в query такого параметра нет вообще.
  *
  * Контроллер объявлен ЭТИМ тикетом (DTJ-372) как часть presentation-слоя `notifications` модуля.
- * Ранее контроллер был внутри `list-own-notifications.use-case.ts`, что нарушало Clean Architecture
- * (presentation внутри application). Отдельный файл — соответствие разделу 0 `02-CleanArchitecture.md`.
+ * Отдельный файл — соответствие разделу 0 `02-CleanArchitecture.md`.
  */
 import { Controller, Get, Inject, Query, UseGuards } from '@nestjs/common'
-import { AuthGuard, RolesGuard } from '@/modules/auth/index.js'
+import { AuthGuard, RolesGuard, Roles } from '@/modules/auth/index.js'
 import { CurrentUser, type JwtClaims } from '@/modules/auth/index.js'
 import { ok, type PaginationMeta, type SuccessEnvelope } from '@dorutj/contracts'
-import { encodeCursor, decodeCursor, type NotificationSummary } from '@dorutj/contracts'
+import { encodeCursor } from '@dorutj/contracts'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
 import { cursorQuerySchema } from '@dorutj/contracts'
-import type { NotificationStatus } from '../application/ports/notifications-repository.port.js'
 import { ListOwnNotificationsUseCase } from '../application/use-cases/list-own-notifications.use-case.js'
-
-export interface ListOwnNotificationsCursor {
-  readonly v: string
-  readonly id: string
-}
+import { parseListCursor, parseStatusFilter } from './notifications-query.util.js'
+import { toNotificationSummary } from './notification-summary.mapper.js'
+import { USER_ROLES } from '@dorutj/contracts'
 
 @Controller({ path: 'notifications', version: '1' })
 @UseGuards(AuthGuard, RolesGuard)
+@Roles(...USER_ROLES)
 export class NotificationsFeedController {
   public constructor(
     @Inject(ListOwnNotificationsUseCase) private readonly listOwnNotifications: ListOwnNotificationsUseCase,
@@ -33,16 +30,15 @@ export class NotificationsFeedController {
 
   @Get()
   public async list(
-    @Query(new ZodValidationPipe(cursorQuerySchema)) query: { limit: number; cursor?: string | undefined; status?: string | undefined },
+    @Query(new ZodValidationPipe(cursorQuerySchema)) query: { limit: number; cursor?: string | undefined },
+    @Query('filter[status]') statusRaw: string | undefined,
     @CurrentUser() claims: JwtClaims,
-  ): Promise<SuccessEnvelope<readonly NotificationSummary[]>> {
-    const status = query.status as NotificationStatus | undefined
-    const cursor = query.cursor ? this.parseCursor(query.cursor) : null
+  ): Promise<SuccessEnvelope<readonly unknown[]>> {
     const result = await this.listOwnNotifications.execute({
-      actor: { userId: claims.sub, tenantId: this.requireTenantId(claims) },
-      status,
+      actor: { userId: claims.sub, tenantId: claims.tenantId },
+      statuses: parseStatusFilter(statusRaw),
       limit: query.limit,
-      cursor,
+      cursor: parseListCursor(query.cursor),
     })
 
     const meta: PaginationMeta = {
@@ -51,23 +47,6 @@ export class NotificationsFeedController {
       limit: query.limit,
     }
 
-    return ok(result.items, { pagination: meta })
-  }
-
-  private requireTenantId(claims: JwtClaims): string {
-    if (claims.tenantId === null) {
-      // `super_admin` не должен использовать этот эндпоинт — только tenant-scoped пользователи.
-      // Это защитная проверка, так как `AuthSizePolicy` и `RolesGuard` уже фильтруют роли.
-      throw new Error('notifications endpoint requires a tenant-scoped actor (super_admin is not allowed)')
-    }
-    return claims.tenantId
-  }
-
-  private parseCursor(raw: string): ListOwnNotificationsCursor | null {
-    const decoded = decodeCursor(raw)
-    if (!decoded || typeof decoded.v !== 'string' || typeof decoded.id !== 'string') {
-      return null
-    }
-    return { v: decoded.v, id: decoded.id }
+    return ok(result.items.map(toNotificationSummary), { pagination: meta })
   }
 }
