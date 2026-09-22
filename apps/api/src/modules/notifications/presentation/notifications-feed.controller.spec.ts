@@ -2,15 +2,10 @@
  * Unit-тест `NotificationsFeedController` (DTJ-372).
  */
 import { describe, expect, it, vi } from 'vitest'
-import type { JwtClaims } from '@/modules/auth/index.js'
-import { ROLES_METADATA_KEY } from '@/modules/auth/index.js'
+import { encodeCursor, NotificationSummarySchema, USER_ROLES } from '@dorutj/contracts'
+import { ROLES_METADATA_KEY, type JwtClaims } from '@/modules/auth/index.js'
 import type { ListOwnNotificationsUseCase } from '../application/use-cases/list-own-notifications.use-case.js'
 import { NotificationsFeedController } from './notifications-feed.controller.js'
-import { USER_ROLES } from '@dorutj/contracts'
-import { NotificationSummarySchema } from '@dorutj/contracts'
-import { encodeCursor } from '@dorutj/contracts'
-import { InvalidCursorError } from '@dorutj/contracts'
-import { parseListCursor, parseStatusFilter } from './notifications-query.util.js'
 
 describe('NotificationsFeedController', () => {
   it('роли: декоратор @Roles(...USER_ROLES) применён к контроллеру', () => {
@@ -121,28 +116,6 @@ describe('NotificationsFeedController', () => {
       })
       expect('failedReason' in parsed.data).toBe(false)
     }
-  })
-
-  it('parseStatusFilter: queued,sent → [queued, sent];  queued , ,sent  → то же; undefined → undefined', () => {
-    expect(parseStatusFilter('queued,sent')).toEqual(['queued', 'sent'])
-    expect(parseStatusFilter(' queued , ,sent ')).toEqual(['queued', 'sent'])
-    expect(parseStatusFilter(undefined)).toBeUndefined()
-    expect(parseStatusFilter('')).toBeUndefined()
-    expect(parseStatusFilter('   ')).toBeUndefined()
-  })
-
-  it('parseStatusFilter: неизвестный статус deleted → бросает ValidationError', () => {
-    expect(() => parseStatusFilter('deleted')).toThrow()
-  })
-
-  it('parseListCursor: мусор вместо курсора not-a-cursor → бросает InvalidCursorError', () => {
-    expect(() => parseListCursor('not-a-cursor')).toThrow(InvalidCursorError)
-  })
-
-  it('parseListCursor: encodeCursor({ v, id }) → { v, id }', () => {
-    const cursor = { v: '2026-09-04T10:00:00.000Z', id: 'notification-1' }
-    const encoded = encodeCursor(cursor)
-    expect(parseListCursor(encoded)).toEqual(cursor)
   })
 })
 

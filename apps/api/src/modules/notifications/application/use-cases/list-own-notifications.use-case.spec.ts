@@ -2,8 +2,8 @@
  * Unit-тест `ListOwnNotificationsUseCase` (DTJ-372).
  */
 import { describe, expect, it, vi } from 'vitest'
-import type { NotificationStatus, NotificationsRepositoryPort, ListNotificationsPage } from '../ports/notifications-repository.port.js'
-import { ListOwnNotificationsUseCase, type ListNotificationsCursor } from './list-own-notifications.use-case.js'
+import type { ListNotificationsCursor, NotificationStatus, NotificationsRepositoryPort } from '../ports/notifications-repository.port.js'
+import { ListOwnNotificationsUseCase } from './list-own-notifications.use-case.js'
 
 const NOW = new Date('2026-09-04T10:00:00.000Z')
 const TENANT_ID = 'tenant-1'
@@ -28,7 +28,7 @@ function buildHarness() {
     }],
     nextCursor: { v: '2026-09-04T10:00:00.000Z', id: 'notification-1' },
     hasMore: true,
-  } as unknown as ListNotificationsPage)
+  })
   const repository: NotificationsRepositoryPort = {
     create: vi.fn(),
     list: listMock,

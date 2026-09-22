@@ -1,6 +1,6 @@
 /**
- * Публичные контракты модуля `notifications` (EP-16, DTJ-368) — DTO presentation-слоя
- * (`notifications-feed.controller.ts`, DTJ-372).
+ * Публичные контракты модуля `notifications` (EP-16, DTJ-372) — DTO presentation-слоя
+ * (`notifications-feed.controller.ts`).
  */
 import { z } from 'zod'
 

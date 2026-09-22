@@ -1,18 +1,21 @@
 /**
  * Обработка query-параметров `filter[status]` и курсора для `notifications-feed.controller.ts`
- * (DTJ-372). Переиспользует `cursorQuerySchema`/`decodeCursor` из `@dorutj/contracts` (DTJ-005).
+ * (DTJ-372). Курсор декодирует `decodeCursor` из `@dorutj/contracts` (DTJ-005).
  *
  * `filter[status]` — bracket-синтаксис как ЛИТЕРАЛЬНОЕ имя query-параметра (Fastify default
- * querystring НЕ разворачивает `a[b]` в вложенный объект), прямой прецедент —
+ * querystring НЕ разворачивает `a[b]` во вложенный объект), прямой прецедент —
  * `pharmacy-terminal-queue.controller.ts` (`filter[pharmacyId]`, DTJ-159).
  *
- * Ошибки валидации — доменные (`ValidationError`/`InvalidCursorError`), брошены НАПРЯМУЖУ,
+ * Ошибки валидации — доменные (`ValidationError`/`InvalidCursorError`), брошены НАПРЯМУЮ,
  * без обёртки в `BadRequestException`: `AllExceptionsFilter` (`@Catch()`) перехватывает `DomainError`
  * из ЛЮБОГО места пайплайна запроса — обёртка не нужна.
  */
-import { decodeCursor, InvalidCursorError, ValidationError } from '@dorutj/contracts'
+import { decodeCursor, InvalidCursorError, NOTIFICATION_STATUS_VALUES, ValidationError } from '@dorutj/contracts'
 import type { ListNotificationsCursor, NotificationStatus } from '../application/ports/notifications-repository.port.js'
-import { NOTIFICATION_STATUS_VALUES } from '@dorutj/contracts'
+
+function isNotificationStatus(value: string): value is NotificationStatus {
+  return (NOTIFICATION_STATUS_VALUES as readonly string[]).includes(value)
+}
 
 export function parseListCursor(raw: string | undefined): ListNotificationsCursor | null {
   if (raw === undefined) {
@@ -37,10 +40,9 @@ export function parseStatusFilter(raw: string | undefined): readonly Notificatio
   if (statuses.length === 0) {
     return undefined
   }
-  for (const status of statuses) {
-    if (!NOTIFICATION_STATUS_VALUES.includes(status as NotificationStatus)) {
-      throw new ValidationError(`Invalid status: "${status}"`, { status })
-    }
+  const invalid = statuses.find((status) => !isNotificationStatus(status))
+  if (invalid !== undefined) {
+    throw new ValidationError(`Invalid status: "${invalid}"`, { status: invalid })
   }
-  return statuses as readonly NotificationStatus[]
+  return statuses.filter(isNotificationStatus)
 }
