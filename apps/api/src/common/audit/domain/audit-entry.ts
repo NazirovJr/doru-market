@@ -16,11 +16,8 @@
  * (архитектурный); ВТОРОЙ, независимый — эксплуатационный `REVOKE UPDATE, DELETE` на уровне
  * роли БД (`migrations/0046_audit_log_revoke_update_delete.sql`).
  *
- * Список запрещённых полей (`DTJ-375`) — ЕДИНЫЙ `SENSITIVE_FIELD_NAMES` из `@dorutj/contracts`
- * (`packages/contracts/src/sensitive-fields.ts`), тот же, что читает pino-редактор
- * (`common/logging/pino-redaction.config.ts`). `infrastructure/audit-log.repository.ts`
- * ПЕРЕИСПОЛЬЗУЕТ ТОТ ЖЕ источник — через `maskSensitiveFields` (второй, более глубокий рубеж
- * defense-in-depth ПЕРЕД `INSERT`) — не заводит собственную копию (риск C15 AGENTS.md).
+ * Список запрещённых полей — `SENSITIVE_FIELD_NAMES` из `@dorutj/contracts`, тот же, что
+ * читает pino-редактор и repository (маскирование перед `INSERT`).
  *
  * `category`/`entityType`/`action` — намеренно `string`, не enum: `audit_action_category`
  * (Postgres enum) уже ограничивает `category` на уровне БД (`INSERT` с недопустимым

@@ -35,10 +35,7 @@ export function buildPinoOptions(config: AppConfigService): LoggerOptions {
   return {
     level: config.logLevel,
     timestamp: pino.stdTimeFunctions.isoTime,
-    // DTJ-375: пути из `REDACTED_PATHS` (заголовки запроса) + пути, сгенерированные ИЗ общего
-    // `SENSITIVE_FIELD_NAMES` (тело/поля объекта лога на верхнем уровне и на один уровень
-    // вложенности, см. JSDoc `pino-redaction.config.ts`) — один и тот же список читает
-    // `audit_log` (`common/audit/infrastructure/audit-log.repository.ts`).
+    // Пути полей заголовков + сгенерированные из общего SENSITIVE_FIELD_NAMES.
     redact: { paths: [...REDACTED_PATHS, ...buildSensitiveFieldRedactPaths()], remove: true },
     mixin: mixinRequestContextFields,
   }

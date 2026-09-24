@@ -1,19 +1,4 @@
-/**
- * Единый список чувствительных полей (EP-16, DTJ-375, SRS-ADM-044/063) — ЕДИНСТВЕННЫЙ источник
- * имён полей, подлежащих маскированию ГДЕ БЫ они ни встретились в приложении. Два независимых
- * потребителя читают ИМЕННО этот список, ни один не заводит свою копию (риск C15 AGENTS.md —
- * разработчик добавит новое чувствительное поле в один список и забудет про второй):
- *  - `apps/api/src/common/logging/pino-redaction.config.ts` — генерирует `pino` `redact.paths`;
- *  - `apps/api/src/common/audit/infrastructure/audit-log.repository.ts` — маскирует `metadata`
- *    перед `INSERT` в `audit_log` (второй, defense-in-depth рубеж после `AuditEntry.create()`,
- *    который отклоняет запись целиком при обнаружении запрещённого поля — см. JSDoc
- *    `apps/api/src/common/audit/domain/audit-entry.ts`).
- *
- * Список объединяет минимальный набор `DTJ-374` (`apiKey`/`hmacSecret`/`codeHash`/`password`) с
- * токенами сессии (`refreshToken`/`accessToken`, `DTJ-022`/`024`/`025`). `apiKey`/`hmacSecret` —
- * секреты API-ключей 1С (`DTJ-365`) — уже входили в минимальный набор `DTJ-374`, отдельного
- * добавления не требуют.
- */
+/** Единственный список: его читают и pino-редактор, и маскирование audit_log. */
 export const SENSITIVE_FIELD_NAMES = [
   'apiKey',
   'hmacSecret',
@@ -25,15 +10,7 @@ export const SENSITIVE_FIELD_NAMES = [
 
 const REDACTED_MARKER = '[REDACTED]'
 
-/**
- * Глубоко маскирует поля из `SENSITIVE_FIELD_NAMES` — рекурсивно по объектам и массивам НА ЛЮБУЮ
- * глубину вложенности (`SRS-ADM-044`: «не полагаясь на то, что разработчик не забудет
- * залогировать» только верхний уровень). Совпадение — строго по ИМЕНИ ключа, без учёта регистра
- * не выполняется (поля в camelCase, единый стиль по всему проекту).
- *
- * Заменяет значение на строку-маркер `'[REDACTED]'`, НЕ удаляет ключ — форма объекта сохраняется
- * для отладки структуры. Чистая функция — не мутирует вход (C13), всегда возвращает новый объект.
- */
+/** Рекурсивно на любую глубину; значение заменяется маркером, ключ сохраняется. */
 export function maskSensitiveFields(obj: Record<string, unknown>): Record<string, unknown> {
   return maskValue(obj) as Record<string, unknown>
 }

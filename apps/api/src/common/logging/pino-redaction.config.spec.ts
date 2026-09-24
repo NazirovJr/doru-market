@@ -1,7 +1,3 @@
-/**
- * `buildSensitiveFieldRedactPaths` (EP-16, DTJ-375) — unit-тест. Тест-план тикета: сгенерированные
- * `redact.paths` содержат ВСЕ имена из `SENSITIVE_FIELD_NAMES`.
- */
 import { describe, expect, it } from 'vitest'
 import { SENSITIVE_FIELD_NAMES } from '@dorutj/contracts'
 import { buildSensitiveFieldRedactPaths } from './pino-redaction.config.js'

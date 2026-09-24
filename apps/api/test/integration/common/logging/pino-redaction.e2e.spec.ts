@@ -1,20 +1,5 @@
-/**
- * `pino`-редактор чувствительных полей (EP-16, DTJ-375, SRS-ADM-044) — интеграционный тест:
- * РЕАЛЬНЫЙ `pino`-логгер (`buildPinoOptions` — те же опции, что использует `createRootLogger`),
- * grep ВСЕГО сериализованного вывода. Обобщённая версия `TC-ADM-017` (DTJ-365 покрывал только
- * `apiKey`/`hmacSecret`) — здесь на ВСЕ поля `SENSITIVE_FIELD_NAMES` (`@dorutj/contracts`).
- *
- * НЕ требует Postgres/Redis (в отличие от соседних файлов `test/integration/common/audit/**`) —
- * запускается как обычный интеграционный тест этого пакета (`pnpm --filter @dorutj/api
- * test:integration`), реальной сети/БД не касается.
- *
- * `pino()` без явного `destination` создаёт СИНХРОННЫЙ `SonicBoom`, пишущий напрямую в файловый
- * дескриптор `1` (`fs.writeSync`), МИНУЯ `process.stdout.write` — перехват метода (приём
- * `http-logger.middleware.spec.ts` для `pino-http`) здесь НЕ работает. Вместо этого передаём
- * `pino()` явный `destination`-объект второй позиционной опцией — минимальный синхронный
- * writable, который `pino` поддерживает нативно для тестов (тот же приём, что тесты `pino`
- * upstream, см. `node_modules/pino/test/`).
- */
+/** Явный `destination`-стрим вместо перехвата `process.stdout.write` — без него `pino()`
+ * пишет синхронно напрямую в fd, минуя перехват. */
 import { describe, expect, it } from 'vitest'
 import { default as pino } from 'pino'
 import { SENSITIVE_FIELD_NAMES } from '@dorutj/contracts'

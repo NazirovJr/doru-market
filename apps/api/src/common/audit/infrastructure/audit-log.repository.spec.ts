@@ -1,24 +1,13 @@
 /**
- * `AuditLogRepository` (EP-16, DTJ-374/375) — unit-тест поверх мокнутого `DrizzleDb.execute`
- * (тот же приём, что `catalog/infrastructure/adapters/postgres-pharmacy-map.adapter.spec.ts`:
- * реальный round-trip — на настоящем Postgres, см. `test/integration/common/audit/
- * audit-log-repository.e2e.spec.ts`, здесь — только форма поведения класса).
+ * `AuditLogRepository` — unit-тест поверх мокнутого `DrizzleDb.execute` (реальный round-trip —
+ * `test/integration/common/audit/audit-log-repository.e2e.spec.ts`).
  *
  * Проверяет:
- *  1. `write()` вызывает `db.execute` РОВНО ОДИН РАЗ для валидного входа — «`write()` выполняет
- *     ТОЛЬКО `INSERT`» (п.4 тикета) в терминах наблюдаемого поведения, не парсинга SQL-текста.
- *  2. `write()` с запрещённым полем `metadata` НЕ вызывает `db.execute` вовсе — домен отклоняет
- *     запись ДО попытки `INSERT` (defense-in-depth срабатывает раньше похода в БД).
- *  3. `write()` вызывает ЕДИНЫЙ `maskSensitiveFields` (`@dorutj/contracts`, DTJ-375) на metadata
- *     ПЕРЕД `INSERT` — второй, defense-in-depth рубеж (AC3 DTJ-375). Тест мокает
- *     `@dorutj/contracts` частично (`vi.mock` + `importOriginal`), сохраняя РЕАЛЬНУЮ реализацию
- *     функции (она уже исчерпывающе покрыта `sensitive-fields.spec.ts`) — здесь проверяется
- *     ТОЛЬКО факт вызова и то, что именно ЕЁ результат попадает в `INSERT`, а не повторяется
- *     алгоритм маскирования. `password`/`apiKey`/… в СУЩЕСТВУЮЩЕМ `metadata` домен (`AuditEntry.
- *     create`) отклоняет ДО репозитория (ЕДИНЫЙ список — риск C15), поэтому реальный вход
- *     `write()` физически не может достичь маскирования с запрещённым полем — это ОСОЗНАННАЯ
- *     асимметрия (см. «Риски» DTJ-375, JSDoc `audit-log.repository.ts`): маскирование остаётся
- *     страховкой на случай будущей регрессии в вызове `AuditEntry.create()`, а не основным путём.
+ *  1. `write()` вызывает `db.execute` ровно один раз для валидного входа.
+ *  2. Запрещённое поле `metadata` → домен отклоняет ДО `INSERT`, `db.execute` не вызван.
+ *  3. `write()` вызывает общий `maskSensitiveFields` перед `INSERT` — `@dorutj/contracts` мокнут
+ *     частично (реализация сохранена, она уже покрыта `sensitive-fields.spec.ts`), проверяется
+ *     только факт вызова и что в БД попадает именно его результат.
  */
 import { describe, expect, it, vi } from 'vitest'
 import type * as DorutjContracts from '@dorutj/contracts'
@@ -35,9 +24,7 @@ vi.mock('@dorutj/contracts', async (importOriginal) => {
 const contracts = await import('@dorutj/contracts')
 const maskSensitiveFieldsSpy = contracts.maskSensitiveFields as unknown as ReturnType<typeof vi.fn>
 
-/** `metadata` — единственный `::jsonb`-параметр `sql` template-тега, сериализованный в JSON
- * (см. JSDoc `audit-log.repository.ts`) — находим его среди `queryChunks` по форме значения,
- * не по позиционному индексу (устойчиво к порядку колонок INSERT). */
+/** Находим JSON-параметр metadata среди queryChunks по форме значения, не по индексу. */
 function insertedMetadata(execute: ReturnType<typeof vi.fn>): unknown {
   const call = execute.mock.calls[0] as [{ queryChunks: readonly unknown[] }] | undefined
   if (call === undefined) throw new Error('db.execute was not called')

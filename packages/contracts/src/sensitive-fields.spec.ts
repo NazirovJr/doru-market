@@ -1,8 +1,4 @@
-/**
- * `maskSensitiveFields` (EP-16, DTJ-375, SRS-ADM-044) — unit-тест. Тест-план тикета: таблица
- * кейсов (верхний уровень, глубокая вложенность, массив объектов, отсутствие чувствительных
- * полей — объект не мутируется).
- */
+/** Таблица кейсов: верхний уровень, глубокая вложенность, массив, иммутабельность входа. */
 import { describe, expect, it } from 'vitest'
 import { SENSITIVE_FIELD_NAMES, maskSensitiveFields } from './sensitive-fields.js'
 
