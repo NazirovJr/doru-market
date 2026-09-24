@@ -20,6 +20,7 @@ export {
   TenantSettings,
   type TenantSettingsBrand,
   type TenantSettingsBrandingUpdate,
+  type TenantSettingsAdminPatch,
 } from './domain/tenant-settings.entity.js'
 export { TenantId } from './domain/value-objects/tenant-id.vo.js'
 export { TenantSlug, RESERVED_SLUGS, type ReservedSlug } from './domain/value-objects/tenant-slug.vo.js'
@@ -53,3 +54,12 @@ export {
   TENANT_SETTINGS_REPOSITORY,
   type TenantSettingsRepositoryPort,
 } from './application/ports/tenant-settings-repository.port.js'
+
+export {
+  TENANT_REPOSITORY,
+  type TenantRepositoryPort,
+  type TenantListItem,
+  type TenantsListCursor,
+  type TenantsListQuery,
+  type TenantsListPage,
+} from './application/ports/tenant-repository.port.js'

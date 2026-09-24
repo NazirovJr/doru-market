@@ -43,13 +43,17 @@ const FeatureFlagsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPage
   import('@/features/feature-flags/ui/feature-flags-page').then((m) => ({ default: m.FeatureFlagsPage })),
 )
 
+const TenantsListPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/tenants/ui/tenants-list-page').then((m) => ({ default: m.TenantsListPage })),
+)
+
 function section(path: string, titleKey: string, icon: string): RouteConfig {
   return { path, titleKey, icon, Component: SectionPlaceholder }
 }
 
 /** `super_admin` (тикет DTJ-350 «Что сделать» п.5): Тенанты/Фиче-флаги/Аптеки/Пользователи/Заказы/Финансы/Настройки. */
 const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
-  section('tenants', 'admin.nav.tenants', 'tenants'),
+  { path: 'tenants', titleKey: 'admin.nav.tenants', icon: 'tenants', Component: TenantsListPage },
   { path: 'feature-flags', titleKey: 'admin.nav.feature_flags', icon: 'flags', Component: FeatureFlagsPage },
   section('pharmacies', 'admin.nav.pharmacies', 'pharmacies'),
   section('users', 'admin.nav.users', 'users'),

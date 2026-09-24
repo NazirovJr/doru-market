@@ -37,6 +37,15 @@ export interface TenantSettingsBrandingUpdate {
   readonly brandLogoUrl: string | null
 }
 
+// Частичный патч (в отличие от TenantSettingsBrandingUpdate) — непереданное поле не меняется.
+export interface TenantSettingsAdminPatch {
+  readonly brandName?: string
+  readonly brandPalette?: Readonly<Record<string, string>>
+  readonly brandLogoUrl?: string | null
+  readonly codLimitDiram?: bigint
+  readonly holdPeriodDays?: number
+}
+
 /**
  * Snapshot-структура всех полей `TenantSettings`. Используется как параметр
  * `restore()` и внутри `Tenant`-агрегата, чтобы не таскать 15 позиционных
@@ -168,6 +177,20 @@ export class TenantSettings {
       inventoryDeltaSlaMinutes: this.inventoryDeltaSlaMinutes,
       returnRestockMinRemainingDays: this.returnRestockMinRemainingDays,
       defaultLocale: this.defaultLocale,
+    })
+  }
+
+  applyAdminPatch(patch: TenantSettingsAdminPatch): TenantSettings {
+    if (patch.brandName?.length === 0) {
+      throw new ValidationError('brandName is required', { field: 'brandName' })
+    }
+    return new TenantSettings({
+      ...this.props,
+      brandName: patch.brandName ?? this.brandName,
+      brandPalette: patch.brandPalette ?? this.brandPalette,
+      brandLogoUrl: patch.brandLogoUrl !== undefined ? patch.brandLogoUrl : this.brandLogoUrl,
+      codLimitDiram: patch.codLimitDiram ?? this.codLimitDiram,
+      holdPeriodDays: patch.holdPeriodDays ?? this.holdPeriodDays,
     })
   }
 }

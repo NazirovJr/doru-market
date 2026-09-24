@@ -26,7 +26,7 @@ import type { CourierSourcingMode } from './value-objects/courier-sourcing-mode.
 import { CustomDomainStatusVO } from './value-objects/custom-domain-status.vo.js'
 import type { CustomDomainStatus } from './value-objects/custom-domain-status.vo.js'
 import { type TenantSettings } from './tenant-settings.entity.js'
-import type { TenantSettingsBrandingUpdate } from './tenant-settings.entity.js'
+import type { TenantSettingsAdminPatch, TenantSettingsBrandingUpdate } from './tenant-settings.entity.js'
 import { ImmutableNeutralTenantError } from './errors/immutable-neutral-tenant.error.js'
 
 export interface TenantCreateOptions {
@@ -210,6 +210,10 @@ export class Tenant {
    */
   updateBranding(update: TenantSettingsBrandingUpdate): Tenant {
     return new Tenant({ ...this.props, settings: this.settings.updateBranding(update) })
+  }
+
+  applySettingsPatch(patch: TenantSettingsAdminPatch): Tenant {
+    return new Tenant({ ...this.props, settings: this.settings.applyAdminPatch(patch) })
   }
 }
 

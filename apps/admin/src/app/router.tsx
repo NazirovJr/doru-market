@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+import { lazy, Suspense } from 'react'
 import { createBrowserRouter, type RouteObject } from 'react-router'
 import { AppLayout } from '@/app/layout'
 import { OnboardingQueuePage } from '@/features/onboarding-verification/onboarding-queue.page'
@@ -8,6 +8,11 @@ import { SupportTicketDetailPage } from '@/features/support/support-ticket-detai
 import { getRoutesForRole, type RouteConfig } from '@/app/role-routes'
 import { getCurrentRole } from '@/shared/auth/current-role'
 import { ForbiddenPage } from '@/shared/ui/forbidden.page'
+
+// Путь с параметром :tenantId не ложится в декларативную карту role-routes.ts — отдельная ветка ниже.
+const TenantSettingsForm = lazy(() =>
+  import('@/features/tenants/ui/tenant-settings-form').then((m) => ({ default: m.TenantSettingsForm })),
+)
 
 /**
  * DTJ-075: scaffolding `apps/admin`. Точка расширения для EP-14/EP-15/EP-17 —
@@ -32,7 +37,22 @@ function buildRoleRoute(config: RouteConfig): RouteObject {
   }
 }
 
-const roleRoutes: RouteObject[] = getRoutesForRole(getCurrentRole()).map(buildRoleRoute)
+const currentRole = getCurrentRole()
+const roleRoutes: RouteObject[] = getRoutesForRole(currentRole).map(buildRoleRoute)
+
+const tenantDetailRoutes: RouteObject[] =
+  currentRole === 'super_admin'
+    ? [
+        {
+          path: 'admin/tenants/:tenantId',
+          element: (
+            <Suspense fallback={null}>
+              <TenantSettingsForm />
+            </Suspense>
+          ),
+        },
+      ]
+    : []
 
 const routes: RouteObject[] = [
   {
@@ -58,6 +78,7 @@ const routes: RouteObject[] = [
         element: <SupportTicketDetailPage />,
       },
       ...roleRoutes,
+      ...tenantDetailRoutes,
       {
         // Catch-all — ЛЮБОЙ `/admin/*`, не совпавший ни с одним маршрутом выше (чужая роль,
         // опечатка в пути). Порядок важен: react-router ранжирует по специфичности статических

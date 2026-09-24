@@ -5,3 +5,4 @@
 // и добавляет РОВНО одну строку экспорта сюда (тот же приём, что
 // `packages/contracts/src/inventory/index.ts` для контекста `inventory`).
 export * from './feature-flags.js'
+export * from './tenants.js'

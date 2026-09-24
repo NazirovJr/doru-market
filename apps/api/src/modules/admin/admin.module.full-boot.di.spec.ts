@@ -66,7 +66,7 @@ describe('AdminModule — DI-резолвинг целиком (реальный
     applyRequiredTestEnv()
   })
 
-  it('компилируется и резолвит все 3 забинженных facade-порта реальными инстансами', async () => {
+  it('компилируется и резолвит все 4 забинженных facade-порта реальными инстансами', async () => {
     // Динамические импорты ПОСЛЕ applyRequiredTestEnv() — AppConfigModule валидирует
     // process.env через Zod в момент компиляции модуля, не лениво.
     const { AppConfigModule } = await import('@/config/config.module.js')
@@ -84,7 +84,9 @@ describe('AdminModule — DI-резолвинг целиком (реальный
     const { ONBOARDING_FACADE_PORT } = await import('./application/ports/onboarding-facade.port.js')
     const { ORDERS_FACADE_PORT } = await import('./application/ports/orders-facade.port.js')
     const { PAYMENTS_FACADE_PORT } = await import('./application/ports/payments-facade.port.js')
+    const { TENANCY_FACADE_PORT } = await import('./application/ports/tenancy-facade.port.js')
     const { OnboardingFacade } = await import('@/modules/onboarding/index.js')
+    const { TenancyFacadeAdapter } = await import('./infrastructure/adapters/tenancy-facade.adapter.js')
 
     const moduleRef = await Test.createTestingModule({
       imports: [
@@ -107,6 +109,7 @@ describe('AdminModule — DI-резолвинг целиком (реальный
     expect(moduleRef.get(ONBOARDING_FACADE_PORT)).toBeInstanceOf(OnboardingFacade)
     expect(moduleRef.get(ORDERS_FACADE_PORT)).toBeDefined()
     expect(moduleRef.get(PAYMENTS_FACADE_PORT)).toBeDefined()
+    expect(moduleRef.get(TENANCY_FACADE_PORT)).toBeInstanceOf(TenancyFacadeAdapter)
 
     await moduleRef.close()
   }, FULL_BOOT_TIMEOUT_MS)
