@@ -1,19 +1,10 @@
-/**
- * `use-tenants.ts` (EP-15, DTJ-351) — TanStack Query хуки над `GET /api/v1/tenants`,
- * `GET /api/v1/tenants/:id`, `PATCH /api/v1/tenant-settings/:tenantId` (`adminRequest`,
- * `admin-client.ts`, DTJ-350 — единый разбор `{error:{code,message,details}}`).
- *
- * Отдельный `api/`-файл (в отличие от `feature-flags-page.tsx`, где запросы инлайн) — тикет
- * `files_owned` явно заводит его: ДВА компонента (`tenants-list-page.tsx`/
- * `tenant-settings-form.tsx`) делят один и тот же список/детали, инлайн означал бы дублирование.
- */
+// Отдельный api/-файл — список и форма настроек делят один и тот же список/детали.
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query'
 import type { TenantDetailDto, TenantSettingsPatchDto, TenantSummaryDto } from '@dorutj/contracts'
 import { adminRequest, type AdminApiError } from '@/shared/api/admin-client'
 
 const TENANTS_PATH = '/tenants'
 const TENANT_SETTINGS_PATH = '/tenant-settings'
-/** Волна 1 — без "load more" в UI (тот же class упрощения, что `use-support-tickets.ts`). */
 const LIST_LIMIT = '100'
 
 interface ListResponse {

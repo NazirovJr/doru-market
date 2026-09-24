@@ -20,10 +20,7 @@
  * первый контроллер этого модуля, использующий `AuthGuard`/`RolesGuard` (тот же приём, что
  * `imports: [AuthModule]` в `support.module.ts`).
  *
- * DTJ-351 (`tenants`) — `TENANCY_FACADE_PORT` → `TenancyFacadeAdapter` (`useClass`, НЕ
- * `useExisting`): `tenancy` не экспортирует собственный класс-фасад (см. JSDoc порта/адаптера),
- * поэтому паттерн `useExisting` из блока выше здесь неприменим — адаптер строится напрямую
- * над `TENANT_REPOSITORY` (`imports: [TenancyModule]`, ДОБАВЛЕНО).
+ * `tenants` — `TENANCY_FACADE_PORT` через `useClass` (не `useExisting`): у `tenancy` нет своего класса-фасада.
  *
  * `controllers`/`providers` (use case'ы) пополняются СЛЕДУЮЩИМИ тикетами (DTJ-351..367) —
  * СТРОГО добавлением элементов в существующие массивы, не переписывая файл. Если после
@@ -66,7 +63,6 @@ import { TenantsController } from './presentation/tenants.controller.js'
     FEATURE_FLAGS_REPOSITORY_PROVIDER,
     ListFeatureFlagsUseCase,
     UpsertFeatureFlagUseCase,
-    // DTJ-351 — tenants (см. JSDoc блока выше).
     TENANCY_FACADE_PORT_PROVIDER,
     ListTenantsUseCase,
     GetTenantUseCase,

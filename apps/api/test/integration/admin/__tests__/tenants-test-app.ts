@@ -1,16 +1,4 @@
-/**
- * `tenants-test-app.ts` (EP-15, DTJ-351) — Supertest-harness `TenantsController` против
- * РЕАЛЬНЫХ Postgres/Redis. Копия приёма `test-app.ts` (DTJ-352, feature-flags) — «КАЖДЫЙ
- * модуль несёт СВОЮ копию harness'а» — но с ДРУГИМ DI-графом: `TenantsController` читает
- * реальные `tenants`/`tenant_settings` через `TenancyModule` (не самодостаточный домен, как
- * `feature_flags`) и пишет аудит через `AuditLogModule` (`UpdateTenantSettingsUseCase`).
- *
- * `installDefaultTenantContextHook` — ОБЯЗАТЕЛЕН: `TenancyModule` регистрирует глобальный
- * `TenantScopeGuard` (`APP_GUARD`), которому нужен резолвленный `TenantContext` ДО контроллера
- * (см. JSDoc `tenant-scope.guard.ts`) — этот harness не поднимает `TenantResolutionMiddleware`
- * (Host/slug резолвинг), поэтому резолвит контекст напрямую из claims Bearer-токена, тот же
- * приём, что `test-app.ts` (DTJ-352).
- */
+// Supertest-harness TenantsController на реальных Postgres/Redis, копия приёма test-app.ts.
 import { randomUUID } from 'node:crypto'
 import { generateKeyPairSync } from 'node:crypto'
 import { type Server } from 'node:http'
@@ -73,18 +61,12 @@ function applyTestEnv(): void {
   }
 }
 
-/**
- * См. JSDoc файла — минимальный модуль вместо полного `AdminModule` (не тянет onboarding/orders/
- * payments). `imports: [TenancyModule]` ЗДЕСЬ, не только на верхнем уровне `Test.
- * createTestingModule` — Nest-инкапсуляция: экспорт соседнего модуля виден только модулю,
- * который его явно импортирует (1:1 приём реального `admin.module.ts`).
- */
 @Module({
   imports: [AuthModule, TenancyModule],
   controllers: [TenantsController],
   providers: [TENANCY_FACADE_PORT_PROVIDER, ListTenantsUseCase, GetTenantUseCase, UpdateTenantSettingsUseCase],
 })
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль тест-harness'а, см. комментарий выше
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- модуль тест-харнесса
 class TenantsTestModule {}
 
 export interface TestApp {
@@ -125,7 +107,6 @@ export async function createTestApp(): Promise<TestApp> {
   }
 }
 
-/** 1:1 приём `test-app.ts` (DTJ-352) «installDefaultRequestContextHook». */
 function installDefaultRequestContextHook(app: NestFastifyApplication): void {
   const fastify = app.getHttpAdapter().getInstance()
   fastify.addHook('onRequest', (_request, _reply, done) => {
@@ -137,7 +118,7 @@ function installDefaultRequestContextHook(app: NestFastifyApplication): void {
   })
 }
 
-/** См. JSDoc файла — `TenantContext` резолвится ИЗ `claims.tenantId` самого Bearer-токена. */
+// TenantContext резолвится из claims.tenantId Bearer-токена — нужен TenantScopeGuard'у.
 function installDefaultTenantContextHook(app: NestFastifyApplication): void {
   const fastify = app.getHttpAdapter().getInstance()
   fastify.addHook('onRequest', (request, _reply, done) => {

@@ -55,9 +55,6 @@ export {
   type TenantSettingsRepositoryPort,
 } from './application/ports/tenant-settings-repository.port.js'
 
-// DTJ-351 (EP-15) — `admin.TenancyFacadeAdapter` (единственный внешний потребитель, узкий порт
-// `admin/application/ports/tenancy-facade.port.ts`) читает/пишет `Tenant` целиком через
-// `TENANT_REPOSITORY`, того же приёма, что `TENANT_SETTINGS_REPOSITORY` выше (DTJ-229).
 export {
   TENANT_REPOSITORY,
   type TenantRepositoryPort,

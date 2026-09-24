@@ -9,13 +9,7 @@ import { getRoutesForRole, type RouteConfig } from '@/app/role-routes'
 import { getCurrentRole } from '@/shared/auth/current-role'
 import { ForbiddenPage } from '@/shared/ui/forbidden.page'
 
-/**
- * DTJ-351 (EP-15) — деталь/форма настроек тенанта. НЕ элемент `role-routes.ts` (путь несёт
- * параметр `:tenantId`, чужеродный для декларативной карты `role → RouteConfig[]`, которая
- * знает только фиксированные пункты меню) — подключена здесь отдельной веткой, ТОЛЬКО когда
- * текущая роль `super_admin` (иначе прямой переход по URL должен давать `403`, критерий
- * приёмки 3 DTJ-350, а не быть доступным всем ролям как обычный статический путь).
- */
+// Путь с параметром :tenantId не ложится в декларативную карту role-routes.ts — отдельная ветка ниже.
 const TenantSettingsForm = lazy(() =>
   import('@/features/tenants/ui/tenant-settings-form').then((m) => ({ default: m.TenantSettingsForm })),
 )
@@ -46,7 +40,6 @@ function buildRoleRoute(config: RouteConfig): RouteObject {
 const currentRole = getCurrentRole()
 const roleRoutes: RouteObject[] = getRoutesForRole(currentRole).map(buildRoleRoute)
 
-/** См. JSDoc `TenantSettingsForm` выше — существует в дереве ТОЛЬКО для `super_admin`. */
 const tenantDetailRoutes: RouteObject[] =
   currentRole === 'super_admin'
     ? [

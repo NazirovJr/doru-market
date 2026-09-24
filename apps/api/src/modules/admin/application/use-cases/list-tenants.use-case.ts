@@ -1,9 +1,3 @@
-/**
- * `ListTenantsUseCase` (EP-15, DTJ-351) — `GET /api/v1/tenants` (`@Roles('super_admin')`,
- * критерий приёмки 1: ВСЕ тенанты платформы, без тенант-скоупа). Курсорная пагинация
- * (`SRS-API-004`), сортировка по умолчанию `createdAt:desc` — тонкий passthrough к
- * `TenancyFacadePort.listTenants`, вся keyset-логика — в `tenancy.DrizzleTenantRepository.list`.
- */
 import { Inject, Injectable } from '@nestjs/common'
 import {
   TENANCY_FACADE_PORT,

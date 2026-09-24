@@ -1,13 +1,4 @@
-/**
- * `TenancyFacadeAdapter` (EP-15, DTJ-351) — реализация `TenancyFacadePort` напрямую поверх
- * `TENANT_REPOSITORY` (`modules/tenancy/index.ts`) — см. JSDoc порта про отсутствие
- * собственного класса-фасада у `tenancy`.
- *
- * `updateTenantSettings` — load-modify-save: `TenantRepositoryPort.findById` → `Tenant.
- * applySettingsPatch()` (домен, ДОБАВЛЕНО этим тикетом) → `save()`. `codLimitDiram` конвертируется
- * `number ↔ bigint` РОВНО на этой границе (см. JSDoc контракта `packages/contracts/src/admin/
- * tenants.ts`) — по обе стороны от неё (Zod-схема, домен `TenantSettings`) типы уже свои.
- */
+// codLimitDiram конвертируется number ↔ bigint ровно на этой границе (домен хранит bigint, контракт — number).
 import { Inject, Injectable } from '@nestjs/common'
 import { TENANT_REPOSITORY, TenantId, type Tenant, type TenantRepositoryPort } from '@/modules/tenancy/index.js'
 import {

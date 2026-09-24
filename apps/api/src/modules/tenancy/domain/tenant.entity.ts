@@ -212,7 +212,6 @@ export class Tenant {
     return new Tenant({ ...this.props, settings: this.settings.updateBranding(update) })
   }
 
-  /** ДОБАВЛЕНО (DTJ-351, EP-15) — `PATCH /tenant-settings/:id`, см. JSDoc `TenantSettingsAdminPatch`. */
   applySettingsPatch(patch: TenantSettingsAdminPatch): Tenant {
     return new Tenant({ ...this.props, settings: this.settings.applyAdminPatch(patch) })
   }

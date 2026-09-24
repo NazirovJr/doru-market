@@ -109,8 +109,6 @@ describe('AdminModule — DI-резолвинг целиком (реальный
     expect(moduleRef.get(ONBOARDING_FACADE_PORT)).toBeInstanceOf(OnboardingFacade)
     expect(moduleRef.get(ORDERS_FACADE_PORT)).toBeDefined()
     expect(moduleRef.get(PAYMENTS_FACADE_PORT)).toBeDefined()
-    // DTJ-351 — TENANCY_FACADE_PORT — useClass (не useExisting, см. JSDoc admin.module.ts),
-    // проверяем именно класс, не только "определено".
     expect(moduleRef.get(TENANCY_FACADE_PORT)).toBeInstanceOf(TenancyFacadeAdapter)
 
     await moduleRef.close()

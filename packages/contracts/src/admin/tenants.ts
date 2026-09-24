@@ -1,20 +1,4 @@
-/**
- * Контракты тенантов (EP-15, DTJ-351, SRS-ADM-027/SRS-API-004/SRS-API-014).
- *
- * `TenantSettingsPatchSchema` — ЧАСТИЧНЫЙ патч (в отличие от `UpsertFeatureFlagSchema`, DTJ-352,
- * который отправляет полную замену): непереданное поле не меняется (`admin.
- * TenantSettings.applyAdminPatch`, `modules/tenancy`). `.refine` отвергает пустой патч — иначе
- * `PATCH {}` выглядел бы как успешное сохранение, ничего не изменив.
- *
- * `brandPalette` — ТОЛЬКО формат HEX (`HEX_COLOR_PATTERN`), без проверки контрастности/
- * доступности (риск тикета: WCAG вне скоупа R1).
- *
- * `codLimitDiram`/`holdPeriodDays` — `number`, не `bigint` (домен `TenantSettings.codLimitDiram`
- * хранит `bigint`, но JSON/Zod-граница контрактов проекта нигде не использует `bigint`, см.
- * `orders.ts` `expectedTotalDiramByPharmacy: z.number()`) — суммы COD-лимита далеко в пределах
- * `Number.MAX_SAFE_INTEGER`, конвертация в/из `bigint` — на границе `admin`
- * (`TenancyFacadeAdapter`).
- */
+// Частичный патч: непереданное поле не меняется. brandPalette — только формат HEX, без WCAG.
 import { z } from 'zod'
 
 const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/u

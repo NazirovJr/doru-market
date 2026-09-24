@@ -37,13 +37,7 @@ export interface TenantSettingsBrandingUpdate {
   readonly brandLogoUrl: string | null
 }
 
-/**
- * ДОБАВЛЕНО (DTJ-351, EP-15) — `PATCH /tenant-settings/:id` (`super_admin`, `admin.
- * UpdateTenantSettingsUseCase`). В отличие от `TenantSettingsBrandingUpdate` (полная замена
- * трёх полей брендинга), это ЧАСТИЧНЫЙ патч: непереданное поле сохраняет текущее значение.
- * Формат HEX/значений уже провалидирован `TenantSettingsPatchSchema` (Zod,
- * `packages/contracts/src/admin/tenants.ts`) до попадания сюда — домен не переповторяет формат.
- */
+// Частичный патч (в отличие от TenantSettingsBrandingUpdate) — непереданное поле не меняется.
 export interface TenantSettingsAdminPatch {
   readonly brandName?: string
   readonly brandPalette?: Readonly<Record<string, string>>
@@ -186,10 +180,6 @@ export class TenantSettings {
     })
   }
 
-  /**
-   * ДОБАВЛЕНО (DTJ-351) — см. JSDoc `TenantSettingsAdminPatch`. Возвращает НОВЫЙ объект
-   * (immutability, C13); поля, отсутствующие в `patch`, копируются из текущего состояния.
-   */
   applyAdminPatch(patch: TenantSettingsAdminPatch): TenantSettings {
     if (patch.brandName?.length === 0) {
       throw new ValidationError('brandName is required', { field: 'brandName' })

@@ -1,19 +1,4 @@
-/**
- * `TenantsController` (EP-15, DTJ-351, SRS-ADM-027) — `GET /api/v1/tenants`,
- * `GET /api/v1/tenants/:id`, `PATCH /api/v1/tenant-settings/:tenantId`. `@Roles('super_admin')`
- * на уровне класса — ВСЕ три маршрута (1:1 приём `FeatureFlagsController`, DTJ-352, критерий
- * приёмки 4: `pharmacy_admin` → `403 INSUFFICIENT_ROLE` ДО входа в use case).
- *
- * Два разных префикса (`tenants`/`tenant-settings`) в ОДНОМ файле (`files_owned` тикета
- * называет ровно этот путь) — `@Controller({version:'1'})` БЕЗ `path` + полные относительные
- * пути на методах (`get-order-ledger.controller.ts` уже показывает: путь контроллера не
- * обязан совпадать с именем файла/папки).
- *
- * Ошибки — через `AllExceptionsFilter` (`ValidationError`/`NotFoundError` — `DomainError`,
- * не собственный `try/catch`, C12). `patch` тела `PATCH` НЕ проходит через `ZodValidationPipe`
- * здесь — валидация НАРОЧНО перенесена в `UpdateTenantSettingsUseCase` (см. её JSDoc,
- * ticket «Что сделать» п.3): тело приходит как `unknown`.
- */
+// Два префикса (tenants/tenant-settings) в одном контроллере — @Controller без path, полный путь на методах.
 import { Body, Controller, Get, Inject, Param, ParseUUIDPipe, Patch, Query, UseGuards } from '@nestjs/common'
 import {
   cursorQuerySchema,
@@ -76,7 +61,6 @@ export class TenantsController {
   }
 }
 
-/** 1:1 приём `feature-flags.controller.ts#parseListCursor` (DTJ-352). */
 function parseListCursor(raw: string | undefined): TenancyListCursor | null {
   if (raw === undefined) {
     return null

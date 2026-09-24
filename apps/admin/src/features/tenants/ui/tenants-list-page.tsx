@@ -1,14 +1,4 @@
-/**
- * `TenantsListPage` (EP-15, DTJ-351) — экран `/admin/tenants` (`super_admin`, критерий приёмки 1:
- * ВСЕ тенанты платформы, нейтральный + White-Label, без фильтра по своему тенанту — сервер уже
- * не скоупит `GET /tenants` по тенанту вызывающего, здесь просто рендерится то, что вернул API).
- *
- * Таблица `packages/ui` не используется (`CursorTable`) — `packages/ui/src/index.ts` пуст (тот
- * же уже задокументированный факт, что `feature-flags-page.tsx`/`role-routes.ts`) — native
- * `<table>`, заменяется одной правкой, когда компонент появится. "Load more" — по `nextCursor`
- * пагинация вне скоупа R1-экрана (тот же class упрощения, что `use-support-tickets.ts`
- * `LIST_LIMIT=100` без "load more") — тикет не описывает постраничную навигацию в UI.
- */
+// packages/ui пуст — native <table>, заменяется одной правкой, когда компонент появится.
 import { type ReactElement } from 'react'
 import { Link } from 'react-router'
 import { useT } from '@dorutj/i18n'

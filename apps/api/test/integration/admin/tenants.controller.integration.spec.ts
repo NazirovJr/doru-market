@@ -1,13 +1,4 @@
-/**
- * `TenantsController` — Supertest integration (EP-15, DTJ-351, тест-план тикета) против
- * РЕАЛЬНЫХ Postgres/Redis (`createTestApp()` — `tenants-test-app.ts`, своя копия harness'а,
- * см. её JSDoc).
- *
- * Покрывает критерии приёмки 1/2/3/4 тикета: `super_admin` видит ВСЕ тенанты (не только свой,
- * АС1); `codLimitDiram=-100` → `400 VALIDATION_ERROR` c `details.field='codLimitDiram'`, БД не
- * изменена (АС2); `PATCH` немедленно отражается в `GET /tenants/:id` (АС3); `pharmacy_admin` →
- * `403 INSUFFICIENT_ROLE` (АС4).
- */
+// Supertest integration TenantsController против реальных Postgres/Redis.
 import { randomUUID } from 'node:crypto'
 import type { Server } from 'node:http'
 import type { INestApplication } from '@nestjs/common'
@@ -85,7 +76,6 @@ describe.skipIf(!postgresAvailable)('TenantsController — Supertest integration
     return id
   }
 
-  /** Заводит РЕАЛЬНЫЙ управляемый тенант (с `tenant_settings`, обязательными для `tenantFromDb`). */
   async function seedManagedTenant(overrides: { codLimitDiram?: number; holdPeriodDays?: number } = {}): Promise<string> {
     const id = randomUUID()
     const slug = `test-tenant-351-${id.slice(0, 8)}`

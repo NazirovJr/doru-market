@@ -16,11 +16,6 @@
  * (функция с МЕНЬШИМ числом параметров присваивается типу с большим, TS позволяет это для
  * функциональных типов), обёртка не нужна.
  *
- * DTJ-351 (EP-15) — запись `tenants` заменена на реальную `TenantsListPage` (тот же приём, что
- * `FeatureFlagsPage` выше). Деталь/форма настроек (`/admin/tenants/:tenantId`,
- * `TenantSettingsForm`) — НЕ элемент этой роль-карты (нет пункта меню, путь с параметром) —
- * подключена отдельной веткой в `router.tsx` (см. её JSDoc).
- *
  * Иконки — временно строковый ключ (`packages/ui` пока не содержит ни одного компонента,
  * `packages/ui/src/index.ts` — пустой барабан, заглушка EP-18/DTJ-400). Рендеринг реальной
  * иконки по ключу — задача будущего меню-компонента, когда `packages/ui` их получит.
@@ -48,7 +43,6 @@ const FeatureFlagsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPage
   import('@/features/feature-flags/ui/feature-flags-page').then((m) => ({ default: m.FeatureFlagsPage })),
 )
 
-/** DTJ-351 — см. JSDoc файла про совместимость без пропсов (1:1 приём `FeatureFlagsPage`). */
 const TenantsListPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
   import('@/features/tenants/ui/tenants-list-page').then((m) => ({ default: m.TenantsListPage })),
 )

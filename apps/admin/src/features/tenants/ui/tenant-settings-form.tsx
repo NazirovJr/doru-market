@@ -1,23 +1,4 @@
-/**
- * `TenantSettingsForm` (EP-15, DTJ-351) — экран `/admin/tenants/:tenantId` (`super_admin`).
- * Программная форма БЕЗ визуального конструктора палитры (`SRS-ADM-027`, явно «без визуального
- * редактора» в R1) — raw HEX-инпуты для `brandPalette.primary/secondary/accent`
- * (`--brand-primary`/`--brand-secondary`/`--brand-accent`, те же CSS-переменные, что
- * `NEUTRAL_PALETTE_JSON`, `db/seed/tenants/neutral.seed.ts`), без превью.
- *
- * Отправляется ПОЛНОЕ текущее состояние формы (не diff): `brandPalette` содержит остальные
- * ключи палитры НЕТРОНУТЫМИ (спред текущего значения + 3 редактируемых) — партиальная
- * Zod-схема (`TenantSettingsPatchSchema`) допускает это, а полный ре-сабмит проще диффа
- * "что реально изменилось" на клиенте и не теряет неотображаемые ключи палитры.
- *
- * `TenantSettingsFields` вынесена из компонента-страницы (C1 `complexity`) — вся форма/её
- * обработчики отдельно от gating-логики загрузки (loading/error/`draft === null`).
- *
- * Ключ тоста успеха — `admin.tenants.settings_form.toast_success` (ДОПУЩЕНИЕ: тикет называет
- * `ux.success.saved` как «существующий ключ», но такого ключа нет НИ В ОДНОМ словаре — проверено
- * `grep -rn "ux.success" packages/i18n`; используется feature-специфичный ключ, 1:1 приём
- * `pharmacy.inventory.point_edit.toast_success`).
- */
+// Форма отправляет ПОЛНОЕ состояние (не diff) — brandPalette сохраняет нередактируемые ключи.
 import { useEffect, useState, type ChangeEvent, type Dispatch, type ReactElement, type SetStateAction, type SyntheticEvent } from 'react'
 import { useParams } from 'react-router'
 import { useT, type TranslateFunction } from '@dorutj/i18n'
