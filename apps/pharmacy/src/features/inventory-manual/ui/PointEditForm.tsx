@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react'
 import { useT } from '@dorutj/i18n'
 import { useManualEntry } from '@/features/inventory-manual/api/use-manual-entry'
-import type { MedicineSuggestionItem } from '@/features/inventory-manual/api/use-medicine-suggest'
+import type { MedicineSuggestionItem } from '@/shared/api/use-medicine-search'
 import {
   INITIAL_POINT_EDIT_STATE,
   buildManualEntryRow,

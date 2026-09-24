@@ -203,6 +203,19 @@ export class InventorySyncReportQueryService {
     return this.catalogMatchQueueRead.countPending(input.pharmacyId)
   }
 
+  // Переиспользует findBySourceUploadId (тот же порт, что getErrorReportForActor) — курсорный список DTJ-163 не фильтрует по sourceUploadId.
+  async listBatchesForSourceUpload(input: {
+    readonly sourceUploadId: string
+    readonly actor: InventoryReportActor
+  }): Promise<readonly InventorySyncBatchListItemResult[] | null> {
+    const batches = await this.syncBatchRepository.findBySourceUploadId(input.sourceUploadId)
+    const firstBatch = batches[0]
+    if (firstBatch === undefined) return null
+    const owned = await this.isOwnedByActor(firstBatch.pharmacyId, input.actor)
+    if (!owned) return null
+    return batches.map(toListItemResult)
+  }
+
   /**
    * DTJ-164 `GET /:sourceUploadId/error-report` (SRS-INV-045) — объединяет `inventory_sync_errors`
    * ПО ВСЕМ батчам одной Excel-загрузки (`findBySourceUploadId`, включает синтетический

@@ -280,7 +280,9 @@ function parseResponseBody(text: string, path: string, status: number): unknown 
  */
 export async function httpRequestJson<T>(path: string, init: HttpClientOptions = {}): Promise<T> {
   const headers = new Headers(init.headers)
-  if (!headers.has('Content-Type') && init.body !== undefined) {
+  // FormData-тело — boundary расставляет fetch сам, ручной Content-Type сломал бы парсинг.
+  const isFormDataBody = init.body instanceof FormData
+  if (!headers.has('Content-Type') && init.body !== undefined && !isFormDataBody) {
     headers.set('Content-Type', 'application/json')
   }
   const response = await httpRequest(path, { ...init, headers })
@@ -307,4 +309,9 @@ export function httpPostJson<T>(path: string, body: unknown): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
+}
+
+/** POST `multipart/form-data`. */
+export function httpPostForm<T>(path: string, formData: FormData): Promise<T> {
+  return httpRequestJson<T>(path, { method: 'POST', body: formData })
 }

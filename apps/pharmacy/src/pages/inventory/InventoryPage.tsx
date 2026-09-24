@@ -1,6 +1,8 @@
 import { useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
 import { PointEditForm } from '@/features/inventory-manual/ui/PointEditForm'
+import { ExcelImportDropzone } from '@/features/inventory-bulk/ui/ExcelImportDropzone'
+import { BulkEditGrid } from '@/features/inventory-bulk/ui/BulkEditGrid'
 
 type InventoryTab = 'point_edit' | 'bulk_edit'
 
@@ -30,13 +32,12 @@ const TabButton = ({
   )
 }
 
-// Заглушка до DTJ-168.
-const BulkEditStub = (): ReactElement => {
-  const { t } = useT('tj')
+const BulkEditPanel = (): ReactElement => {
   return (
-    <p className="text-sm text-ink-muted" data-testid="inventory-bulk-edit-stub">
-      {t('pharmacy.inventory.bulk_edit.coming_soon')}
-    </p>
+    <div className="flex flex-col gap-6" data-testid="inventory-bulk-edit-panel">
+      <ExcelImportDropzone />
+      <BulkEditGrid />
+    </div>
   )
 }
 
@@ -55,7 +56,7 @@ const InventoryPage = (): ReactElement => {
         </TabButton>
       </div>
 
-      {tab === 'point_edit' ? <PointEditForm /> : <BulkEditStub />}
+      {tab === 'point_edit' ? <PointEditForm /> : <BulkEditPanel />}
     </section>
   )
 }

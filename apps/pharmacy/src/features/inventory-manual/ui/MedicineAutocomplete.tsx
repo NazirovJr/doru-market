@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
-import { useMedicineSuggest, MIN_MEDICINE_QUERY_LENGTH, type MedicineSuggestionItem } from '@/features/inventory-manual/api/use-medicine-suggest'
+import { useMedicineSuggest, MIN_MEDICINE_QUERY_LENGTH, type MedicineSuggestionItem } from '@/shared/api/use-medicine-search'
 import { formatMedicineLabel } from '@/features/inventory-manual/model/manual-entry-form.model'
 
 /** Выбор управляется снаружи: при `value !== null` дропдаун и запросы выключены до сброса через `key`. */
