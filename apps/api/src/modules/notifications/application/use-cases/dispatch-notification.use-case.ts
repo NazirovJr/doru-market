@@ -90,7 +90,10 @@ export class DispatchNotificationUseCase {
       return { success: false }
     }
     const rendered = template.render(variables)
-    const result = await this.inAppProvider.send(command.userId, IN_APP_CHANNEL, rendered, {
+    const result = await this.inAppProvider.send({
+      ...rendered,
+      userId: command.userId,
+      channel: IN_APP_CHANNEL,
       eventType: command.eventType,
       sourceEventId: command.sourceEventId,
     })

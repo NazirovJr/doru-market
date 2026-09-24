@@ -35,19 +35,16 @@ export interface NotifySendResult {
   readonly providerMessageId?: string
 }
 
-/** sourceEventId/eventType — для идемпотентности create() у InAppNotifyProvider; опционально. */
-export interface NotifySendContext {
+/** eventType/sourceEventId — для идемпотентности create() у InAppNotifyProvider; опциональны. */
+export interface NotifySendMessage extends RenderedNotificationMessage {
+  readonly userId: string
+  readonly channel: NotificationChannel
   readonly eventType?: string
   readonly sourceEventId?: string
 }
 
 export interface NotifyProviderPort {
-  send(
-    userId: string,
-    channel: NotificationChannel,
-    message: RenderedNotificationMessage,
-    context?: NotifySendContext,
-  ): Promise<NotifySendResult>
+  send(message: NotifySendMessage): Promise<NotifySendResult>
 }
 
 /** DI-токены по каналу (см. JSDoc файла §1 про полиморфизм через токен, не ветвление). */

@@ -30,11 +30,9 @@ import { Inject, Injectable, Logger } from '@nestjs/common'
 import { AppConfigService } from '@/config/app-config.service.js'
 import { IDENTITY_FACADE_PORT, type IdentityFacadePort } from '@/modules/notifications/application/ports/identity-facade.port.js'
 import {
-  type NotificationChannel,
   type NotifyProviderPort,
-  type NotifySendContext,
+  type NotifySendMessage,
   type NotifySendResult,
-  type RenderedNotificationMessage,
 } from '@/modules/notifications/application/ports/notify-provider.port.js'
 
 const TELEGRAM_API_BASE_URL = 'https://api.telegram.org'
@@ -53,15 +51,14 @@ function isTelegramSendMessageResponse(value: unknown): value is TelegramSendMes
   return typeof value === 'object' && value !== null && 'ok' in value && typeof value.ok === 'boolean'
 }
 
-function composeText(message: RenderedNotificationMessage): string {
+function composeText(message: NotifySendMessage): string {
   return message.subject === undefined || message.subject.length === 0 ? message.body : `${message.subject}\n\n${message.body}`
 }
 
 interface SendMessageCommand {
   readonly botToken: string
   readonly chatId: bigint
-  readonly message: RenderedNotificationMessage
-  readonly userId: string
+  readonly message: NotifySendMessage
 }
 
 @Injectable()
@@ -75,14 +72,8 @@ export class TelegramNotifyProvider implements NotifyProviderPort {
     @Inject(AppConfigService) private readonly config: AppConfigService,
   ) {}
 
-  // eslint-disable-next-line max-params -- сигнатура NotifyProviderPort.send(), реализация обязана совпадать с портом.
-  public async send(
-    userId: string,
-    channel: NotificationChannel,
-    message: RenderedNotificationMessage,
-    _context?: NotifySendContext, // не нужен telegram-каналу, только InAppNotifyProvider
-  ): Promise<NotifySendResult> {
-    const profile = await this.identityFacade.getRecipientProfile(userId)
+  public async send(message: NotifySendMessage): Promise<NotifySendResult> {
+    const profile = await this.identityFacade.getRecipientProfile(message.userId)
     const chatId = profile?.telegramChatId ?? null
     if (chatId === null) {
       // Критерий приёмки 2 DTJ-368: без chatId (или без пользователя) — ни одного сетевого вызова.
@@ -91,11 +82,11 @@ export class TelegramNotifyProvider implements NotifyProviderPort {
 
     const botToken = this.config.telegramBotTokenNeutral
     if (botToken === undefined || botToken.length === 0) {
-      this.logger.warn(`telegram-notify: TELEGRAM_BOT_TOKEN_NEUTRAL не настроен, канал=${channel}, userId=${userId} — доставка невозможна.`)
+      this.logger.warn(`telegram-notify: TELEGRAM_BOT_TOKEN_NEUTRAL не настроен, канал=${message.channel}, userId=${message.userId} — доставка невозможна.`)
       return { success: false }
     }
 
-    return this.callSendMessage({ botToken, chatId, message, userId })
+    return this.callSendMessage({ botToken, chatId, message })
   }
 
   private async callSendMessage(command: SendMessageCommand): Promise<NotifySendResult> {
@@ -108,12 +99,12 @@ export class TelegramNotifyProvider implements NotifyProviderPort {
       const body: unknown = await response.json()
       if (!isTelegramSendMessageResponse(body) || !body.ok) {
         const description = isTelegramSendMessageResponse(body) && !body.ok ? body.description : undefined
-        this.logger.warn(`telegram-notify: Bot API отклонил sendMessage для userId=${command.userId} — ${description ?? `HTTP ${String(response.status)}`}.`)
+        this.logger.warn(`telegram-notify: Bot API отклонил sendMessage для userId=${command.message.userId} — ${description ?? `HTTP ${String(response.status)}`}.`)
         return { success: false }
       }
       return { success: true, providerMessageId: String(body.result.message_id) }
     } catch (error) {
-      this.logger.error(`telegram-notify: сетевая ошибка sendMessage для userId=${command.userId} — ${String(error)}.`)
+      this.logger.error(`telegram-notify: сетевая ошибка sendMessage для userId=${command.message.userId} — ${String(error)}.`)
       return { success: false }
     }
   }

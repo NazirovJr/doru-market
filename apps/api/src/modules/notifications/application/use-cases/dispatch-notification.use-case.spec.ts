@@ -160,12 +160,13 @@ describe('DispatchNotificationUseCase (DTJ-370)', () => {
 
     await h.useCase.execute(command())
 
-    expect(h.spies.send).toHaveBeenCalledExactlyOnceWith(
-      'user-1',
-      'in_app',
-      { body: 'Апрель: заказ 42 оплачен' },
-      { eventType: 'order.paid', sourceEventId: 'evt-1' },
-    )
+    expect(h.spies.send).toHaveBeenCalledExactlyOnceWith({
+      userId: 'user-1',
+      channel: 'in_app',
+      body: 'Апрель: заказ 42 оплачен',
+      eventType: 'order.paid',
+      sourceEventId: 'evt-1',
+    })
   })
 
   it('brandName не найден (tenant_settings отсутствуют) — используется пустая строка, не бросает', async () => {

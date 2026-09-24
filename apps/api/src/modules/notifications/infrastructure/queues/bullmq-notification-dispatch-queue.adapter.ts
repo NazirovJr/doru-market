@@ -1,4 +1,4 @@
-/** Реализация `NotificationDispatchQueuePort` поверх общего `REDIS_CLIENT`. Имя очереди — копия apps/worker `QUEUE_NAMES.NOTIFICATION_DISPATCH`. */
+/** Имя очереди — копия apps/worker `QUEUE_NAMES.NOTIFICATION_DISPATCH` (apps/api не может импортировать apps/worker). */
 import { Injectable, type OnModuleDestroy } from '@nestjs/common'
 import { Inject } from '@nestjs/common'
 import { Queue } from 'bullmq'

@@ -18,14 +18,10 @@ import {
   type NotificationsRepositoryPort,
 } from '@/modules/notifications/application/ports/notifications-repository.port.js'
 import {
-  type NotificationChannel,
   type NotifyProviderPort,
-  type NotifySendContext,
+  type NotifySendMessage,
   type NotifySendResult,
-  type RenderedNotificationMessage,
 } from '@/modules/notifications/application/ports/notify-provider.port.js'
-
-const IN_APP_CHANNEL: NotificationChannel = 'in_app'
 
 @Injectable()
 export class InAppNotifyProvider implements NotifyProviderPort {
@@ -36,27 +32,21 @@ export class InAppNotifyProvider implements NotifyProviderPort {
     @Inject(NOTIFICATIONS_REPOSITORY_PORT) private readonly notificationsRepository: NotificationsRepositoryPort,
   ) {}
 
-  // eslint-disable-next-line max-params -- сигнатура NotifyProviderPort.send(), реализация обязана совпадать с портом.
-  public async send(
-    userId: string,
-    _channel: NotificationChannel,
-    message: RenderedNotificationMessage,
-    context?: NotifySendContext,
-  ): Promise<NotifySendResult> {
-    const profile = await this.identityFacade.getRecipientProfile(userId)
+  public async send(message: NotifySendMessage): Promise<NotifySendResult> {
+    const profile = await this.identityFacade.getRecipientProfile(message.userId)
     if (profile === null) {
-      this.logger.warn(`in-app-notify: пользователь userId=${userId} не найден — запись не создана.`)
+      this.logger.warn(`in-app-notify: пользователь userId=${message.userId} не найден — запись не создана.`)
       return { success: false }
     }
 
     const record = await this.notificationsRepository.create({
-      userId,
+      userId: message.userId,
       tenantId: profile.tenantId,
-      channel: IN_APP_CHANNEL,
+      channel: message.channel,
       status: 'sent',
       payload: message.subject === undefined ? { body: message.body } : { subject: message.subject, body: message.body },
-      eventType: context?.eventType,
-      sourceEventId: context?.sourceEventId,
+      eventType: message.eventType,
+      sourceEventId: message.sourceEventId,
     })
 
     return { success: true, providerMessageId: record.id }

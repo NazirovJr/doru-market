@@ -1,4 +1,3 @@
-/** Реализация `NotificationDispatchStorePort` поверх `pg.Pool` (raw SQL). */
 import { Inject, Injectable } from '@nestjs/common'
 import type { Pool } from 'pg'
 import type { NotificationChannel } from '@dorutj/contracts'

@@ -31,7 +31,7 @@ describe('TelegramNotifyProvider', () => {
     const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: null, preferredLocale: 'ru' })
     const provider = new TelegramNotifyProvider(identityFacade, stubConfig('bot-token'))
 
-    const result = await provider.send('user-1', 'telegram', { body: 'привет' })
+    const result = await provider.send({ userId: 'user-1', channel: 'telegram', body: 'привет' })
 
     expect(result).toEqual({ success: false })
     expect(fetchMock).not.toHaveBeenCalled()
@@ -43,7 +43,7 @@ describe('TelegramNotifyProvider', () => {
     const identityFacade = stubIdentityFacade(null)
     const provider = new TelegramNotifyProvider(identityFacade, stubConfig('bot-token'))
 
-    const result = await provider.send('user-missing', 'telegram', { body: 'привет' })
+    const result = await provider.send({ userId: 'user-missing', channel: 'telegram', body: 'привет' })
 
     expect(result).toEqual({ success: false })
     expect(fetchMock).not.toHaveBeenCalled()
@@ -55,7 +55,7 @@ describe('TelegramNotifyProvider', () => {
     const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: 555n, preferredLocale: 'ru' })
     const provider = new TelegramNotifyProvider(identityFacade, stubConfig(undefined))
 
-    const result = await provider.send('user-1', 'telegram', { body: 'привет' })
+    const result = await provider.send({ userId: 'user-1', channel: 'telegram', body: 'привет' })
 
     expect(result).toEqual({ success: false })
     expect(fetchMock).not.toHaveBeenCalled()
@@ -67,7 +67,7 @@ describe('TelegramNotifyProvider', () => {
     const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: 987654321n, preferredLocale: 'ru' })
     const provider = new TelegramNotifyProvider(identityFacade, stubConfig('test-bot-token'))
 
-    const result = await provider.send('user-1', 'telegram', { subject: 'Заказ №1', body: 'Готов к выдаче' })
+    const result = await provider.send({ userId: 'user-1', channel: 'telegram', subject: 'Заказ №1', body: 'Готов к выдаче' })
 
     expect(result).toEqual({ success: true, providerMessageId: '42' })
     expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -82,7 +82,7 @@ describe('TelegramNotifyProvider', () => {
     const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: 1n, preferredLocale: 'ru' })
     const provider = new TelegramNotifyProvider(identityFacade, stubConfig('test-bot-token'))
 
-    const result = await provider.send('user-1', 'telegram', { body: 'привет' })
+    const result = await provider.send({ userId: 'user-1', channel: 'telegram', body: 'привет' })
 
     expect(result).toEqual({ success: false })
   })
@@ -92,6 +92,6 @@ describe('TelegramNotifyProvider', () => {
     const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: 1n, preferredLocale: 'ru' })
     const provider = new TelegramNotifyProvider(identityFacade, stubConfig('test-bot-token'))
 
-    await expect(provider.send('user-1', 'telegram', { body: 'привет' })).resolves.toEqual({ success: false })
+    await expect(provider.send({ userId: 'user-1', channel: 'telegram', body: 'привет' })).resolves.toEqual({ success: false })
   })
 })
