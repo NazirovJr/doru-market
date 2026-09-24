@@ -4,6 +4,7 @@ import pino, { type Logger, type LoggerOptions } from 'pino'
 // (`assumptions` DTJ-001).
 // eslint-disable-next-line no-restricted-imports -- `@/...` не резолвится нативным Node ESM в эмитированном tsc/nest build без bundler-шага (assumptions DTJ-001); относительный путь — единственный рабочий вариант без новых зависимостей.
 import type { AppConfigService } from '../../config/app-config.service.js'
+import { SENSITIVE_FIELD_REDACT_PATHS } from '@dorutj/contracts'
 import { RequestContext } from '../context/request-context.js'
 
 /**
@@ -34,7 +35,8 @@ export function buildPinoOptions(config: AppConfigService): LoggerOptions {
   return {
     level: config.logLevel,
     timestamp: pino.stdTimeFunctions.isoTime,
-    redact: { paths: [...REDACTED_PATHS], remove: true },
+    // Пути полей заголовков + общий список чувствительных полей.
+    redact: { paths: [...REDACTED_PATHS, ...SENSITIVE_FIELD_REDACT_PATHS], remove: true },
     mixin: mixinRequestContextFields,
   }
 }

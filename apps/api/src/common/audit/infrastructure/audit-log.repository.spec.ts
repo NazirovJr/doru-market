@@ -1,21 +1,39 @@
 /**
- * `AuditLogRepository` (EP-16, DTJ-374) — unit-тест поверх мокнутого `DrizzleDb.execute`
- * (тот же приём, что `catalog/infrastructure/adapters/postgres-pharmacy-map.adapter.spec.ts`:
- * реальный round-trip — на настоящем Postgres, см. `test/integration/common/audit/
- * audit-log-repository.e2e.spec.ts`, здесь — только форма поведения класса).
+ * `AuditLogRepository` — unit-тест поверх мокнутого `DrizzleDb.execute` (реальный round-trip —
+ * `test/integration/common/audit/audit-log-repository.e2e.spec.ts`).
  *
  * Проверяет:
- *  1. `write()` вызывает `db.execute` РОВНО ОДИН РАЗ для валидного входа — «`write()` выполняет
- *     ТОЛЬКО `INSERT`» (п.4 тикета) в терминах наблюдаемого поведения, не парсинга SQL-текста.
- *  2. `write()` с запрещённым полем `metadata` НЕ вызывает `db.execute` вовсе — домен отклоняет
- *     запись ДО попытки `INSERT` (defense-in-depth срабатывает раньше похода в БД).
- *  3. `maskSensitiveMetadataFields` — чистая функция, маскирует запрещённые поля рекурсивно.
+ *  1. `write()` вызывает `db.execute` ровно один раз для валидного входа.
+ *  2. Запрещённое поле `metadata` → домен отклоняет ДО `INSERT`, `db.execute` не вызван.
+ *  3. `write()` вызывает общий `maskSensitiveFields` перед `INSERT` — `@dorutj/contracts` мокнут
+ *     частично (реализация сохранена, она уже покрыта `sensitive-fields.spec.ts`), проверяется
+ *     только факт вызова и что в БД попадает именно его результат.
  */
 import { describe, expect, it, vi } from 'vitest'
+import type * as DorutjContracts from '@dorutj/contracts'
 import type { DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
-import { AuditLogRepository, MASKED_METADATA_VALUE, maskSensitiveMetadataFields } from './audit-log.repository.js'
+import { AuditLogRepository } from './audit-log.repository.js'
 import { type AuditEntryInput } from '../audit-log.port.js'
 import { SensitiveMetadataFieldError } from '../domain/errors/sensitive-metadata-field.error.js'
+
+vi.mock('@dorutj/contracts', async (importOriginal) => {
+  const actual = await importOriginal<typeof DorutjContracts>()
+  return { ...actual, maskSensitiveFields: vi.fn(actual.maskSensitiveFields) }
+})
+
+const contracts = await import('@dorutj/contracts')
+const maskSensitiveFieldsSpy = contracts.maskSensitiveFields as unknown as ReturnType<typeof vi.fn>
+
+/** Находим JSON-параметр metadata среди queryChunks по форме значения, не по индексу. */
+function insertedMetadata(execute: ReturnType<typeof vi.fn>): unknown {
+  const call = execute.mock.calls[0] as [{ queryChunks: readonly unknown[] }] | undefined
+  if (call === undefined) throw new Error('db.execute was not called')
+  const jsonParam = call[0].queryChunks.find(
+    (chunk): chunk is string => typeof chunk === 'string' && chunk.startsWith('{'),
+  )
+  if (jsonParam === undefined) throw new Error('metadata param not found among queryChunks')
+  return JSON.parse(jsonParam)
+}
 
 function validInput(overrides: Partial<AuditEntryInput> = {}): AuditEntryInput {
   return {
@@ -53,33 +71,38 @@ describe('AuditLogRepository.write (DTJ-374, SRS-ADM-063/064)', () => {
   })
 })
 
-describe('maskSensitiveMetadataFields (defense-in-depth, второй рубеж после AuditEntry.create)', () => {
-  it('маскирует запрещённое поле верхнего уровня', () => {
-    expect(maskSensitiveMetadataFields({ apiKey: 'secret', ok: 1 })).toEqual({
-      apiKey: MASKED_METADATA_VALUE,
-      ok: 1,
+describe('AuditLogRepository.write — вызывает maskSensitiveFields перед INSERT (DTJ-375, AC3)', () => {
+  it('вызывает maskSensitiveFields РОВНО ОДИН РАЗ с metadata + requestId', async () => {
+    const { repository } = makeRepository()
+    maskSensitiveFieldsSpy.mockClear()
+
+    await repository.write(validInput({ metadata: { before: { role: 'customer' }, after: { role: 'super_admin' } } }))
+
+    expect(maskSensitiveFieldsSpy).toHaveBeenCalledTimes(1)
+    expect(maskSensitiveFieldsSpy).toHaveBeenCalledWith({
+      before: { role: 'customer' },
+      after: { role: 'super_admin' },
+      requestId: 'req-1',
     })
   })
 
-  it('маскирует запрещённое поле, вложенное глубже верхнего уровня', () => {
-    expect(maskSensitiveMetadataFields({ profile: { password: 'x' } })).toEqual({
-      profile: { password: MASKED_METADATA_VALUE },
-    })
+  it('РЕЗУЛЬТАТ maskSensitiveFields — то, что реально попадает в INSERT (не сырое metadata)', async () => {
+    const { repository, execute } = makeRepository()
+    maskSensitiveFieldsSpy.mockClear()
+    maskSensitiveFieldsSpy.mockReturnValueOnce({ marker: 'stub-masked-result' })
+
+    await repository.write(validInput())
+
+    expect(insertedMetadata(execute)).toEqual({ marker: 'stub-masked-result' })
   })
 
-  it('маскирует запрещённое поле внутри массива объектов', () => {
-    expect(maskSensitiveMetadataFields({ items: [{ hmacSecret: 'x' }, { ok: true }] })).toEqual({
-      items: [{ hmacSecret: MASKED_METADATA_VALUE }, { ok: true }],
-    })
-  })
+  it('metadata без чувствительных полей — записывается без изменений (кроме добавленного requestId)', async () => {
+    const { repository, execute } = makeRepository()
+    maskSensitiveFieldsSpy.mockClear()
 
-  it('не трогает значения без запрещённых ключей', () => {
-    const value = { role: 'customer', count: 3, list: [1, 2, 3] }
-    expect(maskSensitiveMetadataFields(value)).toEqual(value)
-  })
+    await repository.write(validInput({ metadata: { before: { role: 'customer' }, after: { role: 'super_admin' } } }))
 
-  it('примитивы и null возвращаются как есть', () => {
-    expect(maskSensitiveMetadataFields(null)).toBeNull()
-    expect(maskSensitiveMetadataFields('x')).toBe('x')
+    const metadata = insertedMetadata(execute)
+    expect(metadata).toEqual({ before: { role: 'customer' }, after: { role: 'super_admin' }, requestId: 'req-1' })
   })
 })
