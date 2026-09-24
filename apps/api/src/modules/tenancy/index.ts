@@ -55,6 +55,8 @@ export {
   type TenantSettingsRepositoryPort,
 } from './application/ports/tenant-settings-repository.port.js'
 
+// DTJ-314 (EP-13) — `delivery → tenancy` фасад (`DeliveryTenancyAdapter`) тоже читает
+// `tenant.courierSourcingMode` (SRS-DOM-037/045) через этот же порт репозитория тенанта.
 export {
   TENANT_REPOSITORY,
   type TenantRepositoryPort,

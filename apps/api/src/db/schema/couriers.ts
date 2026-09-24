@@ -68,3 +68,7 @@ export const couriers = pgTable(
     check('chk_couriers_cash_nonneg', sql`${table.currentCashOnHandDiram} >= 0`),
   ],
 )
+
+/** DTJ-314 — тот же приём, что `SupportTicketRow`/`SupportTicketInsert` (`db/schema/support.ts`). */
+export type CourierRow = typeof couriers.$inferSelect
+export type CourierInsert = typeof couriers.$inferInsert

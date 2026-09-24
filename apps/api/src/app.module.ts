@@ -22,6 +22,7 @@ import { SupportModule } from './modules/support/support.module.js'
 import { AdminModule } from './modules/admin/admin.module.js'
 import { NotificationsModule } from './modules/notifications/notifications.module.js'
 import { AnalyticsModule } from './modules/analytics/analytics.module.js'
+import { DeliveryModule } from './modules/delivery/delivery.module.js'
 import { ResponseInterceptor } from './common/http/interceptors/response.interceptor.js'
 import { OpenApiModule } from './common/openapi/openapi.module.js'
 import { IdempotencyModule } from './common/idempotency/idempotency.module.js'
@@ -45,7 +46,7 @@ import { DomainEventsModule } from './common/events/domain-events.module.js'
  * Сняты с регистрации в волне 6 — см. JSDoc `common/filters/all-exceptions.filter.ts`.
  */
 @Module({
-  imports: [AppConfigModule, LoggerModule, HealthModule, DatabaseModule, RedisModule, SharedKernelModule, OpenApiModule, IdempotencyModule, AuditLogModule, DomainEventsModule, TenancyModule, OnboardingModule, CatalogModule, InventoryModule, AuthModule, OrdersModule, PaymentsModule, ReturnsModule, SupportModule, AdminModule, NotificationsModule, AnalyticsModule, ScheduleModule.forRoot()],
+  imports: [AppConfigModule, LoggerModule, HealthModule, DatabaseModule, RedisModule, SharedKernelModule, OpenApiModule, IdempotencyModule, AuditLogModule, DomainEventsModule, TenancyModule, OnboardingModule, CatalogModule, InventoryModule, AuthModule, OrdersModule, PaymentsModule, ReturnsModule, SupportModule, AdminModule, NotificationsModule, AnalyticsModule, DeliveryModule, ScheduleModule.forRoot()],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
   ],
