@@ -237,8 +237,12 @@ export class HttpError extends Error {
   }
 }
 
+// Непрозрачная форма meta конверта — не типизируем конкретной формой пагинации, чтобы shared-слой не знал о форме ответа одного эндпоинта.
+export type JsonMeta = Readonly<Record<string, unknown>>
+
 interface SuccessEnvelope<T> {
   readonly data: T
+  readonly meta?: JsonMeta
 }
 interface ErrorEnvelope {
   readonly error: { readonly code: string; readonly message?: string; readonly details?: unknown }
@@ -273,12 +277,12 @@ function parseResponseBody(text: string, path: string, status: number): unknown 
   }
 }
 
-/**
- * Парсит `envelope` (`{ data }` / `{ error }`, `SRS-API-026`), бросает `HttpError` на неуспех.
- * `HttpError.status` — реальный `response.status` (не выведенный из тела) — единственный
- * надёжный сигнал для 5xx-деградации (тот же приём, что `apps/web`, `SRS-CAT-075`).
- */
-export async function httpRequestJson<T>(path: string, init: HttpClientOptions = {}): Promise<T> {
+export interface JsonEnvelopeResult<T> {
+  readonly data: T
+  readonly meta: SuccessEnvelope<T>['meta']
+}
+
+export async function requestJsonEnvelope<T>(path: string, init: HttpClientOptions = {}): Promise<JsonEnvelopeResult<T>> {
   const headers = new Headers(init.headers)
   // FormData-тело — boundary расставляет fetch сам, ручной Content-Type сломал бы парсинг.
   const isFormDataBody = init.body instanceof FormData
@@ -289,7 +293,7 @@ export async function httpRequestJson<T>(path: string, init: HttpClientOptions =
   const text = await response.text()
   const parsed = parseResponseBody(text, path, response.status)
   if (response.ok && isSuccessEnvelope<T>(parsed)) {
-    return parsed.data
+    return { data: parsed.data, meta: parsed.meta }
   }
   if (!response.ok && isErrorEnvelope(parsed)) {
     throw new HttpError(response.status, parsed.error.code, {
@@ -300,6 +304,10 @@ export async function httpRequestJson<T>(path: string, init: HttpClientOptions =
   throw new HttpError(response.status, 'UNKNOWN_ERROR', {
     message: `Unexpected response shape from ${path} (status=${String(response.status)})`,
   })
+}
+
+export async function httpRequestJson<T>(path: string, init: HttpClientOptions = {}): Promise<T> {
+  return (await requestJsonEnvelope<T>(path, init)).data
 }
 
 /** Удобный helper для POST/JSON (auth-эндпоинты: `otp/request`, `otp/verify`). */
@@ -314,4 +322,31 @@ export function httpPostJson<T>(path: string, body: unknown): Promise<T> {
 /** POST `multipart/form-data`. */
 export function httpPostForm<T>(path: string, formData: FormData): Promise<T> {
   return httpRequestJson<T>(path, { method: 'POST', body: formData })
+}
+
+export type QueryParams = Readonly<Record<string, string | undefined>>
+
+/** `undefined`-значения опускаются из query-строки, а не сериализуются как `"undefined"`. */
+function buildQueryString(params: QueryParams): string {
+  const search = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) {
+      search.set(key, value)
+    }
+  }
+  const serialized = search.toString()
+  return serialized.length > 0 ? `?${serialized}` : ''
+}
+
+function buildGetUrl(path: string, params?: QueryParams): string {
+  return `${path}${params !== undefined ? buildQueryString(params) : ''}`
+}
+
+export function httpGetJson<T>(path: string, params?: QueryParams): Promise<T> {
+  return httpRequestJson<T>(buildGetUrl(path, params))
+}
+
+// Как httpGetJson, но не отбрасывает meta конверта (нужна для курсорной пагинации).
+export function httpGetJsonWithMeta<T>(path: string, params?: QueryParams): Promise<JsonEnvelopeResult<T>> {
+  return requestJsonEnvelope<T>(buildGetUrl(path, params))
 }
