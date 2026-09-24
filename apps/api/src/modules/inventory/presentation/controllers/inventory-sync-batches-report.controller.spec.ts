@@ -59,6 +59,27 @@ async function seedBatch(
   return id
 }
 
+/** ДОПОЛНЕНО DTJ-168: батч Excel-канала с `sourceUploadId` (агрегированный прогресс-бар). */
+async function seedUploadBatch(
+  repo: InMemoryInventorySyncBatchRepository,
+  input: { readonly pharmacyId: string; readonly sourceUploadId: string },
+): Promise<string> {
+  const id = randomUUID()
+  await repo.createIfNotExists({
+    id,
+    pharmacyId: input.pharmacyId,
+    channel: 'excel',
+    syncType: 'delta',
+    fullSyncSessionId: null,
+    isLastPage: true,
+    totalRows: 5,
+    note: null,
+    now: NOW,
+    sourceUploadId: input.sourceUploadId,
+  })
+  return id
+}
+
 function extractData(result: unknown): unknown {
   return (result as { data: unknown }).data
 }
@@ -159,6 +180,39 @@ describe('InventorySyncBatchesReportController (DTJ-163, SRS-INV-043/044/046)', 
 
     await expect(
       controller.pendingModerationCount('P-OTHER', makeClaims({ role: 'pharmacist', pharmacyId: 'P-1' })),
+    ).rejects.toBeInstanceOf(HttpException)
+  })
+
+  it('ДОПОЛНЕНО DTJ-168: upload/:sourceUploadId возвращает ВСЕ батчи одной Excel-загрузки', async () => {
+    const { controller, repo } = makeController()
+    const uploadId = randomUUID()
+    const idA = await seedUploadBatch(repo, { pharmacyId: 'P-1', sourceUploadId: uploadId })
+    const idB = await seedUploadBatch(repo, { pharmacyId: 'P-1', sourceUploadId: uploadId })
+    await seedBatch(repo, 'P-1') // другой батч, не этой загрузки — не должен попасть в ответ
+
+    const result = await controller.byUpload(uploadId, makeClaims({ role: 'pharmacist', pharmacyId: 'P-1' }))
+    const items = extractData(result) as readonly { batchId: string; sourceUploadId: string | null }[]
+
+    expect(items).toHaveLength(2)
+    expect(new Set(items.map((i) => i.batchId))).toEqual(new Set([idA, idB]))
+    expect(items.every((i) => i.sourceUploadId === uploadId)).toBe(true)
+  })
+
+  it('ДОПОЛНЕНО DTJ-168: upload/:sourceUploadId чужой загрузки даёт 404', async () => {
+    const { controller, repo } = makeController()
+    const uploadId = randomUUID()
+    await seedUploadBatch(repo, { pharmacyId: 'P-OTHER', sourceUploadId: uploadId })
+
+    await expect(
+      controller.byUpload(uploadId, makeClaims({ role: 'pharmacist', pharmacyId: 'P-1' })),
+    ).rejects.toBeInstanceOf(HttpException)
+  })
+
+  it('ДОПОЛНЕНО DTJ-168: несуществующий sourceUploadId даёт 404', async () => {
+    const { controller } = makeController()
+
+    await expect(
+      controller.byUpload(randomUUID(), makeClaims({ role: 'pharmacist', pharmacyId: 'P-1' })),
     ).rejects.toBeInstanceOf(HttpException)
   })
 })

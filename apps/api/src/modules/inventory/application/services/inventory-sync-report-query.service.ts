@@ -204,6 +204,27 @@ export class InventorySyncReportQueryService {
   }
 
   /**
+   * ДОПОЛНЕНО DTJ-168 `GET /upload/:sourceUploadId` (SRS-INV-014/045) — статусы ВСЕХ батчей одной
+   * Excel-загрузки для агрегированного прогресс-бара кабинета (`computeAggregateProgress`,
+   * фронт). Переиспользует `findBySourceUploadId` (тот же порт, что `getErrorReportForActor`
+   * DTJ-164) — DTJ-163 не предусмотрел фильтр `filter[sourceUploadId]` на курсорном списке
+   * (риски DTJ-168: «координировать точечной правкой контракта»), отдельный ненумерованный
+   * список — минимальное расширение, не архитектурное изменение. `null` — загрузка не найдена
+   * ИЛИ не принадлежит актору (тот же приём 404, что остальные read-эндпоинты этого сервиса).
+   */
+  async listBatchesForSourceUpload(input: {
+    readonly sourceUploadId: string
+    readonly actor: InventoryReportActor
+  }): Promise<readonly InventorySyncBatchListItemResult[] | null> {
+    const batches = await this.syncBatchRepository.findBySourceUploadId(input.sourceUploadId)
+    const firstBatch = batches[0]
+    if (firstBatch === undefined) return null
+    const owned = await this.isOwnedByActor(firstBatch.pharmacyId, input.actor)
+    if (!owned) return null
+    return batches.map(toListItemResult)
+  }
+
+  /**
    * DTJ-164 `GET /:sourceUploadId/error-report` (SRS-INV-045) — объединяет `inventory_sync_errors`
    * ПО ВСЕМ батчам одной Excel-загрузки (`findBySourceUploadId`, включает синтетический
    * parser-errors контейнер DTJ-161/164). `null` — `sourceUploadId` не найден, не принадлежит

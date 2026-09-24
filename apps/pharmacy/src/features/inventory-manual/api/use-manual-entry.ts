@@ -1,11 +1,12 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 import type { ManualEntryRow, ManualEntryResponse } from '@dorutj/contracts'
 import { httpPostJson, type HttpError } from '@/shared/api/http-client'
+import { INVENTORY_LIST_QUERY_KEY } from '@/shared/api/inventory-query-keys'
 
 const MANUAL_ENTRY_PATH = '/api/v1/inventory-manual-entry'
 
-/** Пока списка остатков нет, инвалидация — no-op; этот же ключ прочитает сетка DTJ-168. */
-export const INVENTORY_LIST_QUERY_KEY = ['inventory', 'list'] as const
+/** Реэкспорт для обратной совместимости импортов (ключ теперь общий, см. `shared/api/inventory-query-keys`). */
+export { INVENTORY_LIST_QUERY_KEY }
 
 interface ManualEntryRequestBody {
   readonly rows: readonly [ManualEntryRow]

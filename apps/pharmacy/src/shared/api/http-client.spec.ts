@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuthStore } from '@/shared/api/auth-store'
-import { httpRequest, HttpError, httpRequestJson, httpPostJson } from '@/shared/api/http-client'
+import { httpRequest, HttpError, httpRequestJson, httpPostJson, httpPostForm } from '@/shared/api/http-client'
 
 /**
  * DTJ-166 тест-план: «http-client повторяет запрос один раз после успешного refresh» и
@@ -213,5 +213,24 @@ describe('httpRequestJson / httpPostJson', () => {
       expect(caught.status).toBe(400)
       expect(caught.code).toBe('INVALID_PHONE_FORMAT')
     }
+  })
+})
+
+/** ДОПОЛНЕНО DTJ-168: multipart-загрузка (Excel-импорт остатков) не должна получать ручной `Content-Type: application/json`. */
+describe('httpPostForm', () => {
+  it('не выставляет Content-Type вручную — fetch сам добавляет multipart boundary', async () => {
+    const fetchMock = vi.fn((_input: string, _init?: RequestInit) =>
+      Promise.resolve(new Response(JSON.stringify({ data: { ok: true } }), { status: 202 })),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const formData = new FormData()
+    formData.append('mode', 'append_update')
+
+    const result = await httpPostForm<{ ok: boolean }>('/api/v1/inventory-excel-import', formData)
+
+    expect(result).toEqual({ ok: true })
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(new Headers(init.headers).has('content-type')).toBe(false)
+    expect(init.body).toBe(formData)
   })
 })
