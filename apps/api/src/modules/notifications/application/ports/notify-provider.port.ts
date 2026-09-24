@@ -35,12 +35,7 @@ export interface NotifySendResult {
   readonly providerMessageId?: string
 }
 
-/**
- * DTJ-370 — расширение, предсказанное JSDoc файла §1 (`eventType` заполнится вызывающей стороной
- * с доступом к событию): `sourceEventId` нужен `InAppNotifyProvider`, чтобы передать его в
- * `NotificationsRepositoryPort.create()` для идемпотентности (`SRS-ADM-057`). Необязателен — не
- * ломает существующих вызывающих (`ListOwnNotificationsUseCase` и т.п. этот метод не вызывают).
- */
+/** sourceEventId/eventType — для идемпотентности create() у InAppNotifyProvider; опционально. */
 export interface NotifySendContext {
   readonly eventType?: string
   readonly sourceEventId?: string

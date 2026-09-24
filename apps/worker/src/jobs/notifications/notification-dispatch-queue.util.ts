@@ -1,9 +1,4 @@
-/**
- * `enqueueNotificationDispatchJob` (DTJ-370) — единая точка постановки job'а на `notification-dispatch`
- * СО СТОРОНЫ apps/worker (используется и `OutboxToNotificationsConsumer` — первый внешний канал, и
- * `NotificationDispatchProcessor` — каскад на следующий канал при исчерпании ретраев текущего),
- * чтобы retry/backoff-политика (SRS-ADM-060) не расходилась между двумя местами постановки.
- */
+/** Единая точка постановки job'а на `notification-dispatch` (каскад из `NotificationDispatchProcessor`). */
 import type { Queue } from 'bullmq'
 import {
   NOTIFICATION_DISPATCH_BACKOFF_TYPE,

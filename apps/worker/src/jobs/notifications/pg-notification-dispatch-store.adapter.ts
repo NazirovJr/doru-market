@@ -1,7 +1,4 @@
-/**
- * `PgNotificationDispatchStoreAdapter` (DTJ-370) — реализация `NotificationDispatchStorePort`
- * поверх `pg.Pool` (raw SQL, см. JSDoc порта про необходимое дублирование через границу процесса).
- */
+/** Реализация `NotificationDispatchStorePort` поверх `pg.Pool` (raw SQL). */
 import { Inject, Injectable } from '@nestjs/common'
 import type { Pool } from 'pg'
 import type { NotificationChannel } from '@dorutj/contracts'
@@ -13,12 +10,6 @@ import type {
   WorkerNotificationTemplate,
   WorkerUserProfile,
 } from './notification-dispatch-store.port.js'
-
-const INSERT_PROCESSED_EVENT_QUERY = `
-  INSERT INTO processed_events (consumer_name, event_id) VALUES ($1, $2)
-  ON CONFLICT DO NOTHING
-  RETURNING event_id
-`
 
 const GET_USER_PROFILE_QUERY = `
   SELECT tenant_id, telegram_chat_id, preferred_locale
@@ -66,11 +57,6 @@ interface TemplateRow {
 @Injectable()
 export class PgNotificationDispatchStoreAdapter implements NotificationDispatchStorePort {
   public constructor(@Inject(NOTIFICATIONS_DB_POOL) private readonly pool: Pool) {}
-
-  public async insertProcessedEventIfNew(consumerName: string, eventId: string): Promise<boolean> {
-    const result = await this.pool.query(INSERT_PROCESSED_EVENT_QUERY, [consumerName, eventId])
-    return (result.rowCount ?? 0) > 0
-  }
 
   public async getUserProfile(userId: string): Promise<WorkerUserProfile | null> {
     const result = await this.pool.query<UserProfileRow>(GET_USER_PROFILE_QUERY, [userId])

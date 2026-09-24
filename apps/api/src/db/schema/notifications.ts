@@ -1,12 +1,4 @@
-/**
- * Drizzle-схема `notifications` (DTJ-370, `docs/spec/11-database-schema.md` §44, SRS-ADM-057).
- *
- * `sourceEventId` — ссылка на `outbox.id`, породивший уведомление (НЕ FK: `outbox` — append-only
- * лог, строки не удаляются, но и не гарантируется читаться обратно; дедупликация работает по
- * значению, не по целостности связи). `uq_notifications_dedup` = `UNIQUE(user_id, channel,
- * source_event_id)` — механизм идемпотентности `DispatchNotificationUseCase` (SRS-ADM-057):
- * повторная попытка insert с тем же ключом — конфликт, перехватывается репозиторием как no-op.
- */
+/** Drizzle-схема `notifications` (docs/spec/11-database-schema.md §44). `sourceEventId` — не FK, дедуп по значению (uq_notifications_dedup). */
 import { sql } from 'drizzle-orm'
 import { index, jsonb, pgTable, text, timestamp, unique, uuid, varchar } from 'drizzle-orm/pg-core'
 import { notificationChannelEnum, notificationStatusEnum } from './enums.schema.js'
@@ -22,8 +14,7 @@ export const notifications = pgTable(
   NOTIFICATIONS_TABLE,
   {
     id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-    // Nullable — 1:1 со спекой (`docs/spec/11-database-schema.md` §44): без NOT NULL на уровне БД.
-    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }), // nullable по спеке
     tenantId: uuid('tenant_id')
       .notNull()
       .references(() => tenants.id, { onDelete: 'cascade' }),

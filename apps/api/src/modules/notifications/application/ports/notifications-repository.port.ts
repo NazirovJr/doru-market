@@ -30,12 +30,7 @@ export interface CreateNotificationInput {
   readonly payload: Record<string, unknown>
   /** См. JSDoc файла §«eventType необязателен». */
   readonly eventType?: string | undefined
-  /**
-   * DTJ-370, SRS-ADM-057 — ссылка на `outbox.id`, породивший уведомление. Вместе с `channel` —
-   * ключ идемпотентности (`UNIQUE(user_id, channel, source_event_id)`, миграция
-   * `0050_notifications.sql`). Необязателен по той же причине, что `eventType` (см. JSDoc файла):
-   * `NotifyProviderPort.send()` DTJ-368 не несёт этот контекст без расширения вызывающей стороной.
-   */
+  /** Ссылка на outbox.id — вместе с channel ключ идемпотентности UNIQUE(user_id, channel, source_event_id). */
   readonly sourceEventId?: string | undefined
 }
 
@@ -78,12 +73,7 @@ export interface ListNotificationsPage {
 }
 
 export interface NotificationsRepositoryPort {
-  /**
-   * Given `sourceEventId` задан И строка `(userId, channel, sourceEventId)` уже существует, Then
-   * `create()` возвращает СУЩЕСТВУЮЩУЮ запись (идемпотентный no-op, `UNIQUE`-конфликт НЕ бросается
-   * наружу, DTJ-370, SRS-ADM-057) — тот же паттерн «insert or return existing», что
-   * `MockBankProvider.insertOrReuseOperation` (`payments`).
-   */
+  /** UNIQUE-конфликт по sourceEventId — идемпотентный no-op, возвращает существующую запись, не бросает. */
   create(input: CreateNotificationInput): Promise<NotificationRecord>
   /**
    * Страница ленты пользователя.

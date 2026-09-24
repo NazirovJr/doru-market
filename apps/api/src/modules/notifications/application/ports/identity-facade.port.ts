@@ -23,13 +23,7 @@
 export interface NotificationRecipientProfile {
   readonly tenantId: string
   readonly telegramChatId: bigint | null
-  /**
-   * DTJ-370 — источник локали для выбора шаблона (`NotificationTemplatesRepositoryPort`,
-   * `user.preferredLocale`, `apps/api/src/db/schema/users.ts`, реальное имя поля, см. риски
-   * тикета §«user.locale»). Значение из БД — `varchar(5)`, не сужено до `NotificationTemplateLocale`
-   * здесь (порт `notifications` не знает о типе домена `notification-templates`) — сужение и
-   * дефолт на неизвестное значение — на стороне вызывающего (`DispatchNotificationUseCase`).
-   */
+  /** Источник локали для выбора шаблона; сужение/дефолт — на стороне вызывающего. */
   readonly preferredLocale: string
 }
 

@@ -36,7 +36,7 @@ export class InAppNotifyProvider implements NotifyProviderPort {
     @Inject(NOTIFICATIONS_REPOSITORY_PORT) private readonly notificationsRepository: NotificationsRepositoryPort,
   ) {}
 
-  // eslint-disable-next-line max-params -- сигнатура интерфейса NotifyProviderPort.send() (DTJ-368, расширена DTJ-370 контекстом) — реализация обязана совпадать с портом.
+  // eslint-disable-next-line max-params -- сигнатура NotifyProviderPort.send(), реализация обязана совпадать с портом.
   public async send(
     userId: string,
     _channel: NotificationChannel,
@@ -49,8 +49,6 @@ export class InAppNotifyProvider implements NotifyProviderPort {
       return { success: false }
     }
 
-    // DTJ-370: sourceEventId — ключ идемпотентности (SRS-ADM-057). create() перехватывает
-    // UNIQUE-конфликт как no-op, возвращая существующую строку — никогда не бросает сюда.
     const record = await this.notificationsRepository.create({
       userId,
       tenantId: profile.tenantId,

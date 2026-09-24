@@ -1,22 +1,4 @@
-/**
- * `DispatchNotificationUseCase` (DTJ-370, EP-16) — единственная точка, где событие превращается в
- * реальную попытку доставки конкретному пользователю конкретным каналом (SRS-ADM-084/057/060).
- *
- * Порядок (критерий приёмки 3 DTJ-370, проверяется тестом порядка вызовов, не только состояния БД):
- * 1. `in_app` — СИНХРОННО, ПЕРВЫМ, всегда, даже если ВСЕ внешние каналы окажутся недоступны
- *    (рендер шаблона + `NotifyProviderPort` канала `in_app`, который сам пишет строку в
- *    `notifications` и перехватывает `UNIQUE`-конфликт как идемпотентный no-op).
- * 2. Внешние каналы матрицы (без `in_app`) — если есть хотя бы один, создаётся строка
- *    `notifications(status='queued')` для ПЕРВОГО по приоритету фолбэка (идемпотентно по
- *    `sourceEventId`) и ставится ОДНА BullMQ job на `notification-dispatch`; `remainingChannels`
- *    в payload job'а — остальные каналы, к ним переходит ПРОЦЕССОР (`apps/worker`) при
- *    исчерпании ретраев текущего, а не эта команда сразу для всех (см. риски тикета §5/АС2).
- *
- * Рендер `in_app` — здесь (НЕ в процессоре, тот обрабатывает только внешние каналы): шаблон
- * (`NotificationTemplatesRepositoryPort`, локаль — `user.preferredLocale`, риски тикета
- * §«user.locale») + `brandName` тенанта (`SRS-ADM-056`, `TENANT_SETTINGS_REPOSITORY` — публичный
- * фасад `modules/tenancy`, не гостевая правка).
- */
+/** Ядро диспетчеризации: in_app синхронно первым (SRS-ADM-084), затем первый внешний канал матрицы в очередь. */
 import { Inject, Injectable, Logger } from '@nestjs/common'
 import type { NotificationDispatchJobData } from '@dorutj/contracts'
 import { TENANT_SETTINGS_REPOSITORY, TenantId, type TenantSettingsRepositoryPort } from '@/modules/tenancy/index.js'
@@ -47,9 +29,9 @@ export interface DispatchNotificationCommand {
   readonly userId: string
   readonly eventType: string
   readonly sourceEventId: string
-  /** Полный список каналов из `NOTIFICATION_EVENT_MATRIX` (порядок фолбэка), ВКЛЮЧАЯ `in_app`. */
+  /** Каналы из `NOTIFICATION_EVENT_MATRIX`, включая `in_app`. */
   readonly channels: readonly NotificationChannel[]
-  /** Уже сериализованные в `string` переменные для `NotificationTemplate.render()` (без `brandName` — добавляется здесь). */
+  /** Без `brandName` — добавляется здесь из tenant_settings. */
   readonly templateVariables: Readonly<Record<string, string>>
 }
 
@@ -83,11 +65,8 @@ export class DispatchNotificationUseCase {
     const brandName = await this.resolveBrandName(profile.tenantId)
     const variables: Readonly<Record<string, string>> = { ...command.templateVariables, brandName }
 
-    // Шаг 1 (АС3, DoD) — in_app СИНХРОННО и ПЕРВЫМ, независимо от здоровья внешних каналов ниже.
     const inAppResult = await this.dispatchInApp(command, locale, variables)
 
-    // Шаг 2 — внешние каналы: ТОЛЬКО первый по приоритету фолбэка ставится в очередь здесь,
-    // остальные — эстафета процессора (см. JSDoc файла).
     const externalChannels = command.channels.filter((channel) => channel !== IN_APP_CHANNEL)
     if (externalChannels.length === 0) {
       return { inAppDelivered: inAppResult.success, queuedChannel: null }
@@ -148,10 +127,7 @@ export class DispatchNotificationUseCase {
       templateVariables,
     }
 
-    // `jobId = record.id` — defense-in-depth поверх UNIQUE(notifications): повторная постановка
-    // (at-least-once outbox) для уже существующей строки не создаёт вторую job (тот же приём,
-    // что `BullmqInventorySyncQueueAdapter`/`MockBankProvider.enqueueWebhookJob`). Retry/backoff —
-    // внутри адаптера (`BullmqNotificationDispatchQueueAdapter`), не здесь (application не знает о bullmq).
+    // jobId = record.id — дедупликация поверх UNIQUE(notifications) при at-least-once outbox.
     await this.dispatchQueue.enqueue(channel, jobData, record.id)
   }
 

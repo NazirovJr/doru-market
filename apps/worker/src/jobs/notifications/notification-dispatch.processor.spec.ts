@@ -1,13 +1,5 @@
-/**
- * DTJ-370 — наполняет TODO-заглушку DTJ-368 (см. историю `notification-dispatch.processor.ts`).
- * Тест-план тикета: retry/backoff (не здесь напрямую — постоянство `attempts`/`backoffStrategy`
- * задаётся при постановке, `notification-dispatch-queue.util.ts`), каскад на следующий канал при
- * исчерпании попыток (АС2 TC-ADM-025), permanent-fail для нереализованных каналов без траты ретраев.
- *
- * Спаи — отдельные `const` (не `store.метод`/`queue.add` в assert'ах) во избежание
- * `@typescript-eslint/unbound-method` (тот же приём, что `dispatch-notification.use-case.spec.ts`, apps/api).
- */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+/** Каскад на следующий канал при исчерпании попыток (АС2), permanent-fail для нереализованных каналов. */
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Job, Queue } from 'bullmq'
 import type { NotificationDispatchJobData } from '@dorutj/contracts'
 import type {
@@ -16,6 +8,7 @@ import type {
   WorkerNotificationTemplate,
   WorkerUserProfile,
 } from './notification-dispatch-store.port.js'
+import type { TelegramSenderPort, TelegramSendResult } from './telegram-sender.port.js'
 import { NotificationDispatchProcessor } from './notification-dispatch.processor.js'
 
 const TELEGRAM_BOT_TOKEN_NEUTRAL = 'TELEGRAM_BOT_TOKEN_NEUTRAL'
@@ -61,7 +54,6 @@ function buildStore(overrides?: { readonly profile?: WorkerUserProfile | null; r
   const markNotificationResult = vi.fn().mockResolvedValue(undefined)
 
   const store: NotificationDispatchStorePort = {
-    insertProcessedEventIfNew: vi.fn().mockResolvedValue(true),
     getUserProfile,
     getBrandName: vi.fn().mockResolvedValue('Апрель'),
     findTemplate: vi.fn().mockResolvedValue(template),
@@ -81,24 +73,21 @@ function buildQueue(): QueueHarness {
   return { queue: { add } as unknown as Queue<NotificationDispatchJobData>, add }
 }
 
-describe('NotificationDispatchProcessor (DTJ-370)', () => {
-  const fetchMock = vi.fn()
+function buildTelegramSender(result: TelegramSendResult): { readonly sender: TelegramSenderPort; readonly send: ReturnType<typeof vi.fn> } {
+  const send = vi.fn().mockResolvedValue(result)
+  return { sender: { send }, send }
+}
 
+describe('NotificationDispatchProcessor (DTJ-370)', () => {
   beforeEach(() => {
-    vi.stubGlobal('fetch', fetchMock)
-    fetchMock.mockReset()
     process.env[TELEGRAM_BOT_TOKEN_NEUTRAL] = 'test-token'
   })
 
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
-
   it('telegram отправлен успешно — markNotificationResult("sent"), каскад НЕ вызывается', async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ ok: true, result: { message_id: 1 } }) })
     const { store, markNotificationResult } = buildStore()
     const { queue, add } = buildQueue()
-    const processor = new NotificationDispatchProcessor(store, queue)
+    const { sender } = buildTelegramSender({ success: true, providerMessageId: '1' })
+    const processor = new NotificationDispatchProcessor(store, queue, sender)
 
     await processor.process(fakeJob(baseJobData(), 0))
 
@@ -107,10 +96,10 @@ describe('NotificationDispatchProcessor (DTJ-370)', () => {
   })
 
   it('telegram провален, НЕ последняя попытка — бросает (BullMQ ретраит), markNotificationResult НЕ вызван', async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ ok: false, description: 'blocked' }) })
     const { store, markNotificationResult } = buildStore()
     const { queue, add } = buildQueue()
-    const processor = new NotificationDispatchProcessor(store, queue)
+    const { sender } = buildTelegramSender({ success: false, failedReason: 'blocked' })
+    const processor = new NotificationDispatchProcessor(store, queue, sender)
 
     await expect(processor.process(fakeJob(baseJobData(), 0, 3))).rejects.toThrow()
     expect(markNotificationResult).not.toHaveBeenCalled()
@@ -118,10 +107,10 @@ describe('NotificationDispatchProcessor (DTJ-370)', () => {
   })
 
   it('АС2/TC-ADM-025: последняя попытка провалена — failed + каскад на следующий канал матрицы (sms)', async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ ok: false, description: 'blocked' }) })
     const { store, markNotificationResult, createNotification } = buildStore()
     const { queue, add } = buildQueue()
-    const processor = new NotificationDispatchProcessor(store, queue)
+    const { sender } = buildTelegramSender({ success: false, failedReason: 'blocked' })
+    const processor = new NotificationDispatchProcessor(store, queue, sender)
 
     await processor.process(fakeJob(baseJobData(), 2, 3))
 
@@ -133,30 +122,33 @@ describe('NotificationDispatchProcessor (DTJ-370)', () => {
   it('канал без провайдера (sms) — permanent-fail НЕМЕДЛЕННО, каскад даже на попытке 0 (не тратит 3 ретрая впустую)', async () => {
     const { store, markNotificationResult, createNotification } = buildStore()
     const { queue } = buildQueue()
-    const processor = new NotificationDispatchProcessor(store, queue)
+    const { sender, send } = buildTelegramSender({ success: true })
+    const processor = new NotificationDispatchProcessor(store, queue, sender)
 
     await processor.process(fakeJob(baseJobData({ channel: 'sms', remainingChannels: ['web_push'] }), 0, 3))
 
     expect(markNotificationResult).toHaveBeenCalledExactlyOnceWith('notif-1', 'failed', expect.any(String))
     expect(createNotification).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ channel: 'web_push' }))
+    expect(send).not.toHaveBeenCalled()
   })
 
-  it('нет telegram_chat_id — permanent-fail немедленно, без сетевого вызова', async () => {
+  it('нет telegram_chat_id — permanent-fail немедленно, без вызова провайдера', async () => {
     const { store, markNotificationResult } = buildStore({ profile: { tenantId: 'tenant-1', telegramChatId: null, preferredLocale: 'ru' } })
     const { queue } = buildQueue()
-    const processor = new NotificationDispatchProcessor(store, queue)
+    const { sender, send } = buildTelegramSender({ success: true })
+    const processor = new NotificationDispatchProcessor(store, queue, sender)
 
     await processor.process(fakeJob(baseJobData({ remainingChannels: [] }), 0, 3))
 
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(send).not.toHaveBeenCalled()
     expect(markNotificationResult).toHaveBeenCalledExactlyOnceWith('notif-1', 'failed', expect.any(String))
   })
 
   it('remainingChannels пуст на последней попытке — failed, каскад не ставит job (панель недоставленных, DTJ-373)', async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ ok: false, description: 'blocked' }) })
     const { store, markNotificationResult, createNotification } = buildStore()
     const { queue, add } = buildQueue()
-    const processor = new NotificationDispatchProcessor(store, queue)
+    const { sender } = buildTelegramSender({ success: false, failedReason: 'blocked' })
+    const processor = new NotificationDispatchProcessor(store, queue, sender)
 
     await processor.process(fakeJob(baseJobData({ remainingChannels: [] }), 2, 3))
 
@@ -166,10 +158,10 @@ describe('NotificationDispatchProcessor (DTJ-370)', () => {
   })
 
   it('каскад на уже существующий (created:false) — не ставит вторую job (идемпотентность)', async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ ok: false, description: 'blocked' }) })
     const { store } = buildStore({ createNotificationResult: { id: 'notif-2', created: false } })
     const { queue, add } = buildQueue()
-    const processor = new NotificationDispatchProcessor(store, queue)
+    const { sender } = buildTelegramSender({ success: false, failedReason: 'blocked' })
+    const processor = new NotificationDispatchProcessor(store, queue, sender)
 
     await processor.process(fakeJob(baseJobData(), 2, 3))
 

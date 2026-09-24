@@ -1,5 +1,5 @@
-/** Рендер — простая подстановка без шаблонизатора: меньше поверхность инъекций; частичный рендер запрещён. */
-import { ValidationError, ErrorCode } from '@dorutj/contracts'
+/** Рендер — простая подстановка (`@dorutj/contracts`), частичный рендер запрещён; контракт ошибок — здесь, в домене. */
+import { ErrorCode, ValidationError, extractTemplatePlaceholders, findMissingTemplateVariables, renderTemplateString } from '@dorutj/contracts'
 
 /** Шире NotificationChannel провайдеров: включает email, которого пока нет в доставке. */
 export type NotificationTemplateChannel = 'telegram' | 'sms' | 'web_push' | 'email' | 'in_app'
@@ -69,8 +69,6 @@ export interface RenderedNotification {
   readonly body: string
 }
 
-const PLACEHOLDER_PATTERN = /\{\{(\w+)\}\}/g
-
 export class NotificationTemplate {
   private constructor(private readonly snapshot: NotificationTemplateSnapshot) {}
 
@@ -101,26 +99,24 @@ export class NotificationTemplate {
   }
 
   render(variables: Readonly<Record<string, string>>): RenderedNotification {
-    for (const name of this.snapshot.variablesSchema.required) {
-      if (variables[name] === undefined) {
-        throw this.missingVariable(name)
-      }
+    const missingRequired = findMissingTemplateVariables(this.snapshot.variablesSchema.required, variables)
+    if (missingRequired.length > 0) {
+      throw this.missingVariable(missingRequired[0] ?? '')
     }
-    const body = this.substitute(this.snapshot.body, variables)
+    const body = this.substituteOrThrow(this.snapshot.body, variables)
     if (this.snapshot.subject === null) {
       return { body }
     }
-    return { subject: this.substitute(this.snapshot.subject, variables), body }
+    return { subject: this.substituteOrThrow(this.snapshot.subject, variables), body }
   }
 
-  private substitute(text: string, variables: Readonly<Record<string, string>>): string {
-    return text.replace(PLACEHOLDER_PATTERN, (_match, name: string) => {
-      const value = variables[name]
-      if (value === undefined) {
-        throw this.missingVariable(name)
-      }
-      return value
-    })
+  /** Ловит и плейсхолдеры вне `variablesSchema.required` (опечатка автора шаблона). */
+  private substituteOrThrow(text: string, variables: Readonly<Record<string, string>>): string {
+    const missingInText = findMissingTemplateVariables(extractTemplatePlaceholders(text), variables)
+    if (missingInText.length > 0) {
+      throw this.missingVariable(missingInText[0] ?? '')
+    }
+    return renderTemplateString(text, variables)
   }
 
   private missingVariable(name: string): MissingTemplateVariableError {

@@ -1,13 +1,4 @@
-/**
- * Тест-план DTJ-370: in_app ВСЕГДА создаётся синхронно и ПЕРВЫМ (порядок вызовов, не только
- * итоговое состояние), в том числе когда сам in_app "недоставлен" (АС3 — постановка внешнего
- * канала в очередь НЕ блокируется результатом in_app). UNIQUE-конфликт in_app — ответственность
- * репозитория/провайдера (см. `in-app-notify.provider.spec.ts`), здесь use case лишь ДОВЕРЯЕТ
- * контракту порта «никогда не бросает для дедупликации».
- *
- * Спаи объявлены отдельными `const` (не `объект.метод` в assert'ах) — тот же приём, что
- * `in-app-notify.provider.spec.ts`, во избежание `@typescript-eslint/unbound-method`.
- */
+/** in_app создаётся синхронно и первым (проверка порядка вызовов, не только состояния); UNIQUE-конфликт — ответственность репозитория/провайдера. */
 import { describe, expect, it, vi } from 'vitest'
 import type { IdentityFacadePort, NotificationRecipientProfile } from '../ports/identity-facade.port.js'
 import type { CreateNotificationInput, NotificationRecord, NotificationsRepositoryPort } from '../ports/notifications-repository.port.js'

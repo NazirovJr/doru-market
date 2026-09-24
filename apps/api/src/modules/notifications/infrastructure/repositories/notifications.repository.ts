@@ -1,20 +1,4 @@
-/**
- * `NotificationsRepository` (DTJ-370) — реальная Drizzle-реализация `NotificationsRepositoryPort`
- * поверх `notifications` (`db/schema/notifications.ts`, миграция `0050_notifications.sql`),
- * связывается в `notifications.module.ts` ВМЕСТО `UnimplementedNotificationsRepositoryAdapter`
- * (DTJ-368/369 заглушка, удалена этим тикетом — C8, не оставлять мёртвый код после замены).
- *
- * `create()` — идемпотентность (SRS-ADM-057): `sourceEventId` задан → `INSERT ... ON CONFLICT
- * (user_id, channel, source_event_id) DO NOTHING RETURNING`, при пустом `RETURNING` — `SELECT`
- * существующей строки (тот же паттерн «insert or return existing», что
- * `MockBankProvider.insertOrReuseOperation`, `payments`). `sourceEventId` не задан — обычный
- * `INSERT` без `ON CONFLICT` (constraint не срабатывает на NULL, Postgres считает NULL
- * различными значениями в UNIQUE).
- *
- * `list()` — keyset-пагинация, тот же приём, что `DrizzleSupportTicketsRepository.list` (DTJ-282):
- * `LIMIT input.limit + 1` даёт `hasMore` без второй `COUNT`-круговой поездки, курсор —
- * `(created_at, id)` по убыванию.
- */
+/** Drizzle-реализация `NotificationsRepositoryPort`. `create()` идемпотентен по (user_id, channel, source_event_id) — insert-or-return-existing. `list()` — keyset-пагинация. */
 import { Inject, Injectable } from '@nestjs/common'
 import { and, desc, eq, inArray, lt, or } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
@@ -59,8 +43,6 @@ export class NotificationsRepository implements NotificationsRepositoryPort {
       return toDomain(inserted[0])
     }
 
-    // Конфликт (SRS-ADM-057) — та же (userId, channel, sourceEventId) уже обработана ранее
-    // (at-least-once доставка outbox) — возвращаем СУЩЕСТВУЮЩУЮ строку, не создаём вторую.
     const [existing] = await this.db
       .select()
       .from(notifications)
@@ -117,15 +99,9 @@ export class NotificationsRepository implements NotificationsRepositoryPort {
 function toDomain(row: NotificationRow): NotificationRecord {
   return {
     id: row.id,
-    // `notifications.user_id` — nullable по спеке (`docs/spec/11-database-schema.md` §44), но
-    // порт (`CreateNotificationInput.userId`) — обязателен: этот модуль ВСЕГДА пишет с userId,
-    // фолбэк ниже — оборонительный (см. `cursorCreatedAt` в `drizzle-support-tickets.repository.ts`).
-    userId: row.userId ?? '',
+    userId: row.userId ?? '', // user_id nullable по спеке, порт требует string — оборонительный фолбэк
     tenantId: row.tenantId,
-    // ENUM Postgres `notification_channel` шире `NotificationChannel` (несёт легаси `'email'`, см.
-    // JSDoc `notify-provider.port.ts` §«Реестр каналов разошёлся») — этот модуль сам никогда не
-    // пишет `'email'`, cast permissive (тот же приём, что `payout-schedule.repository.ts`).
-    channel: row.channel as NotificationRecord['channel'],
+    channel: row.channel as NotificationRecord['channel'], // enum БД шире NotificationChannel (легаси 'email')
     status: row.status,
     payload: row.payload as Record<string, unknown>,
     eventType: row.eventType ?? undefined,

@@ -11,12 +11,7 @@
  * эпик, DTJ-368, EP-16, и имя очереди — то, что зафиксировано тикетом) заведена ниже.
  */
 export const QUEUE_NAMES = {
-  /**
-   * Куда `OutboxRelayWorker` публикует доменные события (SRS-DOM-151/152).
-   * DTJ-370: ПЕРВЫЙ реальный consumer — `jobs/notifications/outbox-to-notifications.consumer.ts`
-   * (роутинг по `job.name = event_type` внутри одного `Worker`, см. его JSDoc про риск
-   * конкурентного разбора job'ов несколькими независимыми `Worker` на одной очереди).
-   */
+  /** Куда `OutboxRelayWorker` публикует доменные события (SRS-DOM-151/152). Первый реальный consumer — apps/api `OutboxToNotificationsConsumer` (DTJ-370). */
   DOMAIN_EVENTS: 'domain-events',
   /**
    * DTJ-238, SRS-PAY-004. Producer — `apps/api/src/modules/payments/infrastructure/adapters/
@@ -25,12 +20,7 @@ export const QUEUE_NAMES = {
    * Consumer — `jobs/escrow-timeouts/mock-bank-auto-pay.job.ts`.
    */
   MOCK_BANK_AUTO_PAY: 'mock-bank-auto-pay',
-  /**
-   * DTJ-368, EP-16. Producer — `DispatchNotificationUseCase`/`BullmqNotificationDispatchQueueAdapter`
-   * (apps/api) и `outbox-to-notifications.consumer.ts`/`notification-dispatch.processor.ts`
-   * (apps/worker, каскад на следующий канал, DTJ-370). Consumer — `jobs/notifications/
-   * notification-dispatch.processor.ts` (наполнен DTJ-370).
-   */
+  /** Producer — apps/api `DispatchNotificationUseCase`, каскад — сам processor. Consumer — `notification-dispatch.processor.ts`. */
   NOTIFICATION_DISPATCH: 'notification-dispatch',
   /**
    * DTJ-304, EP-12 (модуль 24, «Терминал фармацевта»). Producer — `apps/api/src/modules/orders/

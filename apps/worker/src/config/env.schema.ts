@@ -136,11 +136,7 @@ export const envSchema = z.object({
   // DTJ-252, DoD «GRACE_PERIOD_DAYS — именованная ENV-константа»/«BillingInvoiceOverdueJob (BullMQ repeatable, ежедневно)».
   BILLING_INVOICE_OVERDUE_CRON: z.string().min(1).default(DEFAULT_BILLING_INVOICE_OVERDUE_CRON),
   BILLING_INVOICE_OVERDUE_GRACE_PERIOD_DAYS: z.coerce.number().int().positive().default(DEFAULT_BILLING_INVOICE_OVERDUE_GRACE_PERIOD_DAYS),
-  // DTJ-370: та же переменная, что `apps/api/src/config/env.schema.ts` (ОДИН бот нейтрального
-  // тенанта, `TelegramNotifyProvider` JSDoc §«Токен») — `NotificationDispatchProcessor` шлёт
-  // Telegram-сообщения worker'ом, apps/api не может импортировать apps/worker и наоборот, поэтому
-  // ОБА процесса читают ОДНО и то же имя ENV независимо. `optional`, тот же приём, что
-  // `MOCK_BANK_WEBHOOK_SECRET` — отсутствие даёт рантайм-`{success:false}` джобы, не Zod-сбой старта.
+  // Та же переменная, что apps/api — оба процесса читают одно имя ENV независимо, optional.
   TELEGRAM_BOT_TOKEN_NEUTRAL: z.string().optional(),
 })
 

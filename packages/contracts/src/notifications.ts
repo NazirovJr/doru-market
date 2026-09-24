@@ -1,10 +1,4 @@
-/**
- * Публичные контракты модуля `notifications` (EP-16, DTJ-372/370) — DTO presentation-слоя
- * (`notifications-feed.controller.ts`) и общие для apps/api + apps/worker типы диспетчеризации
- * (DTJ-370): apps/worker НЕ может импортировать apps/api (depcruise, отдельные TS-проекты монорепо,
- * см. `apps/api/src/modules/payments/infrastructure/adapters/mock-bank.provider.ts` §JSDoc) — общее
- * место, тот же приём, что `sensitive-fields.ts` (DTJ-375).
- */
+/** Публичные контракты `notifications`: DTO апи-ленты + общие для apps/api/apps/worker типы диспетчеризации. */
 import { z } from 'zod'
 import { USER_ROLES, type UserRole } from './permissions.js'
 
@@ -36,19 +30,7 @@ export const NotificationSummarySchema = z.object({
 
 export type NotificationSummary = z.infer<typeof NotificationSummarySchema>
 
-/**
- * `NOTIFICATION_EVENT_MATRIX` (DTJ-370) — ЕДИНСТВЕННЫЙ источник матрицы событие × роль × канал
- * (`SRS-ADM-052`, `docs/spec/27-module-admin-moderation-onboarding.md` §6.1, дословная транскрипция
- * таблицы). Порядок `channels` = порядок приоритета фолбэка (первый — самый приоритетный внешний
- * канал); `in_app` ВСЕГДА последним элементом — гарантированный минимум (SRS-ADM-084), диспетчеризуется
- * синхронно отдельно от остальных (`DispatchNotificationUseCase`), не участвует в фолбэк-цепочке.
- *
- * Переиспользуется:
- * - `apps/api/src/modules/notifications/application/notification-event-matrix.ts` (тонкая обёртка);
- * - `tests/arch/notification-templates-completeness.spec.ts` (DTJ-369, полнота шаблонов);
- * - `apps/worker/src/jobs/notifications/outbox-to-notifications.consumer.ts` (список
- *   `event_type`, на которые подписан consumer, и `recipientRoles` для резолва получателей).
- */
+/** Единственный источник матрицы событие×роль×канал (SRS-ADM-052); `channels` — порядок фолбэка, `in_app` всегда последним. */
 export interface NotificationEventMatrixEntry {
   readonly eventType: string
   readonly recipientRoles: readonly UserRole[]
@@ -77,14 +59,7 @@ export function isKnownUserRole(value: string): value is UserRole {
   return (USER_ROLES as readonly string[]).includes(value)
 }
 
-/**
- * Ретраи `notification-dispatch` (SRS-ADM-060): 3 попытки, backoff 2с/8с/32с — НЕ чистая
- * геометрическая прогрессия (иначе тип BullMQ `{type:'exponential'}` дал бы 2с/4с/8с), поэтому
- * custom backoff strategy (`WorkerOptions.settings.backoffStrategy`), регистрируемая ОБОИМИ
- * сторонами очереди под одним именем `NOTIFICATION_DISPATCH_BACKOFF_TYPE`: apps/api (producer,
- * `queue.add(..., { backoff: { type: NOTIFICATION_DISPATCH_BACKOFF_TYPE } })`) и apps/worker
- * (consumer, `new Worker(..., { settings: { backoffStrategy: resolveNotificationDispatchBackoffMs } })`).
- */
+/** Retry-backoff SRS-ADM-060: 2с/8с/32с — не геометрическая прогрессия, поэтому custom `backoffStrategy`. */
 const NOTIFICATION_DISPATCH_BACKOFF_1ST_MS = 2_000
 const NOTIFICATION_DISPATCH_BACKOFF_2ND_MS = 8_000
 const NOTIFICATION_DISPATCH_BACKOFF_3RD_MS = 32_000
@@ -105,11 +80,7 @@ export function resolveNotificationDispatchBackoffMs(attemptsMade: number): numb
   return NOTIFICATION_DISPATCH_BACKOFF_MS[index] ?? NOTIFICATION_DISPATCH_BACKOFF_3RD_MS
 }
 
-/**
- * Payload джобы `notification-dispatch` (DTJ-370). `remainingChannels` — внешние каналы ПОСЛЕ
- * текущего (без `in_app`, порядок фолбэка); при исчерпании ретраев текущего канала процессор
- * ставит job на `remainingChannels[0]` (если есть) с `remainingChannels.slice(1)`.
- */
+/** Payload джобы `notification-dispatch`; `remainingChannels` — фолбэк-цепочка после текущего канала (без `in_app`). */
 export interface NotificationDispatchJobData {
   readonly notificationId: string
   readonly userId: string
@@ -121,8 +92,7 @@ export interface NotificationDispatchJobData {
   readonly templateVariables: Readonly<Record<string, string>>
 }
 
-/** Движок подстановки шаблонов (SRS-ADM-054): простой `String.replace`, не Handlebars — переиспользуется
- * `NotificationTemplate.render` (apps/api) и `apps/worker` (не может импортировать apps/api). */
+/** Подстановка `{{var}}` — простой `String.replace`, не шаблонизатор (SRS-ADM-054). */
 const TEMPLATE_PLACEHOLDER_PATTERN = /\{\{(\w+)\}\}/g
 
 export function renderTemplateString(text: string, variables: Readonly<Record<string, string>>): string {
@@ -135,4 +105,11 @@ export function findMissingTemplateVariables(
   variables: Readonly<Record<string, string>>,
 ): readonly string[] {
   return required.filter((name) => variables[name] === undefined)
+}
+
+/** Имена плейсхолдеров, реально встречающихся в тексте (может отличаться от `variablesSchema.required`). */
+export function extractTemplatePlaceholders(text: string): readonly string[] {
+  return [...text.matchAll(TEMPLATE_PLACEHOLDER_PATTERN)]
+    .map((match) => match[1])
+    .filter((name): name is string => name !== undefined)
 }

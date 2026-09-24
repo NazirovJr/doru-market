@@ -32,12 +32,10 @@
  *
  * DTJ-369: добавлен `NOTIFICATION_TEMPLATES_REPOSITORY_PORT` → `NotificationTemplatesRepository`.
  *
- * DTJ-370: `NOTIFICATIONS_REPOSITORY_PORT` теперь связан с реальным `NotificationsRepository`
- * (заглушка `UnimplementedNotificationsRepositoryAdapter` удалена — C8, не оставлять мёртвый код
- * после замены). Добавлены `DispatchNotificationUseCase` и `NOTIFICATION_DISPATCH_QUEUE_PORT` →
- * `BullmqNotificationDispatchQueueAdapter`. `imports: [..., TenancyModule]` — тот же приём, что
- * `orders.module.ts` (DTJ-228/229): `TENANT_SETTINGS_REPOSITORY` нужен для `brandName`
- * (SRS-ADM-056), публичный фасад `modules/tenancy`, не гостевая правка.
+ * DTJ-370: `NOTIFICATIONS_REPOSITORY_PORT` → реальный `NotificationsRepository`; добавлены
+ * `DispatchNotificationUseCase`, `NOTIFICATION_DISPATCH_QUEUE_PORT`, `NOTIFICATIONS_PROCESSED_EVENTS_PORT`
+ * и `OutboxToNotificationsConsumer` (BullMQ `Worker` на `domain-events`, живёт здесь — вызывает
+ * use case напрямую, чего apps/worker не может).
  */
 import { Module } from '@nestjs/common'
 import { AuthModule } from '@/modules/auth/auth.module.js'
@@ -47,12 +45,16 @@ import { NOTIFICATIONS_REPOSITORY_PORT } from './application/ports/notifications
 import { NOTIFY_PROVIDER_IN_APP, NOTIFY_PROVIDER_TELEGRAM } from './application/ports/notify-provider.port.js'
 import { NOTIFICATION_TEMPLATES_REPOSITORY_PORT } from './application/ports/notification-templates-repository.port.js'
 import { NOTIFICATION_DISPATCH_QUEUE_PORT } from './application/ports/notification-dispatch-queue.port.js'
+import { NOTIFICATIONS_PROCESSED_EVENTS_PORT } from './application/ports/notifications-processed-events.port.js'
 import { UsersRepositoryIdentityFacadeAdapter } from './infrastructure/adapters/users-repository-identity-facade.adapter.js'
 import { TelegramNotifyProvider } from './infrastructure/providers/telegram-notify.provider.js'
 import { InAppNotifyProvider } from './infrastructure/providers/in-app-notify.provider.js'
 import { NotificationTemplatesRepository } from './infrastructure/repositories/notification-templates.repository.js'
 import { NotificationsRepository } from './infrastructure/repositories/notifications.repository.js'
+import { DrizzleNotificationsProcessedEventsRepository } from './infrastructure/repositories/drizzle-notifications-processed-events.repository.js'
 import { BullmqNotificationDispatchQueueAdapter } from './infrastructure/queues/bullmq-notification-dispatch-queue.adapter.js'
+import { domainEventsWorkerConnectionProvider } from './infrastructure/consumers/domain-events-worker-connection.provider.js'
+import { OutboxToNotificationsConsumer } from './infrastructure/consumers/outbox-to-notifications.consumer.js'
 import { ListOwnNotificationsUseCase } from './application/use-cases/list-own-notifications.use-case.js'
 import { DispatchNotificationUseCase } from './application/use-cases/dispatch-notification.use-case.js'
 import { NotificationsFeedController } from './presentation/notifications-feed.controller.js'
@@ -66,14 +68,18 @@ import { NotificationsFeedController } from './presentation/notifications-feed.c
     { provide: NOTIFY_PROVIDER_IN_APP, useClass: InAppNotifyProvider },
     { provide: NOTIFICATION_TEMPLATES_REPOSITORY_PORT, useClass: NotificationTemplatesRepository },
     { provide: NOTIFICATION_DISPATCH_QUEUE_PORT, useClass: BullmqNotificationDispatchQueueAdapter },
+    { provide: NOTIFICATIONS_PROCESSED_EVENTS_PORT, useClass: DrizzleNotificationsProcessedEventsRepository },
     { provide: ListOwnNotificationsUseCase, useClass: ListOwnNotificationsUseCase },
     { provide: DispatchNotificationUseCase, useClass: DispatchNotificationUseCase },
+    domainEventsWorkerConnectionProvider,
     UsersRepositoryIdentityFacadeAdapter,
     NotificationsRepository,
     TelegramNotifyProvider,
     InAppNotifyProvider,
     NotificationTemplatesRepository,
+    DrizzleNotificationsProcessedEventsRepository,
     BullmqNotificationDispatchQueueAdapter,
+    OutboxToNotificationsConsumer,
   ],
   exports: [
     IDENTITY_FACADE_PORT,
