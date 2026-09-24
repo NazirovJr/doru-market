@@ -26,14 +26,22 @@
  * РЕВЬЮЕР: не копировать этот приём на другие БИЗНЕС-модули по аналогии («у нас тоже много
  * потребителей») без такого же явного архитектурного обоснования — см.
  * `tickets/ep09-admin-notify-analytics/DTJ-374.md`, раздел «Риски».
+ *
+ * `AUDIT_LOG_QUERY_PORT` НЕ в `exports:` (в отличие от `AUDIT_LOG_PORT`) — read-порт резолвится
+ * только `ListAuditLogUseCase`, зарегистрированному в этом же модуле.
  */
 import { Global, Module } from '@nestjs/common'
+import { AuthModule } from '@/modules/auth/index.js'
 import { AUDIT_LOG_PORT } from './audit-log.port.js'
-import { AUDIT_LOG_PORT_PROVIDER } from './infrastructure/audit-log.repository.js'
+import { AUDIT_LOG_PORT_PROVIDER, AUDIT_LOG_QUERY_PORT_PROVIDER } from './infrastructure/audit-log.repository.js'
+import { ListAuditLogUseCase } from './application/use-cases/list-audit-log.use-case.js'
+import { AuditLogController } from './presentation/audit-log.controller.js'
 
 @Global()
 @Module({
-  providers: [AUDIT_LOG_PORT_PROVIDER],
+  imports: [AuthModule],
+  controllers: [AuditLogController],
+  providers: [AUDIT_LOG_PORT_PROVIDER, AUDIT_LOG_QUERY_PORT_PROVIDER, ListAuditLogUseCase],
   exports: [AUDIT_LOG_PORT],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.
