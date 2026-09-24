@@ -1,10 +1,4 @@
-/**
- * Шаблоны `prescription.decision` (SRS-ADM-052, `PrescriptionVerifiedEvent`/`RejectedEvent` — ОДИН
- * шаблон-event_type на оба исхода). Движок подстановки не умеет условную логику ({{#if}}), поэтому
- * итоговый текст решения (`decisionText`) вычисляет диспетчер (DTJ-370) ДО вызова `render()` и
- * передаёт готовой строкой — не два разных `event_type`, т.к. форма сообщения («рецепт по заказу
- * №X: <решение>») одинакова для обоих исходов, отличается только содержимое решения. Каналы: telegram + in_app.
- */
+/** prescription.decision — telegram, in_app; decisionText (verified/rejected) вычисляет диспетчер до render(). */
 import { buildNotificationTemplateRows } from '../build-rows.js'
 import type { NotificationTemplateSeedRow } from '../types.js'
 

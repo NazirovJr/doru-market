@@ -1,4 +1,3 @@
-/** Шаблоны `billing.invoice_overdue` (SRS-ADM-052, `InvoiceOverdueEvent` — [ДОПОЛНЕНИЕ], получатель — `pharmacy_admin`). Каналы: telegram → sms + in_app. */
 import { buildNotificationTemplateRows } from '../build-rows.js'
 import type { NotificationTemplateSeedRow } from '../types.js'
 

@@ -1,8 +1,3 @@
-/**
- * Unit-тесты `NotificationTemplate` (DTJ-369, EP-16, SRS-ADM-054/055). Тест-план тикета:
- * рендер с полным набором переменных, недостающая переменная → ошибка, `subject` для `telegram` →
- * ошибка валидации фабрики. Покрывает критерии приёмки №3 и №4 тикета.
- */
 import { describe, expect, it } from 'vitest'
 import {
   InvalidTemplateSubjectChannelError,
@@ -11,7 +6,7 @@ import {
   type NotificationTemplateCreateCommand,
 } from './notification-template.entity.js'
 
-// eslint-disable-next-line no-restricted-globals -- тестовая фикстура (фиксированная дата), не продовый код (`02` §2.6 запрещает `Date.now()`/создание `Date` в domain/, но тесты — часть test-suite).
+// eslint-disable-next-line no-restricted-globals -- тестовая фикстура
 const NOW = new Date('2026-01-01T00:00:00.000Z')
 
 function baseCommand(overrides: Partial<NotificationTemplateCreateCommand> = {}): NotificationTemplateCreateCommand {

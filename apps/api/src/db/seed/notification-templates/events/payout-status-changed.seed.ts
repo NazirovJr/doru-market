@@ -1,4 +1,3 @@
-/** Шаблоны `payout.status_changed` (SRS-ADM-052, `PayoutPaidEvent`/`PayoutDueEvent`, получатель — `pharmacy_admin`). Каналы: telegram → web_push + in_app. */
 import { buildNotificationTemplateRows } from '../build-rows.js'
 import type { NotificationTemplateSeedRow } from '../types.js'
 

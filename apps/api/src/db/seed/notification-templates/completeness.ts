@@ -1,9 +1,4 @@
-/**
- * Алгоритм проверки полноты матрицы `notification_templates` (DTJ-369, SRS-ADM-054, TC-ADM-026).
- * Чистая функция без побочных эффектов — переиспользуется И сид-скриптом (сверка перед записью в
- * БД), И `tests/arch/notification-templates-completeness.spec.ts` (сверка против независимой
- * копии матрицы SRS-ADM-052, читаемой прямо в тесте — см. его JSDoc).
- */
+/** Проверка полноты матрицы — переиспользуется сидом и arch-тестом. */
 import type { NotificationTemplateChannel, NotificationTemplateLocale, NotificationTemplateSeedRow } from './types.js'
 
 export interface NotificationEventChannelMatrixEntry {
@@ -26,7 +21,7 @@ interface EventChannel {
   readonly channel: NotificationTemplateChannel
 }
 
-/** Отсутствующие тройки для одного канала — вынесено из `findMissingTemplateCombinations` ради max-depth (C≤3). */
+/** Вынесено из findMissingTemplateCombinations ради глубины вложенности. */
 function findMissingForChannel(
   present: ReadonlySet<string>,
   eventChannel: EventChannel,
@@ -38,7 +33,7 @@ function findMissingForChannel(
     .map((locale) => ({ eventType, channel, locale }))
 }
 
-/** Все отсутствующие тройки `(event_type, channel, locale)` — пусто, если сид полон. */
+/** Пусто, если сид полон. */
 export function findMissingTemplateCombinations(
   rows: readonly NotificationTemplateSeedRow[],
   matrix: readonly NotificationEventChannelMatrixEntry[],
@@ -54,7 +49,7 @@ export function findMissingTemplateCombinations(
   return missing
 }
 
-/** Читаемое сообщение по одной отсутствующей комбинации (TC-ADM-026 — «не просто тест упал»). */
+/** Читаемое сообщение по одной отсутствующей комбинации. */
 export function formatMissingCombination(missing: MissingTemplateCombination): string {
   return `(event_type="${missing.eventType}", channel="${missing.channel}", locale="${missing.locale}")`
 }

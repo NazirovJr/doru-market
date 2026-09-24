@@ -1,18 +1,4 @@
-/**
- * Идемпотентный upsert `notification_templates` (DTJ-369, DoD п.6: `pnpm db:seed` идемпотентен,
- * `ON CONFLICT (event_type, channel, locale) DO UPDATE`, тот же приём, что `i18n-overrides-
- * catalog.seed.ts`, DTJ-103).
- *
- * Каждая строка сида проходит через `NotificationTemplate.create()` (домен) ДО вставки — тот же
- * приём, что `seed-catalog.ts` для `Medicine.create()`: seed обязан пройти через тот же домен,
- * что и продакшен-путь, иначе может создать невалидное состояние (например, `subject` на
- * `telegram`-строке из-за опечатки в `events/*.seed.ts`) — ошибка домена бросается ДО записи в БД,
- * не после.
- *
- * Standalone CLI entrypoint (тот же приём, что `feature-flags.seed.ts`) — позволяет пересеять
- * ТОЛЬКО этот блок: `tsx src/db/seed/notification-templates/seed-notification-templates.ts`.
- * Основной путь подключения к рантайму — вызов из `seed-catalog.run.ts:main()`, `pnpm db:seed`.
- */
+/** Идемпотентный upsert notification_templates; каждая строка валидируется доменом перед записью. */
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { notificationTemplates } from '@/db/schema/notification-templates.js'
@@ -20,7 +6,7 @@ import { NotificationTemplate } from '@/modules/notifications/domain/notificatio
 import { NOTIFICATION_TEMPLATE_SEED_ROWS } from './index.js'
 import type { NotificationTemplateSeedRow } from './types.js'
 
-/** Валидирует инвариант домена (SRS-ADM-055) ДО вставки — бросает при невалидном сид-файле, не молчит. */
+/** Бросает при невалидном сид-файле, не молчит. */
 function validateSeedRow(row: NotificationTemplateSeedRow, now: Date): void {
   NotificationTemplate.create(
     {
@@ -40,7 +26,7 @@ export async function seedNotificationTemplates(db: NodePgDatabase): Promise<{ u
   const now = new Date()
   for (const row of NOTIFICATION_TEMPLATE_SEED_ROWS) {
     validateSeedRow(row, now)
-    // eslint-disable-next-line no-await-in-loop -- seed-скрипт последователен по конвенции проекта (см. seed-catalog.run.ts insertCategories)
+    // eslint-disable-next-line no-await-in-loop -- последовательный сид
     await db
       .insert(notificationTemplates)
       .values({
@@ -66,7 +52,7 @@ async function main(): Promise<void> {
 
   const dbUrl = process.env.DATABASE_URL
   if (dbUrl === undefined || dbUrl.length === 0) {
-    // eslint-disable-next-line no-console -- CLI-скрипт, не часть Nest-приложения.
+    // eslint-disable-next-line no-console -- CLI-скрипт.
     console.error('DATABASE_URL is required for db:seed')
     process.exit(1)
   }

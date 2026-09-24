@@ -1,4 +1,3 @@
-/** Шаблоны `onboarding.suspended` (SRS-ADM-052, `LicenseExpiredAutoSuspendEvent`/`PharmacySuspendedEvent`, получатель — `pharmacy_admin`). Каналы: telegram → sms (эскалированный приоритет) + in_app. */
 import { buildNotificationTemplateRows } from '../build-rows.js'
 import type { NotificationTemplateSeedRow } from '../types.js'
 

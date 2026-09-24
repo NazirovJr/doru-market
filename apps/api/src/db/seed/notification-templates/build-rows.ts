@@ -1,9 +1,4 @@
-/**
- * Компактный билдер строк сида `notification_templates` (DTJ-369) — 15 `events/*.seed.ts`-файлов
- * иначе повторяли бы одну и ту же плоскую структуру `{eventType, channel, locale, ...}` по 9-12
- * объектов на файл. Здесь один `ChannelTemplateSpec` на канал (тексты трёх локалей рядом, легче
- * сверять на глаз), разворачивается в плоские строки для сида/CI-теста.
- */
+/** Разворачивает {channel, тексты по локалям} в плоские строки сида. */
 import type {
   NotificationTemplateChannel,
   NotificationTemplateLocale,
@@ -15,7 +10,7 @@ type LocalizedText = Readonly<Record<NotificationTemplateLocale, string>>
 
 export interface ChannelTemplateSpec {
   readonly channel: NotificationTemplateChannel
-  /** SRS-ADM-055: только для `channel ∈ {'email','web_push'}` — не задан для прочих каналов. */
+  /** Только для email/web_push. */
   readonly subject?: LocalizedText
   readonly body: LocalizedText
 }

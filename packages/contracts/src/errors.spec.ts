@@ -148,7 +148,7 @@ const EXPECTED: readonly (readonly [ErrorCode, number])[] = [
   [ErrorCode.TICKET_ALREADY_TERMINAL, 409],
   [ErrorCode.INVALID_TICKET_STATUS_TRANSITION, 409],
 
-  // ---- Доменные: notification_templates (DTJ-369, EP-16, SRS-ADM-054/055) ----
+  // ---- Доменные: notification_templates (DTJ-369) ----
   [ErrorCode.MISSING_TEMPLATE_VARIABLE, 500],
   [ErrorCode.INVALID_TEMPLATE_SUBJECT_CHANNEL, 400],
 ]

@@ -1,4 +1,3 @@
-/** Шаблоны `moderation.queue_digest` (SRS-ADM-052, `UnmatchedInventoryRowEvent`, дайджест раз/сутки, получатель — `pharmacy_admin`). Канал: telegram + in_app. */
 import { buildNotificationTemplateRows } from '../build-rows.js'
 import type { NotificationTemplateSeedRow } from '../types.js'
 

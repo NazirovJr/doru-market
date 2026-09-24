@@ -1,9 +1,4 @@
-/**
- * Шаблоны `order.paid` (SRS-ADM-052, строка `OrderPaidEvent`). Каналы: telegram → sms → web_push
- * (всегда) + in_app (гарантированный минимум). `savingsDiram` — экономия от аналогов
- * (`catalog.analogs`, EP-07) — ВСЕГДА передаётся диспетчером (DTJ-370), даже `"0"`, движок
- * подстановки не умеет условную логику (см. «Риски» тикета DTJ-369).
- */
+/** order.paid — telegram, sms, web_push, in_app; savingsDiram передаётся всегда, даже "0" (нет условной логики). */
 import { buildNotificationTemplateRows } from '../build-rows.js'
 import type { NotificationTemplateSeedRow } from '../types.js'
 

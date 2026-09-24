@@ -1,4 +1,3 @@
-/** Шаблоны `order.cancelled` (SRS-ADM-052, `OrderCancelledEvent`/`OrderAutoCancelledEvent`). Каналы: telegram → sms → web_push + in_app. */
 import { buildNotificationTemplateRows } from '../build-rows.js'
 import type { NotificationTemplateSeedRow } from '../types.js'
 

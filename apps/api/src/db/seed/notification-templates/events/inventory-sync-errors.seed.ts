@@ -1,4 +1,3 @@
-/** Шаблоны `inventory.sync_errors` (SRS-ADM-052, `InventorySyncBatchCompletedEvent(hasErrors=true)`, получатель — `pharmacy_admin`). Каналы: telegram → web_push + in_app. */
 import { buildNotificationTemplateRows } from '../build-rows.js'
 import type { NotificationTemplateSeedRow } from '../types.js'
 

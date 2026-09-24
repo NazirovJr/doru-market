@@ -1,4 +1,3 @@
-/** Шаблоны `prescription.needs_clarification` (SRS-ADM-052, `PrescriptionNeedsClarificationEvent`). Каналы: telegram → web_push + in_app. */
 import { buildNotificationTemplateRows } from '../build-rows.js'
 import type { NotificationTemplateSeedRow } from '../types.js'
 

@@ -1,4 +1,3 @@
-/** Шаблоны `order.refunded` (SRS-ADM-052, `OrderRefundedEvent`). Каналы: telegram → sms + in_app. */
 import { buildNotificationTemplateRows } from '../build-rows.js'
 import type { NotificationTemplateSeedRow } from '../types.js'
 

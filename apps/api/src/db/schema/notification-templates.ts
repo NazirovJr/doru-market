@@ -1,16 +1,4 @@
-/**
- * Drizzle-схема `notification_templates` (EP-16, DTJ-369, SRS-ADM-054/055/056). DDL — дословно
- * `docs/spec/27-module-admin-moderation-onboarding.md` §10.1, применена миграцией
- * `0049_notification_templates.sql`.
- *
- * `channel` — `notificationChannelEnum` (`enums.schema.ts`, эта же миграция) — СОГЛАСОВАНИЕ
- * `docs/spec/11-database-schema.md` (`telegram|sms|web_push|email`) и фактического кода EP-16
- * (`telegram|sms|web_push|in_app`), см. JSDoc enum'а.
- * `variablesSchema` — JSONB, форма — `NotificationTemplateVariablesSchema` домена (не типизирована
- * Drizzle'ом строже `unknown`, т.к. Drizzle не проверяет форму JSONB на уровне столбца).
- *
- * infrastructure-слой (`02` §1.1) — НЕ импортируется в `domain`/`application` модуля `notifications`.
- */
+/** Drizzle-схема `notification_templates`; `variablesSchema` — JSONB, форма не типизирована строже `unknown`. */
 import { sql } from 'drizzle-orm'
 import { jsonb, pgTable, text, timestamp, unique, uuid, varchar } from 'drizzle-orm/pg-core'
 import { notificationChannelEnum } from './enums.schema.js'

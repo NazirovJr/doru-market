@@ -1,4 +1,3 @@
-/** Шаблоны `order.delivered` (SRS-ADM-052, `OrderDeliveredEvent`). Каналы: telegram → sms + in_app. */
 import { buildNotificationTemplateRows } from '../build-rows.js'
 import type { NotificationTemplateSeedRow } from '../types.js'
 

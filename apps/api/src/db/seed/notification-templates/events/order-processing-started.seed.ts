@@ -1,4 +1,3 @@
-/** Шаблоны `order.processing_started` (SRS-ADM-052, `OrderProcessingStartedEvent`). Каналы: telegram → web_push (без sms — не критично) + in_app. */
 import { buildNotificationTemplateRows } from '../build-rows.js'
 import type { NotificationTemplateSeedRow } from '../types.js'
 

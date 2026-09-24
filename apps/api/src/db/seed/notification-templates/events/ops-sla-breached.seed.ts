@@ -1,8 +1,4 @@
-/**
- * Шаблоны `ops.sla_breached` (SRS-ADM-052, `SlaBreachedEvent`, получатели — `support_agent`,
- * `super_admin`). Внутренний операционный канал — БЕЗ telegram/sms клиенту (дословно из матрицы:
- * «внутренний канал, не Telegram/SMS клиенту»). Каналы: web_push → in_app.
- */
+/** ops.sla_breached — web_push, in_app; без telegram/sms (внутренний канал, не клиенту). */
 import { buildNotificationTemplateRows } from '../build-rows.js'
 import type { NotificationTemplateSeedRow } from '../types.js'
 

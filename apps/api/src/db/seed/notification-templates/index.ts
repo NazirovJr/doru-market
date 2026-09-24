@@ -1,15 +1,4 @@
-/**
- * Barrel сида `notification_templates` (DTJ-369, EP-16, SRS-ADM-052/054). Агрегирует 15
- * `events/*.seed.ts`-файлов (по одному на `event_type` матрицы SRS-ADM-052 §6.1) в один плоский
- * массив строк.
- *
- * ЧИСТО-ДАННЫЕ: ни этот файл, ни его импорты не тянут Drizzle/pg — читается ДВУМЯ независимыми
- * потребителями: `seed-notification-templates.ts` (пишет в БД) И `tests/arch/notification-
- * templates-completeness.spec.ts` (сверяет полноту, БЕЗ БД — см. JSDoc `types.ts`).
- *
- * Добавление нового `event_type` матрицы — ДОБАВЛЕНИЕ строки (новый `events/<event>.seed.ts` +
- * строка импорта/спреда здесь), тот же приём D-27, что `db/schema/index.ts`.
- */
+/** Barrel сида — агрегирует events/*.seed.ts в один плоский массив, pure-data (без Drizzle/pg). */
 import { BILLING_INVOICE_OVERDUE_TEMPLATE_ROWS } from './events/billing-invoice-overdue.seed.js'
 import { INVENTORY_SYNC_ERRORS_TEMPLATE_ROWS } from './events/inventory-sync-errors.seed.js'
 import { MODERATION_QUEUE_DIGEST_TEMPLATE_ROWS } from './events/moderation-queue-digest.seed.js'

@@ -1,29 +1,6 @@
-/**
- * CI-тест полноты матрицы `notification_templates` (DTJ-369, EP-16, SRS-ADM-054, TC-ADM-026).
- *
- * «Ловушка проверяется CI, не глазами ревьюера» (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §6.1): любой
- * пропуск шаблона (забыли `en`-версию нового события, не завели канал для события) обнаруживается
- * ЗДЕСЬ, до деплоя — не в рантайме при реальной отправке (падение рендера на живом пользователе).
- *
- * `EVENT_CHANNEL_MATRIX` ниже — КОНСТАНТА-КОПИЯ таблицы `docs/spec/27-module-admin-moderation-
- * onboarding.md` §6.1 (SRS-ADM-052), НЕ импортирована из кода сида (`db/seed/notification-
- * templates/`) — намеренно: если бы тест переиспользовал ту же структуру данных, что и сид,
- * ошибка одного автора («забыл канал в обоих местах») осталась бы незамеченной. Независимая
- * копия — единственный способ поймать реальный пропуск. Риск: если архитектор добавит 15-е
- * событие в будущей редакции документа 27, этот тест НЕ поймает это автоматически (нет единого
- * источника событие↔тест, зафиксировано в «Рисках» тикета DTJ-369) — при правке §6.1 документа
- * ОБЯЗАТЕЛЬНА ручная сверка этой константы.
- *
- * Тест-себя-теста (АС2 тикета, «ловушка, которая перестала ловить, молчит об этом», риск-раздел
- * тест-плана): `describe('мета-тест...')` искусственно удаляет одну строку сида и проверяет, что
- * `findMissingTemplateCombinations` ловит именно её — не абстрактный «тест упал», а точная тройка
- * `(event_type, channel, locale)` в сообщении (TC-ADM-026).
- *
- * ЧИСТО-ФАЙЛОВЫЙ/ЧИСТО-ДАННЫЙ тест (см. `tests/arch/vitest.config.ts`) — импортирует ТОЛЬКО
- * pure-data модуль сида (`db/seed/notification-templates/index.ts`), без Drizzle/pg, без БД.
- */
+/** Матрица ниже — независимая копия SRS-ADM-052, не импортирована из сида: иначе одна и та же ошибка автора осталась бы незамеченной. */
 import { describe, expect, it } from 'vitest'
-// eslint-disable-next-line no-restricted-imports -- C16 требует алиас @/..., но этот файл живёт в tests/arch (у tests/arch/tsconfig.json нет @/-алиаса, он есть только у apps/api/tsconfig.json) — ticket DTJ-369 требует путь именно tests/arch/notification-templates-completeness.spec.ts, относительный импорт pure-data сида apps/api — единственный вариант без отдельной alias-инфраструктуры ради одного файла.
+// eslint-disable-next-line no-restricted-imports -- tests/arch без алиаса @/
 import {
   findMissingTemplateCombinations,
   formatMissingCombination,
@@ -34,13 +11,6 @@ import {
 
 const LOCALES = ['tj', 'ru', 'en'] as const
 
-/**
- * Копия таблицы SRS-ADM-052 §6.1 (`docs/spec/27-module-admin-moderation-onboarding.md`, строки
- * 585-599 на момент написания теста). 15 строк матрицы → 15 `event_type` в `notification_templates`.
- * `in_app` добавлен КАЖДОМУ событию явно (матрица: «in_app — гарантированный минимум, всегда
- * пишется, даже если остальные каналы недоступны») — включая `ops.sla_breached`, где он назван
- * в самой строке матрицы.
- */
 const EVENT_CHANNEL_MATRIX: readonly NotificationEventChannelMatrixEntry[] = [
   { eventType: 'order.paid', channels: ['telegram', 'sms', 'web_push', 'in_app'] },
   { eventType: 'order.processing_started', channels: ['telegram', 'web_push', 'in_app'] },
@@ -74,7 +44,6 @@ describe('notification_templates — полнота матрицы SRS-ADM-052 (
   })
 
   it('ни одна строка сида не содержит буквальной строки бренда (DoD DTJ-369, SRS-ADM-056)', () => {
-    // brandName ВСЕГДА плейсхолдер {{brandName}} — буквальное "DoruTJ" в теле/subject запрещено.
     const offenders = NOTIFICATION_TEMPLATE_SEED_ROWS.filter(
       (row) => row.body.includes('DoruTJ') || (row.subject?.includes('DoruTJ') ?? false),
     )

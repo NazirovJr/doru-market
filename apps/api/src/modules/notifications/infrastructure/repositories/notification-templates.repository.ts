@@ -1,10 +1,4 @@
-/**
- * `NotificationTemplatesRepository` (DTJ-369, EP-16) — реализация `NotificationTemplatesRepositoryPort`
- * поверх `notification_templates` (`db/schema/notification-templates.ts`).
- *
- * `findByEventChannelLocale` — точечный `SELECT` по `UNIQUE(event_type, channel, locale)`
- * (миграция `0049_notification_templates.sql`) — не более одной строки физически возможно.
- */
+/** SELECT по UNIQUE(event_type, channel, locale) — не более одной строки. */
 import { Inject, Injectable } from '@nestjs/common'
 import { and, eq } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'

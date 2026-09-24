@@ -224,14 +224,8 @@ export enum ErrorCode {
   TICKET_ALREADY_TERMINAL = 'TICKET_ALREADY_TERMINAL', // 409
   INVALID_TICKET_STATUS_TRANSITION = 'INVALID_TICKET_STATUS_TRANSITION', // 409
 
-  // ---- Доменные: notification_templates (DTJ-369, EP-16, SRS-ADM-054/055) — новые коды в
-  // конец каталога (D-27), тот же класс добавления, что модуль support выше. ----
-  // MISSING_TEMPLATE_VARIABLE — SRS-ADM-054: `NotificationTemplate.render()` вызван без
-  // переменной, обязательной по `variables_schema` — «отсутствие — 500 на этапе рендера,
-  // детектируется до продакшена автоматическим тестом, не в рантайме» (источник дословно).
+  // ---- Доменные: notification_templates (DTJ-369) ----
   MISSING_TEMPLATE_VARIABLE = 'MISSING_TEMPLATE_VARIABLE', // 500
-  // INVALID_TEMPLATE_SUBJECT_CHANNEL — SRS-ADM-055: `subject` задан для `channel`, не входящего
-  // в `{'email','web_push'}` — доменная ошибка фабрики `NotificationTemplate.create()`.
   INVALID_TEMPLATE_SUBJECT_CHANNEL = 'INVALID_TEMPLATE_SUBJECT_CHANNEL', // 400
 }
 

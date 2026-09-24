@@ -1,30 +1,7 @@
-/**
- * `NotificationTemplate` (DTJ-369, EP-16, SRS-ADM-054/055/056) — доменная сущность таблицы
- * `notification_templates`. Минимальный домен (без state machine): фабрика с одним инвариантом
- * (`subject` только для `channel ∈ {'email','web_push'}`, SRS-ADM-055) + чистая функция рендера.
- *
- * `render()` — простая подстановка `{{var}}` через `String.replace`, НЕ Handlebars/шаблонизатор
- * общего назначения (SRS-ADM-054: минимизация поверхности инъекций в исходящий текст). Полный
- * успех либо явная ошибка ДО отправки — частичный рендер (буквальный `{{var}}` в результате)
- * запрещён: переменные проверяются против `variablesSchema.required` ДО подстановки, а сама
- * подстановка бросает ту же ошибку на любой незаполненный плейсхолдер (defensive — ловит и
- * плейсхолдер, забытый в `variablesSchema`).
- *
- * `NotificationTemplateChannel` — СУПЕРМНОЖЕСТВО `NotificationChannel` из
- * `application/ports/notify-provider.port.ts` (DTJ-368). Тот порт умышленно ограничен 4 РЕАЛЬНО
- * подключёнными провайдерами (`telegram|sms|web_push|in_app`, БЕЗ `email` — см. его JSDoc
- * §«Реестр каналов разошёлся с `docs/spec/11-database-schema.md`»). `notification_templates` —
- * таблица ШАБЛОНОВ, а не каналов доставки: реальный Postgres ENUM `notification_channel`
- * (`db/schema/enums.schema.ts`, эта же миграция DTJ-369) СОГЛАСУЕТ оба разошедшихся источника —
- * `docs/spec/11-database-schema.md` (`telegram|sms|web_push|email`, БЕЗ `in_app`) и фактический
- * состав кода EP-16 (`telegram|sms|web_push|in_app`, БЕЗ `email`) — объединением: `in_app`
- * добавлен (иначе половина матрицы SRS-ADM-052 не имеет канала для строки — `in_app` есть
- * практически у каждого события), `email` сохранён (SRS-ADM-055 явно допускает для него
- * `subject`, «оставлен для полноты будущего расширения, не задействован в MVP-матрице»). Это
- * ТИП НЕ ДУБЛИРУЕТ `NotificationChannel` — он шире и обслуживает другую таблицу.
- */
+/** Рендер — простая подстановка без шаблонизатора: меньше поверхность инъекций; частичный рендер запрещён. */
 import { ValidationError, ErrorCode } from '@dorutj/contracts'
 
+/** Шире NotificationChannel провайдеров: включает email, которого пока нет в доставке. */
 export type NotificationTemplateChannel = 'telegram' | 'sms' | 'web_push' | 'email' | 'in_app'
 export type NotificationTemplateLocale = 'tj' | 'ru' | 'en'
 
@@ -37,15 +14,9 @@ export const NOTIFICATION_TEMPLATE_CHANNELS: readonly NotificationTemplateChanne
 ]
 export const NOTIFICATION_TEMPLATE_LOCALES: readonly NotificationTemplateLocale[] = ['tj', 'ru', 'en']
 
-/** SRS-ADM-055: `subject` разрешён только для этих каналов (email subject / web push заголовок). */
 const SUBJECT_ALLOWED_CHANNELS: ReadonlySet<NotificationTemplateChannel> = new Set(['email', 'web_push'])
 
-/**
- * «Zod-подобное» JSON-описание ожидаемых переменных payload'а (SRS-ADM-054). Упрощено до списка
- * обязательных имён — ticket не даёт конкретный JSON Schema draft, а `render()` нуждается только
- * в проверке присутствия (ASSUMPTION: без проверки типа значения — все переменные рендерятся как
- * строки движком простой подстановки).
- */
+/** Только имена: render проверяет присутствие, не типы. */
 export interface NotificationTemplateVariablesSchema {
   readonly required: readonly string[]
 }
@@ -103,13 +74,12 @@ const PLACEHOLDER_PATTERN = /\{\{(\w+)\}\}/g
 export class NotificationTemplate {
   private constructor(private readonly snapshot: NotificationTemplateSnapshot) {}
 
-  /** Валидированное создание (SRS-ADM-055 инвариант). Время — явный параметр (Clock-порт вызывающей стороны, не `new Date()` здесь). */
   static create(command: NotificationTemplateCreateCommand, now: Date): NotificationTemplate {
     assertSubjectAllowedForChannel(command.subject, command.channel)
     return new NotificationTemplate({ ...command, updatedAt: now })
   }
 
-  /** Восстановление из уже валидной строки БД — без повторной валидации инварианта (`02` §2.2). */
+  /** Без повторной валидации — строка уже персистентна. */
   static restore(snapshot: NotificationTemplateSnapshot): NotificationTemplate {
     return new NotificationTemplate(snapshot)
   }
@@ -130,12 +100,6 @@ export class NotificationTemplate {
     return this.snapshot.locale
   }
 
-  /**
-   * Рендер: сначала проверяет ВСЕ поля `variablesSchema.required` присутствуют в `variables`
-   * (SRS-ADM-054 «ДО подстановки»), затем подставляет плейсхолдеры в `body`/`subject`.
-   * Бросает `MissingTemplateVariableError` вместо частичного рендера — либо полный успех, либо
-   * явная ошибка ДО отправки (критерий приёмки №4 тикета).
-   */
   render(variables: Readonly<Record<string, string>>): RenderedNotification {
     for (const name of this.snapshot.variablesSchema.required) {
       if (variables[name] === undefined) {

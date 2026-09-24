@@ -1,4 +1,3 @@
-/** Шаблоны `order.courier_assigned` (SRS-ADM-052, `CourierAssignedEvent`). Каналы: telegram → sms → web_push + in_app. */
 import { buildNotificationTemplateRows } from '../build-rows.js'
 import type { NotificationTemplateSeedRow } from '../types.js'
 

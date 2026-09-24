@@ -30,9 +30,7 @@
  * На этом тикете добавлен `ListOwnNotificationsUseCase` и `NotificationsFeedController` для
  * `GET /api/v1/notifications` (DTJ-372).
  *
- * DTJ-369 (EP-16): добавлен `NOTIFICATION_TEMPLATES_REPOSITORY_PORT` → `NotificationTemplatesRepository`
- * (реальная Drizzle-реализация поверх `notification_templates`, миграция `0049_notification_templates.sql`) —
- * читается диспетчером `DTJ-370` (следующий тикет, использует ту же модуль-область видимости).
+ * DTJ-369: добавлен `NOTIFICATION_TEMPLATES_REPOSITORY_PORT` → `NotificationTemplatesRepository`.
  */
 import { Module } from '@nestjs/common'
 import { AuthModule } from '@/modules/auth/auth.module.js'

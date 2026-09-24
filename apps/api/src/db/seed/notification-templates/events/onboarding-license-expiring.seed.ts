@@ -1,4 +1,3 @@
-/** Шаблоны `onboarding.license_expiring` (SRS-ADM-052, `LicenseExpiringSoonEvent`, получатель — `pharmacy_admin`). Каналы: telegram → sms (daysRemaining<=3) → web_push + in_app. */
 import { buildNotificationTemplateRows } from '../build-rows.js'
 import type { NotificationTemplateSeedRow } from '../types.js'
 
