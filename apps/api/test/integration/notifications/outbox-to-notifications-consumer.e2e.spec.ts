@@ -1,6 +1,7 @@
 /**
- * Реальный BullMQ+Postgres. АС1: одно событие, обработанное `consumer.process()` дважды (redelivery),
+ * Реальный BullMQ+Postgres. АС1: одно событие, обработанное `consumer.handle()` дважды (redelivery),
  * даёт ровно одну строку `notifications`. АС5: `order.courier_assigned` — две записи (customer+courier).
+ * Consumer сам не слушает очередь — job публикуется конвертом DomainEventEnvelope, поднимается DomainEventsModule.
  */
 import { generateKeyPairSync, randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -8,6 +9,7 @@ import { Test, type TestingModule } from '@nestjs/testing'
 import IORedis from 'ioredis'
 import { Queue } from 'bullmq'
 import { Pool } from 'pg'
+import type { DomainEventEnvelope } from '@dorutj/contracts'
 import type { OutboxToNotificationsConsumer } from '@/modules/notifications/infrastructure/consumers/outbox-to-notifications.consumer.js'
 
 const TEST_DATABASE_URL = process.env.NOTIFICATIONS_TEST_DATABASE_URL ?? process.env.DATABASE_URL ?? 'postgres://test:test@localhost:5432/dorutj_test'
@@ -107,6 +109,17 @@ async function seedUser(pool: Pool, input: SeedUserInput): Promise<string> {
   return userId
 }
 
+interface EnvelopeInput {
+  readonly eventId: string
+  readonly eventType: string
+  readonly tenantId: string
+  readonly payload: Record<string, unknown>
+}
+
+function buildEnvelope(input: EnvelopeInput): DomainEventEnvelope {
+  return { ...input, aggregateType: 'order', aggregateId: randomUUID(), occurredAt: new Date().toISOString() }
+}
+
 async function seedInAppTemplate(pool: Pool, eventType: string): Promise<void> {
   await pool.query(
     `INSERT INTO notification_templates (event_type, channel, locale, subject, body, variables_schema)
@@ -131,13 +144,14 @@ describe.skipIf(!postgresAvailable || !redisAvailable)('OutboxToNotificationsCon
     const { DatabaseModule } = await import('@/infrastructure/database/database.module.js')
     const { RedisModule } = await import('@/infrastructure/redis/redis.module.js')
     const { IdempotencyModule } = await import('@/common/idempotency/idempotency.module.js')
+    const { DomainEventsModule } = await import('@/common/events/domain-events.module.js')
     const { NotificationsModule } = await import('@/modules/notifications/notifications.module.js')
     const { OutboxToNotificationsConsumer: ConsumerClass } = await import(
       '@/modules/notifications/infrastructure/consumers/outbox-to-notifications.consumer.js'
     )
 
     moduleRef = await Test.createTestingModule({
-      imports: [AppConfigModule, LoggerModule, SharedKernelModule, DatabaseModule, RedisModule, IdempotencyModule, NotificationsModule],
+      imports: [AppConfigModule, LoggerModule, SharedKernelModule, DatabaseModule, RedisModule, IdempotencyModule, DomainEventsModule, NotificationsModule],
     }).compile()
     await moduleRef.init()
 
@@ -154,16 +168,21 @@ describe.skipIf(!postgresAvailable || !redisAvailable)('OutboxToNotificationsCon
   })
 
   it(
-    'АС1/TC-ADM-022: одно событие обработано consumer.process() дважды (redelivery того же Job) → ОДНА строка notifications на user×channel',
+    'АС1/TC-ADM-022: одно событие обработано consumer.handle() дважды (redelivery того же Job) → ОДНА строка notifications на user×channel',
     async () => {
       const { tenantId } = await seedTenant(pool, 'DTJ-370 e2e Brand')
       const userId = await seedUser(pool, { tenantId, role: 'customer', telegramChatId: 111222333n })
       await seedInAppTemplate(pool, 'order.paid')
 
       const eventId = randomUUID()
-      const jobData = { recipients: { customer: userId }, variables: { orderNumber: '42' } }
+      const envelope = buildEnvelope({
+        eventId,
+        eventType: 'order.paid',
+        tenantId,
+        payload: { recipients: { customer: userId }, variables: { orderNumber: '42' } },
+      })
 
-      await domainEventsQueue.add('order.paid', jobData, { jobId: eventId })
+      await domainEventsQueue.add('order.paid', envelope, { jobId: eventId })
 
       await expect
         .poll(
@@ -176,7 +195,7 @@ describe.skipIf(!postgresAvailable || !redisAvailable)('OutboxToNotificationsCon
         .toBe(1)
 
       // redelivery того же job'а — processed_events guard обязан заблокировать повторную обработку.
-      await consumer.process({ id: eventId, name: 'order.paid', data: jobData } as unknown as Parameters<OutboxToNotificationsConsumer['process']>[0])
+      await consumer.handle(envelope)
 
       const finalCount = await pool.query<{ n: number }>(
         `SELECT COUNT(*)::int AS n FROM notifications WHERE user_id = $1 AND channel = 'in_app' AND source_event_id = $2`,
@@ -196,8 +215,13 @@ describe.skipIf(!postgresAvailable || !redisAvailable)('OutboxToNotificationsCon
       await seedInAppTemplate(pool, 'order.courier_assigned')
 
       const eventId = randomUUID()
-      const jobData = { recipients: { customer: customerId, courier: courierId }, variables: { orderNumber: '43' } }
-      await domainEventsQueue.add('order.courier_assigned', jobData, { jobId: eventId })
+      const envelope = buildEnvelope({
+        eventId,
+        eventType: 'order.courier_assigned',
+        tenantId,
+        payload: { recipients: { customer: customerId, courier: courierId }, variables: { orderNumber: '43' } },
+      })
+      await domainEventsQueue.add('order.courier_assigned', envelope, { jobId: eventId })
 
       await expect
         .poll(

@@ -6,10 +6,8 @@
  * кросс-суитная связь между файлами РАЗНЫХ исполнителей — источник хрупкости при параллельной
  * работе, тот же класс необходимого дублирования, что `drizzle-tx.util.ts` этого тикета).
  *
- * `imports: [OrdersModule]` — ДОСТАТОЧНО: `OrdersModule` теперь `@Global()` (`orders.module.ts`,
- * «РЕШЕНО (DTJ-242)») и САМ импортирует `PaymentsModule` (DTJ-227/241) — оба модуля целиком
- * попадают в граф ОДНИМ импортом, `PaymentsWebhookController`/`HandlePaymentPaymentWebhookUseCase`
- * резолвятся без отдельного `imports: [PaymentsModule]`.
+ * `OrdersModule` (`@Global()`) сам импортирует `PaymentsModule` — оба целиком попадают в граф
+ * одним импортом. `DomainEventsModule` — отдельно, `PROCESSED_EVENTS_PORT` теперь общий.
  *
  * `rawBody: true` — ЕДИНСТВЕННОЕ отличие от `orders`-харнесса: `PaymentsWebhookController`
  * читает `request.rawBody` (см. JSDoc контроллера/`main.ts`) — без этого флага здесь HMAC-тесты
@@ -30,6 +28,7 @@ import { SharedKernelModule } from '@/shared-kernel/shared-kernel.module.js'
 import { LoggerModule } from '@/common/logging/logger.module.js'
 import { AuditLogModule } from '@/common/audit/audit-log.module.js'
 import { IdempotencyModule } from '@/common/idempotency/idempotency.module.js'
+import { DomainEventsModule } from '@/common/events/domain-events.module.js'
 import { RequestContext } from '@/common/context/request-context.js'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { REDIS_CLIENT } from '@/infrastructure/redis/redis.token.js'
@@ -130,7 +129,7 @@ export interface TestApp {
 export async function createTestApp(): Promise<TestApp> {
   applyTestEnv()
   const moduleRef = await Test.createTestingModule({
-    imports: [SharedKernelModule, LoggerModule, IdempotencyModule, AuditLogModule, OrdersModule],
+    imports: [SharedKernelModule, LoggerModule, IdempotencyModule, AuditLogModule, DomainEventsModule, OrdersModule],
   }).compile()
   const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), { rawBody: true })
   const config = app.get(AppConfigService)

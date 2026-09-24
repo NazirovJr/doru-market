@@ -42,6 +42,7 @@ import { OrdersModule } from '@/modules/orders/orders.module.js'
 import { SharedKernelModule } from '@/shared-kernel/shared-kernel.module.js'
 import { LoggerModule } from '@/common/logging/logger.module.js'
 import { IdempotencyModule } from '@/common/idempotency/idempotency.module.js'
+import { DomainEventsModule } from '@/common/events/domain-events.module.js'
 import { TenantContext } from '@/common/context/tenant-context.js'
 import { RequestContext } from '@/common/context/request-context.js'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
@@ -136,7 +137,7 @@ const GUEST_SLUG = 'test-payments-ledger-guest'
 export async function createTestApp(): Promise<TestApp> {
   applyTestEnv()
   const moduleRef = await Test.createTestingModule({
-    imports: [SharedKernelModule, LoggerModule, IdempotencyModule, OrdersModule],
+    imports: [SharedKernelModule, LoggerModule, IdempotencyModule, DomainEventsModule, OrdersModule],
   }).compile()
   const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter())
   const config = app.get(AppConfigService)

@@ -1,24 +1,15 @@
-/**
- * `DrizzleProcessedEventsRepository` (EP-10, DTJ-244) — реализация `ProcessedEventsPort` поверх
- * ОБЩЕЙ `processed_events` (EP-01, `db/schema/processed-events.schema.ts`) — таблица уже
- * существует, этот файл лишь первый потребитель СО СТОРОНЫ `payments`.
- */
 import { Inject, Injectable } from '@nestjs/common'
 import { processedEvents } from '@/db/schema/processed-events.schema.js'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
-import {
-  PROCESSED_EVENTS_PORT,
-  type PaymentsUnitOfWorkTxOpaque,
-  type ProcessedEventsPort,
-} from '@/modules/payments/application/ports/processed-events.port.js'
-import { resolveDrizzleClient } from '../drizzle-tx.util.js'
+import { PROCESSED_EVENTS_PORT, type ProcessedEventsPort } from './processed-events.port.js'
 
+// Единственная реализация — раньше было три копии (payments/returns/notifications), консолидировано.
 @Injectable()
 export class DrizzleProcessedEventsRepository implements ProcessedEventsPort {
   public constructor(@Inject(DRIZZLE_DB) private readonly db: DrizzleDb) {}
 
-  public async markProcessed(consumerName: string, eventId: string, tx?: PaymentsUnitOfWorkTxOpaque): Promise<boolean> {
-    const client = resolveDrizzleClient(this.db, tx)
+  public async markProcessed(consumerName: string, eventId: string, tx?: unknown): Promise<boolean> {
+    const client = (tx ?? this.db) as DrizzleDb
     const inserted = await client
       .insert(processedEvents)
       .values({ consumerName, eventId })

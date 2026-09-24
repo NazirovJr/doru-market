@@ -7,7 +7,7 @@ import type { EscrowLedgerRepository } from '@/modules/payments/application/port
 import type { PaymentsOrderSnapshot, PaymentsOrdersPort, PaymentsUnitOfWorkTx } from '@/modules/payments/application/ports/orders-facade.port.js'
 import type { PaymentsUnitOfWorkPort } from '@/modules/payments/application/ports/payments-unit-of-work.port.js'
 import type { PaymentsTenancyPort, PaymentsTenantSettings } from '@/modules/payments/application/ports/tenancy-facade.port.js'
-import type { ProcessedEventsPort } from '@/modules/payments/application/ports/processed-events.port.js'
+import type { ProcessedEventsPort } from '@/common/events/processed-events.port.js'
 import type { PayoutScheduleRepository } from '@/modules/payments/application/ports/payout-schedule-repository.port.js'
 import { CaptureEscrowUseCase, type CaptureEscrowCommand } from './capture-escrow.use-case.js'
 
