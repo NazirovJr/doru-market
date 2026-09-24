@@ -1,4 +1,10 @@
-/** Матрица ниже — независимая копия SRS-ADM-052, не импортирована из сида: иначе одна и та же ошибка автора осталась бы незамеченной. */
+/**
+ * Матрица (event_type, channels) ниже — теперь ПЕРЕИСПОЛЬЗУЕТ единственный источник
+ * `notification-event-matrix.ts` (DTJ-370), а НЕ независимый литерал: DTJ-370 сделал его
+ * общим файлом, устранив риск рассинхронизации (DTJ-369 «Риски»). Независимость сохраняется
+ * там, где она содержательна — НЕ импортирована из СИДА (`NOTIFICATION_TEMPLATE_SEED_ROWS`):
+ * иначе одна и та же ошибка автора шаблонов осталась бы незамеченной.
+ */
 import { describe, expect, it } from 'vitest'
 // eslint-disable-next-line no-restricted-imports -- tests/arch без алиаса @/
 import {
@@ -8,26 +14,15 @@ import {
   type NotificationEventChannelMatrixEntry,
   type NotificationTemplateSeedRow,
 } from '../../apps/api/src/db/seed/notification-templates/index.js'
+// eslint-disable-next-line no-restricted-imports -- tests/arch без алиаса @/
+import { NOTIFICATION_EVENT_MATRIX } from '../../apps/api/src/modules/notifications/application/notification-event-matrix.js'
 
 const LOCALES = ['tj', 'ru', 'en'] as const
 
-const EVENT_CHANNEL_MATRIX: readonly NotificationEventChannelMatrixEntry[] = [
-  { eventType: 'order.paid', channels: ['telegram', 'sms', 'web_push', 'in_app'] },
-  { eventType: 'order.processing_started', channels: ['telegram', 'web_push', 'in_app'] },
-  { eventType: 'order.courier_assigned', channels: ['telegram', 'sms', 'web_push', 'in_app'] },
-  { eventType: 'order.delivered', channels: ['telegram', 'sms', 'in_app'] },
-  { eventType: 'order.cancelled', channels: ['telegram', 'sms', 'web_push', 'in_app'] },
-  { eventType: 'order.refunded', channels: ['telegram', 'sms', 'in_app'] },
-  { eventType: 'payout.status_changed', channels: ['telegram', 'web_push', 'in_app'] },
-  { eventType: 'prescription.needs_clarification', channels: ['telegram', 'web_push', 'in_app'] },
-  { eventType: 'prescription.decision', channels: ['telegram', 'in_app'] },
-  { eventType: 'inventory.sync_errors', channels: ['telegram', 'web_push', 'in_app'] },
-  { eventType: 'moderation.queue_digest', channels: ['telegram', 'in_app'] },
-  { eventType: 'onboarding.license_expiring', channels: ['telegram', 'sms', 'web_push', 'in_app'] },
-  { eventType: 'onboarding.suspended', channels: ['telegram', 'sms', 'in_app'] },
-  { eventType: 'ops.sla_breached', channels: ['web_push', 'in_app'] },
-  { eventType: 'billing.invoice_overdue', channels: ['telegram', 'sms', 'in_app'] },
-]
+const EVENT_CHANNEL_MATRIX: readonly NotificationEventChannelMatrixEntry[] = NOTIFICATION_EVENT_MATRIX.map((entry) => ({
+  eventType: entry.eventType,
+  channels: entry.channels,
+}))
 
 describe('notification_templates — полнота матрицы SRS-ADM-052 (DTJ-369, TC-ADM-026)', () => {
   it('матрица содержит ровно 15 event_type (сверка с «Что сделать» тикета)', () => {

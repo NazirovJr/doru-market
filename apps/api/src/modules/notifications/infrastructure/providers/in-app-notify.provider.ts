@@ -20,6 +20,7 @@ import {
 import {
   type NotificationChannel,
   type NotifyProviderPort,
+  type NotifySendContext,
   type NotifySendResult,
   type RenderedNotificationMessage,
 } from '@/modules/notifications/application/ports/notify-provider.port.js'
@@ -35,19 +36,29 @@ export class InAppNotifyProvider implements NotifyProviderPort {
     @Inject(NOTIFICATIONS_REPOSITORY_PORT) private readonly notificationsRepository: NotificationsRepositoryPort,
   ) {}
 
-  public async send(userId: string, _channel: NotificationChannel, message: RenderedNotificationMessage): Promise<NotifySendResult> {
+  // eslint-disable-next-line max-params -- сигнатура интерфейса NotifyProviderPort.send() (DTJ-368, расширена DTJ-370 контекстом) — реализация обязана совпадать с портом.
+  public async send(
+    userId: string,
+    _channel: NotificationChannel,
+    message: RenderedNotificationMessage,
+    context?: NotifySendContext,
+  ): Promise<NotifySendResult> {
     const profile = await this.identityFacade.getRecipientProfile(userId)
     if (profile === null) {
       this.logger.warn(`in-app-notify: пользователь userId=${userId} не найден — запись не создана.`)
       return { success: false }
     }
 
+    // DTJ-370: sourceEventId — ключ идемпотентности (SRS-ADM-057). create() перехватывает
+    // UNIQUE-конфликт как no-op, возвращая существующую строку — никогда не бросает сюда.
     const record = await this.notificationsRepository.create({
       userId,
       tenantId: profile.tenantId,
       channel: IN_APP_CHANNEL,
       status: 'sent',
       payload: message.subject === undefined ? { body: message.body } : { subject: message.subject, body: message.body },
+      eventType: context?.eventType,
+      sourceEventId: context?.sourceEventId,
     })
 
     return { success: true, providerMessageId: record.id }

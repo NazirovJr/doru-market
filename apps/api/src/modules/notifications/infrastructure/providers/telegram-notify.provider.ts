@@ -32,6 +32,7 @@ import { IDENTITY_FACADE_PORT, type IdentityFacadePort } from '@/modules/notific
 import {
   type NotificationChannel,
   type NotifyProviderPort,
+  type NotifySendContext,
   type NotifySendResult,
   type RenderedNotificationMessage,
 } from '@/modules/notifications/application/ports/notify-provider.port.js'
@@ -74,10 +75,15 @@ export class TelegramNotifyProvider implements NotifyProviderPort {
     @Inject(AppConfigService) private readonly config: AppConfigService,
   ) {}
 
+  // eslint-disable-next-line max-params -- сигнатура интерфейса NotifyProviderPort.send() (DTJ-368, расширена DTJ-370 контекстом) — реализация обязана совпадать с портом.
   public async send(
     userId: string,
     channel: NotificationChannel,
     message: RenderedNotificationMessage,
+    // DTJ-370: `NotifyProviderPort.send()` расширен `context` для `InAppNotifyProvider` —
+    // Telegram-каналу sourceEventId/eventType не нужен (dedup для внешних каналов — на уровне
+    // строки, которую создаёт `DispatchNotificationUseCase` ДО постановки job'а, не здесь).
+    _context?: NotifySendContext,
   ): Promise<NotifySendResult> {
     const profile = await this.identityFacade.getRecipientProfile(userId)
     const chatId = profile?.telegramChatId ?? null

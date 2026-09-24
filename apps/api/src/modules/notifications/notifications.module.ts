@@ -31,35 +31,49 @@
  * `GET /api/v1/notifications` (DTJ-372).
  *
  * DTJ-369: добавлен `NOTIFICATION_TEMPLATES_REPOSITORY_PORT` → `NotificationTemplatesRepository`.
+ *
+ * DTJ-370: `NOTIFICATIONS_REPOSITORY_PORT` теперь связан с реальным `NotificationsRepository`
+ * (заглушка `UnimplementedNotificationsRepositoryAdapter` удалена — C8, не оставлять мёртвый код
+ * после замены). Добавлены `DispatchNotificationUseCase` и `NOTIFICATION_DISPATCH_QUEUE_PORT` →
+ * `BullmqNotificationDispatchQueueAdapter`. `imports: [..., TenancyModule]` — тот же приём, что
+ * `orders.module.ts` (DTJ-228/229): `TENANT_SETTINGS_REPOSITORY` нужен для `brandName`
+ * (SRS-ADM-056), публичный фасад `modules/tenancy`, не гостевая правка.
  */
 import { Module } from '@nestjs/common'
 import { AuthModule } from '@/modules/auth/auth.module.js'
+import { TenancyModule } from '@/modules/tenancy/tenancy.module.js'
 import { IDENTITY_FACADE_PORT } from './application/ports/identity-facade.port.js'
 import { NOTIFICATIONS_REPOSITORY_PORT } from './application/ports/notifications-repository.port.js'
 import { NOTIFY_PROVIDER_IN_APP, NOTIFY_PROVIDER_TELEGRAM } from './application/ports/notify-provider.port.js'
 import { NOTIFICATION_TEMPLATES_REPOSITORY_PORT } from './application/ports/notification-templates-repository.port.js'
+import { NOTIFICATION_DISPATCH_QUEUE_PORT } from './application/ports/notification-dispatch-queue.port.js'
 import { UsersRepositoryIdentityFacadeAdapter } from './infrastructure/adapters/users-repository-identity-facade.adapter.js'
-import { UnimplementedNotificationsRepositoryAdapter } from './infrastructure/adapters/unimplemented-notifications-repository.adapter.js'
 import { TelegramNotifyProvider } from './infrastructure/providers/telegram-notify.provider.js'
 import { InAppNotifyProvider } from './infrastructure/providers/in-app-notify.provider.js'
 import { NotificationTemplatesRepository } from './infrastructure/repositories/notification-templates.repository.js'
+import { NotificationsRepository } from './infrastructure/repositories/notifications.repository.js'
+import { BullmqNotificationDispatchQueueAdapter } from './infrastructure/queues/bullmq-notification-dispatch-queue.adapter.js'
 import { ListOwnNotificationsUseCase } from './application/use-cases/list-own-notifications.use-case.js'
+import { DispatchNotificationUseCase } from './application/use-cases/dispatch-notification.use-case.js'
 import { NotificationsFeedController } from './presentation/notifications-feed.controller.js'
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, TenancyModule],
   providers: [
     { provide: IDENTITY_FACADE_PORT, useClass: UsersRepositoryIdentityFacadeAdapter },
-    { provide: NOTIFICATIONS_REPOSITORY_PORT, useClass: UnimplementedNotificationsRepositoryAdapter },
+    { provide: NOTIFICATIONS_REPOSITORY_PORT, useClass: NotificationsRepository },
     { provide: NOTIFY_PROVIDER_TELEGRAM, useClass: TelegramNotifyProvider },
     { provide: NOTIFY_PROVIDER_IN_APP, useClass: InAppNotifyProvider },
     { provide: NOTIFICATION_TEMPLATES_REPOSITORY_PORT, useClass: NotificationTemplatesRepository },
+    { provide: NOTIFICATION_DISPATCH_QUEUE_PORT, useClass: BullmqNotificationDispatchQueueAdapter },
     { provide: ListOwnNotificationsUseCase, useClass: ListOwnNotificationsUseCase },
+    { provide: DispatchNotificationUseCase, useClass: DispatchNotificationUseCase },
     UsersRepositoryIdentityFacadeAdapter,
-    UnimplementedNotificationsRepositoryAdapter,
+    NotificationsRepository,
     TelegramNotifyProvider,
     InAppNotifyProvider,
     NotificationTemplatesRepository,
+    BullmqNotificationDispatchQueueAdapter,
   ],
   exports: [
     IDENTITY_FACADE_PORT,
@@ -67,6 +81,7 @@ import { NotificationsFeedController } from './presentation/notifications-feed.c
     NOTIFY_PROVIDER_TELEGRAM,
     NOTIFY_PROVIDER_IN_APP,
     NOTIFICATION_TEMPLATES_REPOSITORY_PORT,
+    DispatchNotificationUseCase,
   ],
   controllers: [NotificationsFeedController],
 })

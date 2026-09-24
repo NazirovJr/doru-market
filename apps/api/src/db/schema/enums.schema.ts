@@ -358,3 +358,12 @@ export const notificationChannelEnum = pgEnum('notification_channel', [
   'email',
   'in_app',
 ])
+
+/** `notifications.status` (DTJ-370, SRS-ADM-057/060/084, `docs/spec/11-database-schema.md` §44). */
+export const notificationStatusEnum = pgEnum('notification_status', [
+  'queued',
+  'sent',
+  'delivered',
+  'failed',
+  'suppressed_rate_limit',
+])
