@@ -3,25 +3,7 @@ import { useT } from '@dorutj/i18n'
 import { useMedicineSuggest, MIN_MEDICINE_QUERY_LENGTH, type MedicineSuggestionItem } from '@/features/inventory-manual/api/use-medicine-suggest'
 import { formatMedicineLabel } from '@/features/inventory-manual/model/manual-entry-form.model'
 
-/**
- * `MedicineAutocomplete.tsx` (DTJ-167, EP-05, SRS-INV-015) — каталожный автокомплит выбора
- * медикамента для точечного редактирования остатка. Локальная реализация (DTJ-167 «Что сделать»
- * п.1: «переиспользовать, если уже есть в `packages/ui`/`entities`, создать здесь ТОЛЬКО если
- * ничего подходящего не существует к волне 4») — `packages/ui/src/index.ts` пуст на момент этого
- * тикета (заглушка EP-18), `entities`-слоя в `apps/pharmacy` не существует вовсе (DTJ-166 его не
- * заводил) — переиспользовать нечего, см. отчёт тикета, ДОПУЩЕНИЯ.
- *
- * Debounce 200мс (DTJ-167 «Что сделать» п.1, в диапазоне `SRS-DB-019` 150-300мс) — простой
- * `useEffect`+`setTimeout` внутри компонента (не отдельный хук `use-debounced-value.ts`, как в
- * `apps/web/src/features/search`): использован ровно один раз, вынесение в отдельный файл добавило
- * бы файл вне `files_owned` без выигрыша в переиспользовании.
- *
- * `value`/`onChange` — управляемый снаружи (`PointEditForm.tsx`) выбор: пока `value === null`,
- * поле ведёт себя как обычный автокомплит (дропдаун открыт при фокусе/вводе); как только
- * медикамент выбран, поле показывает его подпись и дропдаун/сеть больше не активны, пока
- * `PointEditForm` не сбросит `value` в `null` (сброс формы после успешной отправки — через
- * `key`, см. `PointEditForm.tsx`, ремаунт вместо ручной синхронизации внутреннего текста).
- */
+/** Выбор управляется снаружи: при `value !== null` дропдаун и запросы выключены до сброса через `key`. */
 
 const AUTOCOMPLETE_DEBOUNCE_MS = 200
 /** Задержка перед закрытием дропдауна по `blur` — даёт `onMouseDown` опции сработать раньше `blur` инпута. */

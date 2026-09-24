@@ -12,25 +12,7 @@ import {
 } from '@/features/inventory-manual/model/manual-entry-form.model'
 import { MedicineAutocomplete } from './MedicineAutocomplete'
 
-/**
- * `PointEditForm.tsx` (DTJ-167, EP-05, SRS-INV-015/016) — точечное редактирование остатка:
- * выбор медикамента (`MedicineAutocomplete`) + цена/остаток/срок годности/партия + «Сохранить»
- * (тап-зона `MIN_TAP_ZONE_PX=56` — кабинет аптеки, `32-design-reference.md` строка 32, п.4).
- *
- * `Toast` (успех/ошибка) и «Товара нет в списке» — локальные, НЕ импортированы из `packages/ui`:
- * пакет пуст (`packages/ui/src/index.ts`, заглушка EP-18) на момент этого тикета, тот же приём,
- * что временный локальный `Switch` в `ReturnChecklistForm.tsx` (DTJ-277) — TODO(EP-18): перенести
- * оба в `packages/ui`, когда дизайн-система перестанет быть заглушкой.
- *
- * «Товара нет в списке» (SRS-INV-016) — заглушка «Функция появится позже»: эндпоинт
- * `catalog`/`moderation` для создания черновика позиции ВНЕ периметра DTJ-167 (см. JSDoc
- * `InventoryManualEntryController` — «фронт DTJ-167 не должен переиспользовать этот эндпоинт»).
- * Технический долг зафиксирован в отчёте тикета (риски DTJ-167).
- *
- * Сброс формы после успешной отправки — через `formKey` (ремаунт `MedicineAutocomplete`), не
- * ручную синхронизацию его внутреннего текста: проще и надёжнее, см. JSDoc `MedicineAutocomplete`.
- */
-
+/** Тап-зона кабинета аптеки, `32-design-reference.md`. */
 const MIN_TAP_ZONE_PX = 56
 const TOAST_SUCCESS_AUTO_CLOSE_MS = 4000
 
@@ -40,6 +22,7 @@ function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 'YYYY-MM-DD'.length)
 }
 
+// TODO(DTJ-406): заменить на Toast из packages/ui, когда он появится.
 const Toast = ({ state, onClose }: { readonly state: ToastState; readonly onClose: () => void }): ReactElement | null => {
   const { t } = useT('tj')
 
@@ -101,6 +84,7 @@ const INPUT_CLASS_NAME = 'rounded-md border border-line bg-surface px-3 py-2 tex
 
 export const PointEditForm = (): ReactElement => {
   const { t } = useT('tj')
+  // Смена key ремаунтит автокомплит — проще, чем синхронизировать его внутренний текст.
   const [formKey, setFormKey] = useState(0)
   const [medicine, setMedicine] = useState<MedicineSuggestionItem | null>(null)
   const [form, setForm] = useState<PointEditFormState>(INITIAL_POINT_EDIT_STATE)
@@ -206,6 +190,7 @@ export const PointEditForm = (): ReactElement => {
         />
       </FormField>
 
+      {/* Заглушка: создание черновика позиции в каталоге — вне DTJ-167. */}
       <div>
         <button
           type="button"
