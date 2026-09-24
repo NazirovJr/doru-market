@@ -8,6 +8,12 @@ export const SENSITIVE_FIELD_NAMES = [
   'accessToken',
 ] as const
 
+/** `*` в pino redact-путях покрывает ровно один уровень: путь на поле и на один уровень вложенности. */
+export const SENSITIVE_FIELD_REDACT_PATHS: readonly string[] = SENSITIVE_FIELD_NAMES.flatMap((field) => [
+  field,
+  `*.${field}`,
+])
+
 const REDACTED_MARKER = '[REDACTED]'
 
 /** Рекурсивно на любую глубину; значение заменяется маркером, ключ сохраняется. */

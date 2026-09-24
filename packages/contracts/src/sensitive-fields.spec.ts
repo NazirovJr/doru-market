@@ -1,6 +1,6 @@
 /** Таблица кейсов: верхний уровень, глубокая вложенность, массив, иммутабельность входа. */
 import { describe, expect, it } from 'vitest'
-import { SENSITIVE_FIELD_NAMES, maskSensitiveFields } from './sensitive-fields.js'
+import { SENSITIVE_FIELD_NAMES, SENSITIVE_FIELD_REDACT_PATHS, maskSensitiveFields } from './sensitive-fields.js'
 
 const REDACTED = '[REDACTED]'
 
@@ -9,6 +9,21 @@ describe('SENSITIVE_FIELD_NAMES', () => {
     expect(SENSITIVE_FIELD_NAMES).toEqual(
       expect.arrayContaining(['apiKey', 'hmacSecret', 'codeHash', 'password', 'refreshToken', 'accessToken']),
     )
+  })
+})
+
+describe('SENSITIVE_FIELD_REDACT_PATHS', () => {
+  const paths = SENSITIVE_FIELD_REDACT_PATHS
+
+  it('содержит путь верхнего уровня и путь на один уровень вложенности для каждого поля', () => {
+    for (const field of SENSITIVE_FIELD_NAMES) {
+      expect(paths).toContain(field)
+      expect(paths).toContain(`*.${field}`)
+    }
+  })
+
+  it('ровно две записи на каждое поле', () => {
+    expect(paths).toHaveLength(SENSITIVE_FIELD_NAMES.length * 2)
   })
 })
 
