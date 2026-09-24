@@ -75,6 +75,7 @@ describe('OrdersModule — DI-резолвинг целиком (реальны�
     // AppModule целиком — @Global() распространяется только на модули, реально входящие в ТЕКУЩИЙ
     // скомпилированный граф, поэтому его нужно явно перечислить здесь тоже.
     const { AuditLogModule } = await import('@/common/audit/audit-log.module.js')
+    const { DomainEventsModule } = await import('@/common/events/domain-events.module.js')
     const { OrdersModule } = await import('./orders.module.js')
 
     const moduleRef = await Test.createTestingModule({
@@ -86,6 +87,7 @@ describe('OrdersModule — DI-резолвинг целиком (реальны�
         RedisModule,
         IdempotencyModule,
         AuditLogModule,
+        DomainEventsModule,
         OrdersModule,
       ],
     }).compile()

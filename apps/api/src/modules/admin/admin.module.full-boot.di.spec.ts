@@ -80,6 +80,7 @@ describe('AdminModule — DI-резолвинг целиком (реальный
     // — @Global() в реальном AppModule, но этот тест поднимает минимальный граф, не AppModule
     // целиком, поэтому его нужно перечислить явно (см. JSDoc orders.module.full-boot.di.spec.ts).
     const { AuditLogModule } = await import('@/common/audit/audit-log.module.js')
+    const { DomainEventsModule } = await import('@/common/events/domain-events.module.js')
     const { AdminModule } = await import('./admin.module.js')
     const { ONBOARDING_FACADE_PORT } = await import('./application/ports/onboarding-facade.port.js')
     const { ORDERS_FACADE_PORT } = await import('./application/ports/orders-facade.port.js')
@@ -97,6 +98,7 @@ describe('AdminModule — DI-резолвинг целиком (реальный
         RedisModule,
         IdempotencyModule,
         AuditLogModule,
+        DomainEventsModule,
         AdminModule,
       ],
     }).compile()

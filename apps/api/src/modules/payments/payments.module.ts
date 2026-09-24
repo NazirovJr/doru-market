@@ -192,7 +192,6 @@ import { LatePaymentRefundService } from './application/services/late-payment-re
 // DTJ-244 — CaptureEscrowUseCase/OrderDeliveredSubscriber (см. JSDoc блока providers выше).
 // TenancyModule — PaymentsTenancyAdapter инжектит TENANT_SETTINGS_REPOSITORY (holdPeriodDays).
 import { TenancyModule } from '@/modules/tenancy/tenancy.module.js'
-import { PROCESSED_EVENTS_PORT_PROVIDER } from './infrastructure/repositories/drizzle-processed-events.repository.js'
 import { PAYMENTS_TENANCY_PORT_PROVIDER } from './infrastructure/adapters/payments-tenancy.adapter.js'
 import { CaptureEscrowUseCase } from './application/use-cases/capture-escrow.use-case.js'
 import { OrderDeliveredSubscriber } from './infrastructure/subscribers/order-delivered.subscriber.js'
@@ -369,7 +368,7 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
     SUPPORT_TICKET_PORT_PROVIDER,
     LatePaymentRefundService,
     // DTJ-244 — захват комиссии/выплаты при доставке (см. JSDoc блока providers выше).
-    PROCESSED_EVENTS_PORT_PROVIDER,
+    // PROCESSED_EVENTS_PORT — теперь общий (common/events, DomainEventsModule, @Global()).
     PAYMENTS_TENANCY_PORT_PROVIDER,
     CaptureEscrowUseCase,
     OrderDeliveredSubscriber,

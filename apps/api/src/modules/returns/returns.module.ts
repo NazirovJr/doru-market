@@ -51,6 +51,7 @@ import { AdminOverrideReturnUseCase } from './application/use-cases/admin-overri
 import { RetryReturnTransitUseCase } from './application/use-cases/retry-return-transit.use-case.js'
 import { RefundOnReturnResolvedUseCase } from './application/use-cases/refund-on-return-resolved.use-case.js'
 import { RefundOnReturnResolvedSubscriber } from './application/use-cases/refund-on-return-resolved.subscriber.js'
+import { RefundOnReturnResolvedDomainEventHandler } from './application/use-cases/refund-on-return-resolved.domain-event-handler.js'
 import { RETURNS_REPOSITORY_PROVIDER } from './infrastructure/repositories/drizzle-returns.repository.js'
 import { RETURNS_UNIT_OF_WORK_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-returns-unit-of-work.adapter.js'
 import { RETURNS_OUTBOX_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-returns-outbox.adapter.js'
@@ -58,7 +59,6 @@ import { RETURNS_ORDERS_FACADE_DRIZZLE_PROVIDER } from './infrastructure/adapter
 import { RETURNS_INVENTORY_FACADE_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-returns-inventory-facade.adapter.js'
 import { RETURNS_TENANT_SETTINGS_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-returns-tenant-settings.adapter.js'
 import { RETURNS_SUPPORT_FACADE_PROVIDER } from './infrastructure/adapters/returns-support-facade.adapter.js'
-import { RETURNS_PROCESSED_EVENTS_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-returns-processed-events.adapter.js'
 import { RETURNS_DELIVERY_PORT } from './application/ports/delivery-facade.port.js'
 import { UnimplementedReturnsDeliveryAdapter } from './infrastructure/adapters/unimplemented-returns-delivery-facade.adapter.js'
 import { RETURNS_PAYMENTS_PORT } from './application/ports/payments-facade.port.js'
@@ -77,7 +77,7 @@ import { OrderReturnsController } from './presentation/order-returns.controller.
     RETURNS_INVENTORY_FACADE_DRIZZLE_PROVIDER,
     RETURNS_TENANT_SETTINGS_DRIZZLE_PROVIDER,
     RETURNS_SUPPORT_FACADE_PROVIDER,
-    RETURNS_PROCESSED_EVENTS_DRIZZLE_PROVIDER,
+    // PROCESSED_EVENTS_PORT — теперь общий (common/events, DomainEventsModule, @Global()).
     // TODO(EP-13): заменить на реальный адаптер, когда у `delivery` появится публичный фасад.
     { provide: RETURNS_DELIVERY_PORT, useClass: UnimplementedReturnsDeliveryAdapter },
     // TODO(EP-10): заменить, когда `PaymentsFacade` вырастет refund/adjustment-методами — см.
@@ -91,6 +91,7 @@ import { OrderReturnsController } from './presentation/order-returns.controller.
     RetryReturnTransitUseCase,
     RefundOnReturnResolvedUseCase,
     RefundOnReturnResolvedSubscriber,
+    RefundOnReturnResolvedDomainEventHandler,
   ],
 })
 // NestJS module marker class: Nest требует класс-носитель декоратора @Module, providers

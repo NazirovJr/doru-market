@@ -7,7 +7,7 @@
 /** Период тика релея outbox → domain-events. ASSUMPTION: 2 секунды. */
 export const OUTBOX_POLL_INTERVAL_MS = 2000
 
-/** Размер порции `OutboxReaderPort.readPending()` за один тик. ASSUMPTION. */
+/** Размер порции `OutboxReaderPort.claimPending()` за один тик. ASSUMPTION. */
 export const OUTBOX_RELAY_BATCH_LIMIT = 100
 
 /** Внутренняя служебная очередь BullMQ, тикающая релей — НЕ очередь доменных событий. */
@@ -24,3 +24,6 @@ export const OUTBOX_RELAY_QUEUE = Symbol('OUTBOX_RELAY_QUEUE')
 
 /** DI-токен BullMQ `Queue`, в которую релей публикует доменные события. */
 export const DOMAIN_EVENTS_QUEUE = Symbol('DOMAIN_EVENTS_QUEUE')
+
+/** DI-токен `pg.Pool` для чтения/мутации `outbox` напрямую. */
+export const OUTBOX_RELAY_DB_POOL = Symbol('OUTBOX_RELAY_DB_POOL')

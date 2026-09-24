@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Logger } from 'pino'
 import type { OrderReturnContext, ReturnsOrdersPort } from '../ports/orders-facade.port.js'
 import type { ReturnsPaymentsPort } from '../ports/payments-facade.port.js'
-import type { ReturnsProcessedEventsPort } from '../ports/returns-processed-events.port.js'
+import type { ProcessedEventsPort } from '@/common/events/processed-events.port.js'
 import type { ReturnsUnitOfWorkPort } from '../ports/returns-unit-of-work.port.js'
 import { ReturnFinancialOutcomeResolver } from '../policies/return-financial-outcome.policy.js'
 import { RefundOnReturnResolvedUseCase, type RefundOnReturnResolvedCommand } from './refund-on-return-resolved.use-case.js'
@@ -43,8 +43,8 @@ function makeOrder(overrides: Partial<OrderReturnContext> = {}): OrderReturnCont
 }
 
 function buildHarness(orderOverrides: Partial<OrderReturnContext> = {}) {
-  const markProcessed = vi.fn<ReturnsProcessedEventsPort['markProcessed']>().mockResolvedValue(true)
-  const processedEvents: ReturnsProcessedEventsPort = { markProcessed }
+  const markProcessed = vi.fn<ProcessedEventsPort['markProcessed']>().mockResolvedValue(true)
+  const processedEvents: ProcessedEventsPort = { markProcessed }
   const getOrderForReturn = vi.fn<ReturnsOrdersPort['getOrderForReturn']>().mockResolvedValue(makeOrder(orderOverrides))
   const getCourierIdForUser = vi.fn<ReturnsOrdersPort['getCourierIdForUser']>().mockResolvedValue(null)
   const ordersPort: ReturnsOrdersPort = { getOrderForReturn, getCourierIdForUser }
