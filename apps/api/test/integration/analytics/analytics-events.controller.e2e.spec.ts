@@ -162,6 +162,21 @@ describe.skipIf(!postgresAvailable)('AnalyticsEventsController — Supertest int
     expect(rows.rows.map((row) => row.event_type)).not.toContain('unknown_future_event')
   })
 
+  it('клиентский order_placed — не записан (CTO-возврат: пишет только сервер), остальное событие батча сохранено', async () => {
+    const sessionId = randomUUID()
+    seededSessionIds.push(sessionId)
+    const events = [
+      validEvent({ eventType: 'order_placed', sessionId, savingsDiram: 999_999 }),
+      validEvent({ eventType: 'search_performed', sessionId }),
+    ]
+
+    const res = await postEvents(events)
+
+    expect(res.status).toBe(202)
+    const rows = await pool.query<ProductEventRow>('SELECT event_type FROM product_events WHERE session_id = $1', [sessionId])
+    expect(rows.rows).toEqual([{ event_type: 'search_performed' }])
+  })
+
   it('аутентифицированный customer — user_id заполнен из JWT, не NULL', async () => {
     const userId = await seedUser()
     const token = jwtSigner.sign({ sub: userId, role: 'customer', tenantId: GUEST_TENANT_ID, pharmacyId: null, chainId: null, sessionId: randomUUID() })

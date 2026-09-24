@@ -79,6 +79,24 @@ describe('RecordProductEventsBatchUseCase', () => {
     )
   })
 
+  it('клиентский order_placed — пропущен с warn как неизвестный тип, остальные записаны (CTO-возврат: не накрутить savingsDiram)', async () => {
+    const { useCase, insertBatchMock, logger } = buildHarness()
+    const events = [
+      baseItem({ eventType: 'order_placed', savingsDiram: 999_999n }),
+      baseItem({ eventType: 'search_performed' }),
+    ]
+
+    await useCase.execute(baseCommand({ events }))
+
+    const savedEvents = insertBatchMock.mock.calls[0]?.[0] ?? []
+    expect(savedEvents).toHaveLength(1)
+    expect(savedEvents.map((event) => event.eventType)).not.toContain('order_placed')
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: 'order_placed' }),
+      'analytics_events_batch_item_skipped',
+    )
+  })
+
   it('пустой sessionId у одного элемента — тот же частичный успех, что и неизвестный eventType', async () => {
     const { useCase, insertBatchMock, logger } = buildHarness()
     const events = [baseItem({ sessionId: '' }), baseItem({ eventType: 'analog_shown' })]

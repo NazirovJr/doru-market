@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { ValidationError } from '@dorutj/contracts'
 import { fixedDate } from '@/shared-kernel/testing/fixtures/fixed-date.fixture.js'
-import { PRODUCT_EVENT_TYPES, ProductEvent, type ProductEventCreateCommand } from './product-event.entity.js'
+import {
+  CLIENT_PRODUCT_EVENT_TYPES,
+  PRODUCT_EVENT_TYPES,
+  ProductEvent,
+  isClientProductEventType,
+  type ProductEventCreateCommand,
+} from './product-event.entity.js'
 
 const NOW = fixedDate('2026-09-24T10:00:00Z')
 
@@ -88,5 +94,20 @@ describe('ProductEvent.create()', () => {
       metadata: { source: 'catalog_card' },
       occurredAt: NOW,
     })
+  })
+})
+
+describe('CLIENT_PRODUCT_EVENT_TYPES / isClientProductEventType()', () => {
+  it('order_placed исключён из клиентского набора (DTJ-379: пишет только сервер)', () => {
+    expect(CLIENT_PRODUCT_EVENT_TYPES).not.toContain('order_placed')
+    expect(isClientProductEventType('order_placed')).toBe(false)
+  })
+
+  it.each(CLIENT_PRODUCT_EVENT_TYPES)('eventType="%s" — клиентский тип допустим', (eventType) => {
+    expect(isClientProductEventType(eventType)).toBe(true)
+  })
+
+  it('незнакомый тип — тоже не клиентский', () => {
+    expect(isClientProductEventType('typo_event')).toBe(false)
   })
 })

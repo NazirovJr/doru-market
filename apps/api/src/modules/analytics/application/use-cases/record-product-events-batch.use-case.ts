@@ -6,7 +6,7 @@ import type { Logger } from 'pino'
 import { ValidationError } from '@dorutj/contracts'
 import { PINO_LOGGER } from '@/common/logging/pino-logger.token.js'
 import { CLOCK, type Clock } from '@/shared-kernel/application/ports/clock.port.js'
-import { ProductEvent } from '../../domain/product-event.entity.js'
+import { ProductEvent, isClientProductEventType } from '../../domain/product-event.entity.js'
 import { PRODUCT_EVENTS_REPOSITORY, type ProductEventsRepositoryPort } from '../ports/product-events-repository.port.js'
 
 export interface RecordProductEventsBatchItem {
@@ -45,6 +45,15 @@ export class RecordProductEventsBatchUseCase {
   }
 
   private tryCreate(command: RecordProductEventsBatchCommand, item: RecordProductEventsBatchItem, now: Date): ProductEvent | null {
+    // order_placed от клиента — та же судьба, что неизвестный тип (не 400 на весь батч, АС3):
+    // иначе бот пишет произвольный savingsDiram в накопительную метрику экономии (CTO-возврат).
+    if (!isClientProductEventType(item.eventType)) {
+      this.logger.warn(
+        { tenantId: command.tenantId, eventType: item.eventType, reason: 'not a client-accepted event type' },
+        'analytics_events_batch_item_skipped',
+      )
+      return null
+    }
     try {
       return ProductEvent.create(
         {
