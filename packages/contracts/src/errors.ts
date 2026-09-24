@@ -227,6 +227,9 @@ export enum ErrorCode {
   // ---- Доменные: notification_templates (DTJ-369) ----
   MISSING_TEMPLATE_VARIABLE = 'MISSING_TEMPLATE_VARIABLE', // 500
   INVALID_TEMPLATE_SUBJECT_CHANNEL = 'INVALID_TEMPLATE_SUBJECT_CHANNEL', // 400
+
+  // ---- Доменные: notification_preferences ----
+  CRITICAL_CATEGORY_CANNOT_BE_DISABLED = 'CRITICAL_CATEGORY_CANNOT_BE_DISABLED', // 422
 }
 
 /** HTTP-статус для каждого `ErrorCode` (`AllExceptionsFilter`, DTJ-018 — единственный фильтр приложения). */
@@ -365,4 +368,6 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
 
   [ErrorCode.MISSING_TEMPLATE_VARIABLE]: 500,
   [ErrorCode.INVALID_TEMPLATE_SUBJECT_CHANNEL]: 400,
+
+  [ErrorCode.CRITICAL_CATEGORY_CANNOT_BE_DISABLED]: 422,
 }

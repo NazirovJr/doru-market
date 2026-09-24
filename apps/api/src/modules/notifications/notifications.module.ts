@@ -35,6 +35,9 @@
  * DTJ-370: `NOTIFICATIONS_REPOSITORY_PORT` → реальный `NotificationsRepository`; добавлены
  * `DispatchNotificationUseCase`, `NOTIFICATION_DISPATCH_QUEUE_PORT` и `OutboxToNotificationsConsumer`
  * (DTJ-032: больше не держит свой `Worker` — обработчик общего роутера `common/events`).
+ *
+ * `NOTIFICATION_PREFERENCES_REPOSITORY_PORT` → `NotificationPreferencesRepository`; добавлены
+ * `GetUserPreferencesUseCase`/`UpdateUserPreferencesUseCase` и `NotificationPreferencesController`.
  */
 import { Module } from '@nestjs/common'
 import { AuthModule } from '@/modules/auth/auth.module.js'
@@ -44,16 +47,21 @@ import { NOTIFICATIONS_REPOSITORY_PORT } from './application/ports/notifications
 import { NOTIFY_PROVIDER_IN_APP, NOTIFY_PROVIDER_TELEGRAM } from './application/ports/notify-provider.port.js'
 import { NOTIFICATION_TEMPLATES_REPOSITORY_PORT } from './application/ports/notification-templates-repository.port.js'
 import { NOTIFICATION_DISPATCH_QUEUE_PORT } from './application/ports/notification-dispatch-queue.port.js'
+import { NOTIFICATION_PREFERENCES_REPOSITORY_PORT } from './application/ports/notification-preferences-repository.port.js'
 import { UsersRepositoryIdentityFacadeAdapter } from './infrastructure/adapters/users-repository-identity-facade.adapter.js'
 import { TelegramNotifyProvider } from './infrastructure/providers/telegram-notify.provider.js'
 import { InAppNotifyProvider } from './infrastructure/providers/in-app-notify.provider.js'
 import { NotificationTemplatesRepository } from './infrastructure/repositories/notification-templates.repository.js'
 import { NotificationsRepository } from './infrastructure/repositories/notifications.repository.js'
+import { NotificationPreferencesRepository } from './infrastructure/repositories/notification-preferences.repository.js'
 import { BullmqNotificationDispatchQueueAdapter } from './infrastructure/queues/bullmq-notification-dispatch-queue.adapter.js'
 import { OutboxToNotificationsConsumer } from './infrastructure/consumers/outbox-to-notifications.consumer.js'
 import { ListOwnNotificationsUseCase } from './application/use-cases/list-own-notifications.use-case.js'
 import { DispatchNotificationUseCase } from './application/use-cases/dispatch-notification.use-case.js'
+import { GetUserPreferencesUseCase } from './application/use-cases/get-user-preferences.use-case.js'
+import { UpdateUserPreferencesUseCase } from './application/use-cases/update-user-preferences.use-case.js'
 import { NotificationsFeedController } from './presentation/notifications-feed.controller.js'
+import { NotificationPreferencesController } from './presentation/notification-preferences.controller.js'
 
 @Module({
   imports: [AuthModule, TenancyModule],
@@ -66,11 +74,15 @@ import { NotificationsFeedController } from './presentation/notifications-feed.c
     { provide: NOTIFICATION_DISPATCH_QUEUE_PORT, useClass: BullmqNotificationDispatchQueueAdapter },
     { provide: ListOwnNotificationsUseCase, useClass: ListOwnNotificationsUseCase },
     { provide: DispatchNotificationUseCase, useClass: DispatchNotificationUseCase },
+    { provide: NOTIFICATION_PREFERENCES_REPOSITORY_PORT, useClass: NotificationPreferencesRepository },
+    { provide: GetUserPreferencesUseCase, useClass: GetUserPreferencesUseCase },
+    { provide: UpdateUserPreferencesUseCase, useClass: UpdateUserPreferencesUseCase },
     UsersRepositoryIdentityFacadeAdapter,
     NotificationsRepository,
     TelegramNotifyProvider,
     InAppNotifyProvider,
     NotificationTemplatesRepository,
+    NotificationPreferencesRepository,
     BullmqNotificationDispatchQueueAdapter,
     OutboxToNotificationsConsumer, // PROCESSED_EVENTS_PORT общий, см. common/events.
   ],
@@ -80,9 +92,10 @@ import { NotificationsFeedController } from './presentation/notifications-feed.c
     NOTIFY_PROVIDER_TELEGRAM,
     NOTIFY_PROVIDER_IN_APP,
     NOTIFICATION_TEMPLATES_REPOSITORY_PORT,
+    NOTIFICATION_PREFERENCES_REPOSITORY_PORT,
     DispatchNotificationUseCase,
   ],
-  controllers: [NotificationsFeedController],
+  controllers: [NotificationsFeedController, NotificationPreferencesController],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.
 export class NotificationsModule {}

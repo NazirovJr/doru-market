@@ -321,6 +321,12 @@
       "breakpoints": true
     },
     {
+      "idx": 53,
+      "when": 1700000550000,
+      "tag": "0051_notification_preferences",
+      "breakpoints": true
+    },
+    {
       "idx": 54,
       "when": 1700000560000,
       "tag": "0052_product_events",

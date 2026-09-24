@@ -5,11 +5,21 @@ import type { CreateNotificationInput, NotificationRecord, NotificationsReposito
 import type { NotificationTemplatesRepositoryPort } from '../ports/notification-templates-repository.port.js'
 import type { NotifyProviderPort, NotifySendResult } from '../ports/notify-provider.port.js'
 import type { NotificationDispatchQueuePort } from '../ports/notification-dispatch-queue.port.js'
+import type { NotificationPreferencesRepositoryPort } from '../ports/notification-preferences-repository.port.js'
 import type { TenantSettingsRepositoryPort } from '@/modules/tenancy/index.js'
+import type { Clock } from '@/shared-kernel/index.js'
 import { NotificationTemplate } from '../../domain/notification-template.entity.js'
+import { NotificationPreference } from '../../domain/notification-preference.entity.js'
 import { DispatchNotificationUseCase, type DispatchNotificationCommand } from './dispatch-notification.use-case.js'
 
 const NOW = new Date('2026-01-01T00:00:00Z')
+
+class FixedClock implements Clock {
+  constructor(private current: Date) {}
+  now(): Date {
+    return this.current
+  }
+}
 
 function template(): NotificationTemplate {
   return NotificationTemplate.restore({
@@ -35,6 +45,7 @@ interface Spies {
   readonly send: ReturnType<typeof vi.fn>
   readonly findByTenantId: ReturnType<typeof vi.fn>
   readonly enqueue: ReturnType<typeof vi.fn>
+  readonly findPreference: ReturnType<typeof vi.fn>
 }
 
 interface Harness {
@@ -48,6 +59,9 @@ function buildHarness(options?: {
   readonly inAppSendResult?: NotifySendResult
   readonly template?: NotificationTemplate | null
   readonly brandNameSettings?: { readonly brandName: string } | null
+  /** `(userId, category, channel) => NotificationPreference | null` — по умолчанию всё разрешено, без тихих часов. */
+  readonly preferenceResolver?: (userId: string, category: string, channel: string) => NotificationPreference | null
+  readonly now?: Date
 }): Harness {
   const callOrder: string[] = []
   const profile: NotificationRecipientProfile | null =
@@ -82,6 +96,12 @@ function buildHarness(options?: {
   })
   const dispatchQueue: NotificationDispatchQueuePort = { enqueue }
 
+  const findPreference = vi.fn().mockImplementation((userId: string, category: string, channel: string) => {
+    return Promise.resolve(options?.preferenceResolver?.(userId, category, channel) ?? null)
+  })
+  const preferencesRepository: NotificationPreferencesRepositoryPort = { findByUserCategoryChannel: findPreference, listByUser: vi.fn(), upsert: vi.fn() }
+  const clock: Clock = new FixedClock(options?.now ?? NOW)
+
   const useCase = new DispatchNotificationUseCase(
     identityFacade,
     notificationsRepository,
@@ -89,9 +109,11 @@ function buildHarness(options?: {
     inAppProvider,
     tenantSettingsRepository,
     dispatchQueue,
+    preferencesRepository,
+    clock,
   )
 
-  return { useCase, spies: { getRecipientProfile, create, findByEventChannelLocale, send, findByTenantId, enqueue }, callOrder }
+  return { useCase, spies: { getRecipientProfile, create, findByEventChannelLocale, send, findByTenantId, enqueue, findPreference }, callOrder }
 }
 
 function command(overrides?: Partial<DispatchNotificationCommand>): DispatchNotificationCommand {
@@ -129,11 +151,11 @@ describe('DispatchNotificationUseCase (DTJ-370)', () => {
 
     await h.useCase.execute(command({ channels: ['telegram', 'sms', 'web_push', 'in_app'] }))
 
-    expect(h.spies.enqueue).toHaveBeenCalledExactlyOnceWith(
-      'telegram',
-      expect.objectContaining({ remainingChannels: ['sms', 'web_push'] }),
-      'notification-1',
-    )
+    expect(h.spies.enqueue).toHaveBeenCalledOnce()
+    const [input] = h.spies.enqueue.mock.calls[0] as [{ channel: string; jobId: string; jobData: { remainingChannels: readonly string[] } }]
+    expect(input.channel).toBe('telegram')
+    expect(input.jobId).toBe('notification-1')
+    expect(input.jobData.remainingChannels).toEqual(['sms', 'web_push'])
   })
 
   it('матрица без внешних каналов (только in_app) — очередь не вызывается, queuedChannel=null', async () => {
@@ -191,5 +213,76 @@ describe('DispatchNotificationUseCase (DTJ-370)', () => {
     expect(result.inAppDelivered).toBe(false)
     expect(h.spies.send).not.toHaveBeenCalled()
     expect(h.spies.enqueue).toHaveBeenCalledOnce()
+  })
+
+  describe('DTJ-371: интеграция с notification_preferences (SRS-ADM-058/059)', () => {
+    function preference(overrides?: Partial<Parameters<typeof NotificationPreference.restore>[0]>): NotificationPreference {
+      return NotificationPreference.restore({
+        userId: 'user-1',
+        category: 'payout_updates',
+        channel: 'telegram',
+        isEnabled: true,
+        quietHoursStart: null,
+        quietHoursEnd: null,
+        updatedAt: NOW,
+        ...overrides,
+      })
+    }
+
+    it('TC-ADM-023: тихие часы 22:00–08:00 Asia/Dushanbe, сейчас 23:00 — job поставлен с delay > 0 (не отброшен)', async () => {
+      // 23:00 Dushanbe (UTC+5) = 18:00 UTC.
+      const now = new Date('2026-01-01T18:00:00Z')
+      const h = buildHarness({
+        now,
+        preferenceResolver: () => preference({ quietHoursStart: '22:00:00', quietHoursEnd: '08:00:00' }),
+      })
+
+      await h.useCase.execute(command({ eventType: 'payout.status_changed' }))
+
+      expect(h.spies.enqueue).toHaveBeenCalledOnce()
+      const [input] = h.spies.enqueue.mock.calls[0] as [{ delayMs?: number }]
+      // до 08:00 следующего дня — 9 часов = 32_400_000 мс.
+      expect(input.delayMs).toBe(9 * 60 * 60 * 1000)
+    })
+
+    it('TC-ADM-024: критичная категория order_updates — тихие часы игнорируются, delay не передаётся', async () => {
+      const now = new Date('2026-01-01T18:00:00Z') // 23:00 Dushanbe — то же окно, что и выше
+      const h = buildHarness({
+        now,
+        preferenceResolver: () => preference({ category: 'order_updates', quietHoursStart: '22:00:00', quietHoursEnd: '08:00:00' }),
+      })
+
+      await h.useCase.execute(command({ eventType: 'order.paid' })) // 'order.paid' → категория 'order_updates' (критична)
+
+      expect(h.spies.enqueue).toHaveBeenCalledOnce()
+      const [input] = h.spies.enqueue.mock.calls[0] as [{ channel: string; jobId: string; delayMs?: number }]
+      expect(input.channel).toBe('telegram')
+      expect(input.jobId).toBe('notification-1')
+      expect(input.delayMs).toBeUndefined()
+    })
+
+    it('канал, выключенный пользователем (is_enabled=false), пропускается — постановка в очередь ближайшим РАЗРЕШЁННЫМ каналом', async () => {
+      const h = buildHarness({
+        preferenceResolver: (_userId, _category, channel) => preference({ isEnabled: channel !== 'telegram' }),
+      })
+
+      const result = await h.useCase.execute(command({ eventType: 'payout.status_changed', channels: ['telegram', 'web_push', 'in_app'] }))
+
+      expect(result.queuedChannel).toBe('web_push')
+      expect(h.spies.enqueue).toHaveBeenCalledOnce()
+      const [input] = h.spies.enqueue.mock.calls[0] as [{ channel: string; jobId: string; jobData: { remainingChannels: readonly string[] } }]
+      expect(input.channel).toBe('web_push')
+      expect(input.jobId).toBe('notification-1')
+      expect(input.jobData.remainingChannels).toEqual([])
+    })
+
+    it('событие вне NOTIFICATION_EVENT_CATEGORIES (нет раскладки) — предпочтения не проверяются, диспетчеризация как раньше', async () => {
+      const h = buildHarness()
+
+      await h.useCase.execute(command({ eventType: 'unknown.event.without.category' }))
+
+      expect(h.spies.findPreference).not.toHaveBeenCalled()
+      expect(h.spies.enqueue).toHaveBeenCalledOnce()
+    })
   })
 })
