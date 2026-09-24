@@ -2,21 +2,21 @@ import { useEffect, useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
 import {
   BULK_GRID_PAGE_SIZE,
+  flattenInventoryPages,
+  formatMedicineLabel,
   isRowExpiryValid,
   isRowPriceValid,
   isRowQuantityValid,
   isRowValid,
+  mergeServerAndLocalRows,
   paginateRows,
   selectDirtyRows,
   totalPageCount,
   useBulkSave,
+  useInventoryList,
   type BulkGridRow,
 } from '@/features/inventory-bulk/api/use-bulk-grid'
 import { useMedicineSuggest, type MedicineSuggestionItem } from '@/shared/api/use-medicine-search'
-
-function formatMedicineLabel(item: MedicineSuggestionItem): string {
-  return `${item.tradeName} (${item.dosageForm}, ${item.dosageStrength})`
-}
 
 const MEDICINE_SEARCH_DEBOUNCE_MS = 200
 const RANDOM_ID_RADIX = 36
@@ -156,7 +156,6 @@ const GridRow = ({
   )
 }
 
-// Нет backend-эндпоинта для чтения текущих остатков — грид пока работает над строками, добавленными в этой сессии (см. отчёт сдачи).
 export const BulkEditGrid = (): ReactElement => {
   const { t } = useT('tj')
   const [rows, setRows] = useState<readonly BulkGridRow[]>([])
@@ -164,7 +163,21 @@ export const BulkEditGrid = (): ReactElement => {
   const [isPickerOpen, setIsPickerOpen] = useState(false)
   const [saveState, setSaveState] = useState<'idle' | 'success' | 'error'>('idle')
   const bulkSave = useBulkSave()
+  const inventoryList = useInventoryList()
   const today = todayIsoDate()
+
+  // Серверные строки — источник истины, локально добавленные/изменённые сохраняются поверх,
+  // пока не сохранены (mergeServerAndLocalRows). Подгружаем все страницы сразу — существующий
+  // пейджер сетки (BULK_GRID_PAGE_SIZE) остаётся клиентским поверх уже загруженных данных.
+  const serverRows = flattenInventoryPages(inventoryList.data)
+  useEffect(() => {
+    setRows((prev) => mergeServerAndLocalRows(serverRows, prev))
+  }, [inventoryList.data])
+  useEffect(() => {
+    if (inventoryList.hasNextPage && !inventoryList.isFetchingNextPage) {
+      void inventoryList.fetchNextPage()
+    }
+  }, [inventoryList])
 
   const totalPages = totalPageCount(rows.length, BULK_GRID_PAGE_SIZE)
   const visibleRows = paginateRows(rows, page, BULK_GRID_PAGE_SIZE)
