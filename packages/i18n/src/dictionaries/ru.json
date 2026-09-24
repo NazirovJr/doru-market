@@ -328,5 +328,7 @@
   "admin.tenants.settings_form.field.cod_limit_diram": "Лимит наложенного платежа, дирам",
   "admin.tenants.settings_form.field.hold_period_days": "Срок холда выплаты, дней",
   "admin.tenants.settings_form.submit": "Сохранить",
-  "admin.tenants.settings_form.toast_success": "Настройки тенанта сохранены"
+  "admin.tenants.settings_form.toast_success": "Настройки тенанта сохранены",
+  "admin.tenants.settings_form.validation.invalid_hex": "Цвет должен быть в формате HEX, например #1A2B3C",
+  "admin.tenants.settings_form.validation.invalid_cod_limit": "Лимит наложенного платежа должен быть целым числом не меньше 0"
 }

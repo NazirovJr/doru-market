@@ -328,5 +328,7 @@
   "admin.tenants.settings_form.field.cod_limit_diram": "Лимити пардохти нақдӣ, дирам",
   "admin.tenants.settings_form.field.hold_period_days": "Мӯҳлати ҳолди пардохт, рӯз",
   "admin.tenants.settings_form.submit": "Нигоҳ доштан",
-  "admin.tenants.settings_form.toast_success": "Танзимоти тенант нигоҳ дошта шуд"
+  "admin.tenants.settings_form.toast_success": "Танзимоти тенант нигоҳ дошта шуд",
+  "admin.tenants.settings_form.validation.invalid_hex": "Ранг бояд дар формати HEX бошад, масалан #1A2B3C",
+  "admin.tenants.settings_form.validation.invalid_cod_limit": "Лимити пардохти нақдӣ бояд рақами бутуни на кам аз 0 бошад"
 }

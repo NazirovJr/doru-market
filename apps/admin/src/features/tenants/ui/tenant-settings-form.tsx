@@ -8,6 +8,30 @@ import { useTenant, useUpdateTenantSettings, type UpdateTenantSettingsInput } fr
 const PALETTE_PRIMARY_KEY = '--brand-primary'
 const PALETTE_SECONDARY_KEY = '--brand-secondary'
 const PALETTE_ACCENT_KEY = '--brand-accent'
+const PALETTE_KEYS = [PALETTE_PRIMARY_KEY, PALETTE_SECONDARY_KEY, PALETTE_ACCENT_KEY]
+const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/
+
+interface ValidationErrors {
+  readonly palette?: string
+  readonly codLimitDiram?: string
+}
+
+// Блокирует отправку ДО запроса — сервер валидирует то же, но с задержкой на round-trip.
+function validateDraft(draft: FormDraft): ValidationErrors {
+  const errors: { palette?: string; codLimitDiram?: string } = {}
+  const hasInvalidHex = PALETTE_KEYS.some((key) => {
+    const value = draft.palette[key]
+    return value !== undefined && value.length > 0 && !HEX_COLOR_PATTERN.test(value)
+  })
+  if (hasInvalidHex) {
+    errors.palette = 'admin.tenants.settings_form.validation.invalid_hex'
+  }
+  const cod = Number(draft.codLimitDiram)
+  if (!Number.isInteger(cod) || cod < 0) {
+    errors.codLimitDiram = 'admin.tenants.settings_form.validation.invalid_cod_limit'
+  }
+  return errors
+}
 
 interface FormDraft {
   readonly brandName: string
@@ -74,6 +98,7 @@ interface TenantSettingsFieldsProps {
 
 const TenantSettingsFields = ({ tenantId, draft, setDraft, mutation, t }: TenantSettingsFieldsProps): ReactElement => {
   const fieldError = typeof mutation.error?.details?.field === 'string' ? mutation.error.details.field : null
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
 
   function updateField<K extends keyof FormDraft>(key: K, value: FormDraft[K]): void {
     setDraft((prev) => (prev === null ? prev : { ...prev, [key]: value }))
@@ -85,6 +110,11 @@ const TenantSettingsFields = ({ tenantId, draft, setDraft, mutation, t }: Tenant
 
   function handleSubmit(event: SyntheticEvent<HTMLFormElement>): void {
     event.preventDefault()
+    const errors = validateDraft(draft)
+    setValidationErrors(errors)
+    if (errors.palette !== undefined || errors.codLimitDiram !== undefined) {
+      return
+    }
     mutation.mutate(toMutationInput(tenantId, draft))
   }
 
@@ -109,36 +139,18 @@ const TenantSettingsFields = ({ tenantId, draft, setDraft, mutation, t }: Tenant
             aria-invalid={fieldError === 'brandLogoUrl'}
           />
         </label>
-        <label>
-          {t('admin.tenants.settings_form.field.palette_primary')}
-          <input
-            value={draft.palette[PALETTE_PRIMARY_KEY] ?? ''}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => { updatePaletteKey(PALETTE_PRIMARY_KEY, e.target.value) }}
-          />
-        </label>
-        <label>
-          {t('admin.tenants.settings_form.field.palette_secondary')}
-          <input
-            value={draft.palette[PALETTE_SECONDARY_KEY] ?? ''}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => { updatePaletteKey(PALETTE_SECONDARY_KEY, e.target.value) }}
-          />
-        </label>
-        <label>
-          {t('admin.tenants.settings_form.field.palette_accent')}
-          <input
-            value={draft.palette[PALETTE_ACCENT_KEY] ?? ''}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => { updatePaletteKey(PALETTE_ACCENT_KEY, e.target.value) }}
-          />
-        </label>
+        <PaletteFields draft={draft} updatePaletteKey={updatePaletteKey} hasError={validationErrors.palette !== undefined} t={t} />
+        {validationErrors.palette !== undefined ? <p role="alert">{t(validationErrors.palette)}</p> : null}
         <label>
           {t('admin.tenants.settings_form.field.cod_limit_diram')}
           <input
             type="number"
             value={draft.codLimitDiram}
             onChange={(e: ChangeEvent<HTMLInputElement>) => { updateField('codLimitDiram', e.target.value) }}
-            aria-invalid={fieldError === 'codLimitDiram'}
+            aria-invalid={fieldError === 'codLimitDiram' || validationErrors.codLimitDiram !== undefined}
           />
         </label>
+        {validationErrors.codLimitDiram !== undefined ? <p role="alert">{t(validationErrors.codLimitDiram)}</p> : null}
         <label>
           {t('admin.tenants.settings_form.field.hold_period_days')}
           <input
@@ -158,13 +170,42 @@ const TenantSettingsFields = ({ tenantId, draft, setDraft, mutation, t }: Tenant
   )
 }
 
+interface PaletteFieldsProps {
+  readonly draft: FormDraft
+  readonly updatePaletteKey: (key: string, value: string) => void
+  readonly hasError: boolean
+  readonly t: TranslateFunction
+}
+
+const PALETTE_FIELD_LABELS: readonly [key: string, labelKey: string][] = [
+  [PALETTE_PRIMARY_KEY, 'admin.tenants.settings_form.field.palette_primary'],
+  [PALETTE_SECONDARY_KEY, 'admin.tenants.settings_form.field.palette_secondary'],
+  [PALETTE_ACCENT_KEY, 'admin.tenants.settings_form.field.palette_accent'],
+]
+
+const PaletteFields = ({ draft, updatePaletteKey, hasError, t }: PaletteFieldsProps): ReactElement => (
+  <>
+    {PALETTE_FIELD_LABELS.map(([key, labelKey]) => (
+      <label key={key}>
+        {t(labelKey)}
+        <input
+          value={draft.palette[key] ?? ''}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => { updatePaletteKey(key, e.target.value) }}
+          aria-invalid={hasError}
+        />
+      </label>
+    ))}
+  </>
+)
+
 function toMutationInput(tenantId: string, draft: FormDraft): UpdateTenantSettingsInput {
+  const brandPalette = Object.fromEntries(Object.entries(draft.palette).filter(([, value]) => value.length > 0))
   return {
     tenantId,
     patch: {
       brandName: draft.brandName,
       brandLogoUrl: draft.brandLogoUrl.length === 0 ? null : draft.brandLogoUrl,
-      brandPalette: draft.palette,
+      brandPalette,
       codLimitDiram: Number(draft.codLimitDiram),
       holdPeriodDays: Number(draft.holdPeriodDays),
     },
