@@ -6,3 +6,4 @@
 // `packages/contracts/src/inventory/index.ts` для контекста `inventory`).
 export * from './feature-flags.js'
 export * from './tenants.js'
+export * from './audit-log.js'

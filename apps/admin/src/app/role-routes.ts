@@ -47,6 +47,11 @@ const TenantsListPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageP
   import('@/features/tenants/ui/tenants-list-page').then((m) => ({ default: m.TenantsListPage })),
 )
 
+/** См. JSDoc файла про совместимость без пропсов (та же схема, что `FeatureFlagsPage`). */
+const AuditLogPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/audit-log/ui/audit-log-page').then((m) => ({ default: m.AuditLogPage })),
+)
+
 function section(path: string, titleKey: string, icon: string): RouteConfig {
   return { path, titleKey, icon, Component: SectionPlaceholder }
 }
@@ -55,6 +60,7 @@ function section(path: string, titleKey: string, icon: string): RouteConfig {
 const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
   { path: 'tenants', titleKey: 'admin.nav.tenants', icon: 'tenants', Component: TenantsListPage },
   { path: 'feature-flags', titleKey: 'admin.nav.feature_flags', icon: 'flags', Component: FeatureFlagsPage },
+  { path: 'audit-log', titleKey: 'admin.nav.audit_log', icon: 'audit-log', Component: AuditLogPage },
   section('pharmacies', 'admin.nav.pharmacies', 'pharmacies'),
   section('users', 'admin.nav.users', 'users'),
   section('orders', 'admin.nav.orders', 'orders'),
