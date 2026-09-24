@@ -39,6 +39,11 @@ export function collectFailedGroups(outcomes: readonly GroupOutcome[]): Checkout
     .map((o) => ({ pharmacyId: o.pharmacyId, reason: o.reason, details: o.details }))
 }
 
+/** DTJ-380 — реально созданные заказы из `outcomes`, переиспользуется finalize-шагом И analytics-шагом. */
+export function extractCreatedOrders(outcomes: readonly GroupOutcome[]): readonly Order[] {
+  return outcomes.filter((o): o is Extract<GroupOutcome, { kind: 'created' }> => o.kind === 'created').map((o) => o.order)
+}
+
 /** Объект-параметр `buildItemCommands` (C5, `max-params` ≤3). */
 export interface BuildItemCommandsInput {
   readonly group: PharmacyGroup
