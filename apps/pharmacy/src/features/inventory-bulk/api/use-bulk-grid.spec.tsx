@@ -5,13 +5,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { INVENTORY_LIST_QUERY_KEY } from '@/shared/api/inventory-query-keys'
 import {
   BULK_GRID_PAGE_SIZE,
+  flattenInventoryPages,
   isRowExpiryValid,
   isRowPriceValid,
   isRowQuantityValid,
+  mergeServerAndLocalRows,
   paginateRows,
   selectDirtyRows,
   totalPageCount,
   useBulkSave,
+  useInventoryList,
   type BulkGridRow,
 } from './use-bulk-grid'
 
@@ -137,5 +140,114 @@ describe('isRowPriceValid / isRowQuantityValid / isRowExpiryValid', () => {
   it('срок годности не может быть в прошлом', () => {
     expect(isRowExpiryValid('2020-01-01', '2026-01-01')).toBe(false)
     expect(isRowExpiryValid('2027-01-01', '2026-01-01')).toBe(true)
+  })
+})
+
+describe('mergeServerAndLocalRows (DTJ-171)', () => {
+  it('серверные строки + локально добавленная (isDirty, нет на сервере) строка — обе присутствуют', () => {
+    const serverRows = [makeRow({ rowId: 'srv-1', isDirty: false })]
+    const localRow = makeRow({ rowId: 'local-1', isDirty: true })
+    const result = mergeServerAndLocalRows(serverRows, [localRow])
+    expect(result.map((row) => row.rowId)).toEqual(['srv-1', 'local-1'])
+  })
+
+  it('локальная строка, уже сохранённая (isDirty=false) и отсутствующая на сервере — отбрасывается', () => {
+    const serverRows = [makeRow({ rowId: 'srv-1', isDirty: false })]
+    const staleLocalRow = makeRow({ rowId: 'local-1', isDirty: false })
+    const result = mergeServerAndLocalRows(serverRows, [staleLocalRow])
+    expect(result.map((row) => row.rowId)).toEqual(['srv-1'])
+  })
+
+  it('строка с тем же rowId на сервере — серверная версия побеждает (не дублируется)', () => {
+    const serverRows = [makeRow({ rowId: 'row-x', priceTjs: '99', isDirty: false })]
+    const localRow = makeRow({ rowId: 'row-x', priceTjs: '1', isDirty: true })
+    const result = mergeServerAndLocalRows(serverRows, [localRow])
+    expect(result).toHaveLength(1)
+    expect(result[0]?.priceTjs).toBe('99')
+  })
+})
+
+describe('flattenInventoryPages (DTJ-171)', () => {
+  it('data=undefined — пустой массив', () => {
+    expect(flattenInventoryPages(undefined)).toEqual([])
+  })
+
+  it('несколько страниц — сплющивает items всех страниц по порядку, isDirty=false', () => {
+    const data = {
+      pages: [
+        { items: [{ inventoryId: 'inv-1', medicineId: 'med-1', tradeName: 'A', dosageForm: 'tab', dosageStrength: '1mg', priceDiram: 1250, stockQuantity: 5, batchNumber: null, expiryDate: '2030-01-01', lastSyncedAt: '2026-01-01T00:00:00.000Z' }], nextCursor: 'c1' },
+        { items: [{ inventoryId: 'inv-2', medicineId: 'med-2', tradeName: 'B', dosageForm: 'tab', dosageStrength: '2mg', priceDiram: 1, stockQuantity: 0, batchNumber: 'B-1', expiryDate: '2030-02-01', lastSyncedAt: '2026-01-02T00:00:00.000Z' }], nextCursor: null },
+      ],
+      pageParams: [null, 'c1'],
+    }
+    const result = flattenInventoryPages(data)
+    expect(result).toEqual([
+      { rowId: 'inv-1', medicineId: 'med-1', medicineLabel: 'A (tab, 1mg)', priceTjs: '12.50', quantity: '5', expiryDate: '2030-01-01', batchNumber: '', isDirty: false },
+      { rowId: 'inv-2', medicineId: 'med-2', medicineLabel: 'B (tab, 2mg)', priceTjs: '0.01', quantity: '0', expiryDate: '2030-02-01', batchNumber: 'B-1', isDirty: false },
+    ])
+  })
+})
+
+describe('useInventoryList (DTJ-171)', () => {
+  it('загружает страницу, парсит meta.pagination — hasNextPage=true, флаттенится в BulkGridRow', async () => {
+    stubFetch((url) => {
+      expect(url).toContain('/api/v1/inventory')
+      expect(url).toContain('limit=50')
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            data: [{ inventoryId: 'inv-1', medicineId: 'med-1', tradeName: 'Aspirin', dosageForm: 'tab', dosageStrength: '500mg', priceDiram: 1000, stockQuantity: 3, batchNumber: null, expiryDate: '2030-01-01', lastSyncedAt: '2026-01-01T00:00:00.000Z' }],
+            meta: { pagination: { nextCursor: 'cursor-1', hasMore: true, limit: 50 } },
+          }),
+          { status: 200 },
+        ),
+      )
+    })
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    const { result } = renderHook(() => useInventoryList(), { wrapper: makeWrapper(queryClient) })
+
+    await waitFor(() => { expect(result.current.isSuccess).toBe(true) })
+    expect(result.current.hasNextPage).toBe(true)
+    const rows = flattenInventoryPages(result.current.data)
+    expect(rows).toEqual([
+      { rowId: 'inv-1', medicineId: 'med-1', medicineLabel: 'Aspirin (tab, 500mg)', priceTjs: '10.00', quantity: '3', expiryDate: '2030-01-01', batchNumber: '', isDirty: false },
+    ])
+  })
+
+  it('загружает вторую страницу через fetchNextPage с cursor из meta', async () => {
+    const fetchMock = stubFetch((url) => {
+      const hasCursor = url.includes('cursor=')
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            data: [],
+            meta: { pagination: { nextCursor: hasCursor ? null : 'cursor-1', hasMore: !hasCursor, limit: 50 } },
+          }),
+          { status: 200 },
+        ),
+      )
+    })
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const { result } = renderHook(() => useInventoryList(), { wrapper: makeWrapper(queryClient) })
+    await waitFor(() => { expect(result.current.isSuccess).toBe(true) })
+
+    void result.current.fetchNextPage()
+
+    await waitFor(() => { expect(result.current.data?.pages).toHaveLength(2) })
+    const secondCall = fetchMock.mock.calls[1] as [string, RequestInit?]
+    expect(secondCall[0]).toContain('cursor=cursor-1')
+  })
+
+  it('ошибка сервера — isError=true', async () => {
+    stubFetch(() =>
+      Promise.resolve(new Response(JSON.stringify({ error: { code: 'INTERNAL_ERROR', message: 'boom' } }), { status: 500 })),
+    )
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    const { result } = renderHook(() => useInventoryList(), { wrapper: makeWrapper(queryClient) })
+
+    await waitFor(() => { expect(result.current.isError).toBe(true) })
+    expect(result.current.error?.code).toBe('INTERNAL_ERROR')
   })
 })

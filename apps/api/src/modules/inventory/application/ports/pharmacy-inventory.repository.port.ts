@@ -23,6 +23,31 @@ export interface UpsertResult {
   readonly updatedCount: number
 }
 
+// Одна строка курсорного списка — один лот, не агрегат по медикаменту.
+export interface PharmacyInventoryListRow {
+  readonly inventoryId: string
+  readonly medicineId: string
+  readonly tradeName: string
+  readonly dosageForm: string
+  readonly dosageStrength: string
+  readonly priceDiram: number
+  readonly stockQuantity: number
+  readonly batchNumber: string | null
+  readonly expiryDate: string
+  readonly lastSyncedAt: Date
+}
+
+// keyset по (tradeName, id) — tradeName неуникален, id тай-брейк.
+export interface ListByPharmacyCursor {
+  readonly tradeName: string
+  readonly id: string
+}
+
+export interface ListByPharmacyResult {
+  readonly items: readonly PharmacyInventoryListRow[]
+  readonly hasMore: boolean
+}
+
 /** Описание одного row'а, который батчевый `upsertMany` принимает от старого use case'а. */
 export interface UpsertInput {
   readonly pharmacyId: string
@@ -61,4 +86,13 @@ export interface PharmacyInventoryRepository {
    * `findOrCreateManyByMedicineIds` выше, тот же self-deadlock-риск.
    */
   saveMany(aggregates: readonly PharmacyInventory[], tx?: UnitOfWorkTx): Promise<void>
+
+  // Сортировка по tradeName ASC, keyset (tradeName, id) — без второго ключа страницы
+  // теряют/дублируют строки при совпадающих названиях.
+  listByPharmacy(input: {
+    readonly pharmacyId: string
+    readonly q: string | null
+    readonly cursor: ListByPharmacyCursor | null
+    readonly limit: number
+  }): Promise<ListByPharmacyResult>
 }

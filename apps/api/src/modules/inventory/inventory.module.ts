@@ -64,6 +64,8 @@ import { InventoryExcelImportController } from './presentation/controllers/inven
 import { InventoryManualEntryController } from './presentation/controllers/inventory-manual-entry.controller.js'
 import { InventorySyncBatchesReportController } from './presentation/controllers/inventory-sync-batches-report.controller.js'
 import { InventoryExcelErrorReportController } from './presentation/controllers/inventory-excel-error-report.controller.js'
+import { InventoryListController } from './presentation/controllers/inventory-list.controller.js'
+import { ListPharmacyInventoryUseCase } from './application/use-cases/list-pharmacy-inventory.use-case.js'
 import { CompositeInventoryMatcherService } from './application/services/composite-inventory-matcher.service.js'
 import { InventorySyncReportQueryService } from './application/services/inventory-sync-report-query.service.js'
 import { PersistInventorySyncBatchService } from './application/services/persist-inventory-sync-batch.service.js'
@@ -129,6 +131,7 @@ import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/
     // `DrizzleInventorySyncBatchRepository` (см. её JSDoc) — самостоятельный
     // провайдер, тот же приём, что `DrizzleInventorySyncErrorsRepository`.
     DrizzleInventorySyncReportRepository,
+    ListPharmacyInventoryUseCase,
   ],
   controllers: [
     InventoryBatchUpdateController,
@@ -138,6 +141,7 @@ import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/
     InventoryManualEntryController,
     InventorySyncBatchesReportController,
     InventoryExcelErrorReportController,
+    InventoryListController,
   ],
   exports: [
     PHARMACY_INVENTORY_REPOSITORY,
