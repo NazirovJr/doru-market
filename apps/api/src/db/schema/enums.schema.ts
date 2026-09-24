@@ -349,3 +349,22 @@ export const deliveryOfferStatusEnum = pgEnum('delivery_offer_status', [
 /** `courier_shifts.status` (D.4, SRS-DELIV-006) — история физических смен курьера, отдельно от
  * `couriers.shift_status`. */
 export const courierShiftRecordStatusEnum = pgEnum('courier_shift_record_status', ['active', 'closed'])
+
+/**
+ * `notification_templates.channel`/`notifications.channel` (EP-16, DTJ-369, SRS-ADM-054).
+ * СОГЛАСОВАНИЕ двух разошедшихся источников (см. JSDoc `NotificationTemplate` в
+ * `modules/notifications/domain/notification-template.entity.ts` §«Реестр каналов»):
+ * `docs/spec/11-database-schema.md` объявляет `('telegram','sms','web_push','email')`, БЕЗ
+ * `in_app`; фактический код EP-16 (DTJ-368, `NotifyProviderPort`) использует
+ * `('telegram','sms','web_push','in_app')`, БЕЗ `email`. Объединение: `in_app` добавлен (нужен
+ * почти каждой строке матрицы SRS-ADM-052), `email` сохранён (SRS-ADM-055 допускает для него
+ * `subject`, зарезервирован под будущее расширение, не задействован в MVP-матрице R1).
+ * Порядок значений НЕ переименовывать, только дописывать в конец.
+ */
+export const notificationChannelEnum = pgEnum('notification_channel', [
+  'telegram',
+  'sms',
+  'web_push',
+  'email',
+  'in_app',
+])

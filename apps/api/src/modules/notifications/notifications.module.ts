@@ -29,16 +29,22 @@
  *
  * На этом тикете добавлен `ListOwnNotificationsUseCase` и `NotificationsFeedController` для
  * `GET /api/v1/notifications` (DTJ-372).
+ *
+ * DTJ-369 (EP-16): добавлен `NOTIFICATION_TEMPLATES_REPOSITORY_PORT` → `NotificationTemplatesRepository`
+ * (реальная Drizzle-реализация поверх `notification_templates`, миграция `0049_notification_templates.sql`) —
+ * читается диспетчером `DTJ-370` (следующий тикет, использует ту же модуль-область видимости).
  */
 import { Module } from '@nestjs/common'
 import { AuthModule } from '@/modules/auth/auth.module.js'
 import { IDENTITY_FACADE_PORT } from './application/ports/identity-facade.port.js'
 import { NOTIFICATIONS_REPOSITORY_PORT } from './application/ports/notifications-repository.port.js'
 import { NOTIFY_PROVIDER_IN_APP, NOTIFY_PROVIDER_TELEGRAM } from './application/ports/notify-provider.port.js'
+import { NOTIFICATION_TEMPLATES_REPOSITORY_PORT } from './application/ports/notification-templates-repository.port.js'
 import { UsersRepositoryIdentityFacadeAdapter } from './infrastructure/adapters/users-repository-identity-facade.adapter.js'
 import { UnimplementedNotificationsRepositoryAdapter } from './infrastructure/adapters/unimplemented-notifications-repository.adapter.js'
 import { TelegramNotifyProvider } from './infrastructure/providers/telegram-notify.provider.js'
 import { InAppNotifyProvider } from './infrastructure/providers/in-app-notify.provider.js'
+import { NotificationTemplatesRepository } from './infrastructure/repositories/notification-templates.repository.js'
 import { ListOwnNotificationsUseCase } from './application/use-cases/list-own-notifications.use-case.js'
 import { NotificationsFeedController } from './presentation/notifications-feed.controller.js'
 
@@ -49,13 +55,21 @@ import { NotificationsFeedController } from './presentation/notifications-feed.c
     { provide: NOTIFICATIONS_REPOSITORY_PORT, useClass: UnimplementedNotificationsRepositoryAdapter },
     { provide: NOTIFY_PROVIDER_TELEGRAM, useClass: TelegramNotifyProvider },
     { provide: NOTIFY_PROVIDER_IN_APP, useClass: InAppNotifyProvider },
+    { provide: NOTIFICATION_TEMPLATES_REPOSITORY_PORT, useClass: NotificationTemplatesRepository },
     { provide: ListOwnNotificationsUseCase, useClass: ListOwnNotificationsUseCase },
     UsersRepositoryIdentityFacadeAdapter,
     UnimplementedNotificationsRepositoryAdapter,
     TelegramNotifyProvider,
     InAppNotifyProvider,
+    NotificationTemplatesRepository,
   ],
-  exports: [IDENTITY_FACADE_PORT, NOTIFICATIONS_REPOSITORY_PORT, NOTIFY_PROVIDER_TELEGRAM, NOTIFY_PROVIDER_IN_APP],
+  exports: [
+    IDENTITY_FACADE_PORT,
+    NOTIFICATIONS_REPOSITORY_PORT,
+    NOTIFY_PROVIDER_TELEGRAM,
+    NOTIFY_PROVIDER_IN_APP,
+    NOTIFICATION_TEMPLATES_REPOSITORY_PORT,
+  ],
   controllers: [NotificationsFeedController],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.

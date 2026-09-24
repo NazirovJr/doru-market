@@ -281,6 +281,26 @@ async function seedFeatureFlagsViaCli(dbUrl: string): Promise<number> {
   }
 }
 
+/**
+ * DTJ-369 (EP-16): сидит `notification_templates` (15 event_type × N каналов × 3 локали,
+ * SRS-ADM-052) той же командой `pnpm db:seed` (правило 2 AGENTS.md). Отдельное короткоживущее
+ * соединение — тот же приём, что `seedI18nOverridesCatalogViaCli`/`seedFeatureFlagsViaCli` выше.
+ */
+async function seedNotificationTemplatesViaCli(dbUrl: string): Promise<number> {
+  const { drizzle } = await import('drizzle-orm/node-postgres')
+  const { Pool } = await import('pg')
+  const { seedNotificationTemplates } = await import('./notification-templates/seed-notification-templates.js')
+
+  const pool = new Pool({ connectionString: dbUrl })
+  try {
+    const db = drizzle(pool)
+    const result = await seedNotificationTemplates(db)
+    return result.upserted
+  } finally {
+    await pool.end().catch(() => undefined)
+  }
+}
+
 async function main(): Promise<void> {
   // Защита от двойного запуска при импорте из тестов.
   if (process.env.DORUTJ_SEED_SKIP_MAIN === '1') return
@@ -311,6 +331,9 @@ async function main(): Promise<void> {
     const featureFlagsInserted = await seedFeatureFlagsViaCli(dbUrl)
     // eslint-disable-next-line no-console -- CLI-скрипт.
     console.log(`[db:seed] OK — inserted ${String(featureFlagsInserted)} required R1 feature_flags rows (DTJ-352)`)
+    const notificationTemplatesUpserted = await seedNotificationTemplatesViaCli(dbUrl)
+    // eslint-disable-next-line no-console -- CLI-скрипт.
+    console.log(`[db:seed] OK — upserted ${String(notificationTemplatesUpserted)} notification_templates rows (DTJ-369)`)
     process.exitCode = 0
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
