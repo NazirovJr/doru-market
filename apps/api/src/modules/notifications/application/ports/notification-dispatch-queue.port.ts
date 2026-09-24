@@ -4,7 +4,14 @@ import type { NotificationChannel } from './notify-provider.port.js'
 
 export const NOTIFICATION_DISPATCH_QUEUE_PORT = Symbol.for('@dorutj/notifications/notification-dispatch-queue-port')
 
+export interface EnqueueNotificationDispatchInput {
+  readonly channel: NotificationChannel
+  readonly jobData: NotificationDispatchJobData
+  readonly jobId: string
+  // Тихие часы: откладывает job до их конца, не отбрасывает; undefined — немедленно.
+  readonly delayMs?: number
+}
+
 export interface NotificationDispatchQueuePort {
-  /** `jobId` — `notificationId` (defense-in-depth дедупликация BullMQ поверх UNIQUE(notifications)). */
-  enqueue(channel: NotificationChannel, jobData: NotificationDispatchJobData, jobId: string): Promise<void>
+  enqueue(input: EnqueueNotificationDispatchInput): Promise<void>
 }

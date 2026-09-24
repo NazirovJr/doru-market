@@ -151,6 +151,7 @@ const EXPECTED: readonly (readonly [ErrorCode, number])[] = [
   // ---- Доменные: notification_templates (DTJ-369) ----
   [ErrorCode.MISSING_TEMPLATE_VARIABLE, 500],
   [ErrorCode.INVALID_TEMPLATE_SUBJECT_CHANNEL, 400],
+  [ErrorCode.CRITICAL_CATEGORY_CANNOT_BE_DISABLED, 422],
 ]
 
 describe('ErrorCode / ERROR_HTTP_STATUS — сверка с источниками', () => {

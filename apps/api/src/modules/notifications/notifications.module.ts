@@ -36,6 +36,9 @@
  * `DispatchNotificationUseCase`, `NOTIFICATION_DISPATCH_QUEUE_PORT`, `NOTIFICATIONS_PROCESSED_EVENTS_PORT`
  * и `OutboxToNotificationsConsumer` (BullMQ `Worker` на `domain-events`, живёт здесь — вызывает
  * use case напрямую, чего apps/worker не может).
+ *
+ * `NOTIFICATION_PREFERENCES_REPOSITORY_PORT` → `NotificationPreferencesRepository`; добавлены
+ * `GetUserPreferencesUseCase`/`UpdateUserPreferencesUseCase` и `NotificationPreferencesController`.
  */
 import { Module } from '@nestjs/common'
 import { AuthModule } from '@/modules/auth/auth.module.js'
@@ -46,18 +49,23 @@ import { NOTIFY_PROVIDER_IN_APP, NOTIFY_PROVIDER_TELEGRAM } from './application/
 import { NOTIFICATION_TEMPLATES_REPOSITORY_PORT } from './application/ports/notification-templates-repository.port.js'
 import { NOTIFICATION_DISPATCH_QUEUE_PORT } from './application/ports/notification-dispatch-queue.port.js'
 import { NOTIFICATIONS_PROCESSED_EVENTS_PORT } from './application/ports/notifications-processed-events.port.js'
+import { NOTIFICATION_PREFERENCES_REPOSITORY_PORT } from './application/ports/notification-preferences-repository.port.js'
 import { UsersRepositoryIdentityFacadeAdapter } from './infrastructure/adapters/users-repository-identity-facade.adapter.js'
 import { TelegramNotifyProvider } from './infrastructure/providers/telegram-notify.provider.js'
 import { InAppNotifyProvider } from './infrastructure/providers/in-app-notify.provider.js'
 import { NotificationTemplatesRepository } from './infrastructure/repositories/notification-templates.repository.js'
 import { NotificationsRepository } from './infrastructure/repositories/notifications.repository.js'
+import { NotificationPreferencesRepository } from './infrastructure/repositories/notification-preferences.repository.js'
 import { DrizzleNotificationsProcessedEventsRepository } from './infrastructure/repositories/drizzle-notifications-processed-events.repository.js'
 import { BullmqNotificationDispatchQueueAdapter } from './infrastructure/queues/bullmq-notification-dispatch-queue.adapter.js'
 import { domainEventsWorkerConnectionProvider } from './infrastructure/consumers/domain-events-worker-connection.provider.js'
 import { OutboxToNotificationsConsumer } from './infrastructure/consumers/outbox-to-notifications.consumer.js'
 import { ListOwnNotificationsUseCase } from './application/use-cases/list-own-notifications.use-case.js'
 import { DispatchNotificationUseCase } from './application/use-cases/dispatch-notification.use-case.js'
+import { GetUserPreferencesUseCase } from './application/use-cases/get-user-preferences.use-case.js'
+import { UpdateUserPreferencesUseCase } from './application/use-cases/update-user-preferences.use-case.js'
 import { NotificationsFeedController } from './presentation/notifications-feed.controller.js'
+import { NotificationPreferencesController } from './presentation/notification-preferences.controller.js'
 
 @Module({
   imports: [AuthModule, TenancyModule],
@@ -69,14 +77,18 @@ import { NotificationsFeedController } from './presentation/notifications-feed.c
     { provide: NOTIFICATION_TEMPLATES_REPOSITORY_PORT, useClass: NotificationTemplatesRepository },
     { provide: NOTIFICATION_DISPATCH_QUEUE_PORT, useClass: BullmqNotificationDispatchQueueAdapter },
     { provide: NOTIFICATIONS_PROCESSED_EVENTS_PORT, useClass: DrizzleNotificationsProcessedEventsRepository },
+    { provide: NOTIFICATION_PREFERENCES_REPOSITORY_PORT, useClass: NotificationPreferencesRepository },
     { provide: ListOwnNotificationsUseCase, useClass: ListOwnNotificationsUseCase },
     { provide: DispatchNotificationUseCase, useClass: DispatchNotificationUseCase },
+    { provide: GetUserPreferencesUseCase, useClass: GetUserPreferencesUseCase },
+    { provide: UpdateUserPreferencesUseCase, useClass: UpdateUserPreferencesUseCase },
     domainEventsWorkerConnectionProvider,
     UsersRepositoryIdentityFacadeAdapter,
     NotificationsRepository,
     TelegramNotifyProvider,
     InAppNotifyProvider,
     NotificationTemplatesRepository,
+    NotificationPreferencesRepository,
     DrizzleNotificationsProcessedEventsRepository,
     BullmqNotificationDispatchQueueAdapter,
     OutboxToNotificationsConsumer,
@@ -87,9 +99,10 @@ import { NotificationsFeedController } from './presentation/notifications-feed.c
     NOTIFY_PROVIDER_TELEGRAM,
     NOTIFY_PROVIDER_IN_APP,
     NOTIFICATION_TEMPLATES_REPOSITORY_PORT,
+    NOTIFICATION_PREFERENCES_REPOSITORY_PORT,
     DispatchNotificationUseCase,
   ],
-  controllers: [NotificationsFeedController],
+  controllers: [NotificationsFeedController, NotificationPreferencesController],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.
 export class NotificationsModule {}
