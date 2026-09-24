@@ -12,7 +12,6 @@ const EXCEL_IMPORT_PATH = '/api/v1/inventory-excel-import'
 const IMPORT_TEMPLATE_PATH = '/api/v1/inventory-import-template'
 const IMPORT_TEMPLATE_FILENAME = 'doru-tj-inventory-template.xlsx'
 const ERROR_REPORT_FILENAME = 'doru-tj-inventory-import-errors.xlsx'
-/** Опрос агрегированного статуса (риски тикета — «частая утечка TanStack Query»). */
 export const IMPORT_POLL_INTERVAL_MS = 2000
 
 interface ExcelImportInput {
@@ -35,7 +34,6 @@ async function postExcelImport(input: ExcelImportInput): Promise<InventoryExcelI
   return httpPostForm<InventoryExcelImportAcceptedResponse>(EXCEL_IMPORT_PATH, formData)
 }
 
-/** Инвалидирует список остатков — АС6 тикета: после импорта пользователь идёт проверять `/search`. */
 export function useExcelImport(): UseMutationResult<InventoryExcelImportAcceptedResponse, HttpError, ExcelImportInput> {
   const queryClient = useQueryClient()
   return useMutation<InventoryExcelImportAcceptedResponse, HttpError, ExcelImportInput>({
@@ -48,12 +46,7 @@ export function useExcelImport(): UseMutationResult<InventoryExcelImportAccepted
   })
 }
 
-/**
- * Опрос статусов ВСЕХ батчей одной загрузки (ДОПОЛНЕНО DTJ-168 на бэкенде — `GET
- * .../upload/:sourceUploadId`, см. риски тикета «DTJ-163 не предусмотрел фильтр»).
- * `refetchInterval` выключается сам, как только `computeAggregateProgress` даёт `isComplete`
- * (DoD тикета — без этого опрос продолжался бы бесконечно).
- */
+// refetchInterval выключается сам, как только computeAggregateProgress даёт isComplete — иначе опрос продолжался бы бесконечно.
 export function useImportBatchesPolling(sourceUploadId: string | null): UseQueryResult<InventorySyncBatchesByUploadResponse, HttpError> {
   return useQuery<InventorySyncBatchesByUploadResponse, HttpError>({
     queryKey: ['inventory', 'excel-import', 'batches', sourceUploadId],
@@ -85,7 +78,7 @@ async function triggerBlobDownload(path: string, filename: string): Promise<void
   URL.revokeObjectURL(objectUrl)
 }
 
-/** Прямая ссылка была бы проще, но не донесла бы `Authorization` до защищённого эндпоинта (см. «Что сделать» п.2 тикета). */
+// Прямая ссылка не донесла бы Authorization до защищённого эндпоинта — поэтому fetch + blob.
 export function downloadInventoryImportTemplate(): Promise<void> {
   return triggerBlobDownload(IMPORT_TEMPLATE_PATH, IMPORT_TEMPLATE_FILENAME)
 }

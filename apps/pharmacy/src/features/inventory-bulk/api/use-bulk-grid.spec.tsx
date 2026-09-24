@@ -52,7 +52,6 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-/** DTJ-168 тест-план: сохранение массовой сетки батчем изменённых строк, тот же эндпоинт, что DTJ-162. */
 describe('useBulkSave (DTJ-168)', () => {
   it('успех: POST со ВСЕМИ переданными (уже отфильтрованными как dirty) строками, инвалидирует INVENTORY_LIST_QUERY_KEY', async () => {
     const fetchMock = stubFetch(() =>
@@ -94,7 +93,6 @@ describe('useBulkSave (DTJ-168)', () => {
   })
 })
 
-/** DTJ-168 тест-план: «BulkEditGrid: Сохранить отправляет только изменённые строки» (АС5). */
 describe('selectDirtyRows', () => {
   it('80 строк, 3 изменены — возвращает ровно эти 3', () => {
     const rows = Array.from({ length: 80 }, (_, index) => makeRow({ rowId: `row-${String(index)}`, isDirty: index < 3 }))

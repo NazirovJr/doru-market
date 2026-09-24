@@ -14,10 +14,7 @@ function roundPercent(percent: number): number {
   return Math.round(percent)
 }
 
-/**
- * ОДИН агрегированный прогресс-бар на N батчей одной Excel-загрузки (SRS-INV-014, DTJ-168 АС1) —
- * скрывает от пользователя разбивку на батчи, показывает только итог.
- */
+// Один прогресс-бар на N батчей одной загрузки — скрывает от пользователя разбивку на батчи.
 export const ImportProgressBar = ({ sourceUploadId }: ImportProgressBarProps): ReactElement => {
   const { t } = useT('tj')
   const [reportError, setReportError] = useState(false)

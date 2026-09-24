@@ -280,8 +280,7 @@ function parseResponseBody(text: string, path: string, status: number): unknown 
  */
 export async function httpRequestJson<T>(path: string, init: HttpClientOptions = {}): Promise<T> {
   const headers = new Headers(init.headers)
-  // `FormData`-тело (DTJ-168, multipart-загрузка Excel) — `Content-Type`/`boundary` расставляет
-  // `fetch` сам, ручная простановка `application/json` сломала бы парсинг на бэкенде.
+  // FormData-тело — boundary расставляет fetch сам, ручной Content-Type сломал бы парсинг.
   const isFormDataBody = init.body instanceof FormData
   if (!headers.has('Content-Type') && init.body !== undefined && !isFormDataBody) {
     headers.set('Content-Type', 'application/json')
@@ -312,7 +311,7 @@ export function httpPostJson<T>(path: string, body: unknown): Promise<T> {
   })
 }
 
-/** POST `multipart/form-data` (DTJ-168, `inventory-excel-import` — файл + текстовое поле `mode`). */
+/** POST `multipart/form-data`. */
 export function httpPostForm<T>(path: string, formData: FormData): Promise<T> {
   return httpRequestJson<T>(path, { method: 'POST', body: formData })
 }

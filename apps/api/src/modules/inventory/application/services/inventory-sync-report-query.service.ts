@@ -203,15 +203,7 @@ export class InventorySyncReportQueryService {
     return this.catalogMatchQueueRead.countPending(input.pharmacyId)
   }
 
-  /**
-   * ДОПОЛНЕНО DTJ-168 `GET /upload/:sourceUploadId` (SRS-INV-014/045) — статусы ВСЕХ батчей одной
-   * Excel-загрузки для агрегированного прогресс-бара кабинета (`computeAggregateProgress`,
-   * фронт). Переиспользует `findBySourceUploadId` (тот же порт, что `getErrorReportForActor`
-   * DTJ-164) — DTJ-163 не предусмотрел фильтр `filter[sourceUploadId]` на курсорном списке
-   * (риски DTJ-168: «координировать точечной правкой контракта»), отдельный ненумерованный
-   * список — минимальное расширение, не архитектурное изменение. `null` — загрузка не найдена
-   * ИЛИ не принадлежит актору (тот же приём 404, что остальные read-эндпоинты этого сервиса).
-   */
+  // Переиспользует findBySourceUploadId (тот же порт, что getErrorReportForActor) — курсорный список DTJ-163 не фильтрует по sourceUploadId.
   async listBatchesForSourceUpload(input: {
     readonly sourceUploadId: string
     readonly actor: InventoryReportActor

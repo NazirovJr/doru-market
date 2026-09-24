@@ -32,7 +32,6 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-/** DTJ-168 риски: `refetchInterval` обязан выключиться после `isComplete=true` — иначе бесконечная утечка опроса. */
 describe('<ImportProgressBar /> (DTJ-168)', () => {
   it('останавливает опрос после того, как батч достигает терминального статуса', async () => {
     const fetchMock = vi.fn(() => Promise.resolve(batchesResponse('completed_full_success')))

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { useT, type Locale } from '@dorutj/i18n'
 
-/** Smoke-тест локализации `pharmacy.inventory.bulk_edit.*` (DTJ-168) — тот же приём, что `features/inventory-manual/i18n-smoke.spec.ts` (DTJ-167). */
 
 const LOCALES: readonly Locale[] = ['tj', 'ru', 'en']
 

@@ -81,10 +81,5 @@ export interface InventoryPendingModerationCountResponse {
   readonly pendingCount: number
 }
 
-/**
- * ДОПОЛНЕНО DTJ-168: `GET /api/v1/inventory-sync-batches/upload/:sourceUploadId` — статусы ВСЕХ
- * батчей одной Excel-загрузки, для агрегированного прогресс-бара (`computeAggregateProgress`,
- * SRS-INV-014). Плоский массив (не курсорная страница `InventorySyncBatchListItemSchema` из
- * DTJ-163) — N батчей одной загрузки мало (чанки по 1000 строк), пагинация не нужна.
- */
+// GET /inventory-sync-batches/upload/:sourceUploadId — плоский массив, N батчей одной загрузки мало, пагинация не нужна.
 export type InventorySyncBatchesByUploadResponse = readonly InventorySyncBatchListItemDto[]

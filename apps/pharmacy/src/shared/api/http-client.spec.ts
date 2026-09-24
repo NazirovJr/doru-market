@@ -216,7 +216,6 @@ describe('httpRequestJson / httpPostJson', () => {
   })
 })
 
-/** ДОПОЛНЕНО DTJ-168: multipart-загрузка (Excel-импорт остатков) не должна получать ручной `Content-Type: application/json`. */
 describe('httpPostForm', () => {
   it('не выставляет Content-Type вручную — fetch сам добавляет multipart boundary', async () => {
     const fetchMock = vi.fn((_input: string, _init?: RequestInit) =>

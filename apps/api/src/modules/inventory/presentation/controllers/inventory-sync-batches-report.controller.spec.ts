@@ -59,7 +59,6 @@ async function seedBatch(
   return id
 }
 
-/** ДОПОЛНЕНО DTJ-168: батч Excel-канала с `sourceUploadId` (агрегированный прогресс-бар). */
 async function seedUploadBatch(
   repo: InMemoryInventorySyncBatchRepository,
   input: { readonly pharmacyId: string; readonly sourceUploadId: string },

@@ -32,7 +32,6 @@ const TabButton = ({
   )
 }
 
-/** DTJ-168: импорт Excel/CSV + массовая сетка редактирования — заменяет заглушку DTJ-167. */
 const BulkEditPanel = (): ReactElement => {
   return (
     <div className="flex flex-col gap-6" data-testid="inventory-bulk-edit-panel">

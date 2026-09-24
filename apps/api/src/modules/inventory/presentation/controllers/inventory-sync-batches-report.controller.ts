@@ -121,13 +121,7 @@ export class InventorySyncBatchesReportController {
     return ok({ pendingCount })
   }
 
-  /**
-   * ДОПОЛНЕНО DTJ-168 — статусы батчей одной Excel-загрузки (агрегированный прогресс-бар,
-   * `computeAggregateProgress` фронта). Статический сегмент `upload` перед `:sourceUploadId`
-   * (2 сегмента) не пересекается с односегментным `:batchId` DTJ-158 (другой контроллер, тот
-   * же базовый путь) — тот же приём приоритета статических сегментов, что `pending-moderation-count`
-   * (см. JSDoc класса).
-   */
+  // Статический сегмент "upload" перед :sourceUploadId не коллизирует с односегментным :batchId DTJ-158 — роутер отдаёт приоритет статическим сегментам.
   @Get('upload/:sourceUploadId')
   async byUpload(@Param('sourceUploadId') sourceUploadId: string, @CurrentUser() claims: JwtClaims): Promise<unknown> {
     const items = await this.reportQuery.listBatchesForSourceUpload({ sourceUploadId, actor: toActor(claims) })

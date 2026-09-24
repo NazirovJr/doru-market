@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useMedicineSuggest } from './use-medicine-suggest'
+import { useMedicineSuggest } from './use-medicine-search'
 
 type FetchImpl = (input: string) => Promise<Response>
 
@@ -36,8 +36,8 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('useMedicineSuggest (DTJ-167, GET /medicines/search)', () => {
-  it('запрос длины >= порога уходит в сеть, результат несёт dosageForm/dosageStrength (критерий приёмки 1)', async () => {
+describe('useMedicineSuggest (DTJ-167/DTJ-168, GET /medicines/search, общий для inventory-manual и inventory-bulk)', () => {
+  it('запрос длины >= порога уходит в сеть, результат несёт dosageForm/dosageStrength', async () => {
     const fetchMock = stubFetch(() => Promise.resolve(new Response(JSON.stringify({ data: [searchItem('Цитрамон')] }), { status: 200 })))
 
     const { result } = renderHook(() => useMedicineSuggest('цитра', true), { wrapper })

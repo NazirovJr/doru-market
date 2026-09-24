@@ -26,7 +26,6 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-/** DTJ-168 АС1: `POST /inventory-excel-import` вызывается с multipart-телом (файл + mode). */
 describe('useExcelImport (DTJ-168)', () => {
   it('успех: POST multipart/form-data, тело содержит file и mode', async () => {
     const fetchMock = stubFetch(() =>
@@ -55,7 +54,6 @@ describe('useExcelImport (DTJ-168)', () => {
   })
 })
 
-/** DTJ-168 риски: опрос обязан остановиться (`refetchInterval: false`) на терминальном статусе. */
 describe('useImportBatchesPolling (DTJ-168)', () => {
   it('2 из 3 батчей завершены — продолжает опрос (refetchInterval активен)', async () => {
     stubFetch(() =>

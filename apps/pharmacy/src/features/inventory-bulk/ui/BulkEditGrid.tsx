@@ -12,11 +12,11 @@ import {
   useBulkSave,
   type BulkGridRow,
 } from '@/features/inventory-bulk/api/use-bulk-grid'
-import {
-  formatBulkMedicineLabel,
-  useBulkMedicineSearch,
-  type BulkMedicineSuggestion,
-} from '@/features/inventory-bulk/api/use-bulk-medicine-search'
+import { useMedicineSuggest, type MedicineSuggestionItem } from '@/shared/api/use-medicine-search'
+
+function formatMedicineLabel(item: MedicineSuggestionItem): string {
+  return `${item.tradeName} (${item.dosageForm}, ${item.dosageStrength})`
+}
 
 const MEDICINE_SEARCH_DEBOUNCE_MS = 200
 const RANDOM_ID_RADIX = 36
@@ -42,13 +42,13 @@ const MedicinePicker = ({
   onSelect,
   onCancel,
 }: {
-  readonly onSelect: (item: BulkMedicineSuggestion) => void
+  readonly onSelect: (item: MedicineSuggestionItem) => void
   readonly onCancel: () => void
 }): ReactElement => {
   const { t } = useT('tj')
   const [rawQuery, setRawQuery] = useState('')
   const debouncedQuery = useDebouncedText(rawQuery)
-  const suggestQuery = useBulkMedicineSearch(debouncedQuery, true)
+  const suggestQuery = useMedicineSuggest(debouncedQuery, true)
   const items = suggestQuery.data ?? []
 
   return (
@@ -75,7 +75,7 @@ const MedicinePicker = ({
               onClick={() => { onSelect(item) }}
               className="w-full px-2 py-1 text-left text-sm hover:bg-line"
             >
-              {formatBulkMedicineLabel(item)}
+              {formatMedicineLabel(item)}
             </button>
           </li>
         ))}
@@ -156,19 +156,7 @@ const GridRow = ({
   )
 }
 
-/**
- * Массовая сетка (DTJ-168) — переиспользует `POST /inventory-manual-entry` (DTJ-162) батчем
- * изменённых строк, НЕ отдельный Excel-канал.
- *
- * БЛОКЕР (см. отчёт сдачи): в `apps/api/src/modules/inventory/presentation` нет ни одного
- * эндпоинта, отдающего СПИСОК текущих остатков аптеки для предзагрузки существующих позиций —
- * ни один из тикетов в `depends_on` (DTJ-166/161/159/164) его не создаёт, и отдельного тикета на
- * него нет. Строка `INVENTORY_LIST_QUERY_KEY` заведена (см. `shared/api/inventory-query-keys.ts`)
- * и инвалидируется после сохранения — грид готов сразу начать читать данные, как только такой
- * эндпоинт появится (см. `useBulkSave`, `onSuccess`). До тех пор сетка работает над строками,
- * добавленными в ЭТОЙ сессии (медикамент выбирается один раз при добавлении строки и становится
- * `readonly`, как того требует «Что сделать» тикета).
- */
+// Нет backend-эндпоинта для чтения текущих остатков — грид пока работает над строками, добавленными в этой сессии (см. отчёт сдачи).
 export const BulkEditGrid = (): ReactElement => {
   const { t } = useT('tj')
   const [rows, setRows] = useState<readonly BulkGridRow[]>([])
@@ -183,11 +171,11 @@ export const BulkEditGrid = (): ReactElement => {
   const dirtyRows = selectDirtyRows(rows)
   const canSave = dirtyRows.length > 0 && dirtyRows.every((row) => isRowValid(row, today)) && !bulkSave.isPending
 
-  function handleAddMedicine(item: BulkMedicineSuggestion): void {
+  function handleAddMedicine(item: MedicineSuggestionItem): void {
     const newRow: BulkGridRow = {
       rowId: makeRowId(),
       medicineId: item.medicineId,
-      medicineLabel: formatBulkMedicineLabel(item),
+      medicineLabel: formatMedicineLabel(item),
       priceTjs: '',
       quantity: '',
       expiryDate: '',

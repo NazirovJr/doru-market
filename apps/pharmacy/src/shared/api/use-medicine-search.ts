@@ -2,11 +2,9 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import type { SearchResultItemDto } from '@dorutj/contracts'
 import { httpRequestJson, type HttpError } from '@/shared/api/http-client'
 
-/** `/search`, а не `/suggest`: только он отдаёт форму и дозировку, нужные для различения позиций. */
 const MEDICINE_SEARCH_PATH = '/api/v1/medicines/search'
 const MEDICINE_SEARCH_RESULT_LIMIT = 8
 export const MIN_MEDICINE_QUERY_LENGTH = 2
-/** Повторный выбор того же запроса (напр. blur+focus) не бьёт по сети заново на 30с. */
 const SUGGEST_STALE_TIME_MS = 30_000
 
 export interface MedicineSuggestionItem {
@@ -41,7 +39,7 @@ export function useMedicineSuggest(
 ): UseQueryResult<readonly MedicineSuggestionItem[], HttpError> {
   const belowMinLength = debouncedQuery.length < MIN_MEDICINE_QUERY_LENGTH
   return useQuery<readonly MedicineSuggestionItem[], HttpError>({
-    queryKey: ['inventory-manual', 'medicine-search', debouncedQuery],
+    queryKey: ['medicine-search', debouncedQuery],
     queryFn: () => fetchMedicineSuggestions(debouncedQuery),
     enabled: enabled && !belowMinLength,
     staleTime: SUGGEST_STALE_TIME_MS,

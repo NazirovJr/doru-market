@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { computeAggregateProgress } from './import-progress.model'
 
-/** DTJ-168 тест-план: `computeAggregateProgress`. */
 describe('computeAggregateProgress', () => {
   it('2 из 3 завершённых батчей даёт percent≈66.67, isComplete=false', () => {
     const result = computeAggregateProgress([
