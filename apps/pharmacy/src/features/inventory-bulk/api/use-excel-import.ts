@@ -4,8 +4,9 @@ import type {
   InventoryExcelImportMode,
   InventorySyncBatchesByUploadResponse,
 } from '@dorutj/contracts'
-import { httpPostForm, httpRequest, httpRequestJson, type HttpError } from '@/shared/api/http-client'
+import { httpPostForm, httpRequestJson, type HttpError } from '@/shared/api/http-client'
 import { INVENTORY_LIST_QUERY_KEY } from '@/shared/api/inventory-query-keys'
+import { downloadAuthenticatedFile } from '@/shared/api/download-authenticated-file'
 import { computeAggregateProgress, type AggregateProgress } from '@/features/inventory-bulk/model/import-progress.model'
 
 const EXCEL_IMPORT_PATH = '/api/v1/inventory-excel-import'
@@ -64,25 +65,10 @@ export function progressFromBatches(batches: InventorySyncBatchesByUploadRespons
   return computeAggregateProgress(batches ?? [])
 }
 
-async function triggerBlobDownload(path: string, filename: string): Promise<void> {
-  const response = await httpRequest(path)
-  if (!response.ok) {
-    throw new Error(`Failed to download ${path}: HTTP ${String(response.status)}`)
-  }
-  const blob = await response.blob()
-  const objectUrl = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = objectUrl
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(objectUrl)
-}
-
-// Прямая ссылка не донесла бы Authorization до защищённого эндпоинта — поэтому fetch + blob.
 export function downloadInventoryImportTemplate(): Promise<void> {
-  return triggerBlobDownload(IMPORT_TEMPLATE_PATH, IMPORT_TEMPLATE_FILENAME)
+  return downloadAuthenticatedFile(IMPORT_TEMPLATE_PATH, IMPORT_TEMPLATE_FILENAME)
 }
 
 export function downloadImportErrorReport(sourceUploadId: string): Promise<void> {
-  return triggerBlobDownload(errorReportPath(sourceUploadId), ERROR_REPORT_FILENAME)
+  return downloadAuthenticatedFile(errorReportPath(sourceUploadId), ERROR_REPORT_FILENAME)
 }

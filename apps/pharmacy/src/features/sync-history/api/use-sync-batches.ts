@@ -5,8 +5,9 @@ import type {
   InventorySyncBatchListItemDto,
   InventorySyncRowErrorResponseDto,
 } from '@dorutj/contracts'
-import { httpGetJsonWithMeta, httpRequest, type HttpError, type JsonMeta } from '@/shared/api/http-client'
+import { httpGetJsonWithMeta, type HttpError, type JsonMeta } from '@/shared/api/http-client'
 import { useAuthStore } from '@/shared/api/auth-store'
+import { downloadAuthenticatedFile } from '@/shared/api/download-authenticated-file'
 
 // Бэкенд не читает channel вовсе (сверено с контроллером/сервисом) — отправляем его на будущее, а сужение списка делаем клиентски.
 const SYNC_BATCHES_PATH = '/api/v1/inventory-sync-batches'
@@ -112,19 +113,8 @@ function errorReportPath(sourceUploadId: string): string {
 
 const ERROR_REPORT_FILENAME = 'doru-tj-inventory-import-errors.xlsx'
 
-// Прямая ссылка не донесла бы Authorization до защищённого эндпоинта — fetch + blob.
-export async function downloadSyncErrorReport(sourceUploadId: string): Promise<void> {
-  const response = await httpRequest(errorReportPath(sourceUploadId))
-  if (!response.ok) {
-    throw new Error(`Failed to download ${errorReportPath(sourceUploadId)}: HTTP ${String(response.status)}`)
-  }
-  const blob = await response.blob()
-  const objectUrl = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = objectUrl
-  link.download = ERROR_REPORT_FILENAME
-  link.click()
-  URL.revokeObjectURL(objectUrl)
+export function downloadSyncErrorReport(sourceUploadId: string): Promise<void> {
+  return downloadAuthenticatedFile(errorReportPath(sourceUploadId), ERROR_REPORT_FILENAME)
 }
 
 const PENDING_MODERATION_COUNT_PATH = `${SYNC_BATCHES_PATH}/pending-moderation-count`
