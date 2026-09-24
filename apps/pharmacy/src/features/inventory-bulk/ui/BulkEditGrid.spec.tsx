@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { BULK_GRID_PAGE_SIZE } from '@/features/inventory-bulk/api/use-bulk-grid'
 import { BulkEditGrid } from './BulkEditGrid'
 
 const DEFAULT_MEDICINE_SEARCH_ITEM = { medicineId: 'med-1', tradeName: 'Aspirin', dosageForm: 'tablet', dosageStrength: '500mg' }
@@ -37,18 +38,41 @@ function renderGrid(): void {
   )
 }
 
+interface InventoryPageFixture {
+  readonly items: readonly InventoryItemFixture[]
+  readonly hasMore: boolean
+}
+
 interface StubApiOptions {
   readonly medicineSearchItems?: readonly (typeof DEFAULT_MEDICINE_SEARCH_ITEM)[]
   readonly inventoryItems?: readonly InventoryItemFixture[]
+  readonly inventoryPages?: readonly InventoryPageFixture[]
   readonly saveResponse?: Record<string, unknown>
 }
 
+function makeInventoryItems(count: number, offset = 0): InventoryItemFixture[] {
+  return Array.from({ length: count }, (_, i) => ({
+    inventoryId: `inv-${String(offset + i)}`,
+    medicineId: `med-${String(offset + i)}`,
+    tradeName: `Trade-${String(offset + i).padStart(4, '0')}`,
+    dosageForm: 'tablet',
+    dosageStrength: '10mg',
+    priceDiram: 100,
+    stockQuantity: 1,
+    batchNumber: null,
+    expiryDate: '2030-01-01',
+    lastSyncedAt: '2026-01-01T00:00:00.000Z',
+  }))
+}
+
 // Различает URL — /medicines/search (подсказки), /inventory-manual-entry (сохранение, ПЕРЕД
-// общим /inventory — иначе матчится по префиксу), /inventory (список остатков, DTJ-171).
+// общим /inventory — иначе матчится по префиксу), /inventory (список остатков, DTJ-171,
+// многостраничный фикстур через inventoryPages — по счётчику вызовов).
 function stubApi(options: StubApiOptions = {}): ReturnType<typeof vi.fn> {
   const medicineSearchItems = options.medicineSearchItems ?? [DEFAULT_MEDICINE_SEARCH_ITEM]
-  const inventoryItems = options.inventoryItems ?? []
+  const inventoryPages = options.inventoryPages ?? [{ items: options.inventoryItems ?? [], hasMore: false }]
   const saveResponse = options.saveResponse ?? DEFAULT_SAVE_RESPONSE
+  let inventoryCallCount = 0
 
   const fetchMock = vi.fn((input: string, _init?: RequestInit) => {
     if (input.includes('/api/v1/medicines/search')) {
@@ -58,9 +82,14 @@ function stubApi(options: StubApiOptions = {}): ReturnType<typeof vi.fn> {
       return Promise.resolve(new Response(JSON.stringify({ data: saveResponse }), { status: 200 }))
     }
     if (input.includes('/api/v1/inventory')) {
+      const page = inventoryPages[Math.min(inventoryCallCount, inventoryPages.length - 1)]!
+      inventoryCallCount += 1
       return Promise.resolve(
         new Response(
-          JSON.stringify({ data: inventoryItems, meta: { pagination: { nextCursor: null, hasMore: false, limit: 50 } } }),
+          JSON.stringify({
+            data: page.items,
+            meta: { pagination: { nextCursor: page.hasMore ? 'cursor-1' : null, hasMore: page.hasMore, limit: 50 } },
+          }),
           { status: 200 },
         ),
       )
@@ -69,6 +98,12 @@ function stubApi(options: StubApiOptions = {}): ReturnType<typeof vi.fn> {
   })
   vi.stubGlobal('fetch', fetchMock)
   return fetchMock
+}
+
+function countInventoryListCalls(fetchMock: ReturnType<typeof vi.fn>): number {
+  return (fetchMock.mock.calls as [string, RequestInit?][]).filter(
+    ([url]) => url.includes('/api/v1/inventory') && !url.includes('inventory-manual-entry'),
+  ).length
 }
 
 async function addOneRow(): Promise<void> {
@@ -158,5 +193,31 @@ describe('<BulkEditGrid /> (DTJ-168)', () => {
     const body = JSON.parse(init.body as string) as { rows: readonly { medicineId: string }[] }
     expect(body.rows).toHaveLength(2)
     expect(body.rows.map((row) => row.medicineId).sort()).toEqual(['med-1', 'med-2'])
+  })
+
+  it('при монтировании ровно 1 запрос GET /inventory — без эагерной подгрузки всех страниц', async () => {
+    const fetchMock = stubApi({ inventoryPages: [{ items: makeInventoryItems(1), hasMore: true }] })
+    renderGrid()
+
+    await waitFor(() => { expect(screen.getAllByTestId('bulk-grid-row')).toHaveLength(1) })
+    expect(countInventoryListCalls(fetchMock)).toBe(1)
+  })
+
+  it('переход на страницу 2 при hasNextPage=true отправляет второй запрос GET /inventory', async () => {
+    const fetchMock = stubApi({
+      inventoryPages: [
+        { items: makeInventoryItems(BULK_GRID_PAGE_SIZE, 0), hasMore: true },
+        { items: makeInventoryItems(1, BULK_GRID_PAGE_SIZE), hasMore: false },
+      ],
+    })
+    renderGrid()
+
+    await waitFor(() => { expect(screen.getAllByTestId('bulk-grid-row')).toHaveLength(BULK_GRID_PAGE_SIZE) })
+    expect(countInventoryListCalls(fetchMock)).toBe(1)
+    expect(screen.getByTestId('bulk-grid-next-page')).not.toBeDisabled()
+
+    fireEvent.click(screen.getByTestId('bulk-grid-next-page'))
+
+    await waitFor(() => { expect(countInventoryListCalls(fetchMock)).toBe(2) })
   })
 })

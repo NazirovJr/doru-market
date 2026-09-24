@@ -167,17 +167,13 @@ export const BulkEditGrid = (): ReactElement => {
   const today = todayIsoDate()
 
   // Серверные строки — источник истины, локально добавленные/изменённые сохраняются поверх,
-  // пока не сохранены (mergeServerAndLocalRows). Подгружаем все страницы сразу — существующий
-  // пейджер сетки (BULK_GRID_PAGE_SIZE) остаётся клиентским поверх уже загруженных данных.
+  // пока не сохранены (mergeServerAndLocalRows). Следующая серверная страница грузится ПО
+  // ТРЕБОВАНИЮ (goToPage) — не при монтировании, иначе у аптеки с тысячами позиций открытие
+  // вкладки шлёт десятки запросов подряд.
   const serverRows = flattenInventoryPages(inventoryList.data)
   useEffect(() => {
     setRows((prev) => mergeServerAndLocalRows(serverRows, prev))
   }, [inventoryList.data])
-  useEffect(() => {
-    if (inventoryList.hasNextPage && !inventoryList.isFetchingNextPage) {
-      void inventoryList.fetchNextPage()
-    }
-  }, [inventoryList])
 
   const totalPages = totalPageCount(rows.length, BULK_GRID_PAGE_SIZE)
   const visibleRows = paginateRows(rows, page, BULK_GRID_PAGE_SIZE)
@@ -198,6 +194,17 @@ export const BulkEditGrid = (): ReactElement => {
     setRows((prev) => [...prev, newRow])
     setIsPickerOpen(false)
     setPage(totalPageCount(rows.length + 1, BULK_GRID_PAGE_SIZE) - 1)
+  }
+
+  // Переход на страницу, для которой строк ещё не загружено (или на последнюю загруженную) —
+  // подгружает следующую серверную страницу, если она есть.
+  function goToPage(targetPage: number): void {
+    const loadedPages = totalPageCount(rows.length, BULK_GRID_PAGE_SIZE)
+    const needsMoreRows = targetPage >= loadedPages - 1
+    if (needsMoreRows && inventoryList.hasNextPage && !inventoryList.isFetchingNextPage) {
+      void inventoryList.fetchNextPage()
+    }
+    setPage(targetPage)
   }
 
   function handleRowChange(rowId: string, patch: Partial<BulkGridRow>): void {
@@ -262,7 +269,7 @@ export const BulkEditGrid = (): ReactElement => {
           </div>
 
           <div className="flex items-center justify-between text-sm text-ink-muted">
-            <button type="button" disabled={page === 0} onClick={() => { setPage((p) => p - 1) }} data-testid="bulk-grid-prev-page" className="underline disabled:opacity-50">
+            <button type="button" disabled={page === 0} onClick={() => { goToPage(page - 1) }} data-testid="bulk-grid-prev-page" className="underline disabled:opacity-50">
               {t('pharmacy.inventory.bulk_edit.grid_prev_page')}
             </button>
             <span data-testid="bulk-grid-page-info">
@@ -270,8 +277,8 @@ export const BulkEditGrid = (): ReactElement => {
             </span>
             <button
               type="button"
-              disabled={page >= totalPages - 1}
-              onClick={() => { setPage((p) => p + 1) }}
+              disabled={page >= totalPages - 1 && !inventoryList.hasNextPage}
+              onClick={() => { goToPage(page + 1) }}
               data-testid="bulk-grid-next-page"
               className="underline disabled:opacity-50"
             >
