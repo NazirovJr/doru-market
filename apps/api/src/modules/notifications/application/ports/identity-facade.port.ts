@@ -23,6 +23,8 @@
 export interface NotificationRecipientProfile {
   readonly tenantId: string
   readonly telegramChatId: bigint | null
+  /** Источник локали для выбора шаблона; сужение/дефолт — на стороне вызывающего. */
+  readonly preferredLocale: string
 }
 
 export const IDENTITY_FACADE_PORT = Symbol.for('@dorutj/notifications/identity-facade-port')

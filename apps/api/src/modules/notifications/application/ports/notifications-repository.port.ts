@@ -29,7 +29,9 @@ export interface CreateNotificationInput {
   readonly status: NotificationStatus
   readonly payload: Record<string, unknown>
   /** См. JSDoc файла §«eventType необязателен». */
-  readonly eventType?: string
+  readonly eventType?: string | undefined
+  /** Ссылка на outbox.id — вместе с channel ключ идемпотентности UNIQUE(user_id, channel, source_event_id). */
+  readonly sourceEventId?: string | undefined
 }
 
 export interface NotificationRecord extends CreateNotificationInput {
@@ -71,6 +73,7 @@ export interface ListNotificationsPage {
 }
 
 export interface NotificationsRepositoryPort {
+  /** UNIQUE-конфликт по sourceEventId — идемпотентный no-op, возвращает существующую запись, не бросает. */
   create(input: CreateNotificationInput): Promise<NotificationRecord>
   /**
    * Страница ленты пользователя.

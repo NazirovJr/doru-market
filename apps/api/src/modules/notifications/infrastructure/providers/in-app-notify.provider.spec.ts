@@ -17,7 +17,7 @@ function fakeRecord(input: CreateNotificationInput): NotificationRecord {
 
 describe('InAppNotifyProvider', () => {
   it('критерий приёмки 3 DTJ-368: синхронная запись с channel=in_app, status=sent НЕМЕДЛЕННО', async () => {
-    const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: null })
+    const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: null, preferredLocale: 'ru' })
     const create = vi.fn().mockImplementation((input: CreateNotificationInput) => Promise.resolve(fakeRecord(input)))
     const list = vi.fn<NotificationsRepositoryPort['list']>().mockResolvedValue({
       items: [],
@@ -27,7 +27,7 @@ describe('InAppNotifyProvider', () => {
     const repository: NotificationsRepositoryPort = { create, list }
     const provider = new InAppNotifyProvider(identityFacade, repository)
 
-    const result = await provider.send('user-1', 'in_app', { subject: 'Заказ №1', body: 'Готов к выдаче' })
+    const result = await provider.send({ userId: 'user-1', channel: 'in_app', subject: 'Заказ №1', body: 'Готов к выдаче' })
 
     expect(result).toEqual({ success: true, providerMessageId: 'notification-1' })
     expect(create).toHaveBeenCalledExactlyOnceWith({
@@ -40,7 +40,7 @@ describe('InAppNotifyProvider', () => {
   })
 
   it('без subject — payload содержит только body', async () => {
-    const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: null })
+    const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: null, preferredLocale: 'ru' })
     const create = vi.fn().mockImplementation((input: CreateNotificationInput) => Promise.resolve(fakeRecord(input)))
     const list = vi.fn<NotificationsRepositoryPort['list']>().mockResolvedValue({
       items: [],
@@ -50,7 +50,7 @@ describe('InAppNotifyProvider', () => {
     const repository: NotificationsRepositoryPort = { create, list }
     const provider = new InAppNotifyProvider(identityFacade, repository)
 
-    await provider.send('user-1', 'in_app', { body: 'Готов к выдаче' })
+    await provider.send({ userId: 'user-1', channel: 'in_app', body: 'Готов к выдаче' })
 
     expect(create).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ payload: { body: 'Готов к выдаче' } }))
   })
@@ -66,9 +66,23 @@ describe('InAppNotifyProvider', () => {
     const repository: NotificationsRepositoryPort = { create, list }
     const provider = new InAppNotifyProvider(identityFacade, repository)
 
-    const result = await provider.send('user-missing', 'in_app', { body: 'привет' })
+    const result = await provider.send({ userId: 'user-missing', channel: 'in_app', body: 'привет' })
 
     expect(result).toEqual({ success: false })
     expect(create).not.toHaveBeenCalled()
+  })
+
+  it('sourceEventId/eventType передаются в create() для дедупликации (SRS-ADM-057)', async () => {
+    const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: null, preferredLocale: 'ru' })
+    const create = vi.fn().mockImplementation((input: CreateNotificationInput) => Promise.resolve(fakeRecord(input)))
+    const list = vi.fn<NotificationsRepositoryPort['list']>().mockResolvedValue({ items: [], nextCursor: null, hasMore: false })
+    const repository: NotificationsRepositoryPort = { create, list }
+    const provider = new InAppNotifyProvider(identityFacade, repository)
+
+    await provider.send({ userId: 'user-1', channel: 'in_app', body: 'Заказ оплачен', eventType: 'order.paid', sourceEventId: 'evt-1' })
+
+    expect(create).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ eventType: 'order.paid', sourceEventId: 'evt-1' }),
+    )
   })
 })
