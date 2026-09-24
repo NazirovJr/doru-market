@@ -1,21 +1,28 @@
 /**
- * `NotificationDispatchModule` (DTJ-368, EP-16) — регистрирует BullMQ `Worker`, слушающий очередь
- * `notification-dispatch` (`QUEUE_NAMES.NOTIFICATION_DISPATCH`), и делегирует каждую джобу
- * `NotificationDispatchProcessor.process()`. Тот же паттерн, что `MockBankAutoPayModule` (EP-10):
- * очередь наполняется ИЗВНЕ (диспетчер `DTJ-370`, ещё не существует), НЕ тикает по расписанию —
- * поэтому здесь нет `*.scheduler.ts`/`upsertJobScheduler`.
- *
- * `onModuleInit` НЕ `async` (тот же приём, что `MockBankAutoPayModule`/`CartCleanupScheduler`) —
- * недоступный при старте Redis не должен блокировать граф DI / `GET /health`.
+ * Регистрирует BullMQ `Worker` очереди `notification-dispatch`. Backoff — custom (не exponential,
+ * см. contracts). Limiter — глобальный ≤1/сек (не per-chatId, BullMQ OSS без Pro не умеет per-key).
+ * `OutboxToNotificationsConsumer` здесь больше нет — переехал в apps/api (см. отчёт сдачи).
  */
 import { Inject, Injectable, Logger, Module, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common'
-import { Worker, type Job } from 'bullmq'
+import { ConfigService } from '@nestjs/config'
+import { Queue, Worker, type Job } from 'bullmq'
 import type { Redis } from 'ioredis'
+import { Pool } from 'pg'
+import { resolveNotificationDispatchBackoffMs, type NotificationDispatchJobData } from '@dorutj/contracts'
 // eslint-disable-next-line no-restricted-imports -- `@/...` не резолвится в worker-рантайме (см. common/health/health.service.ts); относительный путь до правки nest-cli.json.
 import { REDIS_CONNECTION } from '../../config/redis-connection.provider.js'
 // eslint-disable-next-line no-restricted-imports -- `@/...` не резолвится в worker-рантайме (см. common/health/health.service.ts); относительный путь до правки nest-cli.json.
 import { QUEUE_NAMES } from '../../queues/queue.constants.js'
-import { NotificationDispatchProcessor, type NotificationDispatchJobData } from './notification-dispatch.processor.js'
+// eslint-disable-next-line no-restricted-imports -- `@/...` не резолвится в worker-рантайме (см. common/health/health.service.ts); относительный путь до правки nest-cli.json.
+import type { WorkerEnv } from '../../config/env.schema.js'
+import { NotificationDispatchProcessor } from './notification-dispatch.processor.js'
+import { NOTIFICATION_DISPATCH_QUEUE, NOTIFICATION_DISPATCH_STORE, NOTIFICATIONS_DB_POOL } from './notification-dispatch.constants.js'
+import { PgNotificationDispatchStoreAdapter } from './pg-notification-dispatch-store.adapter.js'
+import { TELEGRAM_SENDER_PORT } from './telegram-sender.port.js'
+import { WorkerTelegramSenderAdapter } from './worker-telegram-sender.js'
+
+const RATE_LIMIT_MAX_JOBS = 1
+const RATE_LIMIT_DURATION_MS = 1_000
 
 @Injectable()
 class NotificationDispatchWorkerRunner implements OnModuleInit, OnModuleDestroy {
@@ -31,7 +38,11 @@ class NotificationDispatchWorkerRunner implements OnModuleInit, OnModuleDestroy 
     this.worker = new Worker<NotificationDispatchJobData>(
       QUEUE_NAMES.NOTIFICATION_DISPATCH,
       (bullJob: Job<NotificationDispatchJobData>) => this.processor.process(bullJob),
-      { connection: this.connection },
+      {
+        connection: this.connection,
+        limiter: { max: RATE_LIMIT_MAX_JOBS, duration: RATE_LIMIT_DURATION_MS },
+        settings: { backoffStrategy: (attemptsMade: number) => resolveNotificationDispatchBackoffMs(attemptsMade) },
+      },
     )
     this.worker.on('failed', (bullJob, error) => {
       this.logger.error(`notification-dispatch: job ${bullJob?.id ?? '?'} failed — ${error.message}`)
@@ -44,7 +55,32 @@ class NotificationDispatchWorkerRunner implements OnModuleInit, OnModuleDestroy 
 }
 
 @Module({
-  providers: [NotificationDispatchProcessor, NotificationDispatchWorkerRunner],
+  providers: [
+    {
+      provide: NOTIFICATIONS_DB_POOL,
+      useFactory: (configService: ConfigService<WorkerEnv, true>): Pool =>
+        new Pool({ connectionString: configService.get('DATABASE_URL', { infer: true }) }),
+      inject: [ConfigService],
+    },
+    {
+      provide: NOTIFICATION_DISPATCH_QUEUE,
+      useFactory: (connection: Redis): Queue<NotificationDispatchJobData> =>
+        new Queue<NotificationDispatchJobData>(QUEUE_NAMES.NOTIFICATION_DISPATCH, { connection }),
+      inject: [REDIS_CONNECTION],
+    },
+    { provide: NOTIFICATION_DISPATCH_STORE, useClass: PgNotificationDispatchStoreAdapter },
+    { provide: TELEGRAM_SENDER_PORT, useClass: WorkerTelegramSenderAdapter },
+    NotificationDispatchProcessor,
+    NotificationDispatchWorkerRunner,
+  ],
 })
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: класс существует только как носитель декоратора @Module для графа DI NestJS — штатный паттерн фреймворка.
-export class NotificationDispatchModule {}
+export class NotificationDispatchModule implements OnModuleDestroy {
+  public constructor(
+    @Inject(NOTIFICATIONS_DB_POOL) private readonly pool: Pool,
+    @Inject(NOTIFICATION_DISPATCH_QUEUE) private readonly dispatchQueue: Queue<NotificationDispatchJobData>,
+  ) {}
+
+  public async onModuleDestroy(): Promise<void> {
+    await Promise.all([this.pool.end(), this.dispatchQueue.close()])
+  }
+}

@@ -13,7 +13,11 @@
  */
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Tenant } from '@/modules/tenancy/domain/tenant.entity.js'
-import type { TenantRepositoryPort } from '@/modules/tenancy/application/ports/tenant-repository.port.js'
+import type {
+  TenantRepositoryPort,
+  TenantsListPage,
+  TenantsListQuery,
+} from '@/modules/tenancy/application/ports/tenant-repository.port.js'
 
 /** Сборка минимального `Tenant` (re-store) для целей теста изоляции. */
 function makeTenant(slug: string, id: string): Tenant {
@@ -63,6 +67,11 @@ class InMemoryTenantRepository implements TenantRepositoryPort {
       }
     }
     return Promise.resolve(null)
+  }
+
+  /** ДОБАВЛЕНО (DTJ-351) — не используется этим тестом (проверяет только изоляцию по slug). */
+  list(_query: TenantsListQuery): Promise<TenantsListPage> {
+    return Promise.resolve({ items: [], nextCursor: null, hasMore: false })
   }
 }
 

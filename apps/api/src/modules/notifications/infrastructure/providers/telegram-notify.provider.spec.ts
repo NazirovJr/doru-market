@@ -28,10 +28,10 @@ describe('TelegramNotifyProvider', () => {
   it('критерий приёмки 2 DTJ-368: без telegramChatId — { success: false }, БЕЗ сетевого вызова', async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
-    const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: null })
+    const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: null, preferredLocale: 'ru' })
     const provider = new TelegramNotifyProvider(identityFacade, stubConfig('bot-token'))
 
-    const result = await provider.send('user-1', 'telegram', { body: 'привет' })
+    const result = await provider.send({ userId: 'user-1', channel: 'telegram', body: 'привет' })
 
     expect(result).toEqual({ success: false })
     expect(fetchMock).not.toHaveBeenCalled()
@@ -43,7 +43,7 @@ describe('TelegramNotifyProvider', () => {
     const identityFacade = stubIdentityFacade(null)
     const provider = new TelegramNotifyProvider(identityFacade, stubConfig('bot-token'))
 
-    const result = await provider.send('user-missing', 'telegram', { body: 'привет' })
+    const result = await provider.send({ userId: 'user-missing', channel: 'telegram', body: 'привет' })
 
     expect(result).toEqual({ success: false })
     expect(fetchMock).not.toHaveBeenCalled()
@@ -52,10 +52,10 @@ describe('TelegramNotifyProvider', () => {
   it('TELEGRAM_BOT_TOKEN_NEUTRAL не настроен — { success: false }, БЕЗ сетевого вызова', async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
-    const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: 555n })
+    const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: 555n, preferredLocale: 'ru' })
     const provider = new TelegramNotifyProvider(identityFacade, stubConfig(undefined))
 
-    const result = await provider.send('user-1', 'telegram', { body: 'привет' })
+    const result = await provider.send({ userId: 'user-1', channel: 'telegram', body: 'привет' })
 
     expect(result).toEqual({ success: false })
     expect(fetchMock).not.toHaveBeenCalled()
@@ -64,10 +64,10 @@ describe('TelegramNotifyProvider', () => {
   it('наличие chatId — вызывает Bot API sendMessage с корректным chat_id и текстом', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { ok: true, result: { message_id: 42 } }))
     vi.stubGlobal('fetch', fetchMock)
-    const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: 987654321n })
+    const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: 987654321n, preferredLocale: 'ru' })
     const provider = new TelegramNotifyProvider(identityFacade, stubConfig('test-bot-token'))
 
-    const result = await provider.send('user-1', 'telegram', { subject: 'Заказ №1', body: 'Готов к выдаче' })
+    const result = await provider.send({ userId: 'user-1', channel: 'telegram', subject: 'Заказ №1', body: 'Готов к выдаче' })
 
     expect(result).toEqual({ success: true, providerMessageId: '42' })
     expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -79,19 +79,19 @@ describe('TelegramNotifyProvider', () => {
 
   it('Bot API возвращает ok: false — { success: false }, не бросает', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(400, { ok: false, description: 'chat not found' })))
-    const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: 1n })
+    const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: 1n, preferredLocale: 'ru' })
     const provider = new TelegramNotifyProvider(identityFacade, stubConfig('test-bot-token'))
 
-    const result = await provider.send('user-1', 'telegram', { body: 'привет' })
+    const result = await provider.send({ userId: 'user-1', channel: 'telegram', body: 'привет' })
 
     expect(result).toEqual({ success: false })
   })
 
   it('сетевая ошибка fetch — { success: false }, не бросает наружу', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')))
-    const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: 1n })
+    const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: 1n, preferredLocale: 'ru' })
     const provider = new TelegramNotifyProvider(identityFacade, stubConfig('test-bot-token'))
 
-    await expect(provider.send('user-1', 'telegram', { body: 'привет' })).resolves.toEqual({ success: false })
+    await expect(provider.send({ userId: 'user-1', channel: 'telegram', body: 'привет' })).resolves.toEqual({ success: false })
   })
 })

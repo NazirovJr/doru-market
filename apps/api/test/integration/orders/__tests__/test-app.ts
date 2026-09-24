@@ -43,6 +43,7 @@ import { ResponseInterceptor } from '@/common/http/interceptors/response.interce
 import { OrdersModule } from '@/modules/orders/orders.module.js'
 import { SharedKernelModule } from '@/shared-kernel/shared-kernel.module.js'
 import { LoggerModule } from '@/common/logging/logger.module.js'
+import { AuditLogModule } from '@/common/audit/audit-log.module.js'
 import { IdempotencyModule } from '@/common/idempotency/idempotency.module.js'
 import { TenantContext } from '@/common/context/tenant-context.js'
 import { RequestContext } from '@/common/context/request-context.js'
@@ -166,7 +167,7 @@ export interface CreateTestAppOptions {
 export async function createTestApp(options: CreateTestAppOptions = {}): Promise<TestApp> {
   applyTestEnv()
   const builder = Test.createTestingModule({
-    imports: [SharedKernelModule, LoggerModule, IdempotencyModule, OrdersModule],
+    imports: [SharedKernelModule, LoggerModule, IdempotencyModule, AuditLogModule, OrdersModule],
   })
   if (options.fakeMockBankAutoPayQueue === true) {
     const { MOCK_BANK_AUTO_PAY_QUEUE } = await import('@/modules/payments/infrastructure/adapters/mock-bank.provider.js')

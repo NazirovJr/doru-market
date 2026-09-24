@@ -24,6 +24,6 @@ export class UsersRepositoryIdentityFacadeAdapter implements IdentityFacadePort 
     if (user === null) {
       return null
     }
-    return { tenantId: user.tenantId, telegramChatId: user.telegramChatId }
+    return { tenantId: user.tenantId, telegramChatId: user.telegramChatId, preferredLocale: user.preferredLocale }
   }
 }

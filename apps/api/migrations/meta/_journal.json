@@ -307,6 +307,18 @@
       "when": 1700000520000,
       "tag": "0048_otp_codes_plain_code_for_handover",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "when": 1700000530000,
+      "tag": "0049_notification_templates",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "when": 1700000540000,
+      "tag": "0050_notifications",
+      "breakpoints": true
     }
   ]
 }

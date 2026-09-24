@@ -1,23 +1,62 @@
-import type { ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
+import { PointEditForm } from '@/features/inventory-manual/ui/PointEditForm'
+import { ExcelImportDropzone } from '@/features/inventory-bulk/ui/ExcelImportDropzone'
+import { BulkEditGrid } from '@/features/inventory-bulk/ui/BulkEditGrid'
 
-/**
- * Заглушка маршрута `/inventory` (DTJ-166 «Что сделать» п.4: «остальные маршруты — заглушки
- * `<Suspense>`+`lazy()` для DTJ-167/168/169, регистрируются пустыми, следующие тикеты
- * заполняют»). Реальный экран (точечный ввод остатка + каталожный автокомплит, DTJ-167;
- * массовая сетка + Excel-импорт как второй таб, DTJ-168) — вне scope DTJ-166.
- *
- * Этот файл — files_owned DTJ-167 (`apps/pharmacy/src/pages/inventory/InventoryPage.tsx`);
- * DTJ-167 заменит содержимое, не создаёт файл заново.
- */
+type InventoryTab = 'point_edit' | 'bulk_edit'
+
+// TODO(DTJ-408): заменить на Tabs из packages/ui, когда он появится.
+const TabButton = ({
+  active,
+  onClick,
+  testId,
+  children,
+}: {
+  readonly active: boolean
+  readonly onClick: () => void
+  readonly testId: string
+  readonly children: string
+}): ReactElement => {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      data-testid={testId}
+      className={`px-3 py-2 text-sm font-medium ${active ? 'border-b-2 border-brand-primary text-ink' : 'text-ink-muted'}`}
+    >
+      {children}
+    </button>
+  )
+}
+
+const BulkEditPanel = (): ReactElement => {
+  return (
+    <div className="flex flex-col gap-6" data-testid="inventory-bulk-edit-panel">
+      <ExcelImportDropzone />
+      <BulkEditGrid />
+    </div>
+  )
+}
+
 const InventoryPage = (): ReactElement => {
   const { t } = useT('tj')
+  const [tab, setTab] = useState<InventoryTab>('point_edit')
+
   return (
-    <section
-      className="mx-auto flex w-full max-w-md flex-col gap-4 py-8"
-      data-testid="inventory-page-stub"
-    >
-      <p className="text-base text-ink">{t('pharmacy.page.coming_soon')}</p>
+    <section className="mx-auto flex w-full max-w-md flex-col gap-4 py-8" data-testid="inventory-page">
+      <div role="tablist" className="flex gap-2 border-b border-line">
+        <TabButton active={tab === 'point_edit'} onClick={() => { setTab('point_edit') }} testId="inventory-tab-point-edit">
+          {t('pharmacy.inventory.tabs.point_edit')}
+        </TabButton>
+        <TabButton active={tab === 'bulk_edit'} onClick={() => { setTab('bulk_edit') }} testId="inventory-tab-bulk-edit">
+          {t('pharmacy.inventory.tabs.bulk_edit')}
+        </TabButton>
+      </div>
+
+      {tab === 'point_edit' ? <PointEditForm /> : <BulkEditPanel />}
     </section>
   )
 }

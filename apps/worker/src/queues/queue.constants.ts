@@ -11,7 +11,7 @@
  * эпик, DTJ-368, EP-16, и имя очереди — то, что зафиксировано тикетом) заведена ниже.
  */
 export const QUEUE_NAMES = {
-  /** Куда `OutboxRelayWorker` публикует доменные события (SRS-DOM-151/152). */
+  /** Куда `OutboxRelayWorker` публикует доменные события (SRS-DOM-151/152). Первый реальный consumer — apps/api `OutboxToNotificationsConsumer` (DTJ-370). */
   DOMAIN_EVENTS: 'domain-events',
   /**
    * DTJ-238, SRS-PAY-004. Producer — `apps/api/src/modules/payments/infrastructure/adapters/
@@ -20,11 +20,7 @@ export const QUEUE_NAMES = {
    * Consumer — `jobs/escrow-timeouts/mock-bank-auto-pay.job.ts`.
    */
   MOCK_BANK_AUTO_PAY: 'mock-bank-auto-pay',
-  /**
-   * DTJ-368, EP-16. Producer — диспетчер `DTJ-370` (ещё не существует на этом тикете; ни один
-   * код не публикует в эту очередь сегодня). Consumer — `jobs/notifications/
-   * notification-dispatch.processor.ts` (скелет, `TODO(DTJ-370)`).
-   */
+  /** Producer — apps/api `DispatchNotificationUseCase`, каскад — сам processor. Consumer — `notification-dispatch.processor.ts`. */
   NOTIFICATION_DISPATCH: 'notification-dispatch',
   /**
    * DTJ-304, EP-12 (модуль 24, «Терминал фармацевта»). Producer — `apps/api/src/modules/orders/

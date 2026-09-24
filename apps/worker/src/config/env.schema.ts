@@ -136,6 +136,8 @@ export const envSchema = z.object({
   // DTJ-252, DoD «GRACE_PERIOD_DAYS — именованная ENV-константа»/«BillingInvoiceOverdueJob (BullMQ repeatable, ежедневно)».
   BILLING_INVOICE_OVERDUE_CRON: z.string().min(1).default(DEFAULT_BILLING_INVOICE_OVERDUE_CRON),
   BILLING_INVOICE_OVERDUE_GRACE_PERIOD_DAYS: z.coerce.number().int().positive().default(DEFAULT_BILLING_INVOICE_OVERDUE_GRACE_PERIOD_DAYS),
+  // Та же переменная, что apps/api — оба процесса читают одно имя ENV независимо, optional.
+  TELEGRAM_BOT_TOKEN_NEUTRAL: z.string().optional(),
 })
 
 export type WorkerEnv = z.infer<typeof envSchema>

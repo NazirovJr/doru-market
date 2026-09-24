@@ -121,6 +121,16 @@ export class InventorySyncBatchesReportController {
     return ok({ pendingCount })
   }
 
+  // Статический сегмент "upload" перед :sourceUploadId не коллизирует с односегментным :batchId DTJ-158 — роутер отдаёт приоритет статическим сегментам.
+  @Get('upload/:sourceUploadId')
+  async byUpload(@Param('sourceUploadId') sourceUploadId: string, @CurrentUser() claims: JwtClaims): Promise<unknown> {
+    const items = await this.reportQuery.listBatchesForSourceUpload({ sourceUploadId, actor: toActor(claims) })
+    if (items === null) {
+      throw notFound()
+    }
+    return ok(items.map(toListItemDto))
+  }
+
   @Get(':batchId/errors')
   async errors(
     @Param('batchId') batchId: string,

@@ -10,6 +10,7 @@ import { Module } from '@nestjs/common'
 import { pino } from 'pino'
 import { InventorySyncFailedJobHandler } from './inventory-sync-failed.handler.js'
 import { InventorySyncFailedListener } from './inventory-sync-failed.listener.js'
+import { buildWorkerLoggerOptions } from './worker-logger-options.js'
 import {
   INVENTORY_OUTBOX_PORT,
   INVENTORY_SYNC_BATCH_REPOSITORY_PORT,
@@ -27,7 +28,7 @@ import {
     { provide: INVENTORY_OUTBOX_PORT, useClass: InMemoryInventoryOutbox },
     {
       provide: LOGGER,
-      useFactory: (): ReturnType<typeof pino> => pino({ level: 'info' }),
+      useFactory: () => pino(buildWorkerLoggerOptions()),
     },
     InMemoryInventorySyncBatchRepository,
     InMemoryInventoryOutbox,

@@ -7,13 +7,19 @@
  * зафиксировано явным комментарием здесь и в DTJ-052.
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { eq } from 'drizzle-orm'
+import { and, desc, eq, inArray, lt, or, type SQL } from 'drizzle-orm'
 import { DuplicateCustomDomainError } from '@dorutj/contracts'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { tenants, tenantSettings } from '@/db/schema/tenants.js'
 import type { Tenant } from '@/modules/tenancy/domain/tenant.entity.js'
 import type { TenantId } from '@/modules/tenancy/domain/value-objects/tenant-id.vo.js'
-import type { TenantRepositoryPort } from '@/modules/tenancy/application/ports/tenant-repository.port.js'
+import type {
+  TenantListItem,
+  TenantRepositoryPort,
+  TenantsListCursor,
+  TenantsListPage,
+  TenantsListQuery,
+} from '@/modules/tenancy/application/ports/tenant-repository.port.js'
 import { tenantFromDb, toTenantInsert } from '@/modules/tenancy/infrastructure/mappers/tenant.mapper.js'
 
 /** Код SQLSTATE для unique_violation в PostgreSQL. */
@@ -65,6 +71,34 @@ export class DrizzleTenantRepository implements TenantRepositoryPort {
       return null
     }
     return this.attachSettings(row)
+  }
+
+  async list(query: TenantsListQuery): Promise<TenantsListPage> {
+    const cursorCondition = query.cursor != null ? keysetCondition(query.cursor) : undefined
+    const rows = await this.db
+      .select()
+      .from(tenants)
+      .where(cursorCondition)
+      .orderBy(desc(tenants.createdAt), desc(tenants.id))
+      .limit(query.limit + 1)
+    const hasMore = rows.length > query.limit
+    const page = hasMore ? rows.slice(0, query.limit) : rows
+    const settingsByTenantId = await this.loadSettingsByTenantId(page.map((row) => row.id))
+    const items = buildListItems(page, settingsByTenantId)
+    const last = page[page.length - 1]
+    return {
+      items,
+      nextCursor: hasMore && last !== undefined ? { v: normalizeCreatedAt(last.createdAt).toISOString(), id: last.id } : null,
+      hasMore,
+    }
+  }
+
+  private async loadSettingsByTenantId(tenantIds: readonly string[]): Promise<Map<string, typeof tenantSettings.$inferSelect>> {
+    if (tenantIds.length === 0) {
+      return new Map()
+    }
+    const rows = await this.db.select().from(tenantSettings).where(inArray(tenantSettings.tenantId, tenantIds))
+    return new Map(rows.map((row) => [row.tenantId, row]))
   }
 
   /**
@@ -180,4 +214,29 @@ function isPostgresError(error: unknown): error is { code: string; constraint?: 
     'code' in error &&
     typeof (error).code === 'string'
   )
+}
+
+function keysetCondition(cursor: TenantsListCursor): SQL | undefined {
+  const anchorCreatedAt = new Date(cursor.v)
+  return or(lt(tenants.createdAt, anchorCreatedAt), and(eq(tenants.createdAt, anchorCreatedAt), lt(tenants.id, cursor.id)))
+}
+
+function buildListItems(
+  rows: readonly (typeof tenants.$inferSelect)[],
+  settingsByTenantId: ReadonlyMap<string, typeof tenantSettings.$inferSelect>,
+): readonly TenantListItem[] {
+  const items: TenantListItem[] = []
+  for (const row of rows) {
+    const settingsRow = settingsByTenantId.get(row.id) ?? null
+    const tenant = tenantFromDb(row, settingsRow)
+    if (tenant !== null) {
+      items.push({ tenant, createdAt: normalizeCreatedAt(row.createdAt) })
+    }
+  }
+  return items
+}
+
+// created_at приходит от pg то Date, то строкой — new Date(x) принимает оба варианта.
+function normalizeCreatedAt(value: Date | string | null): Date {
+  return value === null ? new Date(0) : new Date(value)
 }

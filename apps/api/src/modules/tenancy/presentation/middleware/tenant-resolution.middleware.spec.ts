@@ -43,6 +43,8 @@ import {
 import {
   TENANT_REPOSITORY,
   type TenantRepositoryPort,
+  type TenantsListPage,
+  type TenantsListQuery,
 } from '@/modules/tenancy/application/ports/tenant-repository.port.js'
 import type { Tenant } from '@/modules/tenancy/domain/tenant.entity.js'
 import type { TenantId } from '@/modules/tenancy/domain/value-objects/tenant-id.vo.js'
@@ -112,6 +114,11 @@ class InMemoryTenantRepository implements TenantRepositoryPort {
       }
     }
     return Promise.resolve(null)
+  }
+
+  /** ДОБАВЛЕНО (DTJ-351) — не используется этим тестом (проверяет только резолвинг по slug/Host). */
+  list(_query: TenantsListQuery): Promise<TenantsListPage> {
+    return Promise.resolve({ items: [], nextCursor: null, hasMore: false })
   }
 }
 

@@ -80,3 +80,6 @@ export type InventorySyncRowErrorResponseDto = z.infer<typeof InventorySyncRowEr
 export interface InventoryPendingModerationCountResponse {
   readonly pendingCount: number
 }
+
+// GET /inventory-sync-batches/upload/:sourceUploadId — плоский массив, N батчей одной загрузки мало, пагинация не нужна.
+export type InventorySyncBatchesByUploadResponse = readonly InventorySyncBatchListItemDto[]
