@@ -293,5 +293,7 @@
   "admin.tenants.settings_form.field.cod_limit_diram": "COD limit, diram",
   "admin.tenants.settings_form.field.hold_period_days": "Payout hold period, days",
   "admin.tenants.settings_form.submit": "Save",
-  "admin.tenants.settings_form.toast_success": "Tenant settings saved"
+  "admin.tenants.settings_form.toast_success": "Tenant settings saved",
+  "admin.tenants.settings_form.validation.invalid_hex": "Color must be in HEX format, e.g. #1A2B3C",
+  "admin.tenants.settings_form.validation.invalid_cod_limit": "COD limit must be an integer of 0 or more"
 }
