@@ -5,6 +5,7 @@ import pino, { type Logger, type LoggerOptions } from 'pino'
 // eslint-disable-next-line no-restricted-imports -- `@/...` не резолвится нативным Node ESM в эмитированном tsc/nest build без bundler-шага (assumptions DTJ-001); относительный путь — единственный рабочий вариант без новых зависимостей.
 import type { AppConfigService } from '../../config/app-config.service.js'
 import { RequestContext } from '../context/request-context.js'
+import { buildSensitiveFieldRedactPaths } from './pino-redaction.config.js'
 
 /**
  * SRS-API-068: заголовки, которые никогда не должны попасть в лог целиком — секреты
@@ -34,7 +35,11 @@ export function buildPinoOptions(config: AppConfigService): LoggerOptions {
   return {
     level: config.logLevel,
     timestamp: pino.stdTimeFunctions.isoTime,
-    redact: { paths: [...REDACTED_PATHS], remove: true },
+    // DTJ-375: пути из `REDACTED_PATHS` (заголовки запроса) + пути, сгенерированные ИЗ общего
+    // `SENSITIVE_FIELD_NAMES` (тело/поля объекта лога на верхнем уровне и на один уровень
+    // вложенности, см. JSDoc `pino-redaction.config.ts`) — один и тот же список читает
+    // `audit_log` (`common/audit/infrastructure/audit-log.repository.ts`).
+    redact: { paths: [...REDACTED_PATHS, ...buildSensitiveFieldRedactPaths()], remove: true },
     mixin: mixinRequestContextFields,
   }
 }

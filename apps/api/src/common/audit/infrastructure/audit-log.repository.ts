@@ -11,14 +11,22 @@
  * Тот же приём и то же обоснование, что `modules/payments/infrastructure/repositories/
  * raw-sql-audit-log.repository.ts` (DTJ-243) — см. её JSDoc.
  *
- * `metadata` МАСКИРУЕТСЯ (`maskSensitiveMetadataFields`) ПЕРЕД `INSERT` — ВТОРОЙ, более
- * глубокий (рекурсивный по всей структуре) рубеж защиты секретов, ПОСЛЕ того как
+ * `metadata` МАСКИРУЕТСЯ (`maskSensitiveFields`, `@dorutj/contracts`, `DTJ-375`) ПЕРЕД `INSERT` —
+ * ВТОРОЙ, более глубокий (рекурсивный НА ЛЮБУЮ глубину) рубеж защиты секретов, ПОСЛЕ того как
  * `AuditEntry.create()` (`../domain/audit-entry.ts`) уже отверг запись целиком, если
- * `before`/`after`/`extra` содержат запрещённое поле. Переиспользует ТОТ ЖЕ константный
- * список полей (`SENSITIVE_METADATA_FIELDS`, домен) — не заводит вторую независимую копию
- * (риск расхождения списков, C15 AGENTS.md). Defense-in-depth того же духа, что связка
- * интерфейс+`REVOKE` (SRS-ADM-064): маскирование переживает будущую правку кода, которая по
- * ошибке уберёт вызов `AuditEntry.create()` выше по стеку.
+ * `before`/`after`/`extra` содержат запрещённое поле. Переиспользует ЕДИНЫЙ
+ * `SENSITIVE_FIELD_NAMES` (`packages/contracts/src/sensitive-fields.ts`, тот же источник, что
+ * читает pino-редактор) — не заводит вторую независимую копию (риск расхождения списков, C15
+ * AGENTS.md). Defense-in-depth того же духа, что связка интерфейс+`REVOKE` (SRS-ADM-064):
+ * маскирование переживает будущую правку кода, которая по ошибке уберёт вызов
+ * `AuditEntry.create()` выше по стеку.
+ *
+ * АСИММЕТРИЯ с pino (осознанное решение Tech Lead, `DTJ-375` «Риски»): здесь секрет ОТКЛОНЯЕТ
+ * запись целиком (`AuditEntry.create()`, fail-fast — явная ошибка разработчика на code review),
+ * маскирование `maskSensitiveFields` ниже — ТОЛЬКО второй, defense-in-depth рубеж НА СЛУЧАЙ,
+ * если первый рубеж почему-то не сработал. Для pino, наоборот, ЕДИНСТВЕННАЯ стратегия —
+ * маскирование (`common/logging/pino-redaction.config.ts`): лог не может «отказаться писаться».
+ * Не «исправлять» одно поведение под другое по аналогии.
  *
  * `requestId` дублируется В МЕТАДАННЫХ (канонический формат `{ before?, after?, requestId,
  * extra? }`, SRS-ADM-063) И отдельной колонкой `request_id` (быстрый `WHERE request_id = ...`
@@ -27,11 +35,10 @@
  */
 import { Inject, Injectable } from '@nestjs/common'
 import { sql } from 'drizzle-orm'
+import { maskSensitiveFields } from '@dorutj/contracts'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
-import { AuditEntry, SENSITIVE_METADATA_FIELDS } from '../domain/audit-entry.js'
+import { AuditEntry } from '../domain/audit-entry.js'
 import { AUDIT_LOG_PORT, type AuditEntryInput, type AuditLogPort } from '../audit-log.port.js'
-
-export const MASKED_METADATA_VALUE = '***MASKED***'
 
 @Injectable()
 export class AuditLogRepository implements AuditLogPort {
@@ -40,7 +47,7 @@ export class AuditLogRepository implements AuditLogPort {
   public async write(input: AuditEntryInput): Promise<void> {
     const entry = AuditEntry.create(input)
     const metadataWithRequestId = { ...entry.metadata, requestId: entry.requestId }
-    const maskedMetadata = maskSensitiveMetadataFields(metadataWithRequestId)
+    const maskedMetadata = maskSensitiveFields(metadataWithRequestId)
 
     await this.db.execute(sql`
       INSERT INTO audit_log (category, entity_type, entity_id, actor_user_id, action, reason, metadata, request_id, tenant_id)
@@ -50,20 +57,6 @@ export class AuditLogRepository implements AuditLogPort {
       )
     `)
   }
-}
-
-/** Рекурсивно заменяет значения запрещённых ключей (см. JSDoc файла) — обходит объекты и
- * массивы на любую глубину, не только верхний уровень `before`/`after`/`extra`. */
-export function maskSensitiveMetadataFields(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(maskSensitiveMetadataFields)
-  if (value === null || typeof value !== 'object') return value
-  const masked: Record<string, unknown> = {}
-  for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
-    masked[key] = (SENSITIVE_METADATA_FIELDS as readonly string[]).includes(key)
-      ? MASKED_METADATA_VALUE
-      : maskSensitiveMetadataFields(nested)
-  }
-  return masked
 }
 
 export const AUDIT_LOG_PORT_PROVIDER = {

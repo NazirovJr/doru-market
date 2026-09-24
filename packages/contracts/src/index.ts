@@ -38,3 +38,5 @@ export * from './orders-pharmacy-terminal.contracts.js'
 export * from './delivery/delivery.contracts.js'
 export * from './admin/index.js'
 export * from './notifications.js'
+// DTJ-375 (EP-16) — единый список чувствительных полей (pino-редактор + маскирование audit_log).
+export * from './sensitive-fields.js'
