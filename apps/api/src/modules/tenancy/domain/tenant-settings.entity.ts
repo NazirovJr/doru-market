@@ -38,6 +38,21 @@ export interface TenantSettingsBrandingUpdate {
 }
 
 /**
+ * ДОБАВЛЕНО (DTJ-351, EP-15) — `PATCH /tenant-settings/:id` (`super_admin`, `admin.
+ * UpdateTenantSettingsUseCase`). В отличие от `TenantSettingsBrandingUpdate` (полная замена
+ * трёх полей брендинга), это ЧАСТИЧНЫЙ патч: непереданное поле сохраняет текущее значение.
+ * Формат HEX/значений уже провалидирован `TenantSettingsPatchSchema` (Zod,
+ * `packages/contracts/src/admin/tenants.ts`) до попадания сюда — домен не переповторяет формат.
+ */
+export interface TenantSettingsAdminPatch {
+  readonly brandName?: string
+  readonly brandPalette?: Readonly<Record<string, string>>
+  readonly brandLogoUrl?: string | null
+  readonly codLimitDiram?: bigint
+  readonly holdPeriodDays?: number
+}
+
+/**
  * Snapshot-структура всех полей `TenantSettings`. Используется как параметр
  * `restore()` и внутри `Tenant`-агрегата, чтобы не таскать 15 позиционных
  * аргументов. Поля записаны через `readonly` (C13 immutability, `02` §4).
@@ -168,6 +183,24 @@ export class TenantSettings {
       inventoryDeltaSlaMinutes: this.inventoryDeltaSlaMinutes,
       returnRestockMinRemainingDays: this.returnRestockMinRemainingDays,
       defaultLocale: this.defaultLocale,
+    })
+  }
+
+  /**
+   * ДОБАВЛЕНО (DTJ-351) — см. JSDoc `TenantSettingsAdminPatch`. Возвращает НОВЫЙ объект
+   * (immutability, C13); поля, отсутствующие в `patch`, копируются из текущего состояния.
+   */
+  applyAdminPatch(patch: TenantSettingsAdminPatch): TenantSettings {
+    if (patch.brandName?.length === 0) {
+      throw new ValidationError('brandName is required', { field: 'brandName' })
+    }
+    return new TenantSettings({
+      ...this.props,
+      brandName: patch.brandName ?? this.brandName,
+      brandPalette: patch.brandPalette ?? this.brandPalette,
+      brandLogoUrl: patch.brandLogoUrl !== undefined ? patch.brandLogoUrl : this.brandLogoUrl,
+      codLimitDiram: patch.codLimitDiram ?? this.codLimitDiram,
+      holdPeriodDays: patch.holdPeriodDays ?? this.holdPeriodDays,
     })
   }
 }

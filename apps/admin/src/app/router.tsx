@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+import { lazy, Suspense } from 'react'
 import { createBrowserRouter, type RouteObject } from 'react-router'
 import { AppLayout } from '@/app/layout'
 import { OnboardingQueuePage } from '@/features/onboarding-verification/onboarding-queue.page'
@@ -8,6 +8,17 @@ import { SupportTicketDetailPage } from '@/features/support/support-ticket-detai
 import { getRoutesForRole, type RouteConfig } from '@/app/role-routes'
 import { getCurrentRole } from '@/shared/auth/current-role'
 import { ForbiddenPage } from '@/shared/ui/forbidden.page'
+
+/**
+ * DTJ-351 (EP-15) — деталь/форма настроек тенанта. НЕ элемент `role-routes.ts` (путь несёт
+ * параметр `:tenantId`, чужеродный для декларативной карты `role → RouteConfig[]`, которая
+ * знает только фиксированные пункты меню) — подключена здесь отдельной веткой, ТОЛЬКО когда
+ * текущая роль `super_admin` (иначе прямой переход по URL должен давать `403`, критерий
+ * приёмки 3 DTJ-350, а не быть доступным всем ролям как обычный статический путь).
+ */
+const TenantSettingsForm = lazy(() =>
+  import('@/features/tenants/ui/tenant-settings-form').then((m) => ({ default: m.TenantSettingsForm })),
+)
 
 /**
  * DTJ-075: scaffolding `apps/admin`. Точка расширения для EP-14/EP-15/EP-17 —
@@ -32,7 +43,23 @@ function buildRoleRoute(config: RouteConfig): RouteObject {
   }
 }
 
-const roleRoutes: RouteObject[] = getRoutesForRole(getCurrentRole()).map(buildRoleRoute)
+const currentRole = getCurrentRole()
+const roleRoutes: RouteObject[] = getRoutesForRole(currentRole).map(buildRoleRoute)
+
+/** См. JSDoc `TenantSettingsForm` выше — существует в дереве ТОЛЬКО для `super_admin`. */
+const tenantDetailRoutes: RouteObject[] =
+  currentRole === 'super_admin'
+    ? [
+        {
+          path: 'admin/tenants/:tenantId',
+          element: (
+            <Suspense fallback={null}>
+              <TenantSettingsForm />
+            </Suspense>
+          ),
+        },
+      ]
+    : []
 
 const routes: RouteObject[] = [
   {
@@ -58,6 +85,7 @@ const routes: RouteObject[] = [
         element: <SupportTicketDetailPage />,
       },
       ...roleRoutes,
+      ...tenantDetailRoutes,
       {
         // Catch-all — ЛЮБОЙ `/admin/*`, не совпавший ни с одним маршрутом выше (чужая роль,
         // опечатка в пути). Порядок важен: react-router ранжирует по специфичности статических
