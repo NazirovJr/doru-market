@@ -30,14 +30,21 @@
  * персистенция остатков была частью ТОЙ ЖЕ транзакции, что и
  * `IngestInventoryBatchWithMatchingUseCase.execute` (см. её JSDoc). `upsertMany`
  * (легаси-путь) `tx` не принимает — не вызывается ни одним `uow.run`.
+ *
+ * `listByPharmacy` — `price` в этой таблице уже целые дирамы (`INTEGER`), не `NUMERIC(10,2)`
+ * TJS — конверсии не требуется, `priceDiram = row.price` напрямую.
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { and, asc, eq, gt, ilike, inArray, or, sql } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { pharmacyInventory } from '@/db/schema/pharmacy-inventory.js'
+import { medicines } from '@/db/schema/medicines.js'
 import { PharmacyInventory } from '@/modules/inventory/domain/pharmacy-inventory.entity.js'
 import {
   PHARMACY_INVENTORY_REPOSITORY,
+  type ListByPharmacyCursor,
+  type ListByPharmacyResult,
+  type PharmacyInventoryListRow,
   type PharmacyInventoryRepository,
   type UpsertResult,
 } from '@/modules/inventory/application/ports/pharmacy-inventory.repository.port.js'
@@ -257,6 +264,82 @@ export class DrizzlePharmacyInventoryRepository implements PharmacyInventoryRepo
       ON CONFLICT (pharmacy_id, medicine_id, COALESCE(batch_number, ''), expires_at)
       DO UPDATE SET price = excluded.price, quantity = excluded.quantity, updated_at = excluded.updated_at
     `)
+  }
+
+  async listByPharmacy(input: {
+    pharmacyId: string
+    q: string | null
+    cursor: ListByPharmacyCursor | null
+    limit: number
+  }): Promise<ListByPharmacyResult> {
+    const fetchLimit = input.limit + 1
+    const rows = await this.db
+      .select({
+        inventoryId: pharmacyInventory.id,
+        medicineId: pharmacyInventory.medicineId,
+        tradeName: medicines.tradeName,
+        dosageForm: medicines.dosageForm,
+        dosageStrength: medicines.dosageStrength,
+        price: pharmacyInventory.price,
+        quantity: pharmacyInventory.quantity,
+        batchNumber: pharmacyInventory.batchNumber,
+        expiresAt: pharmacyInventory.expiresAt,
+        updatedAt: pharmacyInventory.updatedAt,
+      })
+      .from(pharmacyInventory)
+      .innerJoin(medicines, eq(pharmacyInventory.medicineId, medicines.id))
+      .where(and(...this.buildListConditions(input)))
+      .orderBy(asc(medicines.tradeName), asc(pharmacyInventory.id))
+      .limit(fetchLimit)
+    const hasMore = rows.length > input.limit
+    const page = hasMore ? rows.slice(0, input.limit) : rows
+    return { items: page.map(toListRow), hasMore }
+  }
+
+  // tradeName неуникален — keyset требует второй ключ id.
+  private buildListConditions(input: { pharmacyId: string; q: string | null; cursor: ListByPharmacyCursor | null }) {
+    const conditions = [eq(pharmacyInventory.pharmacyId, input.pharmacyId)]
+    if (input.q !== null) {
+      conditions.push(ilike(medicines.tradeName, `%${input.q}%`))
+    }
+    if (input.cursor !== null) {
+      const cursor = input.cursor
+      conditions.push(
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- or()/and() типизированы как возможно undefined, с непустыми аргументами всегда возвращают SQL
+        or(
+          gt(medicines.tradeName, cursor.tradeName),
+          and(eq(medicines.tradeName, cursor.tradeName), gt(pharmacyInventory.id, cursor.id)),
+        )!,
+      )
+    }
+    return conditions
+  }
+}
+
+// price — уже целые дирамы, без конверсии.
+function toListRow(row: {
+  inventoryId: string
+  medicineId: string
+  tradeName: string
+  dosageForm: string
+  dosageStrength: string
+  price: number
+  quantity: number
+  batchNumber: string | null
+  expiresAt: string
+  updatedAt: Date
+}): PharmacyInventoryListRow {
+  return {
+    inventoryId: row.inventoryId,
+    medicineId: row.medicineId,
+    tradeName: row.tradeName,
+    dosageForm: row.dosageForm,
+    dosageStrength: row.dosageStrength,
+    priceDiram: row.price,
+    stockQuantity: row.quantity,
+    batchNumber: row.batchNumber,
+    expiryDate: row.expiresAt,
+    lastSyncedAt: row.updatedAt,
   }
 }
 
