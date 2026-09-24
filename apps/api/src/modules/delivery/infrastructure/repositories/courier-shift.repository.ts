@@ -1,8 +1,3 @@
-/**
- * `DrizzleCourierShiftRepository` (EP-13, DTJ-320) — реализация `CourierShiftRepositoryPort` поверх
- * `courier_shifts` (`db/schema/courier-shifts.ts`, DTJ-313). 1:1 паттерн `DrizzleCourierRepository`
- * (upsert по `id`, `resolveDrizzleClient` для tx-прозрачности, DTJ-314).
- */
 import { Inject, Injectable } from '@nestjs/common'
 import { and, desc, eq } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'

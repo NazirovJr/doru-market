@@ -1,6 +1,3 @@
-/**
- * Unit-тест `CourierRatingsController` (EP-13, DTJ-321) — тонкий HTTP-слой, use case — фейк.
- */
 import { describe, expect, it, vi } from 'vitest'
 import { InternalServerErrorException } from '@nestjs/common'
 import type { JwtClaims } from '@/modules/auth/index.js'

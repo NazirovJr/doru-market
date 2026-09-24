@@ -1,8 +1,3 @@
-/**
- * Unit-тест `DeliveryFacade` (EP-13, DTJ-314) — все порты замоканы (`application` не знает о
- * реальной инфраструктуре, `02` §3). Домен (`DeliveryAssignment`/`Courier`) — настоящий, не
- * мокается: фасад — тонкая оркестрация репозиториев поверх уже протестированного домена (DTJ-313).
- */
 import { describe, expect, it, vi } from 'vitest'
 import { NotFoundError } from '@dorutj/contracts'
 import type { Clock } from '@/shared-kernel/index.js'
@@ -54,8 +49,6 @@ function makeFacade(params: { assignment?: DeliveryAssignment | null; courier?: 
   const courier = params.courier === undefined ? makeCourier() : params.courier
   const assignmentsSave = vi.fn().mockResolvedValue(undefined)
   const couriersSave = vi.fn().mockResolvedValue(undefined)
-  // Прямые ссылки на моки (не `port.method`) — избегает `@typescript-eslint/unbound-method` на
-  // `expect(assignments.save)` (1:1 приём `refund-on-return-resolved.use-case.spec.ts`).
   const assignments: DeliveryAssignmentRepositoryPort = {
     findById: vi.fn().mockResolvedValue(assignment),
     findActiveByOrderId: vi.fn().mockResolvedValue(assignment),

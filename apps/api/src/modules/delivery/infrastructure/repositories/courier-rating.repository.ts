@@ -1,9 +1,3 @@
-/**
- * `DrizzleCourierRatingRepository` (EP-13, DTJ-321) — реализация `CourierRatingRepositoryPort`
- * поverh `courier_ratings` (`db/schema/courier-ratings.ts`, DTJ-313). 1:1 паттерн
- * `DrizzleCourierShiftRepository` (`resolveDrizzleClient` для tx-прозрачности, DTJ-320) —
- * append-only (`CourierRating` не несёт методов-намерения после создания, только фабрика/save).
- */
 import { Inject, Injectable } from '@nestjs/common'
 import { eq } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'

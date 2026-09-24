@@ -1,16 +1,3 @@
-/**
- * `CourierShiftsController` (EP-13, DTJ-320, SRS-DELIV-028/029) — `POST /api/v1/courier-shifts`
- * (начать смену) + `POST /api/v1/courier-shifts/:id/end` (завершить смену).
- *
- * Маппинг доменных ошибок → HTTP — АВТОМАТИЧЕСКИЙ (`AllExceptionsFilter`): `ShiftAlreadyActiveError`
- * (409), `ActiveAssignmentBlocksShiftEndError` (422), `ForbiddenError` (403, чужая смена),
- * `NotFoundError` (404) — уже зарегистрированы в `ERROR_HTTP_STATUS` (`@dorutj/contracts`), этот
- * контроллер их не перехватывает (тот же приём, что `CheckoutController`/`PharmacyTerminalItemsController`).
- *
- * `201`/`200` — 1:1 приём `CartController` (`POST /cart/items` создаёт ресурс → `201`) vs
- * `CheckoutController` (переход состояния существующего ресурса → `200`): старт смены создаёт
- * новую строку `courier_shifts` (`201`), завершение — переводит уже существующую (`200`).
- */
 import { Body, Controller, HttpCode, Inject, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
 import { endCourierShiftRequestSchema, ok, type EndCourierShiftRequest, type SuccessEnvelope } from '@dorutj/contracts'
 import { HttpStatus } from '@/common/http/http-status.constants.js'
@@ -25,7 +12,6 @@ const UUID_PIPE = new ParseUUIDPipe({ version: '4' })
 @Controller({ path: 'courier-shifts', version: '1' })
 @UseGuards(AuthGuard, RolesGuard)
 export class CourierShiftsController {
-  // Явный @Inject на каждом параметре — esbuild/vitest не эмитит `design:paramtypes` (DTJ-001).
   public constructor(
     @Inject(StartCourierShiftUseCase) private readonly startShift: StartCourierShiftUseCase,
     @Inject(EndCourierShiftUseCase) private readonly endShift: EndCourierShiftUseCase,

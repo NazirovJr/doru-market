@@ -1,13 +1,3 @@
-/**
- * `DrizzleCourierEarningsRepository` (EP-13, DTJ-321) — реализация `CourierEarningsRepositoryPort`
- * поверх `courier_earnings` (`db/schema/courier-earnings.ts`). Keyset-пагинация 1:1 паттерн
- * `DrizzlePayoutScheduleRepository.findByPharmacy` (DTJ-252, `payments`) — `LIMIT input.limit + 1`
- * даёт `hasMore` без второй `COUNT`-круговой поездки, курсор — составное условие
- * `recognized_at < cursor.v OR (recognized_at = cursor.v AND id < cursor.id)`.
- *
- * READ-ONLY (см. JSDoc `db/schema/courier-earnings.ts`) — этот файл не пишет ни одной строки,
- * только `findPage`.
- */
 import { Inject, Injectable } from '@nestjs/common'
 import { and, desc, eq, lt, or } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
@@ -59,7 +49,6 @@ export class DrizzleCourierEarningsRepository implements CourierEarningsReposito
   }
 }
 
-/** 1:1 `payoutReportConditions` (DTJ-252, `payments`) — `or(...)` типизирован `SQL | undefined`. */
 function earningsConditions(courierId: string, cursor: CourierEarningsCursor | null) {
   const conditions = [eq(courierEarnings.courierId, courierId)]
   if (cursor !== null) {

@@ -75,6 +75,5 @@ export const deliveryAssignments = pgTable(
   ],
 )
 
-/** DTJ-314 — тот же приём, что `SupportTicketRow`/`SupportTicketInsert` (`db/schema/support.ts`). */
 export type DeliveryAssignmentRow = typeof deliveryAssignments.$inferSelect
 export type DeliveryAssignmentInsert = typeof deliveryAssignments.$inferInsert

@@ -1,6 +1,3 @@
-/**
- * Unit-тест `StartCourierShiftUseCase` (EP-13, DTJ-320, тест-план тикета).
- */
 import { describe, expect, it, vi } from 'vitest'
 import type { Clock, IdGenerator } from '@/shared-kernel/index.js'
 import { Money } from '@/shared-kernel/domain/value-objects/money.vo.js'

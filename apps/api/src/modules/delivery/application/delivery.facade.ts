@@ -1,21 +1,3 @@
-/**
- * `DeliveryFacade` (EP-13, DTJ-314, SRS-DELIV-001) — ЕДИНСТВЕННАЯ разрешённая точка входа для
- * других модулей (`orders`, `payments`, `billing`, `returns`) в модуль `delivery`
- * (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2). Прямой импорт `modules/delivery/domain/*`/
- * `application/*` из другого модуля — блокирующее нарушение (`dependency-cruiser`
- * `no-cross-module-deep-import`, DoD этого тикета).
- *
- * `assign`/`reassign` принимают `courierId` (не `CourierAssignmentEligibility` — это домен-
- * внутренний тип): фасад САМ резолвит курьера через `CourierRepositoryPort` и строит снапшот
- * приемлемости (`Courier.toEligibilitySnapshot()`), вызывающий код не обязан знать структуру
- * `CourierAssignmentEligibility`. `orderPharmacyChainId` — параметр вызывающего кода (DTJ-315+):
- * этот тикет не заводит `OrdersFacade`-зависимость (вне `files_owned`), заказ уже несёт эти данные
- * в обработчике `OrderPickedUpEvent`.
- *
- * `calculateDeliveryFee`/`assignReturnCourier` — ЗАГЛУШКИ (см. их JSDoc ниже, риски тикета):
- * сигнатуры стабильны для потребителей (`orders` checkout волна 6, `returns` EP-11) с первого
- * дня, полная реализация — DTJ-322 и DTJ-273/274 соответственно (вне R1-скоупа ЭТОГО тикета).
- */
 import { Inject, Injectable } from '@nestjs/common'
 import { NotFoundError } from '@dorutj/contracts'
 import { CLOCK, type Clock, type GeoPoint } from '@/shared-kernel/index.js'
@@ -31,9 +13,7 @@ import {
   type DeliveryAssignmentRepositoryPort,
 } from './ports/delivery-assignment.repository.port.js'
 
-/** TODO(DTJ-322): формула по зонам/тарифам тенанта (SRS-DELIV-048). Заглушка — риски DTJ-314:
- * `orders`/checkout (волна 6) вызывает этот метод РАНЬШЕ готовности DTJ-322 (волна 9). Значение
- * НЕ финальное — override только через `DELIVERY_FEE_FIXED_STUB_DIRAM` (диагностика/тесты). */
+// TODO(DTJ-322): реальная формула по зонам/тарифам тенанта; override — DELIVERY_FEE_FIXED_STUB_DIRAM.
 const FIXED_DELIVERY_FEE_STUB_DIRAM = 1000n
 
 export interface CreateDeliveryAssignmentInput {
@@ -48,7 +28,6 @@ export interface ReturnCourierAssignment {
   readonly etaMinutes: number | null
 }
 
-/** `reassign()` — объект-параметр (C5 max-params, 4 позиционных были бы за пределами лимита). */
 export interface ReassignDeliveryInput {
   readonly assignmentId: string
   readonly newCourierId: string
@@ -64,7 +43,6 @@ export class DeliveryFacade {
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
-  /** SRS-DELIV-037 — вызывается обработчиком `OrderPickedUpEvent` (DTJ-315), не этим тикетом. */
   public async createAssignment(input: CreateDeliveryAssignmentInput): Promise<DeliveryAssignmentSnapshot> {
     const existing = await this.assignments.findActiveByOrderId(input.orderId)
     const result = DeliveryAssignment.create({
@@ -82,7 +60,6 @@ export class DeliveryFacade {
     return result.value.toSnapshot()
   }
 
-  /** SRS-DOM-037/038 guards — enforced внутри `DeliveryAssignment.assign()` (DTJ-313). */
   public async assign(assignmentId: string, courierId: string, orderPharmacyChainId: string | null): Promise<void> {
     const assignment = await this.getAssignmentOrThrow(assignmentId)
     const courier = await this.getCourierOrThrow(courierId)
@@ -90,7 +67,6 @@ export class DeliveryFacade {
     await this.assignments.save(assignment)
   }
 
-  /** SRS-DOM-041 — `reason` обязателен, проверяется доменом (`DeliveryAssignment.reassign()`). */
   public async reassign(input: ReassignDeliveryInput): Promise<void> {
     const assignment = await this.getAssignmentOrThrow(input.assignmentId)
     assignment.reassign({
@@ -102,7 +78,6 @@ export class DeliveryFacade {
     await this.assignments.save(assignment)
   }
 
-  /** SRS-DOM-036 — нетерминальный статус (`status NOT IN ('delivered','delivery_failed')`). */
   public async hasActiveAssignment(orderId: string): Promise<boolean> {
     return (await this.assignments.findActiveByOrderId(orderId)) !== null
   }
@@ -112,8 +87,7 @@ export class DeliveryFacade {
     return assignment?.toSnapshot() ?? null
   }
 
-  /** TODO(DTJ-322) — см. JSDoc константы `FIXED_DELIVERY_FEE_STUB_DIRAM` выше. */
-  // eslint-disable-next-line @typescript-eslint/require-await -- async намеренно: контракт Promise<bigint> стабилен для будущей реальной реализации (network/DB), throw обязан стать rejected-промисом при её появлении
+  // eslint-disable-next-line @typescript-eslint/require-await -- async — контракт порта
   public async calculateDeliveryFee(_pharmacyGeoPoint: GeoPoint, _deliveryGeoPoint: GeoPoint): Promise<bigint> {
     const override = process.env.DELIVERY_FEE_FIXED_STUB_DIRAM
     if (override !== undefined && override.trim() !== '') {
@@ -123,13 +97,7 @@ export class DeliveryFacade {
     return FIXED_DELIVERY_FEE_STUB_DIRAM
   }
 
-  /**
-   * Заглушка (DTJ-314, риски) — используется `returns` (EP-11) через `ReturnsDeliveryPort`
-   * (адаптер — DTJ-273/274, вне периметра этого тикета). `null` здесь означает буквально то же,
-   * что и в целевом контракте (`ReturnsDeliveryPort.assignReturnCourier` JSDoc): «курьер обратного
-   * рейса ещё не назначен/недоступен» — валидное, не ошибочное значение.
-   */
-  // eslint-disable-next-line @typescript-eslint/require-await -- см. calculateDeliveryFee выше, та же причина
+  // eslint-disable-next-line @typescript-eslint/require-await -- async — контракт порта
   public async assignReturnCourier(_tenantId: string, _returnId: string): Promise<ReturnCourierAssignment | null> {
     return null
   }

@@ -1,25 +1,4 @@
-/**
- * `PostgisCourierCandidateAdapter` (EP-13, DTJ-314, SRS-DELIV-038) — реализация
- * `CourierCandidatePort`. Имя файла — из `files_owned` тикета; PostGIS фактически НЕ
- * используется — `pg_available_extensions` даёт 0 строк для `postgis%` в образе `postgres:16`
- * этого окружения (тот же вывод, что DTJ-185/195/313, см. JSDoc порта и
- * `apps/api/src/modules/catalog/infrastructure/adapters/postgres-search.sql.ts` п.1). Гаверсинус
- * на `couriers.last_known_latitude/longitude` — `EARTH_RADIUS_METERS` совпадает с
- * `GeoPoint.distanceTo()` (`shared-kernel`) и с `postgres-search.sql.ts`.
- *
- * 4 из 7 условий фильтра приемлемости SRS-DELIV-038 п.1 — SQL-native, реализованы здесь:
- * `status='active'`, `shift_status='on_shift'`, дистанция `<= radiusKm`, `last_location_at` не
- * старше `locationStaleMinutes` (курьер без локации — `last_known_latitude/longitude IS NULL` —
- * структурно не проходит, дистанцию посчитать не от чего). Остальные 3 (chain-guard,
- * cold-chain, потолок нагрузки) — `SuggestNearestCourierUseCase` (см. его JSDoc) — адаптер
- * лишь ВОЗВРАЩАЕТ данные для них (`courierChainId`/`coldChainCertified`/
- * `activeAssignmentsCount`), не фильтрует по ним.
- *
- * `activeAssignmentsCount` — `COUNT(*)` через `LEFT JOIN LATERAL` на `delivery_assignments`
- * (нетерминальные, тот же критерий, что `ux_delivery_assignment_one_active`). Postgres возвращает
- * `COUNT(*)` как `bigint` (строка через `pg`-драйвер) — явный `::int` в SQL, число мало
- * (потолок конкурентных назначений), переполнение `int` не грозит.
- */
+// PostGIS недоступен в этом окружении (pg_available_extensions пуст для postgis%) — дистанция считается гаверсинусом
 import { Inject, Injectable } from '@nestjs/common'
 import { sql, type SQL } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
@@ -31,7 +10,6 @@ import {
   type CourierCandidateQuery,
 } from '@/modules/delivery/application/ports/courier-candidate.port.js'
 
-/** Совпадает с `GeoPoint.distanceTo()` (`shared-kernel`) и `postgres-search.sql.ts` (см. JSDoc файла). */
 const EARTH_RADIUS_METERS = 6_371_000
 const METERS_PER_KM = 1000
 
@@ -104,7 +82,6 @@ function toCandidate(row: CandidateRow): CourierCandidate {
   }
 }
 
-/** 1:1 `postgres-pharmacy-map.adapter.ts` (DTJ-195) — нормализация формы `db.execute()`. */
 function extractRows(result: unknown): readonly CandidateRow[] {
   if (Array.isArray(result)) {
     return result as CandidateRow[]

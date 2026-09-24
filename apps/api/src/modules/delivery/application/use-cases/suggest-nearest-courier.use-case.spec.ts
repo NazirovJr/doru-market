@@ -1,15 +1,3 @@
-/**
- * Unit-тест `SuggestNearestCourierUseCase` (EP-13, DTJ-314, тест-план тикета).
- *
- * Границы ответственности (см. JSDoc use case'а): 4 из 7 условий фильтра приемлемости
- * (`status='active'`, `shift_status='on_shift'`, дистанция, свежесть локации) — SQL-native,
- * реализованы `PostgisCourierCandidateAdapter` и проверены его интеграционным тестом на реальном
- * Postgres, НЕ здесь. Здесь мокается `CourierCandidatePort` — тесты на «courier отсутствует в
- * ответе порта» (TC-DELIV-035, аналог off-shift) документируют, что use case НЕ довосстанавливает
- * кандидатов, которых порт не вернул; авторитетная проверка самого SQL-фильтра — в адаптере.
- * Остальные 3 условия (тенантный/chain-guard SRS-DOM-037, cold-chain SRS-DOM-038, потолок
- * нагрузки) — enforced ЭТИМ use case'ом, проверены здесь исчерпывающе.
- */
 import { describe, expect, it, vi } from 'vitest'
 import { GeoPoint } from '@/shared-kernel/index.js'
 import type { CourierCandidate, CourierCandidatePort, CourierCandidateQuery } from '../ports/courier-candidate.port.js'

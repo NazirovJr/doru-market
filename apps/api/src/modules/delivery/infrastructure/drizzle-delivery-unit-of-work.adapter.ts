@@ -1,8 +1,3 @@
-/**
- * `DrizzleDeliveryUnitOfWorkAdapter` (EP-13, DTJ-320) — production-реализация
- * `DeliveryUnitOfWorkPort` через `db.transaction(...)`, 1:1 паттерн `support/infrastructure/
- * adapters/drizzle-support-unit-of-work.adapter.ts` (DTJ-279)/`payments`'s (DTJ-242).
- */
 import { Inject, Injectable } from '@nestjs/common'
 import { type DrizzleDb, DRIZZLE_DB } from '@/infrastructure/database/drizzle.provider.js'
 import {

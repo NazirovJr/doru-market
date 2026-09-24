@@ -1,27 +1,3 @@
-/**
- * `SuggestNearestCourierUseCase` (EP-13, DTJ-314, SRS-DELIV-038) — алгоритм подбора курьера.
- * Читает, не мутирует состояние — сам НЕ создаёт офферы (DTJ-315).
- *
- * **Разделение 7 условий фильтра приемлемости между SQL и use case (проектное решение, нет
- * буквального указания в тикете, где именно проходит граница):**
- * - `CourierCandidatePort` (SQL, `PostgisCourierCandidateAdapter`) — 4 условия, естественно
- *   SQL-native: `status='active'`, `shift_status='on_shift'`, `distance <= radiusKm`,
- *   `last_location_at` не старше `locationStaleMinutes`. Интеграционно проверено на реальном
- *   Postgres (тест-план тикета).
- * - Этот use case («шаг а» SRS-DELIV-038) — 3 условия, требующие бизнес-логики/ветвления по
- *   `courierSourcingMode`, которую проще и корректнее выразить и ЮНИТ-ПРОТЕСТИРОВАТЬ в TS, чем
- *   дублировать в SQL (C15 — правило одного места истины): тенантный/chain-guard (SRS-DOM-037),
- *   cold-chain guard (SRS-DOM-038), потолок нагрузки (`MAX_CONCURRENT_ASSIGNMENTS_PER_COURIER`).
- *   `CourierCandidatePort` возвращает уже все данные, нужные для этих трёх проверок
- *   (`courierChainId`/`coldChainCertified`/`activeAssignmentsCount`), не заставляя use case
- *   делать дополнительный запрос.
- *
- * Веса/радиус/потолки — ASSUMPTION (SRS-DELIV-038, `04-SCOPE-DECISION-PIVOT.md` §7), НЕ
- * хардкод-числа в теле алгоритма (C6): читаются из ENV с именованными дефолтами ниже.
- * Per-tenant override (упомянутый текстом тикета) потребовал бы новых колонок
- * `tenant_settings` — вне `files_owned` этого тикета; ENV — единственный уровень конфигурации
- * сегодня (зафиксировано как открытый вопрос в отчёте сдачи).
- */
 import { Inject, Injectable } from '@nestjs/common'
 import type { GeoPoint } from '@/shared-kernel/index.js'
 import {
@@ -31,22 +7,17 @@ import {
 } from '../ports/courier-candidate.port.js'
 import { DELIVERY_TENANCY_PORT, type DeliveryTenancyPort } from '../ports/delivery-tenancy.port.js'
 
-/** SRS-DELIV-038 п.2, ASSUMPTION — Σ = 1. Override: `env.W_DISTANCE`/`W_WORKLOAD`/`W_RATING`. */
 const DEFAULT_W_DISTANCE = 0.5
 const DEFAULT_W_WORKLOAD = 0.3
 const DEFAULT_W_RATING = 0.2
-/** ASSUMPTION 8 — override `env.COURIER_CANDIDATE_RADIUS_KM`. */
 const DEFAULT_RADIUS_KM = 5
-/** ASSUMPTION 2 — override `env.MAX_CONCURRENT_ASSIGNMENTS_PER_COURIER`. */
 const DEFAULT_MAX_CONCURRENT_ASSIGNMENTS = 3
-/** ASSUMPTION 15 — override `env.COURIER_LOCATION_STALE_MINUTES`. */
 const DEFAULT_LOCATION_STALE_MINUTES = 15
 const RATING_SCALE_MAX = 5
 const MIN_SCORE = 0
 
 export interface SuggestNearestCourierInput {
   readonly tenantId: string
-  /** `pharmacy_chains.id` заказа; `null` — аптека вне сети. */
   readonly pharmacyChainId: string | null
   readonly pharmacyGeoPoint: GeoPoint
   readonly requiresColdChain: boolean
@@ -93,11 +64,6 @@ export class SuggestNearestCourierUseCase {
   }
 }
 
-/**
- * «Шаг а» SRS-DELIV-038 — 3 условия, не покрытые SQL-адаптером (см. JSDoc файла): тенантный
- * guard SRS-DOM-037 (ветвление по `courierSourcingMode`, 1:1 `DeliveryAssignment.assign()`),
- * cold-chain guard SRS-DOM-038, потолок одновременных назначений.
- */
 function passesBusinessGuards(
   candidate: CourierCandidate,
   input: SuggestNearestCourierInput,
@@ -113,7 +79,7 @@ function passesBusinessGuards(
   return candidate.activeAssignmentsCount < maxConcurrent
 }
 
-/** SRS-DOM-037: `own_fleet` исключает пул, `platform_pool` исключает чужой флот, `hybrid` — оба. */
+// own_fleet: только курьеры своей сети; platform_pool: только пул; hybrid: оба
 function passesSourcingModeGuard(
   courierChainId: string | null,
   pharmacyChainId: string | null,
@@ -149,11 +115,11 @@ function scoreCandidate(
   }
 }
 
-/** Убыв. по `totalScore`; на точном равенстве — `own_fleet` (chainId не `null`) выше (SRS-DELIV-038 п.1). */
 function compareScoredCandidates(a: ScoredCourierCandidate, b: ScoredCourierCandidate): number {
   if (a.totalScore !== b.totalScore) {
     return b.totalScore - a.totalScore
   }
+  // равный счёт -> own_fleet (chainId не null) выше
   return (a.courierChainId !== null ? 0 : 1) - (b.courierChainId !== null ? 0 : 1)
 }
 

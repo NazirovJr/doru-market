@@ -1,9 +1,3 @@
-/**
- * Unit-тест `PostgisCourierCandidateAdapter` (EP-13, DTJ-314) — 1:1 приём `postgres-pharmacy-map.
- * adapter.spec.ts` (DTJ-195): здесь только форма SQL (мок `db.execute`) + маппинг строки
- * результата. Реальная семантика фильтра (радиус на границе, свежесть локации, счётчик активных
- * назначений) — интеграционный тест на реальном Postgres (тест-план тикета), не здесь.
- */
 import { describe, expect, it, vi } from 'vitest'
 import { getTableName, is, Table, type SQL } from 'drizzle-orm'
 import { GeoPoint } from '@/shared-kernel/index.js'

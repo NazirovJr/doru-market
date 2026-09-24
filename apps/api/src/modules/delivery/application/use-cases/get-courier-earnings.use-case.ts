@@ -1,16 +1,3 @@
-/**
- * `GetCourierEarningsUseCase` (EP-13, DTJ-321, SRS-DELIV-030) — `GET /api/v1/courier-earnings`.
- * Файл СВЕРХ буквального `files_owned` (тот же приём, что `courier-rating.repository.port.ts`
- * этого же тикета) — `CourierEarningsController` не может остаться тонким HTTP-слоем (`02` §1.1)
- * без выделенного application-класса, тот же приём, что `GetPharmacyPayoutsQuery` (`payments`,
- * DTJ-252).
- *
- * RBAC (текст тикета п.1): `courier` — `implicit scope: own` (courierId резолвится из
- * `claims.sub`, `filter[courierId]` ИГНОРИРУЕТСЯ — курьер не может подсмотреть чужие earnings
- * даже случайно подставленным чужим id в query); `super_admin` — `filter[courierId]`
- * ОБЯЗАТЕЛЕН (негативный тест тикета: без фильтра — явная ошибка валидации, не молчаливое «все
- * курьеры сразу», `CourierEarningsRepositoryPort.findPage` вообще не поддерживает такой режим).
- */
 import { Inject, Injectable } from '@nestjs/common'
 import { ForbiddenError, NotFoundError, ValidationError, type UserRole } from '@dorutj/contracts'
 import { COURIER_REPOSITORY, type CourierRepositoryPort } from '../ports/courier.repository.port.js'
@@ -24,7 +11,7 @@ import {
 export interface GetCourierEarningsInput {
   readonly role: UserRole
   readonly userId: string
-  /** `filter[courierId]` — ИГНОРИРУЕТСЯ для `role==='courier'` (implicit own scope), ОБЯЗАТЕЛЕН для `super_admin`. */
+  // игнорируется для role='courier' (implicit own scope), обязателен для super_admin
   readonly filterCourierId: string | null
   readonly limit: number
   readonly cursor: CourierEarningsCursor | null
@@ -69,8 +56,6 @@ export class GetCourierEarningsUseCase {
       throw new ValidationError('filter[courierId] is required for this role', { field: 'filter[courierId]' })
     }
     if (input.role !== 'super_admin') {
-      // Не должно быть достижимо через `@Roles('courier', 'super_admin')` HTTP-guard — оборонительный
-      // fallback (C-defensive-programming), не наблюдаемый путь ни одним текущим тестом маршрута.
       throw new ForbiddenError('Only courier (own) or super_admin (filtered) may list courier earnings')
     }
     return input.filterCourierId

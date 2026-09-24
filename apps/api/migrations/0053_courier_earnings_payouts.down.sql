@@ -1,7 +1,4 @@
--- Down-миграция для 0053_courier_earnings_payouts.sql (EP-13, DTJ-321).
--- Обратный порядок: courier_earnings (ребёнок по FK на courier_payouts) перед courier_payouts,
--- затем enum. ВНИМАНИЕ: DROP TYPE упадёт, если в схеме остались колонки этого типа (тот же
--- принцип, что 0042_delivery_module_schema.down.sql).
+-- Down для 0053_courier_earnings_payouts.sql. Обратный порядок FK: courier_earnings перед courier_payouts.
 
 DROP INDEX IF EXISTS ix_courier_earnings_courier;
 DROP INDEX IF EXISTS ix_courier_earnings_courier_unpaid;

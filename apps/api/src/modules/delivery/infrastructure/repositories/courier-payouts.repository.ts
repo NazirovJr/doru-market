@@ -1,14 +1,3 @@
-/**
- * `DrizzleCourierPayoutsRepository` (EP-13, DTJ-321) — реализация `CourierPayoutsRepositoryPort`
- * поверх `courier_payouts` (`db/schema/courier-payouts.ts`). 1:1 паттерн
- * `DrizzleCourierEarningsRepository`/`DrizzlePayoutScheduleRepository` (keyset-пагинация,
- * `LIMIT input.limit + 1` для `hasMore`).
- *
- * `courierId: null` — `super_admin` БЕЗ `filter[courierId]` (см. JSDoc порта): условие
- * `eq(courierId, ...)` просто не добавляется в `WHERE`, отдаёт ВСЕ батчи.
- *
- * READ-ONLY (см. JSDoc `db/schema/courier-payouts.ts`) — генерация батчей вне периметра DTJ-321.
- */
 import { Inject, Injectable } from '@nestjs/common'
 import { and, desc, eq, lt, or } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
@@ -70,7 +59,6 @@ export class DrizzleCourierPayoutsRepository implements CourierPayoutsRepository
   }
 }
 
-/** 1:1 `payoutReportConditions` (DTJ-252, `payments`) — `courierId === null` omits the equality filter. */
 function payoutsConditions(courierId: string | null, cursor: CourierPayoutsCursor | null) {
   const conditions = courierId === null ? [] : [eq(courierPayouts.courierId, courierId)]
   if (cursor !== null) {
@@ -86,7 +74,6 @@ function payoutsConditions(courierId: string | null, cursor: CourierPayoutsCurso
   return conditions
 }
 
-/** `created_at` схема несёт `.default(NOW())` без `.notNull()` — оборонительный фолбэк, не ожидаемый путь. */
 function cursorCreatedAt(createdAt: Date | null): Date {
   return createdAt ?? new Date(0)
 }

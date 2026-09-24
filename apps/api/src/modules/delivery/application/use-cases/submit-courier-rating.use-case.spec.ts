@@ -1,8 +1,3 @@
-/**
- * Unit-тест `SubmitCourierRatingUseCase` (EP-13, DTJ-321, тест-план тикета) — все порты
- * замоканы, домен (`Courier`/`CourierRating`/`DeliveryAssignment`) настоящий (тот же приём, что
- * `delivery.facade.spec.ts`, DTJ-314).
- */
 import { describe, expect, it, vi } from 'vitest'
 import { BusinessRuleViolationError, ForbiddenError, NotFoundError, RatingAlreadySubmittedError } from '@dorutj/contracts'
 import type { Clock, IdGenerator } from '@/shared-kernel/index.js'

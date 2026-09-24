@@ -1,9 +1,3 @@
-/**
- * `DrizzleDeliveryAssignmentRepository` (EP-13, DTJ-314) — реализация
- * `DeliveryAssignmentRepositoryPort` поверх `delivery_assignments` (`db/schema/
- * delivery-assignments.ts`, DTJ-313). 1:1 паттерн `DrizzleSupportTicketsRepository` (upsert по
- * `id`, `resolveDrizzleClient` для tx-прозрачности).
- */
 import { Inject, Injectable } from '@nestjs/common'
 import { and, eq, notInArray } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
@@ -44,7 +38,6 @@ export class DrizzleDeliveryAssignmentRepository implements DeliveryAssignmentRe
     return row === undefined ? null : toDomain(row)
   }
 
-  /** ДОБАВЛЕНО DTJ-321 — см. JSDoc порта (`findActiveByOrderId` непригоден для терминальных назначений). */
   public async findByOrderId(orderId: string, tx?: DeliveryUnitOfWorkTx): Promise<DeliveryAssignment | null> {
     const client = resolveDrizzleClient(this.db, tx)
     const [row] = await client.select().from(deliveryAssignments).where(eq(deliveryAssignments.orderId, orderId)).limit(1)

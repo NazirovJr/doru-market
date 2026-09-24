@@ -1,7 +1,3 @@
-/**
- * Unit-тест `GetCourierEarningsUseCase` (EP-13, DTJ-321, тест-план тикета) — RBAC-разграничение
- * `own` (courier) vs обязательный фильтр (`super_admin`), делегация курсорной пагинации.
- */
 import { describe, expect, it, vi } from 'vitest'
 import { ForbiddenError, NotFoundError, ValidationError } from '@dorutj/contracts'
 import { Courier } from '../../domain/courier.entity.js'

@@ -43,6 +43,5 @@ export const courierShifts = pgTable(
   ],
 )
 
-/** DTJ-320 — тот же приём, что `SupportTicketRow`/`SupportTicketInsert` (`db/schema/support.ts`). */
 export type CourierShiftRow = typeof courierShifts.$inferSelect
 export type CourierShiftInsert = typeof courierShifts.$inferInsert

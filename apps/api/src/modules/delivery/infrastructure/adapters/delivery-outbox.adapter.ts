@@ -1,23 +1,3 @@
-/**
- * `DrizzleDeliveryOutboxAdapter` (EP-13, DTJ-320) — реализация `DeliveryOutboxPort` поверх ОБЩЕЙ
- * таблицы `outbox` (EP-01, DTJ-016). 1:1 паттерн `drizzle-support-outbox.adapter.ts`/
- * `drizzle-payments-outbox.adapter.ts`, с ОДНИМ отличием, специфичным для этого модуля:
- *
- * **bigint-ловушка (foundIssue, не домысел):** `outbox.payload` — `jsonb`
- * (`db/schema/outbox.schema.ts`), `JSON.stringify` не умеет сериализовывать `bigint` (кидает
- * `TypeError`) — 1:1 та же причина, что задокументирована `payments/domain/payment-domain-event.ts`
- * (`holdAmountDiram: string, не bigint`). `DeliveryDomainEvent.CashReconciliationDiscrepancyEvent.
- * discrepancyDiram` — `bigint` (домен намеренно остаётся денежно-типизированным, `02` §2.6/AGENTS.md
- * правило 6) — конвертация в JSON-безопасный вид сделана ЗДЕСЬ, на границе infrastructure, а не
- * правкой уже закрытого домена DTJ-313 (`delivery-domain-event.ts`/`courier-shift.entity.ts` —
- * вне `files_owned` DTJ-320, AGENTS.md правило 7): без этого `EndCourierShiftUseCase` падал бы
- * `500`-й на КАЖДОМ ненулевом расхождении наличных — ровно тот путь, который DoD тикета требует
- * НЕ блокировать закрытие смены.
- *
- * `aggregateId`/`aggregateType` — per-event (`switch` с exhaustive-проверкой, `never`-guard ниже,
- * тот же приём, что рекомендует JSDoc `delivery-domain-event.ts`): каждый из семи вариантов
- * привязан к своему естественному агрегату (`delivery_assignment`/`courier_shift`/`courier_rating`).
- */
 import { Inject, Injectable } from '@nestjs/common'
 import { type DrizzleDb, DRIZZLE_DB } from '@/infrastructure/database/drizzle.provider.js'
 import { outbox } from '@/db/schema/outbox.schema.js'
@@ -55,7 +35,7 @@ export class DrizzleDeliveryOutboxAdapter implements DeliveryOutboxPort {
   }
 }
 
-/** Единственное поле, не умещающееся в `JSON.stringify` без потерь (см. JSDoc файла): `bigint → string`. */
+// outbox.payload — jsonb, JSON.stringify не умеет bigint -> сериализуем в строку явно
 function toJsonSafePayload(event: DeliveryDomainEvent): Record<string, unknown> {
   if (event.type === 'CashReconciliationDiscrepancyEvent') {
     return { ...event, discrepancyDiram: event.discrepancyDiram.toString() }

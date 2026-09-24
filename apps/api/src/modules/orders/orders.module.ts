@@ -162,8 +162,6 @@ import { DELIVERY_FACADE_PORT } from './application/ports/delivery-facade.port.j
 import type { PrescriptionsFacadePort } from './application/ports/prescriptions-facade.port.js'
 import { PRESCRIPTIONS_FACADE_PORT } from './application/ports/prescriptions-facade.port.js'
 import { TenancyModule } from '@/modules/tenancy/tenancy.module.js'
-// DTJ-314/320/321 (EP-13) — снимает DELIVERY_FACADE_PORT null-адаптер реальным `DeliveryModule`
-// (см. JSDoc блока providers ниже и `delivery-facade.adapter.ts`).
 import { DeliveryModule } from '@/modules/delivery/delivery.module.js'
 import { DeliveryFacadeAdapter } from './infrastructure/adapters/delivery-facade.adapter.js'
 import { TENANCY_FACADE_PORT_PROVIDER } from './infrastructure/adapters/tenancy-facade.adapter.js'
@@ -488,8 +486,6 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     // PRESCRIPTIONS_FACADE_PORT).
     TENANCY_FACADE_PORT_PROVIDER,
     USER_ADDRESS_FACADE_PORT_PROVIDER,
-    // DTJ-314/320/321 — реальный DeliveryFacade (модуль delivery подключён в imports выше),
-    // UnimplementedDeliveryFacadeAdapter остаётся в файле для orders.module.spec.ts (D-27).
     DeliveryFacadeAdapter,
     { provide: DELIVERY_FACADE_PORT, useClass: DeliveryFacadeAdapter },
     { provide: PRESCRIPTIONS_FACADE_PORT, useClass: UnimplementedPrescriptionsFacadeAdapter },

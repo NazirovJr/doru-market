@@ -1,15 +1,3 @@
-/**
- * `CourierEarningsController` (EP-13, DTJ-321, SRS-DELIV-030) — `GET /api/v1/courier-earnings`.
- * Тонкий HTTP-слой (`02` §1.1) — вся RBAC/пагинация в `GetCourierEarningsUseCase`.
- *
- * `filter[courierId]` — литеральный query-ключ, Fastify без `qs` не разворачивает bracket-nesting
- * (1:1 приём `PharmacyTerminalQueueController.filterPharmacyIdRaw`, DTJ-301 — см. её JSDoc).
- *
- * Маппинг ошибок — `AllExceptionsFilter` (единственный фильтр приложения): `NotFoundError`(404,
- * courier не резолвится по userId)/`ValidationError`(400, `super_admin` без обязательного
- * фильтра) — уже зарегистрированы в `ERROR_HTTP_STATUS` (`@dorutj/contracts`), этот контроллер их
- * не перехватывает.
- */
 import { Controller, Get, HttpCode, Inject, Query, UseGuards } from '@nestjs/common'
 import { encodeCursor, ok, type PaginationMeta, type SuccessEnvelope } from '@dorutj/contracts'
 import { HttpStatus } from '@/common/http/http-status.constants.js'
@@ -20,7 +8,6 @@ import { parseCourierIdFilter, parseDeliveryListQuery, type DeliveryListQueryPar
 @Controller({ path: 'courier-earnings', version: '1' })
 @UseGuards(AuthGuard, RolesGuard)
 export class CourierEarningsController {
-  // Явный @Inject на каждом параметре — esbuild/vitest не эмитит `design:paramtypes` (DTJ-001).
   public constructor(
     @Inject(GetCourierEarningsUseCase) private readonly getCourierEarnings: GetCourierEarningsUseCase,
   ) {}

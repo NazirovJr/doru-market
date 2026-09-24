@@ -1,8 +1,3 @@
-/**
- * Unit-тест `CourierShiftsController` (EP-13, DTJ-320) — тонкий HTTP-слой, use cases — фейки.
- * Ранее отсутствовал (тест-план тикета покрывался только на уровне use case'ов) — восполнено при
- * сдаче DTJ-321 (соседняя работа над тем же модулем).
- */
 import { describe, expect, it, vi } from 'vitest'
 import type { JwtClaims } from '@/modules/auth/index.js'
 import type { StartCourierShiftUseCase } from '../application/use-cases/start-courier-shift.use-case.js'

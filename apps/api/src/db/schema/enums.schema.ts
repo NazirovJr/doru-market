@@ -368,13 +368,6 @@ export const notificationStatusEnum = pgEnum('notification_status', [
   'suppressed_rate_limit',
 ])
 
-/**
- * `courier_payouts.status` (EP-13, DTJ-321, `11-database-schema.md` §36) — батч физической выплаты
- * курьеру платформенного пула. `courier_earnings`/`courier_payouts` — «остаток Группы H», НЕ
- * созданы DTJ-313 (foundIssue, зафиксирован в `0042_delivery_module_schema.sql` и
- * `docs/STATE-AND-RESUME-POINT.md`: «нужны DTJ-320/321») — создаются здесь, DTJ-321, первым
- * реальным потребителем (`GET /courier-earnings`/`GET /courier-payouts`).
- */
 export const courierPayoutBatchStatusEnum = pgEnum('courier_payout_batch_status', [
   'draft',
   'issued',

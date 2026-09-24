@@ -1,7 +1,3 @@
-/**
- * Unit-тест `EndCourierShiftUseCase` (EP-13, DTJ-320, тест-план тикета). Три случая расхождения
- * (положительное/отрицательное/нулевое) — событие публикуется ТОЛЬКО в первых двух (DoD).
- */
 import { describe, expect, it, vi } from 'vitest'
 import type { Clock } from '@/shared-kernel/index.js'
 import { Money } from '@/shared-kernel/domain/value-objects/money.vo.js'

@@ -1,12 +1,3 @@
-/**
- * `DrizzleCourierRepository` (EP-13, DTJ-314) — реализация `CourierRepositoryPort` поверх
- * `couriers` (`db/schema/couriers.ts`, DTJ-313). 1:1 паттерн `DrizzleSupportTicketsRepository`
- * (upsert по `id`, `resolveDrizzleClient` для tx-прозрачности).
- *
- * **numeric-ловушка** (см. `postgres-pharmacy-map.adapter.ts` DTJ-195): `rating_avg` —
- * `numeric(3,2)`, Drizzle query-builder без `{mode:'number'}` возвращает его СТРОКОЙ — явный
- * `Number(row.ratingAvg)` при чтении, иначе `Courier.ratingAvg` ушёл бы в домен строкой.
- */
 import { Inject, Injectable } from '@nestjs/common'
 import { eq } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
@@ -57,6 +48,7 @@ function toDomain(row: CourierRow): Courier {
     createdAt: row.createdAt ?? new Date(0),
     lastKnownLocation: toLastKnownLocation(row),
     shiftStatus: row.shiftStatus,
+    // numeric(3,2) приходит из drizzle строкой без {mode:'number'}
     ratingAvg: Number(row.ratingAvg),
     ratingCount: row.ratingCount,
     currentCashOnHandDiram: Money.fromDiram(row.currentCashOnHandDiram),
@@ -69,8 +61,6 @@ function toLastKnownLocation(row: CourierRow): CourierProps['lastKnownLocation']
     return null
   }
   const geo = GeoPoint.create(Number(row.lastKnownLatitude), Number(row.lastKnownLongitude))
-  // Координаты уже прошли валидацию при записи (SRS-DOM-072) — невалидная строка в БД означала бы
-  // порчу данных вне контроля этого репозитория; сигнализируем явно, не подставляем `null` молча.
   if (!geo.ok) {
     throw new Error(`Corrupt courier location in DB for last_known_lat/lon: ${geo.error.message}`)
   }

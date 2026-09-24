@@ -1,27 +1,3 @@
-/**
- * NestJS-модуль `delivery` (EP-13). Barrel-файл (D-27): правится ТОЛЬКО добавлением строк,
- * перечитать перед правкой, конфликты слияния — за архитектором.
- *
- * DTJ-313 завела ЧИСТЫЙ `domain/` (ноль `@nestjs/*`-импортов, `02` §2.6) — не требовала правки
- * этого файла (он не существовал). DTJ-314 создаёт `application/`/`infrastructure/` ВПЕРВЕ:
- * `DeliveryFacade`, `SuggestNearestCourierUseCase`, репозитории `Courier`/`DeliveryAssignment`,
- * `CourierCandidatePort`/`DeliveryTenancyPort`-адаптеры. DTJ-320 добавляет смены курьера
- * (`Start`/`EndCourierShiftUseCase`, `CourierShiftsController`). DTJ-321 добавляет заработок/
- * выплаты/рейтинг (read-эндпоинты `courier-earnings`/`courier-payouts` + `POST /courier-ratings`).
- *
- * `TenancyModule` — импортирован ради `TENANT_REPOSITORY` (`DeliveryTenancyAdapter`, DTJ-314),
- * тот же приём, что `orders.module.ts` (DTJ-228/229) импортирует его ради `TENANT_SETTINGS_
- * REPOSITORY`. `OrdersModule` НЕ импортируется (DTJ-321, `DeliveryOrdersAdapter`) — `orders.
- * module.ts` уже `@Global()` (решение DTJ-242), `ORDERS_FACADE` виден без `imports:`, см. JSDoc
- * `delivery-orders.adapter.ts`. `AuthModule` — ДОБАВЛЕНО (DTJ-321, обнаружено `app.module.spec.ts`
- * «поднимается целиком», Ж2): `CourierShiftsController`/`CourierEarningsController`/
- * `CourierPayoutsController`/`CourierRatingsController` — все под `@UseGuards(AuthGuard,
- * RolesGuard)`, `AuthGuard` инжектит `JWT_SIGNER` — без явного `imports: [AuthModule]` DI-граф
- * не резолвится ни для одного контроллера этого модуля (foundIssue: `CourierShiftsController`,
- * DTJ-320, уже требовал этого ДО DTJ-321 — этот модуль, похоже, ни разу не поднимался целиком до
- * этой правки, см. отчёт сдачи). 1:1 приём `payments.module.ts` (`AuthModule` импортирует только
- * `@Global()`-модули — цикла нет).
- */
 import { Module } from '@nestjs/common'
 import { AuthModule } from '@/modules/auth/index.js'
 import { TenancyModule } from '@/modules/tenancy/tenancy.module.js'
@@ -73,7 +49,5 @@ import { CourierRatingsController } from './presentation/courier-ratings.control
   ],
   exports: [DeliveryFacade],
 })
-// NestJS module marker class — providers регистрируются декоратором, не телом класса (тот же
-// приём, что modules/support/payments/orders).
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS module marker class, см. комментарий выше
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS module marker class
 export class DeliveryModule {}

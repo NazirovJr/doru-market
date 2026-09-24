@@ -1,7 +1,3 @@
-/**
- * Unit-тест `CourierEarningsController` (EP-13, DTJ-321) — 1:1 приём `get-payouts.controller.spec.ts`
- * (DTJ-252, `payments`): контроллер инстанцируется напрямую, use case — фейк.
- */
 import { describe, expect, it, vi } from 'vitest'
 import { encodeCursor } from '@dorutj/contracts'
 import type { JwtClaims } from '@/modules/auth/index.js'

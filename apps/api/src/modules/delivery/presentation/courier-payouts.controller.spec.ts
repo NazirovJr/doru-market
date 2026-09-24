@@ -1,6 +1,3 @@
-/**
- * Unit-тест `CourierPayoutsController` (EP-13, DTJ-321) — 1:1 приём `courier-earnings.controller.spec.ts`.
- */
 import { describe, expect, it, vi } from 'vitest'
 import type { JwtClaims } from '@/modules/auth/index.js'
 import type { GetCourierPayoutsUseCase } from '../application/use-cases/get-courier-payouts.use-case.js'
