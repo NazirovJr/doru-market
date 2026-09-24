@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuthStore } from '@/shared/api/auth-store'
-import { httpRequest, HttpError, httpRequestJson, httpPostJson, httpPostForm } from '@/shared/api/http-client'
+import { httpRequest, HttpError, httpRequestJson, httpPostJson, httpPostForm, httpGetJson, httpGetJsonWithMeta } from '@/shared/api/http-client'
 
 /**
  * DTJ-166 тест-план: «http-client повторяет запрос один раз после успешного refresh» и
@@ -231,5 +231,37 @@ describe('httpPostForm', () => {
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(new Headers(init.headers).has('content-type')).toBe(false)
     expect(init.body).toBe(formData)
+  })
+})
+
+describe('httpGetJson / httpGetJsonWithMeta (DTJ-169)', () => {
+  it('httpGetJson сериализует params в query-строку и отбрасывает undefined-значения', async () => {
+    const fetchMock = vi.fn((_input: string, _init?: RequestInit) =>
+      Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 })),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await httpGetJson('/api/v1/inventory-sync-batches', { limit: '20', cursor: undefined })
+
+    const [url] = fetchMock.mock.calls[0] as [string]
+    expect(url).toBe('http://localhost:3000/api/v1/inventory-sync-batches?limit=20')
+  })
+
+  it('httpGetJsonWithMeta возвращает data и meta из конверта', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ data: [{ batchId: 'b1' }], meta: { pagination: { hasMore: true, nextCursor: 'c1', limit: 20 } } }), {
+            status: 200,
+          }),
+        ),
+      ),
+    )
+
+    const result = await httpGetJsonWithMeta<readonly { batchId: string }[]>('/api/v1/inventory-sync-batches')
+
+    expect(result.data).toEqual([{ batchId: 'b1' }])
+    expect(result.meta).toEqual({ pagination: { hasMore: true, nextCursor: 'c1', limit: 20 } })
   })
 })
