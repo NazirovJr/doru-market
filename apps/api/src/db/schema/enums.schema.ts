@@ -349,3 +349,12 @@ export const deliveryOfferStatusEnum = pgEnum('delivery_offer_status', [
 /** `courier_shifts.status` (D.4, SRS-DELIV-006) — история физических смен курьера, отдельно от
  * `couriers.shift_status`. */
 export const courierShiftRecordStatusEnum = pgEnum('courier_shift_record_status', ['active', 'closed'])
+
+/** Объединение каналов спеки и кода EP-16: добавлен `in_app`, сохранён `email`. */
+export const notificationChannelEnum = pgEnum('notification_channel', [
+  'telegram',
+  'sms',
+  'web_push',
+  'email',
+  'in_app',
+])

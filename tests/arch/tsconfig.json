@@ -9,6 +9,7 @@
     "run-fixture-check.spec.ts",
     "runtime-connectivity.spec.ts",
     "suppression-justification.spec.ts",
-    "di-explicit-inject.spec.ts"
+    "di-explicit-inject.spec.ts",
+    "notification-templates-completeness.spec.ts"
   ]
 }
