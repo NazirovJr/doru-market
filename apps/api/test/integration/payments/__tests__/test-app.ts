@@ -28,6 +28,7 @@ import { ResponseInterceptor } from '@/common/http/interceptors/response.interce
 import { OrdersModule } from '@/modules/orders/orders.module.js'
 import { SharedKernelModule } from '@/shared-kernel/shared-kernel.module.js'
 import { LoggerModule } from '@/common/logging/logger.module.js'
+import { AuditLogModule } from '@/common/audit/audit-log.module.js'
 import { IdempotencyModule } from '@/common/idempotency/idempotency.module.js'
 import { RequestContext } from '@/common/context/request-context.js'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
@@ -129,7 +130,7 @@ export interface TestApp {
 export async function createTestApp(): Promise<TestApp> {
   applyTestEnv()
   const moduleRef = await Test.createTestingModule({
-    imports: [SharedKernelModule, LoggerModule, IdempotencyModule, OrdersModule],
+    imports: [SharedKernelModule, LoggerModule, IdempotencyModule, AuditLogModule, OrdersModule],
   }).compile()
   const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), { rawBody: true })
   const config = app.get(AppConfigService)
