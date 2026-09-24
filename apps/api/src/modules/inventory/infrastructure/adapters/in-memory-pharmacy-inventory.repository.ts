@@ -2,11 +2,14 @@
  * In-memory `PharmacyInventoryRepository` (EP-05, DTJ-148) — заглушка для R1.
  * Drizzle-реализация — в DTJ-154. Mock семантически ТОЧНО воспроизводит
  * upsert по (pharmacyId, medicineId, batchNumber, expiresAt) и счётчики
- * accepted/updated.
+ * accepted/updated. `listByPharmacy` — строки заводятся тестом через `seedListRow`.
  */
 import { Injectable } from '@nestjs/common'
 import {
   PHARMACY_INVENTORY_REPOSITORY,
+  type ListByPharmacyCursor,
+  type ListByPharmacyResult,
+  type PharmacyInventoryListRow,
   type PharmacyInventoryRepository,
   type UpsertResult,
 } from '@/modules/inventory/application/ports/pharmacy-inventory.repository.port.js'
@@ -24,6 +27,7 @@ interface InventoryKey {
 export class InMemoryPharmacyInventoryRepository implements PharmacyInventoryRepository {
   private readonly rows = new Map<string, InventoryBatchUpsertRow>()
   private readonly aggregates = new Map<string, PharmacyInventory>()
+  private readonly listRowsByPharmacy = new Map<string, PharmacyInventoryListRow[]>()
 
   async upsertMany(input: {
     pharmacyId: string
@@ -74,6 +78,35 @@ export class InMemoryPharmacyInventoryRepository implements PharmacyInventoryRep
       this.aggregates.set(key, aggregate)
     }
     return Promise.resolve()
+  }
+
+  // Тестовый сид — listByPharmacy отдаёт строку как есть.
+  seedListRow(pharmacyId: string, row: PharmacyInventoryListRow): void {
+    const rows = this.listRowsByPharmacy.get(pharmacyId) ?? []
+    rows.push(row)
+    this.listRowsByPharmacy.set(pharmacyId, rows)
+  }
+
+  listByPharmacy(input: {
+    pharmacyId: string
+    q: string | null
+    cursor: ListByPharmacyCursor | null
+    limit: number
+  }): Promise<ListByPharmacyResult> {
+    const all = (this.listRowsByPharmacy.get(input.pharmacyId) ?? [])
+      .filter((row) => input.q === null || row.tradeName.toLowerCase().includes(input.q.toLowerCase()))
+      .filter((row) => this.isAfterCursor(row, input.cursor))
+      .slice()
+      .sort((a, b) => a.tradeName.localeCompare(b.tradeName) || a.inventoryId.localeCompare(b.inventoryId))
+    const hasMore = all.length > input.limit
+    const items = hasMore ? all.slice(0, input.limit) : all
+    return Promise.resolve({ items, hasMore })
+  }
+
+  private isAfterCursor(row: PharmacyInventoryListRow, cursor: ListByPharmacyCursor | null): boolean {
+    if (cursor === null) return true
+    if (row.tradeName > cursor.tradeName) return true
+    return row.tradeName === cursor.tradeName && row.inventoryId > cursor.id
   }
 
   private makeKey(pharmacyId: string, row: InventoryBatchUpsertRow): string {

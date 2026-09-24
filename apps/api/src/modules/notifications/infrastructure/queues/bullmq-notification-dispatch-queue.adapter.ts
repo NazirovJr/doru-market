@@ -9,8 +9,7 @@ import {
   type NotificationDispatchJobData,
 } from '@dorutj/contracts'
 import { REDIS_CLIENT } from '@/infrastructure/redis/redis.token.js'
-import type { NotificationChannel } from '@/modules/notifications/application/ports/notify-provider.port.js'
-import type { NotificationDispatchQueuePort } from '@/modules/notifications/application/ports/notification-dispatch-queue.port.js'
+import type { EnqueueNotificationDispatchInput, NotificationDispatchQueuePort } from '@/modules/notifications/application/ports/notification-dispatch-queue.port.js'
 
 export const NOTIFICATION_DISPATCH_QUEUE_NAME = 'notification-dispatch'
 
@@ -22,11 +21,13 @@ export class BullmqNotificationDispatchQueueAdapter implements NotificationDispa
     this.queue = new Queue<NotificationDispatchJobData>(NOTIFICATION_DISPATCH_QUEUE_NAME, { connection: redis })
   }
 
-  public async enqueue(channel: NotificationChannel, jobData: NotificationDispatchJobData, jobId: string): Promise<void> {
+  public async enqueue(input: EnqueueNotificationDispatchInput): Promise<void> {
+    const { channel, jobData, jobId, delayMs } = input
     await this.queue.add(channel, jobData, {
       jobId,
       attempts: NOTIFICATION_DISPATCH_MAX_ATTEMPTS,
       backoff: { type: NOTIFICATION_DISPATCH_BACKOFF_TYPE },
+      ...(delayMs !== undefined && delayMs > 0 && { delay: delayMs }),
     })
   }
 

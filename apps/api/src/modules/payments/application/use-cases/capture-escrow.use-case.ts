@@ -31,7 +31,7 @@ import {
   type PaymentsUnitOfWorkPort,
 } from '@/modules/payments/application/ports/payments-unit-of-work.port.js'
 import { PAYMENTS_TENANCY_PORT, type PaymentsTenancyPort } from '@/modules/payments/application/ports/tenancy-facade.port.js'
-import { PROCESSED_EVENTS_PORT, type ProcessedEventsPort } from '@/modules/payments/application/ports/processed-events.port.js'
+import { PROCESSED_EVENTS_PORT, type ProcessedEventsPort } from '@/common/events/processed-events.port.js'
 import {
   PAYOUT_SCHEDULE_REPOSITORY,
   type PayoutScheduleRepository,

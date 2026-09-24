@@ -75,6 +75,7 @@ describe('NotificationsModule — DI-резолвинг целиком (реал
     const { DatabaseModule } = await import('@/infrastructure/database/database.module.js')
     const { RedisModule } = await import('@/infrastructure/redis/redis.module.js')
     const { IdempotencyModule } = await import('@/common/idempotency/idempotency.module.js')
+    const { DomainEventsModule } = await import('@/common/events/domain-events.module.js')
     const { NotificationsModule } = await import('./notifications.module.js')
     const { IDENTITY_FACADE_PORT } = await import('./application/ports/identity-facade.port.js')
     const { NOTIFICATIONS_REPOSITORY_PORT } = await import('./application/ports/notifications-repository.port.js')
@@ -83,7 +84,7 @@ describe('NotificationsModule — DI-резолвинг целиком (реал
     const { InAppNotifyProvider } = await import('./infrastructure/providers/in-app-notify.provider.js')
 
     const moduleRef = await Test.createTestingModule({
-      imports: [AppConfigModule, LoggerModule, SharedKernelModule, DatabaseModule, RedisModule, IdempotencyModule, NotificationsModule],
+      imports: [AppConfigModule, LoggerModule, SharedKernelModule, DatabaseModule, RedisModule, IdempotencyModule, DomainEventsModule, NotificationsModule],
     }).compile()
 
     expect(moduleRef).toBeDefined()

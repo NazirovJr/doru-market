@@ -21,7 +21,7 @@ import { PINO_LOGGER } from '@/common/logging/pino-logger.token.js'
 import { ReturnReason, ReturnDisposition } from '../../domain/index.js'
 import { RETURNS_ORDERS_PORT, type ReturnsOrdersPort, type OrderReturnContext } from '../ports/orders-facade.port.js'
 import { RETURNS_PAYMENTS_PORT, type ReturnsPaymentsPort } from '../ports/payments-facade.port.js'
-import { RETURNS_PROCESSED_EVENTS_PORT, type ReturnsProcessedEventsPort } from '../ports/returns-processed-events.port.js'
+import { PROCESSED_EVENTS_PORT, type ProcessedEventsPort } from '@/common/events/processed-events.port.js'
 import { RETURNS_UNIT_OF_WORK, type ReturnsUnitOfWorkPort, type ReturnsUnitOfWorkCallback } from '../ports/returns-unit-of-work.port.js'
 import type { ReturnsUnitOfWorkTx } from '../ports/orders-facade.port.js'
 import { ReturnFinancialOutcomeResolver } from '../policies/return-financial-outcome.policy.js'
@@ -39,7 +39,7 @@ export interface RefundOnReturnResolvedCommand {
   readonly orderId: string
   readonly reason: ReturnReasonValue
   readonly disposition: ReturnDispositionValue
-  /** `outbox.id` строки, доставившей событие — ключ идемпотентности (`ReturnsProcessedEventsPort`, SRS-DOM-152). */
+  /** `outbox.id` строки, доставившей событие — ключ идемпотентности (`ProcessedEventsPort`, SRS-DOM-152). */
   readonly eventId: string
 }
 
@@ -47,7 +47,7 @@ export interface RefundOnReturnResolvedCommand {
 export class RefundOnReturnResolvedUseCase {
   // eslint-disable-next-line max-params -- явный @Inject на каждом порте, см. CaptureEscrowUseCase JSDoc (payments-модуль, тот же приём).
   public constructor(
-    @Inject(RETURNS_PROCESSED_EVENTS_PORT) private readonly processedEvents: ReturnsProcessedEventsPort,
+    @Inject(PROCESSED_EVENTS_PORT) private readonly processedEvents: ProcessedEventsPort,
     @Inject(RETURNS_ORDERS_PORT) private readonly ordersPort: ReturnsOrdersPort,
     @Inject(RETURNS_PAYMENTS_PORT) private readonly paymentsPort: ReturnsPaymentsPort,
     @Inject(RETURNS_UNIT_OF_WORK) private readonly unitOfWork: ReturnsUnitOfWorkPort,

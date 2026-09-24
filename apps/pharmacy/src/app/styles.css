@@ -14,6 +14,10 @@
   --color-line: #e2e8f0;
   --color-brand-primary: #0ea5e9;
   --color-brand-danger: #dc2626;
+  /* DTJ-169: статусные бейджи батчей синхронизации (completed_full_success/partial/failed) — та же
+     заглушка-логика токенов, что выше, packages/ui их ещё не определяет (см. риски тикета). */
+  --color-brand-success: #16a34a;
+  --color-brand-warning: #d97706;
 }
 
 /*

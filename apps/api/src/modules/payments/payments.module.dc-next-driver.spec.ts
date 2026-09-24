@@ -67,6 +67,7 @@ describe('PaymentsModule — PAYMENT_DRIVER=dc_next (DTJ-239)', () => {
     const { IdempotencyModule } = await import('@/common/idempotency/idempotency.module.js')
     // ДОБАВЛЕНО (DTJ-306) — OrdersModule требует AUDIT_LOG_PORT, см. JSDoc orders.module.full-boot.di.spec.ts.
     const { AuditLogModule } = await import('@/common/audit/audit-log.module.js')
+    const { DomainEventsModule } = await import('@/common/events/domain-events.module.js')
     const { OrdersModule } = await import('@/modules/orders/orders.module.js')
     const { PaymentsModule } = await import('./payments.module.js')
     const { PAYMENT_PROVIDER_TOKEN } = await import('./application/ports/payment-provider.port.js')
@@ -81,6 +82,7 @@ describe('PaymentsModule — PAYMENT_DRIVER=dc_next (DTJ-239)', () => {
         RedisModule,
         IdempotencyModule,
         AuditLogModule,
+        DomainEventsModule,
         OrdersModule,
         PaymentsModule,
       ],

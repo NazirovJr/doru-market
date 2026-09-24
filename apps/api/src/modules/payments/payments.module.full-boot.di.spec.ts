@@ -94,6 +94,7 @@ describe('PaymentsModule — DI-резолвинг целиком (реальн�
     // ДОБАВЛЕНО (DTJ-306, EP-12 §A.5) — OrdersModule теперь требует AUDIT_LOG_PORT
     // (GetHandoverOtpUseCase/RegenerateHandoverOtpUseCase), см. JSDoc orders.module.full-boot.di.spec.ts.
     const { AuditLogModule } = await import('@/common/audit/audit-log.module.js')
+    const { DomainEventsModule } = await import('@/common/events/domain-events.module.js')
     const { OrdersModule } = await import('@/modules/orders/orders.module.js')
     const { PaymentsModule } = await import('./payments.module.js')
 
@@ -106,6 +107,7 @@ describe('PaymentsModule — DI-резолвинг целиком (реальн�
         RedisModule,
         IdempotencyModule,
         AuditLogModule,
+        DomainEventsModule,
         OrdersModule,
         PaymentsModule,
       ],

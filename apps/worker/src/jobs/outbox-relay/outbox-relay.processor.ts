@@ -1,15 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
 import type { Queue } from 'bullmq'
+import type { DomainEventEnvelope } from '@dorutj/contracts'
 import { DOMAIN_EVENTS_QUEUE, OUTBOX_RELAY_BATCH_LIMIT } from './outbox-relay.constants.js'
 import { OUTBOX_READER_PORT, type OutboxEventRecord, type OutboxReaderPort } from './outbox-reader.port.js'
 
-/**
- * Ядро джобы outbox-relay: читает порцию `outbox` через порт, публикует каждую строку в очередь
- * `domain-events` (`jobId = event.id` — встроенная дедупликация BullMQ поверх основной гарантии
- * `processed_events` на стороне потребителя, см. «Риски» тикета DTJ-002), помечает опубликованной.
- * Планирование тика (BullMQ `repeat`) — отдельно, `outbox-relay.scheduler.ts`, чтобы эта логика
- * оставалась юнит-тестируемой без реального BullMQ `Worker`.
- */
+// Публикация в Redis идёт конкурентно (падение одной строки не роняет тик), а мутация статуса —
+// последовательно: markPublished/recordFailure делят один pg.PoolClient транзакции батча.
 @Injectable()
 export class OutboxRelayProcessor {
   private readonly logger = new Logger(OutboxRelayProcessor.name)
@@ -19,16 +15,40 @@ export class OutboxRelayProcessor {
     @Inject(DOMAIN_EVENTS_QUEUE) private readonly domainEventsQueue: Queue,
   ) {}
 
-  /** Один тик: возвращает число обработанных строк outbox. */
+  /** Один тик: возвращает число заклеймленных строк outbox. */
   async relayOnce(): Promise<number> {
-    const pending = await this.outboxReader.readPending(OUTBOX_RELAY_BATCH_LIMIT)
-    await Promise.all(pending.map((event) => this.publishAndMark(event)))
-    this.logger.debug(`outbox-relay: тик обработал ${String(pending.length)} событие(й)`)
-    return pending.length
+    const claim = await this.outboxReader.claimPending(OUTBOX_RELAY_BATCH_LIMIT)
+    const outcomes = await Promise.allSettled(claim.events.map((event) => this.publish(event)))
+    for (const [index, outcome] of outcomes.entries()) {
+      const event = claim.events[index]
+      if (event === undefined) continue // недостижимо: outcomes 1:1 с claim.events по построению выше.
+      if (outcome.status === 'fulfilled') {
+        // eslint-disable-next-line no-await-in-loop -- один pg.PoolClient на батч, см. комментарий выше.
+        await claim.markPublished(event.id)
+      } else {
+        this.logger.error(`outbox-relay: публикация ${event.id} (${event.eventType}) не удалась — ${String(outcome.reason)}`)
+        // eslint-disable-next-line no-await-in-loop -- см. обоснование выше.
+        await claim.recordFailure(event.id)
+      }
+    }
+    await claim.commit()
+    this.logger.debug(`outbox-relay: тик обработал ${String(claim.events.length)} событие(й)`)
+    return claim.events.length
   }
 
-  private async publishAndMark(event: OutboxEventRecord): Promise<void> {
-    await this.domainEventsQueue.add(event.eventType, event.payload, { jobId: event.id })
-    await this.outboxReader.markPublished(event.id)
+  private async publish(event: OutboxEventRecord): Promise<void> {
+    await this.domainEventsQueue.add(event.eventType, toEnvelope(event), { jobId: event.id })
+  }
+}
+
+function toEnvelope(event: OutboxEventRecord): DomainEventEnvelope {
+  return {
+    eventId: event.id,
+    eventType: event.eventType,
+    aggregateType: event.aggregateType,
+    aggregateId: event.aggregateId,
+    tenantId: event.tenantId,
+    occurredAt: event.occurredAt.toISOString(),
+    payload: event.payload,
   }
 }
