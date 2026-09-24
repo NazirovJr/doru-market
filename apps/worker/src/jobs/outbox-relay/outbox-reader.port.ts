@@ -1,20 +1,25 @@
-/**
- * Порт чтения `outbox` (02-CLEAN-ARCHITECTURE-AND-CODE.md §1.3: interface + DI-токен рядом).
- * Реализация репозитория — тикет DTJ-016 (тот же эпик), таблицы `outbox`/`processed_events`
- * создаёт он же. Здесь — только контракт + временная заглушка `NoopOutboxReaderAdapter`.
- */
-
 export interface OutboxEventRecord {
   readonly id: string
   readonly eventType: string
+  readonly aggregateType: string
+  readonly aggregateId: string
+  readonly tenantId: string | null
+  readonly occurredAt: Date
   readonly payload: Record<string, unknown>
+}
+
+// Один объект-клейм на вызов (не общее состояние адаптера): FOR UPDATE SKIP LOCKED держит лок
+// строк до commit(), а конкурентные claimPending() (два worker-реплики) должны получать каждый
+// свою транзакцию, иначе один инстанс порта перезаписывал бы клиент другого.
+export interface OutboxClaim {
+  readonly events: readonly OutboxEventRecord[]
+  markPublished(id: string): Promise<void>
+  recordFailure(id: string): Promise<void>
+  commit(): Promise<void>
 }
 
 export const OUTBOX_READER_PORT = Symbol('OUTBOX_READER_PORT')
 
 export interface OutboxReaderPort {
-  /** Возвращает до `limit` неопубликованных строк outbox, упорядоченных по времени создания. */
-  readPending(limit: number): Promise<readonly OutboxEventRecord[]>
-  /** Помечает строку outbox опубликованной (`outbox.mark_processed()`, SRS-DOM-152). */
-  markPublished(id: string): Promise<void>
+  claimPending(limit: number): Promise<OutboxClaim>
 }

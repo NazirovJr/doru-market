@@ -17,7 +17,7 @@ import { OutboxRelayProcessor } from './outbox-relay.processor.js'
  * Планирование тика outbox-relay через BullMQ `repeat` (DTJ-002, шаг 5): регистрирует
  * повторяющуюся джобу (`upsertJobScheduler`, идемпотентно) и `Worker`, который на каждый тик
  * вызывает `OutboxRelayProcessor.relayOnce()`. AC3 тикета: джоба выполняется на расписании без
- * падения процесса, даже когда `readPending()` всегда возвращает пустой массив.
+ * падения процесса, даже когда `claimPending()` всегда возвращает пустой батч.
  *
  * `onModuleInit` НЕ ждёт `upsertJobScheduler` (не `async`, не блокирует граф DI Nest): иначе
  * недоступный при старте Redis блокирует ВЕСЬ `NestFactory.createApplicationContext`, а вместе
