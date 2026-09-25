@@ -3,14 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "DoruTJ — tests/e2e: заготовка E2E-инфраструктуры (Playwright). Наполняется тикетом DTJ-417.",
+  "description": "DoruTJ — tests/e2e: каркас E2E-инфраструктуры Playwright (DTJ-417) — конфиг, помощники OTP/Telegram/axe, самопроверочные тесты. Конкретные CUJ-сценарии — DTJ-418..423.",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "playwright test --pass-with-no-tests"
+    "test:helpers": "vitest run",
+    "test": "pnpm run test:helpers && playwright test",
+    "test:smoke": "E2E_REQUIRE_API=true playwright test smoke"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
     "@types/node": "^24.13.3",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
   }
 }

@@ -79,10 +79,20 @@ services:
   minio:
     # Пиновка (01-TECH-BASELINE.md, DoD «ни одного :latest»): официальные Docker-образы
     # minio/minio сняты с публикации в Docker Hub (объявление minio, октябрь 2025 — репозиторий
-    # заархивирован); RELEASE.2025-09-07T16-13-09Z — последний реально опубликованный официальный
-    # тег на момент реализации тикета (проверено). Новых security-патчей для этой ветки больше не
-    # будет — follow-up для EP-19: оценить самосборку из исходников или проверенный форк до GA.
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    # заархивирован); RELEASE.2025-09-07T16-13-09Z, ранее указанный здесь как «последний реально
+    # опубликованный официальный тег», при живой проверке DTJ-412 (25.09.2026, `docker pull
+    # minio/minio:...` → «not found», репозиторий `minio/minio` целиком отсутствует на Docker Hub,
+    # `minio/minio:latest` — та же ошибка) подтверждённо больше НЕ резолвится вообще — образ
+    # `docker compose up -d` не может скачать. `quay.io/minio/minio` (официальная новая площадка
+    # публикации) недоступен из текущей CI/dev-сети по egress-политике прокси — см.
+    # `docs/STATE-AND-RESUME-POINT.md` при следующей ревизии этой политики. До появления доступа к
+    # `quay.io` используем `pgsty/minio:RELEASE.2026-08-04T00-00-00Z` — зеркало проекта Pigsty
+    # (те же официальные бинарники MinIO, `minio --version` подтверждает `RELEASE.2026-08-04T00-
+    # 00-00Z`, тот же entrypoint/CMD/порт 9000, drop-in замена) — проверено живым `docker pull` +
+    # `docker run --rm ... minio --version` при ревью DTJ-412. Follow-up: вернуться на
+    # `quay.io/minio/minio` или официальную площадку, как только egress-политика окружения это
+    # разрешит — не блокирует этот тикет.
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     command: ['server', '/data', '--console-address', ':9001']
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-dorutj_minio_admin}
@@ -133,6 +143,12 @@ services:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
     environment: *api-env
+    # dev-профиль (та же логика, что у postgres/redis/minio выше) — публикуется на хост, чтобы
+    # локальный разработчик и CI e2e-стадия (DTJ-414) могли curl'ить `/ready` напрямую, без
+    # прохождения через Nginx (который DTJ-413's docker-compose.test.yml снимает с автозапуска
+    # для тестового стека). `docker-compose.prod.yml` (DTJ-412) снимает эту публикацию тем же
+    # `!reset []`, что и у postgres/redis/minio — в проде api доступен только через Nginx.
+    ports: ['3000:3000']
     healthcheck:
       test:
         [
