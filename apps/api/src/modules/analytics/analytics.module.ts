@@ -5,20 +5,24 @@ import { PRODUCT_EVENTS_REPOSITORY_PROVIDER } from './infrastructure/repositorie
 import { RecordProductEventUseCase } from './application/use-cases/record-product-event.use-case.js'
 import { RecordProductEventsBatchUseCase } from './application/use-cases/record-product-events-batch.use-case.js'
 import { RealizedSavingsCalculator } from './application/services/realized-savings-calculator.js'
+import { GetFunnelUseCase } from './application/use-cases/get-funnel.use-case.js'
 import { AnalyticsFacade } from './analytics.facade.js'
 import { AnalyticsEventsController } from './presentation/analytics-events.controller.js'
+import { AnalyticsDashboardController } from './presentation/analytics-dashboard.controller.js'
 import { AnalyticsEventsIdentityGuard } from './presentation/guards/analytics-events-identity.guard.js'
 
 @Module({
   // AuthModule — DTJ-379: AnalyticsEventsIdentityGuard инжектит JWT_SIGNER (экспортирован
-  // auth.module.ts), тот же приём, что CartIdentityGuard/orders.module.ts.
+  // auth.module.ts), тот же приём, что CartIdentityGuard/orders.module.ts. DTJ-381 переиспользует
+  // тот же импорт для AuthGuard/RolesGuard AnalyticsDashboardController.
   imports: [AuthModule],
-  controllers: [AnalyticsEventsController],
+  controllers: [AnalyticsEventsController, AnalyticsDashboardController],
   providers: [
     PRODUCT_EVENTS_REPOSITORY_PROVIDER,
     RecordProductEventUseCase,
     RecordProductEventsBatchUseCase,
     RealizedSavingsCalculator,
+    GetFunnelUseCase,
     AnalyticsEventsIdentityGuard,
     AnalyticsFacade,
   ],

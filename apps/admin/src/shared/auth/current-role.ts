@@ -70,3 +70,21 @@ export function getCurrentRole(): UserRole | null {
     return null
   }
 }
+
+/** DTJ-381 — воронка аналитики требует tenantId в query; тот же приём decode, что и роль выше. */
+export function decodeTenantIdFromAccessToken(token: string | null): string | null {
+  if (token === null || token.length === 0) {
+    return null
+  }
+  const tenantId = decodeJwtPayload(token)?.tenantId
+  return typeof tenantId === 'string' && tenantId.length > 0 ? tenantId : null
+}
+
+/** Читает токен из `localStorage` и декодирует tenantId — обёртка для `funnel-page.tsx` (DTJ-381). */
+export function getCurrentTenantId(): string | null {
+  try {
+    return decodeTenantIdFromAccessToken(localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY))
+  } catch {
+    return null
+  }
+}

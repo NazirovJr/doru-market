@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { ACCESS_TOKEN_STORAGE_KEY, decodeRoleFromAccessToken, getCurrentRole } from './current-role'
+import {
+  ACCESS_TOKEN_STORAGE_KEY,
+  decodeRoleFromAccessToken,
+  decodeTenantIdFromAccessToken,
+  getCurrentRole,
+  getCurrentTenantId,
+} from './current-role'
 
 function base64Url(json: unknown): string {
   const base64 = btoa(JSON.stringify(json))
@@ -70,5 +76,47 @@ describe('getCurrentRole', () => {
     const token = buildJwt({ sub: 'user-1', role: 'pharmacy_admin' })
     localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, token)
     expect(getCurrentRole()).toBe('pharmacy_admin')
+  })
+})
+
+// DTJ-381 — decode tenantId для funnel-page.tsx, та же логика/защита, что decodeRoleFromAccessToken.
+describe('decodeTenantIdFromAccessToken', () => {
+  it('возвращает null для null-токена', () => {
+    expect(decodeTenantIdFromAccessToken(null)).toBeNull()
+  })
+
+  it('возвращает null, если tenantId отсутствует в payload', () => {
+    const token = buildJwt({ sub: 'user-1', role: 'super_admin' })
+    expect(decodeTenantIdFromAccessToken(token)).toBeNull()
+  })
+
+  it('возвращает null, если tenantId — не строка', () => {
+    const token = buildJwt({ sub: 'user-1', role: 'super_admin', tenantId: 42 })
+    expect(decodeTenantIdFromAccessToken(token)).toBeNull()
+  })
+
+  it('возвращает tenantId для валидного токена', () => {
+    const token = buildJwt({ sub: 'user-1', role: 'super_admin', tenantId: 'tenant-42' })
+    expect(decodeTenantIdFromAccessToken(token)).toBe('tenant-42')
+  })
+})
+
+describe('getCurrentTenantId', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  afterEach(() => {
+    localStorage.clear()
+  })
+
+  it('возвращает null, если токен не сохранён', () => {
+    expect(getCurrentTenantId()).toBeNull()
+  })
+
+  it('читает tenantId из localStorage под ACCESS_TOKEN_STORAGE_KEY', () => {
+    const token = buildJwt({ sub: 'user-1', role: 'super_admin', tenantId: 'tenant-7' })
+    localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, token)
+    expect(getCurrentTenantId()).toBe('tenant-7')
   })
 })

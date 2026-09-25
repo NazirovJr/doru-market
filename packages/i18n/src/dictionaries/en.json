@@ -454,5 +454,22 @@
   "admin.undelivered_notifications.status.sent": "Sent",
   "admin.undelivered_notifications.status.delivered": "Delivered",
   "admin.undelivered_notifications.status.failed": "Failed",
-  "admin.undelivered_notifications.status.suppressed_rate_limit": "Suppressed by rate limit"
+  "admin.undelivered_notifications.status.suppressed_rate_limit": "Suppressed by rate limit",
+  "admin.nav.analytics_funnel": "Savings funnel",
+  "admin.analytics_funnel.title": "Savings funnel",
+  "admin.analytics_funnel.loading": "Loading funnel…",
+  "admin.analytics_funnel.error": "Failed to load the funnel",
+  "admin.analytics_funnel.period.week": "Week",
+  "admin.analytics_funnel.period.month": "Month",
+  "admin.analytics_funnel.amount_somoni": "{amount} TJS",
+  "admin.analytics_funnel.hero.shown_title": "Total savings shown",
+  "admin.analytics_funnel.hero.realized_title": "Savings realized",
+  "admin.analytics_funnel.hero.realized_percent": "{percent} of shown",
+  "admin.analytics_funnel.funnel.title": "Savings shown → click → cart → order",
+  "admin.analytics_funnel.step.analog_shown": "Savings shown",
+  "admin.analytics_funnel.step.analog_clicked": "Analog clicked",
+  "admin.analytics_funnel.step.added_to_cart": "Added to cart",
+  "admin.analytics_funnel.step.order_placed": "Order placed",
+  "admin.analytics_funnel.conversion_from_previous": "{percent} of previous step",
+  "admin.analytics_funnel.trend.title": "Realized savings trend"
 }
