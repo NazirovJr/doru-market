@@ -1,9 +1,4 @@
-/**
- * Интеграционный тест `DrizzlePayoutScheduleRepository.findSchedule` (DTJ-357, review) —
- * реальный Postgres, платформенная очередь `admin` (без `pharmacyId`, фильтры `status`/
- * `pharmacyId` опциональны). Тот же приём подключения, что `escrow-ledger.repository.
- * integration.spec.ts` (DTJ-240) — repository напрямую, не через HTTP.
- */
+// Интеграционный тест DrizzlePayoutScheduleRepository.findSchedule — реальный Postgres, repository напрямую (тот же приём, что escrow-ledger.repository.integration.spec.ts).
 import { randomUUID } from 'node:crypto'
 import { Pool } from 'pg'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'

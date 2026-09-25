@@ -1,5 +1,4 @@
-// SRS-ADM-034 — единственный экран платформы, помеченный «требует немедленного расследования»
-// в самом UI. Badge danger — CSS-переменные `--color-status-danger-*` (тот же приём, что SlaBadge).
+// SRS-ADM-034 — единственный экран платформы, помеченный «требует немедленного расследования» в самом UI. Badge danger — CSS-переменные, тот же приём, что SlaBadge.
 import { useEffect, useState, type ReactElement } from 'react'
 import { useT, toIntlLocale } from '@dorutj/i18n'
 import type { FinanceReconciliationAlertDto } from '@dorutj/contracts'

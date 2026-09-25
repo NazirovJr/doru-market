@@ -1,5 +1,4 @@
-// packages/ui пуст (тот же приём, что audit-log-page.tsx) — нативная таблица, поиск по orderId
-// (единственный практический фильтр, платформенное расследование конкретного заказа).
+// packages/ui пуст (тот же приём, что audit-log-page.tsx) — нативная таблица, поиск по orderId (единственный практический фильтр).
 import { useState, type ChangeEvent, type ReactElement, type SyntheticEvent } from 'react'
 import { useT, toIntlLocale } from '@dorutj/i18n'
 import type { FinanceEscrowLedgerEntryDto } from '@dorutj/contracts'
