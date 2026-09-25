@@ -8,28 +8,13 @@ import {
 } from './branding-allowlist'
 
 /**
- * Пейлоады CSS/HTML-инъекции через палитру (TC-NFR-006 / TC-TEN-008). Этот же список обязан быть
- * перенесён 1:1 в `tests/security/payloads/branding-injection.json` тикетом DTJ-425.
+ * Пейлоады CSS/HTML-инъекции через палитру (TC-NFR-006 / TC-TEN-008). ЕДИНСТВЕННЫЙ источник —
+ * `tests/security/payloads/branding-injection.json` (DTJ-425, DoD «пейлоады синхронизированы,
+ * не дублируются независимым списком») — читается отсюда, а не хардкодится второй раз здесь.
  */
-const INJECTION_PAYLOADS = [
-  'url(javascript:alert(1))',
-  'javascript:alert(1)',
-  '</style><script>alert(1)</script>',
-  '<script>alert(1)</script>',
-  '#fff;background:url(https://evil.example/x.png)',
-  '#ffffff; } body { display:none',
-  'expression(alert(1))',
-  'var(--brand-danger)',
-  'rgba(0,0,0,0.5)',
-  'red',
-  '#ffffff\n',
-  ' #ffffff',
-  '#ffffff ',
-  '#fffffff',
-  '#ggg',
-  '#12',
-  '',
-] as const
+const INJECTION_PAYLOADS = JSON.parse(
+  readFileSync(join(import.meta.dirname, '../../../../tests/security/payloads/branding-injection.json'), 'utf8'),
+) as readonly string[]
 
 describe('validateBrandingPayload', () => {
   it('AC1: accepts a valid color and returns normalized value', () => {

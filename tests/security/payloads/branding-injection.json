@@ -1,0 +1,19 @@
+[
+  "url(javascript:alert(1))",
+  "javascript:alert(1)",
+  "</style><script>alert(1)</script>",
+  "<script>alert(1)</script>",
+  "#fff;background:url(https://evil.example/x.png)",
+  "#ffffff; } body { display:none",
+  "expression(alert(1))",
+  "var(--brand-danger)",
+  "rgba(0,0,0,0.5)",
+  "red",
+  "#ffffff\n",
+  " #ffffff",
+  "#ffffff ",
+  "#fffffff",
+  "#ggg",
+  "#12",
+  ""
+]
