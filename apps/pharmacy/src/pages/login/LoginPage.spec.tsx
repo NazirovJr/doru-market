@@ -8,8 +8,8 @@ import { useAuthStore } from '@/shared/api/auth-store'
 /**
  * DTJ-166 критерий приёмки 4: роль `customer`/`courier` технически проходит OTP-verify
  * (эндпоинт роле-агностичен, `use-verify-otp.ts`), но `LoginPage` обязана отклонить доступ ДО
- * навигации на `/inventory` — очистить сессию, показать сообщение, вернуть на шаг «телефон».
- * Также покрывает критерий приёмки 2 (успешный вход персонала аптеки → редирект на /inventory).
+ * навигации на `/` — очистить сессию, показать сообщение, вернуть на шаг «телефон».
+ * Также покрывает критерий приёмки 2 (успешный вход персонала аптеки → редирект на `/`, DTJ-310).
  */
 
 const OTP_REQUEST_URL = 'http://localhost:3000/api/v1/auth/otp/request'
@@ -27,7 +27,7 @@ function renderLoginPage(): void {
       <MemoryRouter initialEntries={['/login']}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/inventory" element={<div>inventory-screen</div>} />
+          <Route path="/" element={<div>queue-screen</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -84,7 +84,7 @@ describe('<LoginPage /> — критерий приёмки 4 (роль не п�
     await waitFor(() => {
       expect(screen.getByTestId('role-denied-error')).not.toHaveTextContent('')
     })
-    expect(screen.queryByText('inventory-screen')).not.toBeInTheDocument()
+    expect(screen.queryByText('queue-screen')).not.toBeInTheDocument()
     expect(screen.getByTestId('phone-step')).toBeInTheDocument()
     expect(useAuthStore.getState().accessToken).toBeNull()
     expect(useAuthStore.getState().user).toBeNull()
@@ -102,27 +102,27 @@ describe('<LoginPage /> — критерий приёмки 4 (роль не п�
     expect(useAuthStore.getState().accessToken).toBeNull()
   })
 
-  it('критерий приёмки 2: pharmacist — успешный вход, редирект на /inventory', async () => {
+  it('критерий приёмки 2: pharmacist — успешный вход, редирект на / (очередь заказов)', async () => {
     renderLoginPage()
     stubOtpFlow('pharmacist')
 
     await submitPhoneAndCode()
 
     await waitFor(() => {
-      expect(screen.getByText('inventory-screen')).toBeInTheDocument()
+      expect(screen.getByText('queue-screen')).toBeInTheDocument()
     })
     expect(screen.queryByTestId('role-denied-error')).not.toBeInTheDocument()
     expect(useAuthStore.getState().accessToken).toBe('access-1')
   })
 
-  it('pharmacy_admin — успешный вход, редирект на /inventory', async () => {
+  it('pharmacy_admin — успешный вход, редирект на / (очередь заказов)', async () => {
     renderLoginPage()
     stubOtpFlow('pharmacy_admin')
 
     await submitPhoneAndCode()
 
     await waitFor(() => {
-      expect(screen.getByText('inventory-screen')).toBeInTheDocument()
+      expect(screen.getByText('queue-screen')).toBeInTheDocument()
     })
   })
 })

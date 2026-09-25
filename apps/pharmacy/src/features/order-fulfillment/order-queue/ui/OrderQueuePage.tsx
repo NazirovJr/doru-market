@@ -8,7 +8,6 @@ import { OrderCard } from './OrderCard'
 import { NewOrderBanner } from './NewOrderBanner'
 import { OfflineBanner } from './OfflineBanner'
 import { SoundAlert, type SoundAlertHandle } from './SoundAlert'
-import { LanguageSwitcherPlaceholder } from './LanguageSwitcherPlaceholder'
 
 export const OrderQueuePage = (): ReactElement => {
   const { t } = useT('tj')
@@ -38,9 +37,8 @@ export const OrderQueuePage = (): ReactElement => {
 
   return (
     <section className="mx-auto flex w-full max-w-2xl flex-col gap-4 py-8" data-testid="order-queue-page">
-      <header className="flex items-center justify-between">
+      <header>
         <h1 className="text-lg font-semibold text-ink">{t('pharmacy.order_queue.page.title')}</h1>
-        <LanguageSwitcherPlaceholder />
       </header>
 
       <SoundAlert ref={soundAlertRef} />
