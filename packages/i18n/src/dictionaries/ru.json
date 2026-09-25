@@ -359,6 +359,7 @@
   "admin.audit_log.category.onboarding_decision": "Решение по онбордингу",
   "admin.audit_log.category.force_cancel_order": "Принудительная отмена заказа",
   "admin.audit_log.category.ledger_adjustment": "Корректировка леджера",
+  "admin.audit_log.category.role_grant": "Выдача платформенной роли",
   "admin.users.title": "Пользователи",
   "admin.users.loading": "Загружаем пользователей…",
   "admin.users.error": "Не удалось загрузить пользователей",

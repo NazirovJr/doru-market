@@ -359,6 +359,7 @@
   "admin.audit_log.category.onboarding_decision": "Қарор оид ба сабти ном",
   "admin.audit_log.category.force_cancel_order": "Бекор кардани маҷбурии фармоиш",
   "admin.audit_log.category.ledger_adjustment": "Ислоҳи феҳраст",
+  "admin.audit_log.category.role_grant": "Додани нақши платформа",
   "admin.users.title": "Корбарон",
   "admin.users.loading": "Боркунии корбарон…",
   "admin.users.error": "Корбарон бор нашуданд",
