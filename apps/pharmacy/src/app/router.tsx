@@ -33,6 +33,14 @@ const routes: RouteObject[] = [
           return { Component }
         },
       },
+      // Одна строка маршрута в общем каркасе — сам экран сборки живёт в своей папке фичи.
+      {
+        path: 'orders/:id',
+        lazy: async () => {
+          const { default: Component } = await import('@/features/order-fulfillment/picking/ui/PickingPage')
+          return { Component }
+        },
+      },
       {
         path: 'inventory',
         lazy: async () => {

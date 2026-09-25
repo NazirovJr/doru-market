@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router'
 import type { PharmacyTerminalQueueItemDto } from '@dorutj/contracts'
 import { OrderCard } from './OrderCard'
 
@@ -25,9 +26,11 @@ function renderCard(item: PharmacyTerminalQueueItemDto, currentUserId = 'me'): v
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   render(
     <QueryClientProvider client={queryClient}>
-      <ul>
-        <OrderCard item={item} currentUserId={currentUserId} onAccept={vi.fn()} isAccepting={false} />
-      </ul>
+      <MemoryRouter>
+        <ul>
+          <OrderCard item={item} currentUserId={currentUserId} onAccept={vi.fn()} isAccepting={false} />
+        </ul>
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 }
@@ -49,11 +52,12 @@ describe('<OrderCard /> (DTJ-310)', () => {
     expect(screen.getByTestId('order-card-rx-badge')).toBeInTheDocument()
   })
 
-  it('«В сборке», занят мной — показывает «Ваша сборка», «Принять» скрыта, кнопка перехвата отсутствует', () => {
+  it('«В сборке», занят мной — показывает «Ваша сборка», «Принять» скрыта, кнопка перехвата отсутствует, есть переход в сборку (DTJ-311)', () => {
     renderCard(makeItem({ status: 'processing', assignedPharmacistId: 'me' }))
     expect(screen.queryByTestId('order-card-accept-cta')).not.toBeInTheDocument()
     expect(screen.getByTestId('order-card-own-badge')).toBeInTheDocument()
     expect(screen.queryByTestId('order-card-reclaim-toggle')).not.toBeInTheDocument()
+    expect(screen.getByTestId('order-card-go-to-picking')).toHaveAttribute('href', '/orders/order-1')
   })
 
   it('«В сборке», занят коллегой — «Принять» скрыта, показан бейдж с именем и кнопка «Перехватить»', () => {
