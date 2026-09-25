@@ -577,5 +577,14 @@
   "admin.platform_metrics.card.delivery_sla.title": "Соблюдение SLA доставки",
   "admin.platform_metrics.card.cancellation_rate.title": "Доля отмен",
   "admin.platform_metrics.card.active_pharmacies.title": "Аптеки, присылающие данные",
-  "admin.platform_metrics.card.active_pharmacies.below_threshold": "Ниже порога пилота"
+  "admin.platform_metrics.card.active_pharmacies.below_threshold": "Ниже порога пилота",
+  "admin.nav.top_analogs": "Топ аналогов",
+  "admin.top_analogs.title": "Топ аналогов по показанной экономии",
+  "admin.top_analogs.loading": "Загружаем отчёт…",
+  "admin.top_analogs.error": "Не удалось загрузить отчёт",
+  "admin.top_analogs.empty": "Нет показов аналогов за период",
+  "admin.top_analogs.column.medicine": "Препарат",
+  "admin.top_analogs.column.avg_savings": "Средняя экономия",
+  "admin.top_analogs.column.times_shown": "Показов",
+  "admin.top_analogs.column.conversion": "Конверсия в заказ"
 }

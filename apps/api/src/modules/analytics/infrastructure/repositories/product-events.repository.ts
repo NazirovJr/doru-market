@@ -7,15 +7,25 @@ import {
   PRODUCT_EVENTS_REPOSITORY,
   type AnalyticsPeriodRange,
   type ProductEventsRepositoryPort,
+  type TopAnalogSavingsRow,
   type WeeklyRealizedSavingsPoint,
 } from '@/modules/analytics/application/ports/product-events-repository.port.js'
 
 const SAVINGS_SOURCE_EVENT_TYPES = ['analog_shown', 'added_to_cart'] as const
 const TREND_WEEKS = 7
+const MIN_TOP_ANALOGS_LIMIT = 1
+const MAX_TOP_ANALOGS_LIMIT = 100
 
 interface WeeklyTrendRow {
   readonly week_label: string
   readonly realized_savings_diram: string
+}
+
+interface TopAnalogsSqlRow {
+  readonly medicine_id: string
+  readonly avg_savings_diram: string
+  readonly times_shown: string
+  readonly converted_count: string
 }
 
 @Injectable()
@@ -121,6 +131,52 @@ export class ProductEventsRepository implements ProductEventsRepositoryPort {
     `)
     return extractRows(result).map(toWeeklyPoint)
   }
+
+  public async getTopAnalogsBySavings(
+    tenantId: string,
+    period: AnalyticsPeriodRange,
+    limit: number,
+  ): Promise<readonly TopAnalogSavingsRow[]> {
+    const clampedLimit = clampTopAnalogsLimit(limit)
+    const result = await this.db.execute(sql`
+      WITH shown AS (
+        SELECT id, medicine_id, session_id, savings_diram, occurred_at
+        FROM product_events
+        WHERE tenant_id = ${tenantId}
+          AND event_type = 'analog_shown'
+          AND medicine_id IS NOT NULL
+          AND occurred_at >= ${period.start}
+          AND occurred_at < ${period.end}
+      )
+      SELECT
+        s.medicine_id,
+        AVG(s.savings_diram)::text AS avg_savings_diram,
+        COUNT(*)::text AS times_shown,
+        COUNT(*) FILTER (
+          WHERE EXISTS (
+            SELECT 1 FROM product_events op
+            WHERE op.tenant_id = ${tenantId}
+              AND op.event_type = 'order_placed'
+              AND op.session_id = s.session_id
+              AND op.medicine_id = s.medicine_id
+              AND op.occurred_at >= s.occurred_at
+          )
+        )::text AS converted_count
+      FROM shown s
+      GROUP BY s.medicine_id
+      ORDER BY COUNT(*) DESC
+      LIMIT ${clampedLimit}
+    `)
+    return extractRows(result).map(toTopAnalogRow)
+  }
+}
+
+// Верхняя граница — защита от неограниченного ответа (DoD DTJ-383); дефолт=10 применяет use case.
+function clampTopAnalogsLimit(limit: number): number {
+  if (!Number.isFinite(limit) || limit < MIN_TOP_ANALOGS_LIMIT) {
+    return MIN_TOP_ANALOGS_LIMIT
+  }
+  return Math.min(limit, MAX_TOP_ANALOGS_LIMIT)
 }
 
 function periodConditions(tenantId: string, period: AnalyticsPeriodRange) {
@@ -144,6 +200,17 @@ function extractRows(result: unknown): readonly unknown[] {
 function toWeeklyPoint(row: unknown): WeeklyRealizedSavingsPoint {
   const typed = row as WeeklyTrendRow
   return { weekLabel: typed.week_label, realizedSavingsDiram: BigInt(typed.realized_savings_diram) }
+}
+
+function toTopAnalogRow(row: unknown): TopAnalogSavingsRow {
+  const typed = row as TopAnalogsSqlRow
+  const timesShown = Number(typed.times_shown)
+  return {
+    medicineId: typed.medicine_id,
+    avgSavingsDiram: BigInt(Math.round(Number(typed.avg_savings_diram))),
+    timesShown,
+    conversionToOrder: timesShown === 0 ? 0 : Number(typed.converted_count) / timesShown,
+  }
 }
 
 function toRow(event: ProductEvent): ProductEventInsert {

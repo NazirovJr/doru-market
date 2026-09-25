@@ -577,5 +577,14 @@
   "admin.platform_metrics.card.delivery_sla.title": "Delivery SLA compliance",
   "admin.platform_metrics.card.cancellation_rate.title": "Cancellation rate",
   "admin.platform_metrics.card.active_pharmacies.title": "Pharmacies sending data",
-  "admin.platform_metrics.card.active_pharmacies.below_threshold": "Below pilot threshold"
+  "admin.platform_metrics.card.active_pharmacies.below_threshold": "Below pilot threshold",
+  "admin.nav.top_analogs": "Top analogs",
+  "admin.top_analogs.title": "Top analogs by shown savings",
+  "admin.top_analogs.loading": "Loading report…",
+  "admin.top_analogs.error": "Failed to load report",
+  "admin.top_analogs.empty": "No analogs shown for this period",
+  "admin.top_analogs.column.medicine": "Medicine",
+  "admin.top_analogs.column.avg_savings": "Avg. savings",
+  "admin.top_analogs.column.times_shown": "Times shown",
+  "admin.top_analogs.column.conversion": "Conversion to order"
 }

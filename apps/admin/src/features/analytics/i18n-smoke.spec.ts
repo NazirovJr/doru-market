@@ -38,6 +38,18 @@ const ADMIN_PLATFORM_METRICS_KEYS: readonly string[] = [
   'admin.platform_metrics.card.active_pharmacies.below_threshold',
 ]
 
+const ADMIN_TOP_ANALOGS_KEYS: readonly string[] = [
+  'admin.nav.top_analogs',
+  'admin.top_analogs.title',
+  'admin.top_analogs.loading',
+  'admin.top_analogs.error',
+  'admin.top_analogs.empty',
+  'admin.top_analogs.column.medicine',
+  'admin.top_analogs.column.avg_savings',
+  'admin.top_analogs.column.times_shown',
+  'admin.top_analogs.column.conversion',
+]
+
 const MISSING_KEY_MARKER = '[[missing:'
 
 describe('admin/analytics (funnel) i18n — 3 локали, все ключи переведены', () => {
@@ -53,6 +65,15 @@ describe('admin/analytics (platform metrics, DTJ-382) i18n — 3 локали, �
   it.each(LOCALES)('%s — все ключи admin.platform_metrics.*/admin.nav.platform_metrics без [[missing: ...]]', (locale) => {
     const { t } = useT(locale)
     for (const key of ADMIN_PLATFORM_METRICS_KEYS) {
+      expect(t(key)).not.toContain(MISSING_KEY_MARKER)
+    }
+  })
+})
+
+describe('admin/analytics (top analogs, DTJ-383) i18n — 3 локали, все ключи переведены', () => {
+  it.each(LOCALES)('%s — все ключи admin.top_analogs.*/admin.nav.top_analogs без [[missing: ...]]', (locale) => {
+    const { t } = useT(locale)
+    for (const key of ADMIN_TOP_ANALOGS_KEYS) {
       expect(t(key)).not.toContain(MISSING_KEY_MARKER)
     }
   })

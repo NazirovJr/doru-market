@@ -577,5 +577,14 @@
   "admin.platform_metrics.card.delivery_sla.title": "Риояи SLA-и расонидан",
   "admin.platform_metrics.card.cancellation_rate.title": "Ҳиссаи бекоркунӣ",
   "admin.platform_metrics.card.active_pharmacies.title": "Дорухонаҳое, ки маълумот мефиристанд",
-  "admin.platform_metrics.card.active_pharmacies.below_threshold": "Поёнтар аз ҳадди пилот"
+  "admin.platform_metrics.card.active_pharmacies.below_threshold": "Поёнтар аз ҳадди пилот",
+  "admin.nav.top_analogs": "Топи аналогҳо",
+  "admin.top_analogs.title": "Топи аналогҳо аз рӯи сарфаи нишондодашуда",
+  "admin.top_analogs.loading": "Боргирии ҳисобот…",
+  "admin.top_analogs.error": "Боргирии ҳисобот ноком шуд",
+  "admin.top_analogs.empty": "Дар давра нишондиҳии аналог набуд",
+  "admin.top_analogs.column.medicine": "Дору",
+  "admin.top_analogs.column.avg_savings": "Сарфаи миёна",
+  "admin.top_analogs.column.times_shown": "Шумораи нишондиҳиҳо",
+  "admin.top_analogs.column.conversion": "Конверсия ба фармоиш"
 }
