@@ -13,3 +13,13 @@ export type { ConnectionMode, ConnectionStatus } from './hooks/use-connection-st
 export { useConnectionStatus } from './hooks/use-connection-status'
 export type { UiCircuitBreakerState, UseUiCircuitBreakerOptions } from './hooks/use-ui-circuit-breaker'
 export { DEFAULT_COOLDOWN_MS, DEFAULT_FAILURE_THRESHOLD, useUiCircuitBreaker } from './hooks/use-ui-circuit-breaker'
+
+// DTJ-411 — слой темизации и хуков Telegram Mini App (SRS-UX-013/043/044/045/046/047/048):
+// детектор среды TWA, третий слой каскада темизации (--brand-* -> --tg-theme-*) и тонкая
+// презентационная обвязка над системными MainButton/BackButton хоста.
+export { isTwaRuntime } from './twa/is-twa-runtime'
+export { useTelegramTheme } from './twa/use-telegram-theme'
+export type { UseMainButtonOptions, UseMainButtonResult } from './twa/use-main-button'
+export { useMainButton } from './twa/use-main-button'
+export type { UseBackButtonOptions } from './twa/use-back-button'
+export { useBackButton } from './twa/use-back-button'
