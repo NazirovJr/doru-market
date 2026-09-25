@@ -38,21 +38,28 @@ const parsePx = (value: string): number => {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-const sumPx = (style: CSSStyleDeclaration, properties: readonly string[]): number =>
+const sumPaddingPx = (style: CSSStyleDeclaration, properties: readonly string[]): number =>
   properties.reduce((total, property) => total + parsePx(style.getPropertyValue(property)), 0)
 
-const HORIZONTAL_BOX = [
-  'padding-left',
-  'padding-right',
-  'border-left-width',
-  'border-right-width',
-] as const
-const VERTICAL_BOX = [
-  'padding-top',
-  'padding-bottom',
-  'border-top-width',
-  'border-bottom-width',
-] as const
+/**
+ * Ширина рамки СТОРОНЫ элемента. По спецификации CSS вычисленная `border-*-width` всегда 0,
+ * если `border-*-style` этой стороны — `none`/`hidden`, НЕЗАВИСИМО от заданного `border-width`
+ * (initial-значение `border-width` — ключевое слово `medium`, которое не должно рендериться
+ * без стиля рамки). Игнорировать это правило под `jsdom` опасно: реализация вычисляемых
+ * стилей `jsdom` возвращает конкретное px-значение для `medium` даже когда `border-style`
+ * не задан (по умолчанию `none`) — без этой проверки КАЖДЫЙ элемент без явной рамки получал
+ * бы фантомные +32px к тап-зоне.
+ */
+const borderSidePx = (style: CSSStyleDeclaration, side: 'left' | 'right' | 'top' | 'bottom'): number => {
+  const borderStyle = style.getPropertyValue(`border-${side}-style`)
+  if (borderStyle === '' || borderStyle === 'none' || borderStyle === 'hidden') {
+    return 0
+  }
+  return parsePx(style.getPropertyValue(`border-${side}-width`))
+}
+
+const PADDING_HORIZONTAL = ['padding-left', 'padding-right'] as const
+const PADDING_VERTICAL = ['padding-top', 'padding-bottom'] as const
 
 const measureFromStyle = (element: HTMLElement): HitAreaSize => {
   const style = getComputedStyle(element)
@@ -62,8 +69,8 @@ const measureFromStyle = (element: HTMLElement): HitAreaSize => {
     return { width, height }
   }
   return {
-    width: width + sumPx(style, HORIZONTAL_BOX),
-    height: height + sumPx(style, VERTICAL_BOX),
+    width: width + sumPaddingPx(style, PADDING_HORIZONTAL) + borderSidePx(style, 'left') + borderSidePx(style, 'right'),
+    height: height + sumPaddingPx(style, PADDING_VERTICAL) + borderSidePx(style, 'top') + borderSidePx(style, 'bottom'),
   }
 }
 

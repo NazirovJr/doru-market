@@ -69,21 +69,38 @@ export const isBlocking = (violation: A11yViolation): boolean =>
 
 export const FOCUS_INDICATOR_RULE_ID = 'dorutj-focus-indicator'
 
-const isZeroPx = (value: string): boolean => Number.parseFloat(value) === 0
+const isZeroPx = (value: string): boolean => value !== '' && Number.parseFloat(value) === 0
 
-const isOutlineSuppressed = (style: CSSStyleDeclaration): boolean =>
-  style.outlineStyle === 'none' || style.outlineStyle === 'hidden' || isZeroPx(style.outlineWidth)
-
-const hasShadowReplacement = (style: CSSStyleDeclaration): boolean =>
-  style.boxShadow !== '' && style.boxShadow !== 'none'
-
-const hasSuppressedFocusIndicator = (element: HTMLElement): boolean => {
-  element.focus()
-  const style = getComputedStyle(element)
-  const suppressed = isOutlineSuppressed(style) && !hasShadowReplacement(style)
-  element.blur()
-  return suppressed
+/**
+ * Проверяет АВТОРСКИЕ inline-декларации элемента (`HTMLElement.style`), а не `getComputedStyle`.
+ * Причина: computed `outline-style` по спецификации CSS равен `none` в состоянии покоя ВСЕГДА
+ * (браузер рисует focus-ring через собственный UA-механизм `:focus-visible`, а не через
+ * обычный computed-каскад) — под `jsdom`, где этого UA-механизма нет, `outline-style` элемента
+ * в фокусе тоже остаётся `none`, даже если разработчик НЕ подавлял индикатор. Проверка
+ * computed-стиля поэтому ложно помечала бы КАЖДЫЙ элемент как нарушителя. Проверка inline-
+ * деклараций ловит именно то, что описано в правиле: явное `style={{ outline: 'none' }}`
+ * без замены. Ограничение: подавление через внешний класс/CSS-файл (не inline) эта проверка
+ * не ловит под `jsdom` — задокументированное ограничение unit-уровня (см. JSDoc модуля).
+ */
+const isOutlineSuppressed = (style: CSSStyleDeclaration): boolean => {
+  const outline = style.outline.trim().toLowerCase()
+  const outlineStyle = style.outlineStyle.trim().toLowerCase()
+  return (
+    outline === 'none' ||
+    isZeroPx(outline) ||
+    outlineStyle === 'none' ||
+    outlineStyle === 'hidden' ||
+    isZeroPx(style.outlineWidth)
+  )
 }
+
+const hasShadowReplacement = (style: CSSStyleDeclaration): boolean => {
+  const boxShadow = style.boxShadow.trim().toLowerCase()
+  return boxShadow !== '' && boxShadow !== 'none'
+}
+
+const hasSuppressedFocusIndicator = (element: HTMLElement): boolean =>
+  isOutlineSuppressed(element.style) && !hasShadowReplacement(element.style)
 
 /**
  * Ловит ЯВНОЕ подавление фокус-индикатора (`outline: none`/`0` без `box-shadow`-замены) у
