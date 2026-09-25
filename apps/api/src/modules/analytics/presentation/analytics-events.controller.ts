@@ -51,6 +51,7 @@ function toBatchItem(input: ProductEventsBatchInput[number]): RecordProductEvent
     eventType: input.eventType,
     sessionId: input.sessionId,
     medicineId: input.medicineId ?? null,
+    referenceMedicineId: input.referenceMedicineId ?? null,
     pharmacyId: input.pharmacyId ?? null,
     savingsDiram: input.savingsDiram === undefined ? null : BigInt(input.savingsDiram),
     ...(input.metadata === undefined ? {} : { metadata: input.metadata }), // exactOptionalPropertyTypes

@@ -41,6 +41,11 @@ describe('ProductEventInputSchema', () => {
     expect(ProductEventInputSchema.safeParse(validEvent({ medicineId: 'not-a-uuid' })).success).toBe(false)
   })
 
+  it('referenceMedicineId — валидный UUID принимается (DTJ-385)', () => {
+    const parsed = ProductEventInputSchema.parse(validEvent({ referenceMedicineId: VALID_MEDICINE_ID }))
+    expect(parsed.referenceMedicineId).toBe(VALID_MEDICINE_ID)
+  })
+
   it('savingsDiram — целое неотрицательное принимается', () => {
     const parsed = ProductEventInputSchema.parse(validEvent({ savingsDiram: 15_000 }))
     expect(parsed.savingsDiram).toBe(15_000)

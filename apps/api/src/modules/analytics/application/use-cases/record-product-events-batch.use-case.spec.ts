@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Logger } from 'pino'
 import type { Clock } from '@/shared-kernel/application/ports/clock.port.js'
 import type { ProductEventsRepositoryPort } from '../ports/product-events-repository.port.js'
+import type { AnalogSavingsComputeInput, AnalogSavingsPort } from '../ports/analog-savings.port.js'
 import {
   RecordProductEventsBatchUseCase,
   type RecordProductEventsBatchCommand,
@@ -33,7 +34,7 @@ function baseCommand(overrides: Partial<RecordProductEventsBatchCommand> = {}): 
   }
 }
 
-function buildHarness() {
+function buildHarness(analogSavingsResults: ReadonlyMap<string, bigint | null> = new Map()) {
   const insertMock = vi.fn<ProductEventsRepositoryPort['insert']>().mockResolvedValue(undefined)
   const insertBatchMock = vi.fn<ProductEventsRepositoryPort['insertBatch']>().mockResolvedValue(undefined)
   const repository: ProductEventsRepositoryPort = {
@@ -42,8 +43,12 @@ function buildHarness() {
     findMatchingSavingsEvents: vi.fn<ProductEventsRepositoryPort['findMatchingSavingsEvents']>().mockResolvedValue(new Map()),
   }
   const logger = { warn: vi.fn() } as unknown as Logger
-  const useCase = new RecordProductEventsBatchUseCase(repository, new FixedClock(), logger)
-  return { useCase, insertBatchMock, logger }
+  const computeMock = vi.fn<AnalogSavingsPort['compute']>().mockImplementation((input: AnalogSavingsComputeInput) =>
+    Promise.resolve(analogSavingsResults.get(`${input.referenceMedicineId}|${input.analogMedicineId}`) ?? null),
+  )
+  const analogSavings: AnalogSavingsPort = { compute: computeMock }
+  const useCase = new RecordProductEventsBatchUseCase(repository, new FixedClock(), logger, analogSavings)
+  return { useCase, insertBatchMock, logger, computeMock }
 }
 
 describe('RecordProductEventsBatchUseCase', () => {
@@ -145,5 +150,61 @@ describe('RecordProductEventsBatchUseCase', () => {
     await useCase.execute(baseCommand({ events: [] }))
 
     expect(insertBatchMock).toHaveBeenCalledWith([])
+  })
+
+  describe('серверная экономия analog_shown/added_to_cart (DTJ-385)', () => {
+    it('клиентский savingsDiram игнорируется — пишется серверное значение порта', async () => {
+      const { useCase, insertBatchMock } = buildHarness(new Map([['ref-1|analog-1', 5000n]]))
+      const events = [
+        baseItem({
+          eventType: 'analog_shown',
+          referenceMedicineId: 'ref-1',
+          medicineId: 'analog-1',
+          savingsDiram: 100_000_000n,
+        }),
+      ]
+
+      await useCase.execute(baseCommand({ events }))
+
+      const savedEvents = insertBatchMock.mock.calls[0]?.[0] ?? []
+      expect(savedEvents[0]?.toSnapshot().savingsDiram).toBe(5000n)
+    })
+
+    it('порт вернул null (аналог не дешевле) — savings_diram null', async () => {
+      const { useCase, insertBatchMock } = buildHarness(new Map([['ref-1|analog-1', null]]))
+      const events = [baseItem({ eventType: 'analog_shown', referenceMedicineId: 'ref-1', medicineId: 'analog-1' })]
+
+      await useCase.execute(baseCommand({ events }))
+
+      const savedEvents = insertBatchMock.mock.calls[0]?.[0] ?? []
+      expect(savedEvents[0]?.toSnapshot().savingsDiram).toBeNull()
+    })
+
+    it('нет referenceMedicineId — savings_diram null без вызова порта', async () => {
+      const { useCase, insertBatchMock, computeMock } = buildHarness()
+      const events = [baseItem({ eventType: 'added_to_cart', medicineId: 'analog-1' })]
+
+      await useCase.execute(baseCommand({ events }))
+
+      const savedEvents = insertBatchMock.mock.calls[0]?.[0] ?? []
+      expect(savedEvents[0]?.toSnapshot().savingsDiram).toBeNull()
+      expect(computeMock).not.toHaveBeenCalled()
+    })
+
+    it('50 событий с 10 уникальными парами — порт вызван РОВНО 10 раз, не 50 (АС3)', async () => {
+      const { useCase, computeMock } = buildHarness()
+      const events = Array.from({ length: 50 }, (_, i) => {
+        const pairIndex = String(i % 10)
+        return baseItem({
+          eventType: 'analog_shown',
+          referenceMedicineId: `ref-${pairIndex}`,
+          medicineId: `analog-${pairIndex}`,
+        })
+      })
+
+      await useCase.execute(baseCommand({ events }))
+
+      expect(computeMock).toHaveBeenCalledTimes(10)
+    })
   })
 })

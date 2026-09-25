@@ -32,8 +32,13 @@ import type { MedicineRecord, SubstanceRef } from '@/modules/catalog/domain/medi
 import type { CatalogRepository } from '@/modules/catalog/application/ports/catalog-repository.port.js'
 import { InvalidCompositeMatchInputError } from '@/modules/catalog/application/use-cases/resolve-medicine-by-composite.use-case.js'
 import type { ResolveMedicineByCompositeUseCase } from '@/modules/catalog/application/use-cases/resolve-medicine-by-composite.use-case.js'
+import type {
+  AnalogOfferLookupInput,
+  AnalogOfferLookupPort,
+} from '@/modules/catalog/application/ports/analog-offer-lookup.port.js'
 import { CatalogFacadeImpl } from '@/modules/catalog/index.js'
 import type { CompositeMatchInput, MedicineMatchResult } from '@/modules/catalog/index.js'
+import type { PharmacyOfferPublic } from '@dorutj/contracts'
 
 /** Минимальный in-memory `CatalogRepository` для теста. */
 class FakeCatalogRepository implements CatalogRepository {
@@ -128,11 +133,34 @@ function makeFakeResolveUseCase(
   return { execute } as unknown as ResolveMedicineByCompositeUseCase
 }
 
+/** Fake `AnalogOfferLookupPort` — тот же приём, что `analogs.controller.integration.spec.ts`. */
+class FakeAnalogOfferLookupAdapter implements AnalogOfferLookupPort {
+  private readonly offersByMedicineId = new Map<string, readonly PharmacyOfferPublic[]>()
+
+  setOffers(medicineId: string, offers: readonly PharmacyOfferPublic[]): void {
+    this.offersByMedicineId.set(medicineId, offers)
+  }
+
+  getOffersForMedicines(input: AnalogOfferLookupInput): Promise<ReadonlyMap<string, readonly PharmacyOfferPublic[]>> {
+    const result = new Map<string, readonly PharmacyOfferPublic[]>()
+    for (const id of input.medicineIds) {
+      const offers = this.offersByMedicineId.get(id)
+      if (offers !== undefined) result.set(id, offers)
+    }
+    return Promise.resolve(result)
+  }
+}
+
+function makeOffer(pharmacyId: string, priceDiram: number): PharmacyOfferPublic {
+  return { pharmacyId, priceDiram, distanceMeters: null, isStale: false, lastSyncedAt: null }
+}
+
 function makeFacade(
   repo: FakeCatalogRepository,
   resolveUseCase: ResolveMedicineByCompositeUseCase = makeFakeResolveUseCase(),
+  analogOfferLookup: AnalogOfferLookupPort = new FakeAnalogOfferLookupAdapter(),
 ): CatalogFacadeImpl {
-  return new CatalogFacadeImpl(repo, resolveUseCase)
+  return new CatalogFacadeImpl(repo, resolveUseCase, analogOfferLookup)
 }
 
 describe('CatalogFacade (DTJ-096, SRS-CAT-051, SRS-CAT-064, SRS-DOM-107)', () => {
@@ -345,6 +373,68 @@ describe('CatalogFacade (DTJ-096, SRS-CAT-051, SRS-CAT-064, SRS-DOM-107)', () =>
       const facade = makeFacade(repo, makeFakeResolveUseCase(execute))
 
       await expect(facade.resolveMedicineByComposite(input)).rejects.toThrow(error)
+    })
+  })
+
+  describe('computeAnalogSavingsDiram (DTJ-385)', () => {
+    it('референс дороже аналога → положительная разница', async () => {
+      const repo = new FakeCatalogRepository()
+      const offerLookup = new FakeAnalogOfferLookupAdapter()
+      offerLookup.setOffers('ref-1', [makeOffer('pharm-1', 3000)])
+      offerLookup.setOffers('analog-1', [makeOffer('pharm-2', 1800)])
+      const facade = makeFacade(repo, undefined, offerLookup)
+
+      const result = await facade.computeAnalogSavingsDiram({
+        referenceMedicineId: 'ref-1',
+        analogMedicineId: 'analog-1',
+      })
+
+      expect(result).toBe(1200)
+    })
+
+    it('аналог не дешевле референса → null', async () => {
+      const repo = new FakeCatalogRepository()
+      const offerLookup = new FakeAnalogOfferLookupAdapter()
+      offerLookup.setOffers('ref-1', [makeOffer('pharm-1', 1000)])
+      offerLookup.setOffers('analog-1', [makeOffer('pharm-2', 1800)])
+      const facade = makeFacade(repo, undefined, offerLookup)
+
+      const result = await facade.computeAnalogSavingsDiram({
+        referenceMedicineId: 'ref-1',
+        analogMedicineId: 'analog-1',
+      })
+
+      expect(result).toBeNull()
+    })
+
+    it('нет офферов у одной из сторон → null', async () => {
+      const repo = new FakeCatalogRepository()
+      const offerLookup = new FakeAnalogOfferLookupAdapter()
+      offerLookup.setOffers('ref-1', [makeOffer('pharm-1', 3000)])
+      const facade = makeFacade(repo, undefined, offerLookup)
+
+      const result = await facade.computeAnalogSavingsDiram({
+        referenceMedicineId: 'ref-1',
+        analogMedicineId: 'analog-1',
+      })
+
+      expect(result).toBeNull()
+    })
+
+    it('pharmacyId сужает выбор до цены конкретной аптеки', async () => {
+      const repo = new FakeCatalogRepository()
+      const offerLookup = new FakeAnalogOfferLookupAdapter()
+      offerLookup.setOffers('ref-1', [makeOffer('pharm-cheap', 1000), makeOffer('pharm-1', 3000)])
+      offerLookup.setOffers('analog-1', [makeOffer('pharm-1', 1800)])
+      const facade = makeFacade(repo, undefined, offerLookup)
+
+      const result = await facade.computeAnalogSavingsDiram({
+        referenceMedicineId: 'ref-1',
+        analogMedicineId: 'analog-1',
+        pharmacyId: 'pharm-1',
+      })
+
+      expect(result).toBe(1200)
     })
   })
 })

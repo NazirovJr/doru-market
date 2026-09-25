@@ -68,6 +68,7 @@ import {
   type AnalogOfferLookupPort,
 } from '../ports/analog-offer-lookup.port.js'
 import { AnalogEquivalenceService } from '../../domain/services/analog-equivalence.service.js'
+import { computeAnalogSavingsDiram } from '../../domain/services/analog-savings-calculator.service.js'
 import {
   CONTROL_CATEGORIES_FORBIDDEN_FROM_REMOTE,
   type ControlCategory,
@@ -253,31 +254,18 @@ export class FindAnalogsUseCase {
 }
 
 /**
- * Шаг 7: расчёт `savingsDiram` (целые дирамы, SRS-DOM-159, без округления).
- *
- * Референс ищем в `offerMap` (включён в батч на шаге 5). Если у референса
- * нет офферов или `savingsDiram <= 0` → `null`; список аналогов всё равно
- * возвращается непустым при `items.length > 0` (TC-CAT-014).
+ * Шаг 7: расчёт `savingsDiram` (SRS-DOM-159). Референс ищем в `offerMap` (включён в батч
+ * на шаге 5), сравниваем с самым дешёвым аналогом (`items[0]`) — формула (DTJ-385) в
+ * `computeAnalogSavingsDiram` (domain/services), не здесь.
  */
 function computeSavingsDiram(
   offerMap: ReadonlyMap<string, readonly PharmacyOfferPublic[]>,
   referenceMedicineId: string,
   items: readonly FindAnalogsItem[],
 ): number | null {
-  const referenceOffers = offerMap.get(referenceMedicineId) ?? []
-  if (referenceOffers.length === 0 || items.length === 0) {
-    return null
-  }
-  const referenceOffer = referenceOffers[0]
-  if (referenceOffer === undefined) {
-    return null
-  }
-  const cheapest = items[0]
-  if (cheapest === undefined) {
-    return null
-  }
-  const diff = referenceOffer.priceDiram - cheapest.displayPrice
-  return diff > 0 ? diff : null
+  const referencePrice = offerMap.get(referenceMedicineId)?.[0]?.priceDiram ?? null
+  const analogPrice = items[0]?.displayPrice ?? null
+  return computeAnalogSavingsDiram(referencePrice, analogPrice)
 }
 
 /** Шаг 8: `limit` обрезает ПОСЛЕ сортировки. Дефолт — без ограничения. */
