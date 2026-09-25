@@ -1,0 +1,19 @@
+import { describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { NewOrderBanner } from './NewOrderBanner'
+
+describe('<NewOrderBanner /> (DTJ-310)', () => {
+  it('orderNumber === null — ничего не рендерит', () => {
+    const { container } = render(<NewOrderBanner orderNumber={null} onDismiss={vi.fn()} />)
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it('показывает номер заказа, клик «скрыть» вызывает onDismiss', () => {
+    const onDismiss = vi.fn()
+    render(<NewOrderBanner orderNumber="DTJ-260925-00007" onDismiss={onDismiss} />)
+
+    expect(screen.getByTestId('new-order-banner')).toHaveTextContent('DTJ-260925-00007')
+    fireEvent.click(screen.getByTestId('new-order-banner-dismiss'))
+    expect(onDismiss).toHaveBeenCalledOnce()
+  })
+})
