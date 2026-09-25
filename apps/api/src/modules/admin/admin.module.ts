@@ -54,13 +54,18 @@ import { ListUsersUseCase } from './application/use-cases/list-users.use-case.js
 import { DeactivateUserUseCase } from './application/use-cases/deactivate-user.use-case.js'
 import { ChangeStaffRoleUseCase } from './application/use-cases/change-staff-role.use-case.js'
 import { GrantPlatformRoleUseCase } from './application/use-cases/grant-platform-role.use-case.js'
+// DTJ-357 — финансы (escrow-ledger/payout-schedule/reconciliation-alerts), поверх PAYMENTS_FACADE_PORT.
+import { ListEscrowLedgerUseCase } from './application/use-cases/list-escrow-ledger.use-case.js'
+import { ListPayoutScheduleUseCase } from './application/use-cases/list-payout-schedule.use-case.js'
+import { ListReconciliationAlertsUseCase } from './application/use-cases/list-reconciliation-alerts.use-case.js'
 import { FeatureFlagsController } from './presentation/feature-flags.controller.js'
 import { TenantsController } from './presentation/tenants.controller.js'
 import { UsersAdminController } from './presentation/users-admin.controller.js'
+import { FinanceLedgerController } from './presentation/finance-ledger.controller.js'
 
 @Module({
   imports: [OnboardingModule, OrdersModule, PaymentsModule, AuthModule, TenancyModule],
-  controllers: [FeatureFlagsController, TenantsController, UsersAdminController],
+  controllers: [FeatureFlagsController, TenantsController, UsersAdminController, FinanceLedgerController],
   providers: [
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },
     { provide: ORDERS_FACADE_PORT, useExisting: ORDERS_FACADE },
@@ -79,6 +84,10 @@ import { UsersAdminController } from './presentation/users-admin.controller.js'
     DeactivateUserUseCase,
     ChangeStaffRoleUseCase,
     GrantPlatformRoleUseCase,
+    // DTJ-357 — см. импорт выше. PAYMENTS_FACADE_PORT уже забинжен (DTJ-350 useExisting).
+    ListEscrowLedgerUseCase,
+    ListPayoutScheduleUseCase,
+    ListReconciliationAlertsUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.

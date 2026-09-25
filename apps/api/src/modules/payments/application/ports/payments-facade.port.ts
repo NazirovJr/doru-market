@@ -40,6 +40,63 @@ export interface RecordLedgerAdjustmentCommand {
   readonly actorUserId: string
 }
 
+// DTJ-357 — 3 read-метода для admin (PAYMENTS_FACADE_PORT), @Roles('super_admin')-only.
+export interface FinanceCursor {
+  readonly v: string
+  readonly id: string
+}
+
+export interface FinancePage<T> {
+  readonly items: readonly T[]
+  readonly nextCursor: FinanceCursor | null
+  readonly hasMore: boolean
+}
+
+export interface EscrowLedgerEntryDto {
+  readonly orderId: string
+  readonly entryType: string
+  readonly direction: string
+  readonly amountDiram: number
+  readonly reason: string | null
+  readonly actorUserId: string | null
+  readonly paymentTransactionRef: string | null
+  readonly createdAt: Date
+}
+
+export interface FindEscrowLedgerFilter {
+  readonly orderId?: string | undefined
+}
+
+export interface PayoutScheduleEntryDto {
+  readonly orderId: string
+  readonly orderNumber: string
+  readonly pharmacyId: string
+  readonly grossAmountDiram: number
+  readonly commissionDiram: number
+  readonly netAmountDiram: number
+  readonly status: string
+  readonly dueAt: Date | null
+  readonly paidAt: Date | null
+}
+
+export interface FindPayoutScheduleFilter {
+  readonly status?: string | undefined
+  readonly pharmacyId?: string | undefined
+}
+
+export interface ReconciliationAlertDto {
+  readonly orderId: string
+  readonly tenantId: string | null
+  readonly discrepancyDiram: number
+  readonly repeatDetectionCount: number
+  readonly detectedAt: Date
+}
+
+export interface FinancePagination {
+  readonly limit: number
+  readonly cursor: FinanceCursor | null
+}
+
 export interface PaymentsFacade {
   /**
    * Атомарно переводит `payout_schedule` заказа в `status='disputed'` (SRS-DOM-058), если она
@@ -53,4 +110,11 @@ export interface PaymentsFacade {
 
   /** Учётная корректировка ledger, `direction` всегда `'credit'` — тонкая обёртка над `AdjustLedgerUseCase`. */
   recordAdjustment(command: RecordLedgerAdjustmentCommand): Promise<void>
+
+  /** `filter.orderId` обязателен на практике — валидируется в `finance-facade.queries.ts`. */
+  findEscrowLedgerEntries(filter: FindEscrowLedgerFilter, pagination: FinancePagination): Promise<FinancePage<EscrowLedgerEntryDto>>
+
+  findPayoutSchedule(filter: FindPayoutScheduleFilter, pagination: FinancePagination): Promise<FinancePage<PayoutScheduleEntryDto>>
+
+  findReconciliationAlerts(pagination: FinancePagination): Promise<FinancePage<ReconciliationAlertDto>>
 }

@@ -24,11 +24,14 @@ import { payoutStatusEnum } from '@/db/schema/enums.schema.js'
 type PayoutStatusValue = (typeof payoutStatusEnum.enumValues)[number]
 import {
   PAYOUT_SCHEDULE_REPOSITORY,
+  type FindPayoutScheduleInput,
+  type FindPayoutScheduleResult,
   type FindPayoutsByPharmacyInput,
   type FindPayoutsByPharmacyResult,
   type HoldIfPendingInput,
   type InsertPendingPayoutInput,
   type PayoutReportRow,
+  type PayoutScheduleReportRow,
   type PayoutScheduleRepository,
   type PayoutScheduleUnitOfWorkTx,
 } from '@/modules/payments/application/ports/payout-schedule-repository.port.js'
@@ -150,6 +153,25 @@ export class DrizzlePayoutScheduleRepository implements PayoutScheduleRepository
       .orderBy(desc(payoutSchedule.createdAt), desc(payoutSchedule.id))) as PayoutReportSelectionRow[]
     return rows.map(toPayoutReportRow)
   }
+
+  /** ДОБАВЛЕНО (DTJ-357) — см. JSDoc порта. Тот же keyset-приём, что `findByPharmacy`, оба фильтра опциональны. */
+  public async findSchedule(input: FindPayoutScheduleInput): Promise<FindPayoutScheduleResult> {
+    const rows = (await this.db
+      .select({ ...PAYOUT_REPORT_SELECTION, pharmacyId: payoutSchedule.pharmacyId })
+      .from(payoutSchedule)
+      .innerJoin(orders, eq(orders.id, payoutSchedule.orderId))
+      .where(and(...financeScheduleConditions(input)))
+      .orderBy(desc(payoutSchedule.createdAt), desc(payoutSchedule.id))
+      .limit(input.limit + 1)) as (PayoutReportSelectionRow & { pharmacyId: string })[]
+    const hasMore = rows.length > input.limit
+    const page = hasMore ? rows.slice(0, input.limit) : rows
+    const last = page[page.length - 1]
+    return {
+      items: page.map(toPayoutScheduleReportRow),
+      nextCursor: hasMore && last !== undefined ? { v: cursorCreatedAt(last.createdAt).toISOString(), id: last.id } : null,
+      hasMore,
+    }
+  }
 }
 
 /** Общие `WHERE`-условия `findByPharmacy`/`findAllByPharmacy` (DTJ-252) — не дублировать между методами. */
@@ -187,6 +209,32 @@ function toPayoutReportRow(row: PayoutReportSelectionRow): PayoutReportRow {
     dueAt: row.dueAt,
     paidAt: row.paidAt,
   }
+}
+
+function toPayoutScheduleReportRow(row: PayoutReportSelectionRow & { pharmacyId: string }): PayoutScheduleReportRow {
+  return { ...toPayoutReportRow(row), pharmacyId: row.pharmacyId }
+}
+
+/** `findSchedule` (DTJ-357) — оба фильтра опциональны, тот же keyset-приём, что `payoutReportConditions`. */
+function financeScheduleConditions(input: FindPayoutScheduleInput) {
+  const conditions = []
+  if (input.pharmacyId !== undefined) {
+    conditions.push(eq(payoutSchedule.pharmacyId, input.pharmacyId))
+  }
+  if (input.status !== undefined) {
+    conditions.push(eq(payoutSchedule.status, input.status as PayoutStatusValue))
+  }
+  if (input.cursor !== null) {
+    const cursorCreatedAtValue = new Date(input.cursor.v)
+    const keysetCondition = or(
+      lt(payoutSchedule.createdAt, cursorCreatedAtValue),
+      and(eq(payoutSchedule.createdAt, cursorCreatedAtValue), lt(payoutSchedule.id, input.cursor.id)),
+    )
+    if (keysetCondition !== undefined) {
+      conditions.push(keysetCondition)
+    }
+  }
+  return conditions
 }
 
 /** См. JSDoc файла — тот же приём, что `escrow-ledger.repository.ts` (`orderBelongsToTenant`). */

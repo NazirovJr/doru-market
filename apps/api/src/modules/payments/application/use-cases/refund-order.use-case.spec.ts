@@ -103,7 +103,7 @@ function makeHarness(overrides: HarnessOverrides = {}): Harness {
   })
   const findByOrderId = vi.fn<EscrowLedgerRepository['findByOrderId']>().mockResolvedValue([...(overrides.holdEntries ?? [holdEntry()])])
   const append = vi.fn<EscrowLedgerRepository['append']>().mockResolvedValue(undefined)
-  const escrowLedger: EscrowLedgerRepository = { append, findByOrderId, sumByType }
+  const escrowLedger: EscrowLedgerRepository = { append, findByOrderId, sumByType, findByOrderPaged: vi.fn() }
 
   const reverseIfExists = vi.fn<PayoutScheduleRepository['reverseIfExists']>().mockResolvedValue(overrides.reverseIfExistsResult ?? false)
   const insertPending = vi.fn<PayoutScheduleRepository['insertPending']>().mockResolvedValue(undefined)
@@ -113,7 +113,14 @@ function makeHarness(overrides: HarnessOverrides = {}): Harness {
   const holdIfPending = vi.fn<PayoutScheduleRepository['holdIfPending']>().mockResolvedValue({ held: false })
   const findByPharmacy = vi.fn<PayoutScheduleRepository['findByPharmacy']>().mockResolvedValue({ items: [], nextCursor: null, hasMore: false })
   const findAllByPharmacy = vi.fn<PayoutScheduleRepository['findAllByPharmacy']>().mockResolvedValue([])
-  const payoutScheduleRepo: PayoutScheduleRepository = { reverseIfExists, insertPending, holdIfPending, findByPharmacy, findAllByPharmacy }
+  const payoutScheduleRepo: PayoutScheduleRepository = {
+    reverseIfExists,
+    insertPending,
+    holdIfPending,
+    findByPharmacy,
+    findAllByPharmacy,
+    findSchedule: vi.fn(),
+  }
 
   const useCase = new RefundOrderUseCase(ordersPort, paymentProvider, escrowLedger, payoutScheduleRepo, SILENT_LOGGER)
   return { useCase, getOrderById, refund, sumByType, findByOrderId, append, reverseIfExists }

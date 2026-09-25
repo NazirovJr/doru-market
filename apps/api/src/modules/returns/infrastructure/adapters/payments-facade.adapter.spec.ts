@@ -9,7 +9,14 @@ function buildHarness() {
   const refundFull = vi.fn<PaymentsFacade['refundFull']>().mockResolvedValue(undefined)
   const recordAdjustment = vi.fn<PaymentsFacade['recordAdjustment']>().mockResolvedValue(undefined)
   const holdPayout = vi.fn<PaymentsFacade['holdPayout']>()
-  const paymentsFacade: PaymentsFacade = { holdPayout, refundFull, recordAdjustment }
+  const paymentsFacade: PaymentsFacade = {
+    holdPayout,
+    refundFull,
+    recordAdjustment,
+    findEscrowLedgerEntries: vi.fn(),
+    findPayoutSchedule: vi.fn(),
+    findReconciliationAlerts: vi.fn(),
+  }
   const adapter = new PaymentsFacadeAdapter(paymentsFacade)
   return { adapter, refundFull, recordAdjustment, holdPayout }
 }

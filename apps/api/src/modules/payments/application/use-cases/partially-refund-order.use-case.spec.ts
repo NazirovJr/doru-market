@@ -90,7 +90,7 @@ function makeHarness(overrides: HarnessOverrides = {}): Harness {
   })
   const findByOrderId = vi.fn<EscrowLedgerRepository['findByOrderId']>().mockResolvedValue([...(overrides.holdEntries ?? [holdEntry()])])
   const append = vi.fn<EscrowLedgerRepository['append']>().mockResolvedValue(undefined)
-  const escrowLedger: EscrowLedgerRepository = { append, findByOrderId, sumByType }
+  const escrowLedger: EscrowLedgerRepository = { append, findByOrderId, sumByType, findByOrderPaged: vi.fn() }
 
   const useCase = new PartiallyRefundOrderUseCase(ordersPort, paymentProvider, escrowLedger, SILENT_LOGGER)
   return { useCase, getOrderById, refund, sumByType, findByOrderId, append }

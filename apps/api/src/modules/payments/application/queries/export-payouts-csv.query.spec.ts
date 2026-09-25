@@ -30,6 +30,7 @@ function fakePayoutRepository(rows: readonly PayoutReportRow[]): { repository: P
     holdIfPending: vi.fn(),
     findByPharmacy: vi.fn(),
     findAllByPharmacy,
+    findSchedule: vi.fn(),
   }
   return { repository, findAllByPharmacy }
 }

@@ -54,4 +54,36 @@ export interface EscrowLedgerRepository {
    * первый обязательный параметр, тот же тенант-скоуп через `orders`, что `findByOrderId`.
    */
   sumByType(tenantId: string, orderId: string, entryType: EscrowEntryType): Promise<bigint>
+
+  /** DTJ-357 — курсорная страница по заказу для admin, `createdAt ASC`. БЕЗ `tenantId`: `super_admin`-only, платформенное расследование. */
+  findByOrderPaged(input: FindByOrderPagedInput): Promise<FindByOrderPagedResult>
+}
+
+export interface EscrowLedgerCursor {
+  readonly v: string
+  readonly id: string
+}
+
+export interface FindByOrderPagedInput {
+  readonly orderId: string
+  readonly limit: number
+  readonly cursor: EscrowLedgerCursor | null
+}
+
+/** Строка отчёта — `id`/`createdAt` нужны только для курсора/сортировки, не часть домена `EscrowLedgerEntry` (см. её JSDoc). */
+export interface EscrowLedgerReportRow {
+  readonly orderId: string
+  readonly entryType: EscrowEntryType
+  readonly direction: EscrowLedgerEntry['direction']
+  readonly amountDiram: bigint
+  readonly reason: string | null
+  readonly actorUserId: string | null
+  readonly paymentTransactionRef: string | null
+  readonly createdAt: Date
+}
+
+export interface FindByOrderPagedResult {
+  readonly items: readonly EscrowLedgerReportRow[]
+  readonly nextCursor: EscrowLedgerCursor | null
+  readonly hasMore: boolean
 }

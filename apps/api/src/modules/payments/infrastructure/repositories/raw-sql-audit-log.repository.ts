@@ -20,11 +20,24 @@ import {
   AUDIT_LOG_PORT,
   type AppendPaymentOverrideAuditInput,
   type AuditLogPort,
+  type FindReconciliationAlertsInput,
+  type FindReconciliationAlertsResult,
+  type ReconciliationAlertRow,
 } from '@/modules/payments/application/ports/audit-log.port.js'
 
 const PAYMENT_OVERRIDE_CATEGORY = 'payment_override'
 const ORDER_ENTITY_TYPE = 'order'
 const WEBHOOK_EVENT_ENTITY_TYPE = 'payment_webhook_event'
+const LEDGER_ADJUSTMENT_CATEGORY = 'ledger_adjustment'
+const ESCROW_LEDGER_ENTITY_TYPE = 'escrow_ledger'
+
+interface ReconciliationAlertSqlRow {
+  readonly order_id: string
+  readonly tenant_id: string | null
+  readonly metadata: { readonly discrepancyDiram?: string; readonly repeatDetectionCount?: number }
+  readonly created_at: Date
+  readonly id: string
+}
 
 @Injectable()
 export class RawSqlAuditLogRepository implements AuditLogPort {
@@ -40,6 +53,57 @@ export class RawSqlAuditLogRepository implements AuditLogPort {
         ${JSON.stringify(input.metadata)}::jsonb, ${input.tenantId}, ${input.reason ?? null}, ${input.actorUserId ?? null}
       )
     `)
+  }
+
+  /** ДОБАВЛЕНО (DTJ-357) — см. JSDoc порта. `DISTINCT ON` берёт ПОСЛЕДНЮЮ (по `created_at`) запись на заказ. */
+  public async findLedgerAdjustmentAlerts(input: FindReconciliationAlertsInput): Promise<FindReconciliationAlertsResult> {
+    const cursorCondition =
+      input.cursor === null
+        ? sql``
+        : sql`WHERE created_at < ${new Date(input.cursor.v)} OR (created_at = ${new Date(input.cursor.v)} AND id < ${input.cursor.id})`
+    const result = await this.db.execute(sql`
+      SELECT order_id, tenant_id, metadata, created_at, id FROM (
+        SELECT DISTINCT ON (entity_id) entity_id AS order_id, tenant_id, metadata, created_at, id
+        FROM audit_log
+        WHERE category = ${LEDGER_ADJUSTMENT_CATEGORY} AND entity_type = ${ESCROW_LEDGER_ENTITY_TYPE}
+        ORDER BY entity_id, created_at DESC, id DESC
+      ) latest
+      ${cursorCondition}
+      ORDER BY created_at DESC, id DESC
+      LIMIT ${input.limit + 1}
+    `)
+    const rows = extractRows(result)
+    const hasMore = rows.length > input.limit
+    const page = hasMore ? rows.slice(0, input.limit) : rows
+    const last = page[page.length - 1]
+    return {
+      items: page.map(toAlertRow),
+      nextCursor: hasMore && last !== undefined ? { v: last.created_at.toISOString(), id: last.id } : null,
+      hasMore,
+    }
+  }
+}
+
+function extractRows(result: unknown): readonly ReconciliationAlertSqlRow[] {
+  if (Array.isArray(result)) {
+    return result as ReconciliationAlertSqlRow[]
+  }
+  if (result !== null && typeof result === 'object' && 'rows' in result) {
+    const rows: unknown = (result as Record<string, unknown>).rows
+    if (Array.isArray(rows)) {
+      return rows as ReconciliationAlertSqlRow[]
+    }
+  }
+  return []
+}
+
+function toAlertRow(row: ReconciliationAlertSqlRow): ReconciliationAlertRow {
+  return {
+    orderId: row.order_id,
+    tenantId: row.tenant_id,
+    discrepancyDiram: BigInt(row.metadata.discrepancyDiram ?? '0'),
+    repeatDetectionCount: row.metadata.repeatDetectionCount ?? 0,
+    detectedAt: row.created_at,
   }
 }
 

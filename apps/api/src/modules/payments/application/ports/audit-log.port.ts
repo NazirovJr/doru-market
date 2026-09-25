@@ -30,4 +30,31 @@ export interface AppendPaymentOverrideAuditInput {
 
 export interface AuditLogPort {
   appendPaymentOverride(input: AppendPaymentOverrideAuditInput): Promise<void>
+
+  /** DTJ-357 — последняя запись `category='ledger_adjustment'` на заказ. Не через `common/audit` — тот порт намеренно не экспортирован наружу. */
+  findLedgerAdjustmentAlerts(input: FindReconciliationAlertsInput): Promise<FindReconciliationAlertsResult>
+}
+
+export interface ReconciliationAlertCursor {
+  readonly v: string
+  readonly id: string
+}
+
+export interface FindReconciliationAlertsInput {
+  readonly limit: number
+  readonly cursor: ReconciliationAlertCursor | null
+}
+
+export interface ReconciliationAlertRow {
+  readonly orderId: string
+  readonly tenantId: string | null
+  readonly discrepancyDiram: bigint
+  readonly repeatDetectionCount: number
+  readonly detectedAt: Date
+}
+
+export interface FindReconciliationAlertsResult {
+  readonly items: readonly ReconciliationAlertRow[]
+  readonly nextCursor: ReconciliationAlertCursor | null
+  readonly hasMore: boolean
 }

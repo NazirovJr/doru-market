@@ -40,13 +40,16 @@
  * СЕЙЧАС (`payments.module.full-boot.di.spec.ts`), реальный вызывающий код появится позже.
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { eq, and, sql } from 'drizzle-orm'
+import { eq, and, asc, gt, or, sql } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { escrowLedger } from '@/db/schema/payments.js'
 import { orders } from '@/db/schema/orders.js'
 import {
   type EscrowLedgerRepository,
   type EscrowLedgerUnitOfWorkTx,
+  type EscrowLedgerReportRow,
+  type FindByOrderPagedInput,
+  type FindByOrderPagedResult,
 } from '@/modules/payments/application/ports/escrow-ledger-repository.port.js'
 import { EscrowLedgerEntry, type EscrowEntryType } from '@/modules/payments/domain/escrow-ledger-entry.value-object.js'
 import { Money } from '@/shared-kernel/domain/value-objects/money.vo.js'
@@ -93,6 +96,45 @@ export class DrizzleEscrowLedgerRepository implements EscrowLedgerRepository {
         ),
       )
     return rows.reduce((acc, row) => acc + row.amountDiram, ZERO_DIRAM)
+  }
+
+  /** ДОБАВЛЕНО (DTJ-357) — см. JSDoc порта. `LIMIT +1` — `hasMore` без второй круговой поездки, тот же приём, что `DrizzlePayoutScheduleRepository.findByPharmacy`. */
+  public async findByOrderPaged(input: FindByOrderPagedInput): Promise<FindByOrderPagedResult> {
+    const conditions = [eq(escrowLedger.orderId, input.orderId)]
+    if (input.cursor !== null) {
+      const cursorCreatedAt = new Date(input.cursor.v)
+      const keysetCondition = or(gt(escrowLedger.createdAt, cursorCreatedAt), and(eq(escrowLedger.createdAt, cursorCreatedAt), gt(escrowLedger.id, input.cursor.id)))
+      if (keysetCondition !== undefined) {
+        conditions.push(keysetCondition)
+      }
+    }
+    const rows = await this.db
+      .select()
+      .from(escrowLedger)
+      .where(and(...conditions))
+      .orderBy(asc(escrowLedger.createdAt), asc(escrowLedger.id))
+      .limit(input.limit + 1)
+    const hasMore = rows.length > input.limit
+    const page = hasMore ? rows.slice(0, input.limit) : rows
+    const last = page[page.length - 1]
+    return {
+      items: page.map(toReportRow),
+      nextCursor: hasMore && last !== undefined ? { v: last.createdAt.toISOString(), id: last.id } : null,
+      hasMore,
+    }
+  }
+}
+
+function toReportRow(row: EscrowLedgerRow): EscrowLedgerReportRow {
+  return {
+    orderId: row.orderId,
+    entryType: row.entryType,
+    direction: row.direction,
+    amountDiram: row.amountDiram,
+    reason: row.reason,
+    actorUserId: row.actorUserId,
+    paymentTransactionRef: row.paymentTransactionRef,
+    createdAt: row.createdAt,
   }
 }
 

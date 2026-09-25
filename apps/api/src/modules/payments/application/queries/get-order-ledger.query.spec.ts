@@ -59,6 +59,7 @@ function fakeLedgerRepository(entries: EscrowLedgerEntry[]): EscrowLedgerReposit
     append: vi.fn(),
     findByOrderId: vi.fn<EscrowLedgerRepository['findByOrderId']>().mockResolvedValue(entries),
     sumByType: vi.fn(),
+    findByOrderPaged: vi.fn(),
   }
 }
 

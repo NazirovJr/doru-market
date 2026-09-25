@@ -67,6 +67,17 @@ const UsersPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>>
   import('@/features/users/ui/users-page').then((m) => ({ default: m.UsersPage })),
 )
 
+/** DTJ-357 — та же схема совместимости без пропсов, что `AuditLogPage`; 3 записи вместо 1 placeholder `finance` (см. «Что сделать» тикета). */
+const EscrowLedgerPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/finance/ui/escrow-ledger-page').then((m) => ({ default: m.EscrowLedgerPage })),
+)
+const PayoutSchedulePage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/finance/ui/payout-schedule-page').then((m) => ({ default: m.PayoutSchedulePage })),
+)
+const ReconciliationAlertsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/finance/ui/reconciliation-alerts-page').then((m) => ({ default: m.ReconciliationAlertsPage })),
+)
+
 function section(path: string, titleKey: string, icon: string): RouteConfig {
   return { path, titleKey, icon, Component: SectionPlaceholder }
 }
@@ -81,7 +92,10 @@ const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
   section('pharmacies', 'admin.nav.pharmacies', 'pharmacies'),
   { path: 'users', titleKey: 'admin.nav.users', icon: 'users', Component: UsersPage },
   section('orders', 'admin.nav.orders', 'orders'),
-  section('finance', 'admin.nav.finance', 'finance'),
+  // DTJ-357 — заменяет placeholder `finance` тремя реальными READ-ONLY экранами (эскроу-леджер/выплаты/алерты сверки).
+  { path: 'finance/escrow-ledger', titleKey: 'admin.nav.finance_escrow_ledger', icon: 'finance', Component: EscrowLedgerPage },
+  { path: 'finance/payout-schedule', titleKey: 'admin.nav.finance_payout_schedule', icon: 'finance', Component: PayoutSchedulePage },
+  { path: 'finance/reconciliation-alerts', titleKey: 'admin.nav.finance_reconciliation_alerts', icon: 'finance', Component: ReconciliationAlertsPage },
   section('settings', 'admin.nav.settings', 'settings'),
 ]
 
