@@ -52,6 +52,11 @@ const AuditLogPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProp
   import('@/features/audit-log/ui/audit-log-page').then((m) => ({ default: m.AuditLogPage })),
 )
 
+/** См. JSDoc файла про совместимость без пропсов (та же схема, что `AuditLogPage`). */
+const UndeliveredNotificationsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/notifications/ui/undelivered-notifications-page').then((m) => ({ default: m.UndeliveredNotificationsPage })),
+)
+
 function section(path: string, titleKey: string, icon: string): RouteConfig {
   return { path, titleKey, icon, Component: SectionPlaceholder }
 }
@@ -61,6 +66,7 @@ const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
   { path: 'tenants', titleKey: 'admin.nav.tenants', icon: 'tenants', Component: TenantsListPage },
   { path: 'feature-flags', titleKey: 'admin.nav.feature_flags', icon: 'flags', Component: FeatureFlagsPage },
   { path: 'audit-log', titleKey: 'admin.nav.audit_log', icon: 'audit-log', Component: AuditLogPage },
+  { path: 'undelivered-notifications', titleKey: 'admin.nav.undelivered_notifications', icon: 'notifications', Component: UndeliveredNotificationsPage },
   section('pharmacies', 'admin.nav.pharmacies', 'pharmacies'),
   section('users', 'admin.nav.users', 'users'),
   section('orders', 'admin.nav.orders', 'orders'),

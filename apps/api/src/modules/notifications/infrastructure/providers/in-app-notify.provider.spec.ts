@@ -24,7 +24,7 @@ describe('InAppNotifyProvider', () => {
       nextCursor: null,
       hasMore: false,
     })
-    const repository: NotificationsRepositoryPort = { create, list }
+    const repository: NotificationsRepositoryPort = { create, list, findUndeliveredAcrossAllChannels: vi.fn() }
     const provider = new InAppNotifyProvider(identityFacade, repository)
 
     const result = await provider.send({ userId: 'user-1', channel: 'in_app', subject: 'Заказ №1', body: 'Готов к выдаче' })
@@ -47,7 +47,7 @@ describe('InAppNotifyProvider', () => {
       nextCursor: null,
       hasMore: false,
     })
-    const repository: NotificationsRepositoryPort = { create, list }
+    const repository: NotificationsRepositoryPort = { create, list, findUndeliveredAcrossAllChannels: vi.fn() }
     const provider = new InAppNotifyProvider(identityFacade, repository)
 
     await provider.send({ userId: 'user-1', channel: 'in_app', body: 'Готов к выдаче' })
@@ -63,7 +63,7 @@ describe('InAppNotifyProvider', () => {
       nextCursor: null,
       hasMore: false,
     })
-    const repository: NotificationsRepositoryPort = { create, list }
+    const repository: NotificationsRepositoryPort = { create, list, findUndeliveredAcrossAllChannels: vi.fn() }
     const provider = new InAppNotifyProvider(identityFacade, repository)
 
     const result = await provider.send({ userId: 'user-missing', channel: 'in_app', body: 'привет' })
@@ -76,7 +76,7 @@ describe('InAppNotifyProvider', () => {
     const identityFacade = stubIdentityFacade({ tenantId: 'tenant-1', telegramChatId: null, preferredLocale: 'ru' })
     const create = vi.fn().mockImplementation((input: CreateNotificationInput) => Promise.resolve(fakeRecord(input)))
     const list = vi.fn<NotificationsRepositoryPort['list']>().mockResolvedValue({ items: [], nextCursor: null, hasMore: false })
-    const repository: NotificationsRepositoryPort = { create, list }
+    const repository: NotificationsRepositoryPort = { create, list, findUndeliveredAcrossAllChannels: vi.fn() }
     const provider = new InAppNotifyProvider(identityFacade, repository)
 
     await provider.send({ userId: 'user-1', channel: 'in_app', body: 'Заказ оплачен', eventType: 'order.paid', sourceEventId: 'evt-1' })

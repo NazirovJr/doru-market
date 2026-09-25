@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { getRoutesForRole } from './role-routes'
 
-const SUPER_ADMIN_PATHS = ['tenants', 'feature-flags', 'audit-log', 'pharmacies', 'users', 'orders', 'finance', 'settings']
+const SUPER_ADMIN_PATHS = ['tenants', 'feature-flags', 'audit-log', 'undelivered-notifications', 'pharmacies', 'users', 'orders', 'finance', 'settings']
 const PHARMACY_ADMIN_PATHS = ['my-pharmacies', 'my-orders', 'staff', 'integration-keys', 'reports', 'schedule']
 
 describe('getRoutesForRole', () => {
-  it('super_admin получает все 8 разделов админ-панели', () => {
+  it('super_admin получает все 9 разделов админ-панели', () => {
     const routes = getRoutesForRole('super_admin')
     expect(routes.map((r) => r.path)).toEqual(SUPER_ADMIN_PATHS)
   })
