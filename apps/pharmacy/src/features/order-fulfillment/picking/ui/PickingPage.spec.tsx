@@ -160,6 +160,30 @@ describe('<PickingPage /> (DTJ-311)', () => {
     expect(screen.getByTestId('picking-item-report-issue')).toBeEnabled()
   })
 
+  it('409 ITEM_ALREADY_SCANNED — сообщение «Уже отсканировано», позиция синхронизируется с фактическим состоянием сервера', async () => {
+    const items = [makeItem({ id: 'a', medicineName: 'Парацетамол 500мг' })]
+    let alreadyScanned = false
+    stubFetch((url) => {
+      if (url.includes('/scan')) {
+        alreadyScanned = true
+        return Promise.resolve(jsonResponse({ error: { code: 'ITEM_ALREADY_SCANNED' } }, 409))
+      }
+      return Promise.resolve(
+        jsonResponse({ data: makeOrder({ items: [{ ...items[0], fulfillmentStatus: alreadyScanned ? 'scanned_ok' : 'pending' }] }) }),
+      )
+    })
+    renderPage()
+
+    await waitFor(() => { expect(screen.getByTestId('picking-item-row')).toBeInTheDocument() })
+    fireEvent.click(screen.getByTestId('picking-item-select'))
+    fireEvent.change(await screen.findByTestId('barcode-scan-input'), { target: { value: '123' } })
+    fireEvent.click(screen.getByTestId('barcode-scan-submit'))
+
+    await waitFor(() => { expect(screen.getByTestId('barcode-scan-error')).toHaveTextContent('Аллакай сканер шудааст') })
+    // Рефетч после 409 подтягивает реальное состояние сервера — позиция красится в scanned_ok.
+    await waitFor(() => { expect(screen.getByTestId('picking-item-badge')).toHaveTextContent('Санҷида шуд') })
+  })
+
   it('заказ отменён (order.cancelled) — блокирующий диалог, действия недоступны (SRS-PHT-068, негативный сценарий)', async () => {
     const items = [makeItem({ id: 'a', medicineName: 'Парацетамол 500мг' })]
     stubFetch(() => Promise.resolve(jsonResponse({ data: makeOrder({ items, status: 'cancelled' }) })))
