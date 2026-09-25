@@ -21,6 +21,8 @@ import {
   ANALOG_OFFER_LOOKUP_PORT,
   type AnalogOfferLookupPort,
 } from './application/ports/analog-offer-lookup.port.js'
+// Алиас — избегает совпадения имени с методом CatalogFacadeImpl.computeAnalogSavingsDiram ниже.
+import { computeAnalogSavingsDiram as computeAnalogSavingsDiramFormula } from './domain/services/analog-savings-calculator.service.js'
 
 // Определения этих двух типов переехали в `application/ports/composite-match.types.ts`:
 // иначе получался цикл `resolve-medicine-by-composite.use-case.ts → index.ts → он же`,
@@ -145,8 +147,9 @@ export class CatalogFacadeImpl implements CatalogFacade {
 
   /**
    * DTJ-385: сервер сам считает экономию analog_shown/added_to_cart — та же пара
-   * офферов (`ANALOG_OFFER_LOOKUP_PORT`) и то же правило diff, что `FindAnalogsUseCase`,
-   * без домен-фильтра эквивалентности (пара уже определена вызывающим).
+   * офферов (`ANALOG_OFFER_LOOKUP_PORT`) и та же формула (`computeAnalogSavingsDiram`,
+   * domain/services), что `FindAnalogsUseCase`, без домен-фильтра эквивалентности
+   * (пара уже определена вызывающим).
    */
   async computeAnalogSavingsDiram(input: AnalogSavingsComputeInput): Promise<number | null> {
     if (input.referenceMedicineId === input.analogMedicineId) return null
@@ -156,9 +159,7 @@ export class CatalogFacadeImpl implements CatalogFacade {
     })
     const referencePrice = cheapestPriceDiram(offerMap.get(input.referenceMedicineId), input.pharmacyId)
     const analogPrice = cheapestPriceDiram(offerMap.get(input.analogMedicineId), input.pharmacyId)
-    if (referencePrice === null || analogPrice === null) return null
-    const diff = referencePrice - analogPrice
-    return diff > 0 ? diff : null
+    return computeAnalogSavingsDiramFormula(referencePrice, analogPrice)
   }
 
   private recordToSnapshot(record: MedicineRecord): MedicineSnapshot {
