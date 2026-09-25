@@ -9,10 +9,8 @@
  *   - `ORDERS_FACADE_PORT` → `ORDERS_FACADE` (`@/modules/orders`, реален, DTJ-222)
  *   - `PAYMENTS_FACADE_PORT` → `PAYMENTS_FACADE` (`@/modules/payments`, реален, DTJ-249;
  *     экспорт добавлен ЭТИМ тикетом, см. JSDoc `payments.module.ts`)
- *   - `INVENTORY_FACADE_PORT` — НЕ забинжен: `modules/inventory` пока не экспортирует facade
- *     вообще (см. JSDoc `inventory-facade.port.ts`). Добавится одной строкой, когда EP-05 его
- *     заведёт — не блокирует эту реализацию (тот же класс риска, что `PAYMENTS_FACADE` до
- *     DTJ-249, см. `payments/index.ts`).
+ *   - `INVENTORY_FACADE_PORT` → `InventoryFacade` (`@/modules/inventory`, реален, публичный
+ *     барабан модуля теперь экспортирует его).
  *
  * DTJ-352 (`feature_flags`) — ЕДИНСТВЕННАЯ таблица этого модуля с СОБСТВЕННЫМ доменом
  * (`domain/feature-flag.entity.ts`, `SRS-ADM-028`) — не фасад чужого модуля, поэтому не идёт
@@ -36,12 +34,12 @@ import { PaymentsModule } from '@/modules/payments/payments.module.js'
 import { PAYMENTS_FACADE } from '@/modules/payments/index.js'
 import { AuthModule } from '@/modules/auth/index.js'
 import { TenancyModule } from '@/modules/tenancy/tenancy.module.js'
+import { InventoryModule } from '@/modules/inventory/inventory.module.js'
+import { InventoryFacade } from '@/modules/inventory/index.js'
 import { ONBOARDING_FACADE_PORT } from './application/ports/onboarding-facade.port.js'
 import { ORDERS_FACADE_PORT } from './application/ports/orders-facade.port.js'
 import { PAYMENTS_FACADE_PORT } from './application/ports/payments-facade.port.js'
-// INVENTORY_FACADE_PORT существует (файл создан этим тикетом), но НЕ импортирован здесь —
-// нет провайдера, который его свяжет (см. JSDoc inventory-facade.port.ts). Импорт без
-// использования дал бы неиспользуемый символ — оставлен только в своём файле-порте.
+import { INVENTORY_FACADE_PORT } from './application/ports/inventory-facade.port.js'
 import { FEATURE_FLAGS_REPOSITORY_PROVIDER } from './infrastructure/repositories/feature-flags.repository.js'
 import { TENANCY_FACADE_PORT_PROVIDER } from './infrastructure/adapters/tenancy-facade.adapter.js'
 import { IDENTITY_FACADE_PORT_PROVIDER } from './infrastructure/adapters/identity-facade.adapter.js'
@@ -55,18 +53,21 @@ import { DeactivateUserUseCase } from './application/use-cases/deactivate-user.u
 import { ChangeStaffRoleUseCase } from './application/use-cases/change-staff-role.use-case.js'
 import { GrantPlatformRoleUseCase } from './application/use-cases/grant-platform-role.use-case.js'
 import { ListPharmacyAccountsAnyUseCase } from './application/use-cases/list-pharmacy-accounts-any.use-case.js'
+import { ListPharmacyAccountsOwnUseCase } from './application/use-cases/list-pharmacy-accounts-own.use-case.js'
+import { GetInventorySummaryUseCase } from './application/use-cases/get-inventory-summary.use-case.js'
 import { FeatureFlagsController } from './presentation/feature-flags.controller.js'
 import { TenantsController } from './presentation/tenants.controller.js'
 import { UsersAdminController } from './presentation/users-admin.controller.js'
 import { PharmacyAccountsOverviewController } from './presentation/pharmacy-accounts-overview.controller.js'
 
 @Module({
-  imports: [OnboardingModule, OrdersModule, PaymentsModule, AuthModule, TenancyModule],
+  imports: [OnboardingModule, OrdersModule, PaymentsModule, AuthModule, TenancyModule, InventoryModule],
   controllers: [FeatureFlagsController, TenantsController, UsersAdminController, PharmacyAccountsOverviewController],
   providers: [
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },
     { provide: ORDERS_FACADE_PORT, useExisting: ORDERS_FACADE },
     { provide: PAYMENTS_FACADE_PORT, useExisting: PAYMENTS_FACADE },
+    { provide: INVENTORY_FACADE_PORT, useExisting: InventoryFacade },
     // DTJ-352 — feature_flags (см. JSDoc блока выше).
     FEATURE_FLAGS_REPOSITORY_PROVIDER,
     ListFeatureFlagsUseCase,
@@ -83,6 +84,9 @@ import { PharmacyAccountsOverviewController } from './presentation/pharmacy-acco
     GrantPlatformRoleUseCase,
     // DTJ-353 — pharmacy-accounts (ONBOARDING_FACADE_PORT.findPharmacyAccountsAny, см. JSDoc порта).
     ListPharmacyAccountsAnyUseCase,
+    // scope=own — тот же ONBOARDING_FACADE_PORT, chainId резолвится из actor, не из query.
+    ListPharmacyAccountsOwnUseCase,
+    GetInventorySummaryUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.

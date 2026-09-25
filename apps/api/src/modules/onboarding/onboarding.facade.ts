@@ -44,6 +44,12 @@ export class OnboardingFacade {
     return account?.suspensionReason ?? null
   }
 
+  /** Для cross-tenant policy-проверок других модулей (несуществующая аптека — null, не throw). */
+  async getPharmacyChainId(pharmacyId: string): Promise<string | null> {
+    const account = await this.pharmacyAccountRepository.findById(pharmacyId)
+    return account?.chainId ?? null
+  }
+
   /**
    * РАСШИРЕНИЕ (DTJ-227, EP-09 checkout) — отображаемые имена аптек по батчу id
    * (`OnboardingFacadePort.getPharmacyNames`, DTJ-225). `PharmacyAccountRepositoryPort` не

@@ -18,3 +18,8 @@ export interface PharmacyAccountAdminSummaryDto {
   readonly status: string
   readonly licenseExpiryDate: string | null
 }
+
+export interface InventorySummaryDto {
+  readonly skuCount: number
+  readonly staleDataSharePercent: number
+}

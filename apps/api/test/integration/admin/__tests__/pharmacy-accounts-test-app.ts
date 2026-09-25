@@ -17,7 +17,12 @@ import { OnboardingFacade } from '@/modules/onboarding/index.js'
 import { AuditLogModule } from '@/common/audit/audit-log.module.js'
 import { PharmacyAccountsOverviewController } from '@/modules/admin/presentation/pharmacy-accounts-overview.controller.js'
 import { ONBOARDING_FACADE_PORT } from '@/modules/admin/application/ports/onboarding-facade.port.js'
+import { INVENTORY_FACADE_PORT } from '@/modules/admin/application/ports/inventory-facade.port.js'
 import { ListPharmacyAccountsAnyUseCase } from '@/modules/admin/application/use-cases/list-pharmacy-accounts-any.use-case.js'
+import { ListPharmacyAccountsOwnUseCase } from '@/modules/admin/application/use-cases/list-pharmacy-accounts-own.use-case.js'
+import { GetInventorySummaryUseCase } from '@/modules/admin/application/use-cases/get-inventory-summary.use-case.js'
+import { InventoryModule } from '@/modules/inventory/inventory.module.js'
+import { InventoryFacade } from '@/modules/inventory/index.js'
 import { SharedKernelModule } from '@/shared-kernel/shared-kernel.module.js'
 import { LoggerModule } from '@/common/logging/logger.module.js'
 import { TenantContext } from '@/common/context/tenant-context.js'
@@ -61,9 +66,15 @@ function applyTestEnv(): void {
 }
 
 @Module({
-  imports: [AuthModule, OnboardingModule],
+  imports: [AuthModule, OnboardingModule, InventoryModule],
   controllers: [PharmacyAccountsOverviewController],
-  providers: [{ provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade }, ListPharmacyAccountsAnyUseCase],
+  providers: [
+    { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },
+    { provide: INVENTORY_FACADE_PORT, useExisting: InventoryFacade },
+    ListPharmacyAccountsAnyUseCase,
+    ListPharmacyAccountsOwnUseCase,
+    GetInventorySummaryUseCase,
+  ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- модуль тест-харнесса
 class PharmacyAccountsAdminTestModule {}

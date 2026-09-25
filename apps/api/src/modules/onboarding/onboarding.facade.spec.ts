@@ -141,3 +141,19 @@ describe('OnboardingFacade.findPharmacyAccountsAny (DTJ-353)', () => {
     expect(result.items[0]?.chainName).toBeNull()
   })
 })
+
+describe('OnboardingFacade.getPharmacyChainId', () => {
+  it('аптека найдена — возвращает её chainId', async () => {
+    const findById = vi.fn().mockResolvedValue({ id: 'acc-1', chainId: 'chain-1' })
+    const accountRepository: PharmacyAccountRepositoryPort = { ...fakeAccountRepository(), findById }
+    const facade = new OnboardingFacade(accountRepository, fakeChainRepository(null).repository)
+
+    await expect(facade.getPharmacyChainId('acc-1')).resolves.toBe('chain-1')
+  })
+
+  it('аптека не найдена — null, не throw', async () => {
+    const facade = new OnboardingFacade(fakeAccountRepository(), fakeChainRepository(null).repository)
+
+    await expect(facade.getPharmacyChainId('missing')).resolves.toBeNull()
+  })
+})

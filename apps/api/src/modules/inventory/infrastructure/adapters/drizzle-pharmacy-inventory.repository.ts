@@ -46,6 +46,7 @@ import {
   type ListByPharmacyResult,
   type PharmacyInventoryListRow,
   type PharmacyInventoryRepository,
+  type PharmacyInventorySummary,
   type UpsertResult,
 } from '@/modules/inventory/application/ports/pharmacy-inventory.repository.port.js'
 import type { InventoryBatchUpsertRow } from '@/modules/inventory/domain/value-objects/inventory-batch-upsert-row.vo.js'
@@ -313,6 +314,19 @@ export class DrizzlePharmacyInventoryRepository implements PharmacyInventoryRepo
       )
     }
     return conditions
+  }
+
+  // COUNT(DISTINCT medicine_id) + COUNT(*) FILTER — один запрос, без обхода listByPharmacy постранично.
+  async getSummary(input: { pharmacyId: string; staleBefore: Date }): Promise<PharmacyInventorySummary> {
+    const [row] = await this.db
+      .select({
+        skuCount: sql<number>`count(distinct ${pharmacyInventory.medicineId})::int`,
+        totalRowCount: sql<number>`count(*)::int`,
+        staleRowCount: sql<number>`count(*) filter (where ${pharmacyInventory.updatedAt} < ${input.staleBefore})::int`,
+      })
+      .from(pharmacyInventory)
+      .where(eq(pharmacyInventory.pharmacyId, input.pharmacyId))
+    return row ?? { skuCount: 0, totalRowCount: 0, staleRowCount: 0 }
   }
 }
 

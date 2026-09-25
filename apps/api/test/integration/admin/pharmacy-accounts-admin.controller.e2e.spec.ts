@@ -175,4 +175,90 @@ describe.skipIf(!postgresAvailable)('PharmacyAccountsOverviewController — Supe
     expect(res.status).toBe(403)
     expect((res.body as ErrorBody).error.code).toBe('INSUFFICIENT_ROLE')
   })
+
+  // scope=own: pharmacy_admin видит только точки СВОЕЙ сети, chainId резолвится из JWT.
+  it('pharmacy_admin сети A видит ТОЛЬКО точки сети A, даже если в query передан chainId сети B', async () => {
+    const suffix = randomUUID().slice(0, 8)
+    const chainAId = await seedChain(`Own Chain A ${suffix}`)
+    const chainBId = await seedChain(`Own Chain B ${suffix}`)
+    const ownPharmacyId = await seedPharmacy(`Own pharmacy A ${suffix}`, 'active', chainAId)
+    const foreignPharmacyId = await seedPharmacy(`Foreign pharmacy B ${suffix}`, 'active', chainBId)
+    const ownAdminToken = sign('pharmacy_admin', { chainId: chainAId })
+
+    const res = await getPharmacyAccounts(ownAdminToken, `&scope=own&filter[chainId]=${chainBId}`)
+
+    expect(res.status).toBe(200)
+    const body = res.body as SuccessBody<readonly PharmacyAccountSummaryBody[]>
+    expect(body.data.some((p) => p.id === ownPharmacyId)).toBe(true)
+    expect(body.data.some((p) => p.id === foreignPharmacyId)).toBe(false)
+    expect(body.data.every((p) => p.chainId === chainAId)).toBe(true)
+  })
+
+  it('DTJ-362 — pharmacy_admin сети A вызывает scope=own без query[chainId] — тот же результат (own точки сети A)', async () => {
+    const suffix = randomUUID().slice(0, 8)
+    const chainId = await seedChain(`Own Chain Solo ${suffix}`)
+    const ownPharmacyId = await seedPharmacy(`Own pharmacy solo ${suffix}`, 'active', chainId)
+    const ownAdminToken = sign('pharmacy_admin', { chainId })
+
+    const res = await getPharmacyAccounts(ownAdminToken, '&scope=own')
+
+    expect(res.status).toBe(200)
+    const body = res.body as SuccessBody<readonly PharmacyAccountSummaryBody[]>
+    expect(body.data.some((p) => p.id === ownPharmacyId)).toBe(true)
+  })
+
+  it('DTJ-362 — pharmacy_admin без chainId в токене (некорректный актор) → 403 CROSS_TENANT_ACCESS_DENIED, до обращения к БД', async () => {
+    const res = await getPharmacyAccounts(sign('pharmacy_admin', { chainId: null }), '&scope=own')
+
+    expect(res.status).toBe(403)
+    expect((res.body as ErrorBody).error.code).toBe('CROSS_TENANT_ACCESS_DENIED')
+  })
+
+  it('DTJ-362 — super_admin со scope=own → 403 CROSS_TENANT_ACCESS_DENIED (own предназначен только pharmacy_admin)', async () => {
+    const res = await getPharmacyAccounts(superAdminToken, '&scope=own')
+
+    expect(res.status).toBe(403)
+    expect((res.body as ErrorBody).error.code).toBe('CROSS_TENANT_ACCESS_DENIED')
+  })
+
+  function getInventorySummary(token: string, pharmacyId: string): request.Test {
+    return request(httpServer).get(`/api/v1/pharmacy-accounts/${pharmacyId}/inventory-summary`).set('Authorization', `Bearer ${token}`)
+  }
+
+  it('DTJ-362 — pharmacy_admin сети A запрашивает сводку аптеки сети B → 403 CROSS_TENANT_ACCESS_DENIED', async () => {
+    const suffix = randomUUID().slice(0, 8)
+    const chainAId = await seedChain(`Inventory Chain A ${suffix}`)
+    const chainBId = await seedChain(`Inventory Chain B ${suffix}`)
+    const foreignPharmacyId = await seedPharmacy(`Foreign pharmacy inv ${suffix}`, 'active', chainBId)
+    const ownAdminToken = sign('pharmacy_admin', { chainId: chainAId })
+
+    const res = await getInventorySummary(ownAdminToken, foreignPharmacyId)
+
+    expect(res.status).toBe(403)
+    expect((res.body as ErrorBody).error.code).toBe('CROSS_TENANT_ACCESS_DENIED')
+  })
+
+  it('DTJ-362 — pharmacy_admin сети A запрашивает сводку СВОЕЙ аптеки → 200, skuCount/staleDataSharePercent', async () => {
+    const suffix = randomUUID().slice(0, 8)
+    const chainId = await seedChain(`Inventory Chain Own ${suffix}`)
+    const ownPharmacyId = await seedPharmacy(`Own pharmacy inv ${suffix}`, 'active', chainId)
+    const ownAdminToken = sign('pharmacy_admin', { chainId })
+
+    const res = await getInventorySummary(ownAdminToken, ownPharmacyId)
+
+    expect(res.status).toBe(200)
+    const body = res.body as SuccessBody<{ skuCount: number; staleDataSharePercent: number }>
+    expect(body.data.skuCount).toBe(0)
+    expect(body.data.staleDataSharePercent).toBe(0)
+  })
+
+  it('DTJ-362 — super_admin запрашивает сводку любой аптеки → 200 без policy-проверки владения', async () => {
+    const suffix = randomUUID().slice(0, 8)
+    const chainId = await seedChain(`Inventory Chain Super ${suffix}`)
+    const pharmacyId = await seedPharmacy(`Any pharmacy inv ${suffix}`, 'active', chainId)
+
+    const res = await getInventorySummary(superAdminToken, pharmacyId)
+
+    expect(res.status).toBe(200)
+  })
 })
