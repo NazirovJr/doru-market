@@ -1,0 +1,17 @@
+/*
+ * DTJ-404 — keyframes shimmer-анимации `Skeleton` (`SRS-UX-019` loading placeholder). Как и
+ * `internal/spinner.css`, keyframes нельзя задать через inline `style`, поэтому вынесены в
+ * отдельный файл. Присутствие/отсутствие анимации на конкретном элементе задаётся через inline
+ * `style.animation` в `skeleton.tsx` (уважает `useReducedMotion()`) — см. `skeleton.spec.tsx`.
+ */
+@keyframes dorutj-shimmer {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 1;
+  }
+}

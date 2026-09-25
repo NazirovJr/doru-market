@@ -13,6 +13,10 @@ import { defineConfig } from 'vitest/config'
  * (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §6). `coverage.enabled` заставляет обычный `vitest run`
  * (а значит и `pnpm test` → `turbo run test`) считать покрытие и падать при просадке ниже
  * порога — без отдельного флага `--coverage` в скрипте `test`.
+ *
+ * DTJ-404 добавляет `src/components` (файлы `.tsx`) в тот же порог (тикет: «90% для всех файлов .tsx
+ * (не генерируемых) в этом тикете» — эквивалент строгости `domain`/`application` для
+ * `packages/ui`). `*.stories.tsx` — не продуктовый код (Storybook-демонстрация), исключён.
  */
 const COVERAGE_THRESHOLD_PERCENT = 90
 
@@ -33,10 +37,18 @@ export default defineConfig({
       provider: 'v8',
       enabled: true,
       reporter: ['text', 'html'],
-      include: ['src/a11y/**/*.ts'],
+      include: ['src/a11y/**/*.ts', 'src/components/**/*.tsx'],
       // `index.ts` — барабанный экспорт (D-27); фикстуры-нарушители — тестовые данные,
-      // не продуктовая логика.
-      exclude: ['**/*.spec.ts', '**/*.spec.tsx', '**/*.d.ts', 'src/a11y/index.ts', '**/__fixtures__/**'],
+      // не продуктовая логика; `*.stories.tsx` — Storybook-демонстрация, не продуктовый код
+      // (тикет DTJ-404: «90% для всех файлов .tsx (не генерируемых) в этом тикете»).
+      exclude: [
+        '**/*.spec.ts',
+        '**/*.spec.tsx',
+        '**/*.stories.tsx',
+        '**/*.d.ts',
+        'src/a11y/index.ts',
+        '**/__fixtures__/**',
+      ],
       thresholds: {
         lines: COVERAGE_THRESHOLD_PERCENT,
         statements: COVERAGE_THRESHOLD_PERCENT,
