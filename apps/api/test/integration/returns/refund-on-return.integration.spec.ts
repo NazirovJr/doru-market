@@ -195,11 +195,27 @@ describe.skipIf(!postgresAvailable || !redisAvailable)('RefundOnReturnResolvedUs
     const { DatabaseModule } = await import('@/infrastructure/database/database.module.js')
     const { RedisModule } = await import('@/infrastructure/redis/redis.module.js')
     const { IdempotencyModule } = await import('@/common/idempotency/idempotency.module.js')
+    const { AuditLogModule } = await import('@/common/audit/audit-log.module.js')
     const { DomainEventsModule } = await import('@/common/events/domain-events.module.js')
+    const { OrdersModule } = await import('@/modules/orders/orders.module.js')
     const { ReturnsModule } = await import('@/modules/returns/returns.module.js')
 
+    // PaymentsModule регистрирует OrdersFacadeAdapter И как отдельный провайдер, И под
+    // PAYMENTS_ORDERS_PORT — overrideProvider(PAYMENTS_ORDERS_PORT) ниже подменяет только вторую
+    // регистрацию. Первую всё равно резолвит Nest, ей нужен ORDERS_FACADE — OrdersModule (@Global()).
     moduleRef = await Test.createTestingModule({
-      imports: [AppConfigModule, LoggerModule, SharedKernelModule, DatabaseModule, RedisModule, IdempotencyModule, DomainEventsModule, ReturnsModule],
+      imports: [
+        AppConfigModule,
+        LoggerModule,
+        SharedKernelModule,
+        DatabaseModule,
+        RedisModule,
+        IdempotencyModule,
+        AuditLogModule,
+        DomainEventsModule,
+        OrdersModule,
+        ReturnsModule,
+      ],
     })
       .overrideProvider(PAYMENTS_ORDERS_PORT)
       .useValue(new TestOrdersPort(db))
