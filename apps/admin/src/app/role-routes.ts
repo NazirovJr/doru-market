@@ -72,6 +72,11 @@ const PharmacyAccountsPage: LazyExoticComponent<ComponentType<SectionPlaceholder
   import('@/features/pharmacies-crud/ui/pharmacy-accounts-page').then((m) => ({ default: m.PharmacyAccountsPage })),
 )
 
+/** Та же схема совместимости без пропсов, что `AuditLogPage` выше. */
+const OwnPharmaciesPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/pharmacies-crud/ui/own-pharmacies-page').then((m) => ({ default: m.OwnPharmaciesPage })),
+)
+
 function section(path: string, titleKey: string, icon: string): RouteConfig {
   return { path, titleKey, icon, Component: SectionPlaceholder }
 }
@@ -92,7 +97,7 @@ const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
 
 /** `pharmacy_admin`: Мои точки/Заказы/Сотрудники/Ключи 1С/Отчёты/Расписание. */
 const PHARMACY_ADMIN_ROUTES: readonly RouteConfig[] = [
-  section('my-pharmacies', 'admin.nav.my_pharmacies', 'pharmacies'),
+  { path: 'my-pharmacies', titleKey: 'admin.nav.my_pharmacies', icon: 'pharmacies', Component: OwnPharmaciesPage },
   section('my-orders', 'admin.nav.my_orders', 'orders'),
   section('staff', 'admin.nav.staff', 'staff'),
   section('integration-keys', 'admin.nav.integration_keys', 'keys'),

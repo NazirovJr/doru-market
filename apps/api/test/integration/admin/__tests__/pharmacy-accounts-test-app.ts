@@ -18,6 +18,7 @@ import { AuditLogModule } from '@/common/audit/audit-log.module.js'
 import { PharmacyAccountsOverviewController } from '@/modules/admin/presentation/pharmacy-accounts-overview.controller.js'
 import { ONBOARDING_FACADE_PORT } from '@/modules/admin/application/ports/onboarding-facade.port.js'
 import { ListPharmacyAccountsAnyUseCase } from '@/modules/admin/application/use-cases/list-pharmacy-accounts-any.use-case.js'
+import { ListPharmacyAccountsOwnUseCase } from '@/modules/admin/application/use-cases/list-pharmacy-accounts-own.use-case.js'
 import { SharedKernelModule } from '@/shared-kernel/shared-kernel.module.js'
 import { LoggerModule } from '@/common/logging/logger.module.js'
 import { TenantContext } from '@/common/context/tenant-context.js'
@@ -63,7 +64,7 @@ function applyTestEnv(): void {
 @Module({
   imports: [AuthModule, OnboardingModule],
   controllers: [PharmacyAccountsOverviewController],
-  providers: [{ provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade }, ListPharmacyAccountsAnyUseCase],
+  providers: [{ provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade }, ListPharmacyAccountsAnyUseCase, ListPharmacyAccountsOwnUseCase],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- модуль тест-харнесса
 class PharmacyAccountsAdminTestModule {}

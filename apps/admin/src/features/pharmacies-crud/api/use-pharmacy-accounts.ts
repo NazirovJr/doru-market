@@ -24,10 +24,17 @@ function readFilters(searchParams: URLSearchParams): PharmacyAccountsFilters {
   }
 }
 
-function toQueryParams(filters: PharmacyAccountsFilters, cursor: string | null, limit: number): QueryParams {
+export interface PharmacyAccountsListOptions {
+  readonly cursor: string | null
+  readonly limit: number
+  readonly scope?: 'own'
+}
+
+function toQueryParams(filters: PharmacyAccountsFilters, options: PharmacyAccountsListOptions): QueryParams {
   return {
-    limit: String(limit),
-    cursor: cursor ?? undefined,
+    scope: options.scope,
+    limit: String(options.limit),
+    cursor: options.cursor ?? undefined,
     'filter[status]': filters.status,
     'filter[chainId]': filters.chainId,
     'filter[name][like]': filters.name,
@@ -42,10 +49,9 @@ export interface PharmacyAccountsPageResult {
 
 export async function fetchPharmacyAccountsPage(
   filters: PharmacyAccountsFilters,
-  cursor: string | null,
-  limit: number,
+  options: PharmacyAccountsListOptions,
 ): Promise<PharmacyAccountsPageResult> {
-  const params = toQueryParams(filters, cursor, limit)
+  const params = toQueryParams(filters, options)
   const result = await httpGetJsonWithMeta<readonly PharmacyAccountAdminSummaryDto[]>(PHARMACY_ACCOUNTS_PATH, params)
   const pagination = result.meta?.pagination as { nextCursor: string | null; hasMore: boolean } | undefined
   return { items: result.data, nextCursor: pagination?.nextCursor ?? null, hasMore: pagination?.hasMore ?? false }
@@ -62,7 +68,24 @@ export function usePharmacyAccounts(
 ): UseQueryResult<PharmacyAccountsPageResult, HttpError> {
   return useQuery<PharmacyAccountsPageResult, HttpError>({
     queryKey: pharmacyAccountsQueryKey(filters, cursor),
-    queryFn: () => fetchPharmacyAccountsPage(filters, cursor, limit),
+    queryFn: () => fetchPharmacyAccountsPage(filters, { cursor, limit }),
+  })
+}
+
+const EMPTY_FILTERS: PharmacyAccountsFilters = { status: undefined, chainId: undefined, name: undefined }
+
+/** scope=own: chainId резолвится сервером из JWT актора, здесь фильтр по сети не передаётся вовсе. */
+export function ownPharmacyAccountsQueryKey(cursor: string | null): readonly unknown[] {
+  return ['admin', 'pharmacy-accounts', 'own', cursor] as const
+}
+
+export function useOwnPharmacyAccounts(
+  cursor: string | null,
+  limit: number = DEFAULT_LIMIT,
+): UseQueryResult<PharmacyAccountsPageResult, HttpError> {
+  return useQuery<PharmacyAccountsPageResult, HttpError>({
+    queryKey: ownPharmacyAccountsQueryKey(cursor),
+    queryFn: () => fetchPharmacyAccountsPage(EMPTY_FILTERS, { cursor, limit, scope: 'own' }),
   })
 }
 

@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router'
 import type { PharmacyAccountAdminSummaryDto } from '@dorutj/contracts'
 import { getClientEnv } from '@/shared/api/http-client'
-import { usePharmacyAccounts, usePharmacyAccountsFilters } from './use-pharmacy-accounts'
+import { useOwnPharmacyAccounts, usePharmacyAccounts, usePharmacyAccountsFilters } from './use-pharmacy-accounts'
 
 const API_BASE = getClientEnv().apiBaseUrl
 
@@ -75,6 +75,20 @@ describe('usePharmacyAccounts', () => {
     expect(url.searchParams.has('filter[status]')).toBe(false)
     expect(url.searchParams.has('filter[chainId]')).toBe(false)
     expect(url.searchParams.has('filter[name][like]')).toBe(false)
+  })
+})
+
+describe('useOwnPharmacyAccounts (DTJ-362)', () => {
+  it('GET /api/v1/pharmacy-accounts?scope=own — без filter[chainId], сеть резолвится сервером', async () => {
+    const fetchMock = stubFetch(() => Promise.resolve(jsonResponse({ data: [ACCOUNT], meta: { pagination: { nextCursor: null, hasMore: false, limit: 50 } } })))
+
+    const { result } = renderHook(() => useOwnPharmacyAccounts(null), { wrapper: makeWrapper() })
+    await waitFor(() => { expect(result.current.isSuccess).toBe(true) })
+
+    const url = new URL(fetchMock.mock.calls[0]![0])
+    expect(url.searchParams.get('scope')).toBe('own')
+    expect(url.searchParams.has('filter[chainId]')).toBe(false)
+    expect(result.current.data).toEqual({ items: [ACCOUNT], nextCursor: null, hasMore: false })
   })
 })
 
