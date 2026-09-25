@@ -24,7 +24,7 @@ function makeContext(overrides: Partial<AssignmentContext> = {}): AssignmentCont
   const geo = GeoPoint.create(38.5598, 68.787)
   if (!geo.ok) throw new Error('fixture error')
   return {
-    order: { orderId: ORDER_ID, tenantId: TENANT_ID, pharmacyId: 'pharmacy-1', medicineIds: [], itemsCount: 1, paymentMethod: 'cash_courier', deliveryGeoPoint: null },
+    order: { orderId: ORDER_ID, tenantId: TENANT_ID, pharmacyId: 'pharmacy-1', medicineIds: [], itemsCount: 1, paymentMethod: 'cash_courier', deliveryGeoPoint: null, deliveryFeeDiram: 1000n },
     pharmacy: { id: 'pharmacy-1', name: 'Pharmacy', addressText: 'Addr', geoPoint: geo.value, chainId: null },
     requiresColdChain: false,
     candidateQuery: { tenantId: TENANT_ID, pharmacyChainId: null, pharmacyGeoPoint: geo.value, requiresColdChain: false },

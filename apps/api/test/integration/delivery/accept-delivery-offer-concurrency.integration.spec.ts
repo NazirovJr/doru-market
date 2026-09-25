@@ -130,6 +130,7 @@ describe.skipIf(!postgresAvailable)('AcceptDeliveryOfferUseCase — TC-DELIV-071
       itemsCount: 1,
       paymentMethod: 'cash_courier',
       deliveryGeoPoint: null,
+      deliveryFeeDiram: 1000n,
     }
     const orders: DeliveryOrdersPort = {
       getOrderForRating: () => Promise.resolve(null),
