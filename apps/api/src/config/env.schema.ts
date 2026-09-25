@@ -48,6 +48,12 @@ const DEFAULT_BANK_INVOICE_VALIDITY_MINUTES = 15
  * тикета (0 — немедленное подтверждение, тот же приём, что `DEFAULT_MOCK_BANK_AUTO_PAY_DELAY_MS`
  * для DTJ-238, но со значением 0, буквально указанным ticket «Что сделать» п.2). */
 const DEFAULT_MOCK_PAYOUT_DELAY_MS = 0
+/** [DTJ-432, SRS-API-012] Глобальный дефолт rate-limit, ключ — IP. */
+const DEFAULT_RATE_LIMIT_ANON_PER_MIN = 100
+/** [DTJ-432, SRS-API-012] Глобальный дефолт rate-limit, ключ — `userId`. */
+const DEFAULT_RATE_LIMIT_USER_PER_MIN = 300
+/** [DTJ-432, SRS-API-012] `POST /inventory/batch-update` (канал 1С), ключ — `pharmacyId`. */
+const DEFAULT_RATE_LIMIT_1C_BATCH_PER_MIN = 20
 const MINUTES_PER_HOUR = 60
 const HOURS_PER_DAY = 24
 const SECONDS_PER_MINUTE = 60
@@ -156,6 +162,10 @@ export const envSchema = z.object({
   // ASSUMPTION 20000 (тикет). Превышение отклоняет весь файл целиком, до построчного разбора.
   EXCEL_IMPORT_MAX_ROWS: z.coerce.number().int().positive().default(DEFAULT_EXCEL_IMPORT_MAX_ROWS),
   AUDIT_LOG_RETENTION_YEARS: z.coerce.number().int().positive().default(AUDIT_LOG_RETENTION_YEARS_DEFAULT),
+  // [DTJ-432, SRS-API-012/013] Глобальный rate-limit (@fastify/rate-limit + Redis).
+  RATE_LIMIT_ANON_PER_MIN: z.coerce.number().int().positive().default(DEFAULT_RATE_LIMIT_ANON_PER_MIN),
+  RATE_LIMIT_USER_PER_MIN: z.coerce.number().int().positive().default(DEFAULT_RATE_LIMIT_USER_PER_MIN),
+  RATE_LIMIT_1C_BATCH_PER_MIN: z.coerce.number().int().positive().default(DEFAULT_RATE_LIMIT_1C_BATCH_PER_MIN),
 })
 
 /** [DTJ-023] Секунды в N минутах/часах/дне — для use case расчёта rate-limit окон. */

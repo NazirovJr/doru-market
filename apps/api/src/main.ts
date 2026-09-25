@@ -8,17 +8,23 @@
  * заводится вместе с первыми контроллерами следующих эпиков, не `class-validator`.
  */
 import 'reflect-metadata'
+import { fileURLToPath } from 'node:url'
 import { NestFactory } from '@nestjs/core'
 import { VersioningType } from '@nestjs/common'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import helmet from '@fastify/helmet'
 import cors from '@fastify/cors'
 import multipart from '@fastify/multipart'
+import rateLimit from '@fastify/rate-limit'
 import pino from 'pino'
+import type Redis from 'ioredis'
 import { AppModule } from './app.module.js'
 import { AppConfigService } from './config/app-config.service.js'
 import { isAllowedCorsOrigin } from './config/cors-origin.policy.js'
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js'
+import { REDIS_CLIENT } from './infrastructure/redis/redis.token.js'
+import { JWT_SIGNER, type JwtSignerPort } from './modules/auth/index.js'
+import { buildRateLimitOptions } from './common/http/rate-limit/rate-limit.config.js'
 
 /**
  * `@fastify/helmet`/`@fastify/cors` резолвятся в свою (более новую) копию `fastify`,
@@ -53,6 +59,8 @@ const STARTUP_FAILURE_EXIT_CODE = 1
  */
 const GLOBAL_API_PREFIX = 'api'
 const UNPREFIXED_PATHS = ['health', 'ready']
+/** Доверенный hop перед `apps/api` — edge-Nginx; дальше `X-Forwarded-For` не доверяем. */
+const TRUSTED_PROXY_HOPS = 1
 
 async function registerTransportSecurity(
   app: NestFastifyApplication,
@@ -74,12 +82,22 @@ async function registerTransportSecurity(
   await app.register(multipart as unknown as FastifyRegisterablePlugin, {
     limits: { fileSize: EXCEL_IMPORT_MULTIPART_LIMIT_BYTES },
   })
+  // Глобальный rate-limit — Redis-хранилище, ключ/лимит выбираются в `buildRateLimitOptions`.
+  await app.register(
+    rateLimit as unknown as FastifyRegisterablePlugin,
+    buildRateLimitOptions(config, {
+      redis: app.get<Redis>(REDIS_CLIENT),
+      jwtSigner: app.get<JwtSignerPort>(JWT_SIGNER),
+    }),
+  )
 }
 
-async function bootstrap(): Promise<void> {
+/** Собирает `NestFastifyApplication` до `app.listen(...)` — переиспользуется `bootstrap()` и
+ *  интеграционными тестами, которым нужно реальное приложение, а не урезанный harness. */
+export async function createApp(): Promise<NestFastifyApplication> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ bodyLimit: DEFAULT_JSON_BODY_LIMIT_BYTES }),
+    new FastifyAdapter({ bodyLimit: DEFAULT_JSON_BODY_LIMIT_BYTES, trustProxy: TRUSTED_PROXY_HOPS }),
     // `rawBody: true` (DTJ-242, `PaymentsWebhookController`) — Nest/Fastify сохраняет СЫРЫЕ
     // байты тела запроса в `request.rawBody` ДО JSON-парсинга, не заменяя обычный `req.body`
     // ни для одного другого маршрута (аддитивный флаг, см. риски тикета DTJ-242: HMAC-подпись
@@ -107,11 +125,21 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new AllExceptionsFilter())
   app.enableShutdownHooks()
 
+  return app
+}
+
+async function bootstrap(): Promise<void> {
+  const app = await createApp()
+  const config = app.get(AppConfigService)
   await app.listen(config.port, LISTEN_HOST)
 }
 
-bootstrap().catch((error: unknown) => {
-  const fallbackLogger = pino({ name: 'apps-api-bootstrap' })
-  fallbackLogger.fatal({ err: error }, 'apps/api failed to start before opening the port')
-  process.exit(STARTUP_FAILURE_EXIT_CODE)
-})
+// Без проверки импорт файла тестами (не только `node dist/main.js`) запускал бы второй bootstrap.
+const isMainModule = process.argv[1] !== undefined && fileURLToPath(import.meta.url) === process.argv[1]
+if (isMainModule) {
+  bootstrap().catch((error: unknown) => {
+    const fallbackLogger = pino({ name: 'apps-api-bootstrap' })
+    fallbackLogger.fatal({ err: error }, 'apps/api failed to start before opening the port')
+    process.exit(STARTUP_FAILURE_EXIT_CODE)
+  })
+}
