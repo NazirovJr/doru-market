@@ -510,5 +510,8 @@
   "quantity.piece.one": "{count} дона",
   "quantity.piece.few": "{count} дона",
   "quantity.piece.many": "{count} дона",
-  "quantity.piece.other": "{count} дона"
+  "quantity.piece.other": "{count} дона",
+  "ui.phone_input.incomplete_error": "Рақами пурраи телефонро ворид кунед",
+  "ui.otp_input.group_label": "Рамзи тасдиқ",
+  "ui.otp_input.cell_label": "Рақами {index} аз {total}"
 }

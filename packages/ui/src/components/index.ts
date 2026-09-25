@@ -26,3 +26,21 @@ export { Chip } from './chip/chip'
 
 export type { CardInteractiveProps, CardProps } from './card/card'
 export { Card } from './card/card'
+
+export type { PhoneInputProps } from './phone-input/phone-input'
+export { PhoneInput } from './phone-input/phone-input'
+
+export type { OtpInputProps, OtpLength } from './otp-input/otp-input'
+export { OtpInput } from './otp-input/otp-input'
+
+export type { SelectOption, SelectProps } from './select/select'
+export { Select } from './select/select'
+
+export type { RadioGroupProps, RadioOption } from './radio-group/radio-group'
+export { RadioGroup } from './radio-group/radio-group'
+
+export type { CheckboxProps } from './checkbox/checkbox'
+export { Checkbox } from './checkbox/checkbox'
+
+export type { SwitchProps } from './switch/switch'
+export { Switch } from './switch/switch'

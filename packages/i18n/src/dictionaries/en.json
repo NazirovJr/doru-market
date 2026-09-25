@@ -510,5 +510,8 @@
   "quantity.piece.one": "{count} pc.",
   "quantity.piece.few": "{count} pcs.",
   "quantity.piece.many": "{count} pcs.",
-  "quantity.piece.other": "{count} pcs."
+  "quantity.piece.other": "{count} pcs.",
+  "ui.phone_input.incomplete_error": "Enter the full phone number",
+  "ui.otp_input.group_label": "Confirmation code",
+  "ui.otp_input.cell_label": "Digit {index} of {total}"
 }
