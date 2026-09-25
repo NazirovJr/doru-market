@@ -68,4 +68,6 @@ export interface MedicineSnapshot {
   readonly dosageStrength: string
   readonly isPrescriptionRequired: boolean
   readonly controlCategory: ControlCategory
+  /** DTJ-315 (EP-13) — нужен `delivery` для `requiresColdChain` назначения (SRS-DELIV-004). */
+  readonly requiresColdChain: boolean
 }

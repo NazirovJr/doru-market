@@ -21,18 +21,20 @@ describe('DeliveryDomainEvent — все 7 вариантов конструир
     { type: 'OrderRefusedAtDoorEvent', deliveryAssignmentId: 'a1', orderId: 'ord1', notes: 'client refused' },
     { type: 'CashReconciliationDiscrepancyEvent', courierShiftId: 's1', courierId: 'c1', discrepancyDiram: 500n },
     { type: 'CourierRatedEvent', orderId: 'ord1', courierId: 'c1', rating: 5 },
+    { type: 'CourierAssignedEvent', deliveryAssignmentId: 'a1', orderId: 'ord1', courierId: 'c1', assignedAt: EXPIRES_AT },
   ]
 
   it.each(events.map((e) => [e.type, e] as const))('%s — payload полон и type — дискриминант', (type, event) => {
     expect(event.type).toBe(type)
   })
 
-  it('семь различных type — покрывают ровно каталог §A.6 (без дублей/пропусков)', () => {
+  it('восемь различных type — семь из §A.6 плюс CourierAssignedEvent (DTJ-315, без дублей/пропусков)', () => {
     const types = events.map((e) => e.type)
-    expect(new Set(types).size).toBe(7)
+    expect(new Set(types).size).toBe(8)
     expect(types.sort()).toEqual(
       [
         'CashReconciliationDiscrepancyEvent',
+        'CourierAssignedEvent',
         'CourierRatedEvent',
         'DeliveryEscalatedToPoolEvent',
         'DeliveryFailedEvent',

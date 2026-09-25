@@ -171,6 +171,7 @@ export class CatalogFacadeImpl implements CatalogFacade {
       dosageStrength: record.dosageStrength,
       isPrescriptionRequired: record.isPrescriptionRequired,
       controlCategory: record.controlCategory,
+      requiresColdChain: record.requiresColdChain, // DTJ-315
     }
   }
 }

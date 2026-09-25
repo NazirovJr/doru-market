@@ -81,7 +81,10 @@ function makeUseCase(params: {
   const ratingsSave = vi.fn().mockResolvedValue(undefined)
   const couriersSave = vi.fn().mockResolvedValue(undefined)
   const outboxAppend = vi.fn().mockResolvedValue(undefined)
-  const orders: DeliveryOrdersPort = { getOrderForRating: vi.fn().mockResolvedValue(params.order) }
+  const orders: DeliveryOrdersPort = {
+    getOrderForRating: vi.fn().mockResolvedValue(params.order),
+    getDeliveryContext: vi.fn().mockResolvedValue(null),
+  }
   const assignments: DeliveryAssignmentRepositoryPort = {
     findById: vi.fn().mockResolvedValue(null),
     findActiveByOrderId: vi.fn().mockResolvedValue(null),
