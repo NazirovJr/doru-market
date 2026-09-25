@@ -36,13 +36,14 @@ import { AUDIT_LOG_PORT } from './audit-log.port.js'
 import { AUDIT_LOG_PORT_PROVIDER, AUDIT_LOG_QUERY_PORT_PROVIDER } from './infrastructure/audit-log.repository.js'
 import { ListAuditLogUseCase } from './application/use-cases/list-audit-log.use-case.js'
 import { AuditLogController } from './presentation/audit-log.controller.js'
+import { AUDIT_RETENTION_CONFIG, AUDIT_RETENTION_CONFIG_PROVIDER } from './config/audit-retention.config.js'
 
 @Global()
 @Module({
   imports: [AuthModule],
   controllers: [AuditLogController],
-  providers: [AUDIT_LOG_PORT_PROVIDER, AUDIT_LOG_QUERY_PORT_PROVIDER, ListAuditLogUseCase],
-  exports: [AUDIT_LOG_PORT],
+  providers: [AUDIT_LOG_PORT_PROVIDER, AUDIT_LOG_QUERY_PORT_PROVIDER, ListAuditLogUseCase, AUDIT_RETENTION_CONFIG_PROVIDER],
+  exports: [AUDIT_LOG_PORT, AUDIT_RETENTION_CONFIG],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.
 export class AuditLogModule {}

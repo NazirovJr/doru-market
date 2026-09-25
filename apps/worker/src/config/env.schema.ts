@@ -1,4 +1,6 @@
 import { z } from 'zod'
+// Общий дефолт с apps/api — worker не импортирует apps/api напрямую.
+import { AUDIT_LOG_RETENTION_YEARS_DEFAULT } from '@dorutj/contracts'
 
 /**
  * Валидация ENV apps/worker на старте процесса (DTJ-002, шаг 3).
@@ -61,6 +63,8 @@ const DEFAULT_PAYOUT_EXECUTION_CRON = '0 * * * *'
 // DTJ-250, ticket «Что сделать» п.3: ASSUMPTION лимит на батч — не найден общий паттерн
 // батчинга в кодовой базе на момент реализации (проверено), заведён локально этим тикетом.
 const DEFAULT_PAYOUT_BATCH_SIZE = 50
+const DEFAULT_AUDIT_LOG_RETENTION_CRON = '0 3 1 */3 *' // квартально, 1-е число месяца 03:00
+const DEFAULT_AUDIT_LOG_RETENTION_BATCH_SIZE = 1000
 
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const
 
@@ -138,6 +142,13 @@ export const envSchema = z.object({
   BILLING_INVOICE_OVERDUE_GRACE_PERIOD_DAYS: z.coerce.number().int().positive().default(DEFAULT_BILLING_INVOICE_OVERDUE_GRACE_PERIOD_DAYS),
   // Та же переменная, что apps/api — оба процесса читают одно имя ENV независимо, optional.
   TELEGRAM_BOT_TOKEN_NEUTRAL: z.string().optional(),
+  AUDIT_LOG_RETENTION_YEARS: z.coerce.number().int().positive().default(AUDIT_LOG_RETENTION_YEARS_DEFAULT),
+  AUDIT_LOG_RETENTION_CRON: z.string().min(1).default(DEFAULT_AUDIT_LOG_RETENTION_CRON),
+  AUDIT_LOG_RETENTION_BATCH_SIZE: z.coerce.number().int().positive().default(DEFAULT_AUDIT_LOG_RETENTION_BATCH_SIZE),
+  // optional, НЕ .default(DATABASE_URL) — молчаливый fallback запускал бы DELETE под app_role.
+  AUDIT_RETENTION_DATABASE_URL: z
+    .url({ error: 'AUDIT_RETENTION_DATABASE_URL должен быть валидным URL (postgres://...)' })
+    .optional(),
 })
 
 export type WorkerEnv = z.infer<typeof envSchema>

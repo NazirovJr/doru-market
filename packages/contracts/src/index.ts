@@ -43,3 +43,4 @@ export * from './sensitive-fields.js'
 export * from './domain-event-envelope.js'
 // DTJ-379 (EP-17) — контракт батч-приёма клиентской UX-телеметрии.
 export * from './analytics.js'
+export * from './audit-retention.js'

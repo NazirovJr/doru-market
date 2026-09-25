@@ -41,6 +41,7 @@ const BASE_ENV: EnvConfig = {
   PAYOUT_DRIVER: 'mock',
   MOCK_PAYOUT_DELAY_MS: 0,
   EXCEL_IMPORT_MAX_ROWS: 20_000,
+  AUDIT_LOG_RETENTION_YEARS: 5,
 }
 
 describe('AppConfigService', () => {
@@ -61,6 +62,7 @@ describe('AppConfigService', () => {
     expect(config.mockBankWebhookSecret).toBeUndefined()
     expect(config.payoutDriver).toBe('mock')
     expect(config.mockPayoutDelayMs).toBe(0)
+    expect(config.auditLogRetentionYears).toBe(5)
   })
 
   it('mockBankWebhookSecret — прокидывает значение из ENV, когда задано (DTJ-238)', () => {
