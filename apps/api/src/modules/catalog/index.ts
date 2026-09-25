@@ -13,8 +13,16 @@ import type { MedicineRecord } from './domain/medicine.types.js'
 import type { CatalogRepository } from './application/ports/catalog-repository.port.js'
 import { CONTROL_CATEGORIES_FORBIDDEN_FROM_REMOTE } from './domain/medicine.enums.js'
 import { Inject, Injectable } from '@nestjs/common'
+import type { PharmacyOfferPublic } from '@dorutj/contracts'
+import { SEARCH_DEFAULT_RADIUS_METERS } from '@dorutj/contracts'
 import { CATALOG_REPOSITORY } from './application/ports/catalog-repository.port.js'
 import { ResolveMedicineByCompositeUseCase } from './application/use-cases/resolve-medicine-by-composite.use-case.js'
+import {
+  ANALOG_OFFER_LOOKUP_PORT,
+  type AnalogOfferLookupPort,
+} from './application/ports/analog-offer-lookup.port.js'
+// Алиас — избегает совпадения имени с методом CatalogFacadeImpl.computeAnalogSavingsDiram ниже.
+import { computeAnalogSavingsDiram as computeAnalogSavingsDiramFormula } from './domain/services/analog-savings-calculator.service.js'
 
 // Определения этих двух типов переехали в `application/ports/composite-match.types.ts`:
 // иначе получался цикл `resolve-medicine-by-composite.use-case.ts → index.ts → он же`,
@@ -32,6 +40,15 @@ export interface CatalogFacade {
   getSubstances(ids: readonly string[]): Promise<Map<string, SubstanceRef[]>>
   isVisible(medicineId: string): Promise<boolean>
   resolveMedicineByComposite(input: CompositeMatchInput): Promise<MedicineMatchResult>
+  /** DTJ-385: серверная экономия для пары (референс, аналог) — та же цена, что видит `FindAnalogsUseCase`. */
+  computeAnalogSavingsDiram(input: AnalogSavingsComputeInput): Promise<number | null>
+}
+
+/** Вход `computeAnalogSavingsDiram` (DTJ-385). `pharmacyId` — сузить до цены конкретной аптеки. */
+export interface AnalogSavingsComputeInput {
+  readonly referenceMedicineId: string
+  readonly analogMedicineId: string
+  readonly pharmacyId?: string
 }
 
 /** DI-токен для провайдера `CatalogFacade` (DTJ-096: `{ provide: CATALOG_FACADE, useClass: ... }`). */
@@ -66,6 +83,8 @@ export class CatalogFacadeImpl implements CatalogFacade {
     // остаётся undefined — бут зелёный, TypeError на первом же вызове через фасад.
     @Inject(ResolveMedicineByCompositeUseCase)
     private readonly resolveMedicineByCompositeUseCase: ResolveMedicineByCompositeUseCase,
+    @Inject(ANALOG_OFFER_LOOKUP_PORT)
+    private readonly analogOfferLookup: AnalogOfferLookupPort,
   ) {}
 
   /**
@@ -126,6 +145,23 @@ export class CatalogFacadeImpl implements CatalogFacade {
     return result.value
   }
 
+  /**
+   * DTJ-385: сервер сам считает экономию analog_shown/added_to_cart — та же пара
+   * офферов (`ANALOG_OFFER_LOOKUP_PORT`) и та же формула (`computeAnalogSavingsDiram`,
+   * domain/services), что `FindAnalogsUseCase`, без домен-фильтра эквивалентности
+   * (пара уже определена вызывающим).
+   */
+  async computeAnalogSavingsDiram(input: AnalogSavingsComputeInput): Promise<number | null> {
+    if (input.referenceMedicineId === input.analogMedicineId) return null
+    const offerMap = await this.analogOfferLookup.getOffersForMedicines({
+      medicineIds: [input.referenceMedicineId, input.analogMedicineId],
+      radiusMeters: SEARCH_DEFAULT_RADIUS_METERS,
+    })
+    const referencePrice = cheapestPriceDiram(offerMap.get(input.referenceMedicineId), input.pharmacyId)
+    const analogPrice = cheapestPriceDiram(offerMap.get(input.analogMedicineId), input.pharmacyId)
+    return computeAnalogSavingsDiramFormula(referencePrice, analogPrice)
+  }
+
   private recordToSnapshot(record: MedicineRecord): MedicineSnapshot {
     return {
       medicineId: record.id,
@@ -135,6 +171,7 @@ export class CatalogFacadeImpl implements CatalogFacade {
       dosageStrength: record.dosageStrength,
       isPrescriptionRequired: record.isPrescriptionRequired,
       controlCategory: record.controlCategory,
+      requiresColdChain: record.requiresColdChain, // DTJ-315
     }
   }
 }
@@ -146,4 +183,14 @@ export class CatalogFacadeImpl implements CatalogFacade {
  */
 function isPubliclyVisible(record: MedicineRecord): boolean {
   return record.isPublished && !CONTROL_CATEGORIES_FORBIDDEN_FROM_REMOTE.has(record.controlCategory)
+}
+
+// Офферы уже отсортированы по цене портом (SRS-DOM-158) — фильтр по аптеке сохраняет порядок.
+function cheapestPriceDiram(
+  offers: readonly PharmacyOfferPublic[] | undefined,
+  pharmacyId: string | undefined,
+): number | null {
+  if (offers === undefined) return null
+  const matching = pharmacyId === undefined ? offers : offers.filter((o) => o.pharmacyId === pharmacyId)
+  return matching[0]?.priceDiram ?? null
 }

@@ -12,7 +12,9 @@ export const AUDIT_LOG_CATEGORY_VALUES = [
   'onboarding_decision',
   'force_cancel_order',
   'ledger_adjustment',
+  'cash_reconciliation_discrepancy',
   'role_grant',
+  'delivery_pricing_change',
 ] as const
 
 export type AuditLogCategory = (typeof AUDIT_LOG_CATEGORY_VALUES)[number]

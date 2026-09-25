@@ -31,4 +31,6 @@ export const QUEUE_NAMES = {
   PARTIAL_FULFILLMENT_TIMEOUT: 'partial-fulfillment-timeout',
   /** DTJ-307 (EP-12). Producer — apps/api `infrastructure/jobs/sla-watchdog.processor.ts` (`SLA_WATCHDOG_QUEUE_NAME`, своя копия строки). Consumer — `jobs/escrow-timeouts/picking-sla-watchdog.job.ts`. */
   PICKING_SLA_WATCHDOG: 'picking-sla-watchdog',
+  /** DTJ-315 (EP-13). Producer — apps/api `modules/delivery/infrastructure/jobs/delivery-offer-timeout.processor.ts` (`DELIVERY_OFFER_TIMEOUT_QUEUE_NAME`, своя копия строки). Consumer — `jobs/delivery/delivery-offer-timeout.job.ts`. */
+  DELIVERY_OFFER_TIMEOUT: 'delivery-offer-timeout',
 } as const

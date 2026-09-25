@@ -30,7 +30,7 @@
  * провайдер всегда есть, `undefined` там недостижимо.
  */
 import { Inject, Injectable, Optional } from '@nestjs/common'
-import { NotFoundError } from '@dorutj/contracts'
+import { NotFoundError, type OrderPaymentMethod } from '@dorutj/contracts'
 import {
   ORDER_REPOSITORY_PORT,
   type OrderRepositoryPort,
@@ -39,6 +39,7 @@ import {
 import { MergeGuestCartUseCase, type MergeGuestCartResult } from './cart/merge-guest-cart.use-case.js'
 import type { Order } from '@/modules/orders/domain/order.entity.js'
 import type { OrderCancelActor, OrderCancelReason } from '@/modules/orders/domain/order-domain-event.js'
+import type { GeoPoint } from '@/shared-kernel/domain/value-objects/geo-point.vo.js'
 
 export interface MarkPaidEscrowCommand {
   readonly tenantId: string
@@ -73,6 +74,19 @@ export interface CancelOrderCommand {
   readonly now: Date
 }
 
+// Единственный легальный путь, каким delivery читает данные заказа (см. db/schema/orders.ts).
+export interface DeliverySnapshot {
+  readonly orderId: string
+  readonly tenantId: string
+  readonly pharmacyId: string
+  readonly medicineIds: readonly string[]
+  readonly itemsCount: number
+  readonly paymentMethod: OrderPaymentMethod
+  readonly deliveryGeoPoint: GeoPoint | null
+  // Стоимость доставки, зафиксированная на checkout (Order.deliveryFee — readonly, тариф после не пересчитывается).
+  readonly deliveryFeeDiram: bigint
+}
+
 @Injectable()
 export class OrdersFacade {
   constructor(
@@ -94,6 +108,21 @@ export class OrdersFacade {
 
   async getOrderById(tenantId: string, orderId: string, tx?: OrderUnitOfWorkTx): Promise<Order | null> {
     return this.repository.findById(tenantId, orderId, tx)
+  }
+
+  async getDeliverySnapshot(orderId: string, tx?: OrderUnitOfWorkTx): Promise<DeliverySnapshot | null> {
+    const order = await this.repository.findByIdAcrossTenants(orderId, tx)
+    if (order === null) return null
+    return {
+      orderId: order.id,
+      tenantId: order.tenantId,
+      pharmacyId: order.pharmacyId,
+      medicineIds: order.items.map((item) => item.medicineId),
+      itemsCount: order.items.length,
+      paymentMethod: order.paymentMethod,
+      deliveryGeoPoint: order.deliveryGeoPoint,
+      deliveryFeeDiram: order.deliveryFee.diram,
+    }
   }
 
   async markPaidEscrow(orderId: string, cmd: MarkPaidEscrowCommand, tx?: OrderUnitOfWorkTx): Promise<void> {

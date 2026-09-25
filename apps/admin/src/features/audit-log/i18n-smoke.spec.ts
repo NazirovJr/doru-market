@@ -38,7 +38,7 @@ describe('admin/audit-log i18n — 3 локали, все ключи перев�
     }
   })
 
-  it.each(LOCALES)('%s — все 8 категорий (admin.audit_log.category.*) переведены', (locale) => {
+  it.each(LOCALES)('%s — все категории (admin.audit_log.category.*) переведены', (locale) => {
     const { t } = useT(locale)
     for (const category of AUDIT_LOG_CATEGORY_VALUES) {
       expect(t(`admin.audit_log.category.${category}`)).not.toContain(MISSING_KEY_MARKER)

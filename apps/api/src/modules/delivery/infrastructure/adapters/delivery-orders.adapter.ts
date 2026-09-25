@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common'
 import { ORDERS_FACADE, type OrdersFacade } from '@/modules/orders/index.js'
 import {
   DELIVERY_ORDERS_PORT,
+  type DeliveryOrderContext,
   type DeliveryOrdersPort,
   type OrderRatingContext,
 } from '@/modules/delivery/application/ports/delivery-orders.port.js'
@@ -16,6 +17,10 @@ export class DeliveryOrdersAdapter implements DeliveryOrdersPort {
       return null
     }
     return { orderId: order.id, customerId: order.customerId, status: order.status }
+  }
+
+  public async getDeliveryContext(orderId: string): Promise<DeliveryOrderContext | null> {
+    return this.ordersFacade.getDeliverySnapshot(orderId)
   }
 }
 

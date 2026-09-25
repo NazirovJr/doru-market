@@ -19,6 +19,7 @@ import { NotificationDispatchModule } from './jobs/notifications/notification-di
 import { PartialFulfillmentTimeoutModule } from './jobs/escrow-timeouts/partial-fulfillment-timeout.module.js'
 import { PickingSlaWatchdogModule } from './jobs/escrow-timeouts/picking-sla-watchdog.module.js'
 import { AuditLogRetentionModule } from './jobs/audit-log-retention/audit-log-retention.module.js'
+import { DeliveryOfferTimeoutModule } from './jobs/delivery/delivery-offer-timeout.module.js'
 
 /**
  * Барабанный модуль (D-27) — корневой `AppModule` apps/worker. Каждый новый тикет,
@@ -47,6 +48,7 @@ import { AuditLogRetentionModule } from './jobs/audit-log-retention/audit-log-re
     PartialFulfillmentTimeoutModule,
     PickingSlaWatchdogModule,
     AuditLogRetentionModule,
+    DeliveryOfferTimeoutModule,
   ],
 })
 // Класс существует только как носитель декоратора @Module для графа DI NestJS — штатный паттерн.

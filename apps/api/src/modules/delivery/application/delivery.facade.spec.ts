@@ -5,6 +5,7 @@ import { Courier } from '../domain/courier.entity.js'
 import { DeliveryAssignment } from '../domain/delivery-assignment.entity.js'
 import type { CourierRepositoryPort } from './ports/courier.repository.port.js'
 import type { DeliveryAssignmentRepositoryPort } from './ports/delivery-assignment.repository.port.js'
+import type { CalculateDeliveryFeeUseCase } from './use-cases/calculate-delivery-fee.use-case.js'
 import { DeliveryFacade } from './delivery.facade.js'
 
 const NOW = new Date('2026-09-05T10:00:00.000Z')
@@ -44,6 +45,7 @@ function makeFacade(params: { assignment?: DeliveryAssignment | null; courier?: 
   facade: DeliveryFacade
   assignmentsSave: ReturnType<typeof vi.fn>
   couriersSave: ReturnType<typeof vi.fn>
+  calculateFeeExecute: ReturnType<typeof vi.fn>
 } {
   const assignment = params.assignment === undefined ? makeAssignment() : params.assignment
   const courier = params.courier === undefined ? makeCourier() : params.courier
@@ -61,8 +63,10 @@ function makeFacade(params: { assignment?: DeliveryAssignment | null; courier?: 
     findByUserId: vi.fn().mockResolvedValue(courier),
     save: couriersSave,
   }
-  const facade = new DeliveryFacade(assignments, couriers, makeClock())
-  return { facade, assignmentsSave, couriersSave }
+  const calculateFeeExecute = vi.fn().mockResolvedValue(1234n)
+  const calculateFee = { execute: calculateFeeExecute } as unknown as CalculateDeliveryFeeUseCase
+  const facade = new DeliveryFacade(assignments, couriers, makeClock(), calculateFee)
+  return { facade, assignmentsSave, couriersSave, calculateFeeExecute }
 }
 
 describe('DeliveryFacade', () => {
@@ -126,12 +130,14 @@ describe('DeliveryFacade', () => {
     expect(await facade.getActiveAssignment(ORDER_ID)).toBeNull()
   })
 
-  it('calculateDeliveryFee: заглушка возвращает фиксированную неотрицательную ставку (TODO DTJ-322)', async () => {
-    const { facade } = makeFacade()
+  it('calculateDeliveryFee: делегирует CalculateDeliveryFeeUseCase.execute() (DTJ-322)', async () => {
+    const { facade, calculateFeeExecute } = makeFacade()
     const geoResult = await import('@/shared-kernel/index.js').then((m) => m.GeoPoint.create(38.5, 68.7))
     if (!geoResult.ok) throw geoResult.error
-    const fee = await facade.calculateDeliveryFee(geoResult.value, geoResult.value)
-    expect(fee).toBeGreaterThanOrEqual(0n)
+    const input = { pharmacyGeoPoint: geoResult.value, customerGeoPoint: geoResult.value, tenantId: 'tenant-1', itemsTotalDiram: 10000n }
+    const fee = await facade.calculateDeliveryFee(input)
+    expect(fee).toBe(1234n)
+    expect(calculateFeeExecute).toHaveBeenCalledWith(input)
   })
 
   it('assignReturnCourier: заглушка возвращает null (DTJ-273/274 вне периметра)', async () => {

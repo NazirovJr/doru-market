@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { NotFoundError } from '@dorutj/contracts'
-import { CLOCK, type Clock, type GeoPoint } from '@/shared-kernel/index.js'
+import { CLOCK, type Clock } from '@/shared-kernel/index.js'
 import { DeliveryAssignment } from '../domain/delivery-assignment.entity.js'
 import type { Courier } from '../domain/courier.entity.js'
 import type { DeliveryAssignmentSnapshot } from '../domain/delivery-assignment-snapshot.js'
@@ -12,9 +12,9 @@ import {
   DELIVERY_ASSIGNMENT_REPOSITORY,
   type DeliveryAssignmentRepositoryPort,
 } from './ports/delivery-assignment.repository.port.js'
+import { CalculateDeliveryFeeUseCase, type CalculateDeliveryFeeInput } from './use-cases/calculate-delivery-fee.use-case.js'
 
-// TODO(DTJ-322): реальная формула по зонам/тарифам тенанта; override — DELIVERY_FEE_FIXED_STUB_DIRAM.
-const FIXED_DELIVERY_FEE_STUB_DIRAM = 1000n
+export type { CalculateDeliveryFeeInput }
 
 export interface CreateDeliveryAssignmentInput {
   readonly id: string
@@ -37,10 +37,12 @@ export interface ReassignDeliveryInput {
 
 @Injectable()
 export class DeliveryFacade {
+  // eslint-disable-next-line max-params -- 4 DI-инъекции, конструктор NestJS.
   public constructor(
     @Inject(DELIVERY_ASSIGNMENT_REPOSITORY) private readonly assignments: DeliveryAssignmentRepositoryPort,
     @Inject(COURIER_REPOSITORY) private readonly couriers: CourierRepositoryPort,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(CalculateDeliveryFeeUseCase) private readonly calculateFee: CalculateDeliveryFeeUseCase,
   ) {}
 
   public async createAssignment(input: CreateDeliveryAssignmentInput): Promise<DeliveryAssignmentSnapshot> {
@@ -87,14 +89,9 @@ export class DeliveryFacade {
     return assignment?.toSnapshot() ?? null
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await -- async — контракт порта
-  public async calculateDeliveryFee(_pharmacyGeoPoint: GeoPoint, _deliveryGeoPoint: GeoPoint): Promise<bigint> {
-    const override = process.env.DELIVERY_FEE_FIXED_STUB_DIRAM
-    if (override !== undefined && override.trim() !== '') {
-      const parsed = BigInt(override)
-      return parsed
-    }
-    return FIXED_DELIVERY_FEE_STUB_DIRAM
+  /** SRS-DELIV-048 (DTJ-322) — делегирует резолюцию зоны/тарифа/ночной надбавки `CalculateDeliveryFeeUseCase`. */
+  public async calculateDeliveryFee(input: CalculateDeliveryFeeInput): Promise<bigint> {
+    return this.calculateFee.execute(input)
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await -- async — контракт порта

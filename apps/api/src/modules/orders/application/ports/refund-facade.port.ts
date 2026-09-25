@@ -43,8 +43,8 @@ export interface RefundError {
  * `PaymentsFacade` (`modules/payments/index.ts`, DTJ-249, только `holdPayout`), ни
  * `RefundFacadePort` (этот файл, DTJ-232, только `refundFull` — цельная отмена заказа) не
  * несли метода для ЧАСТИЧНОГО денежного эффекта БЕЗ отмены заказа — тот же класс пробела, что
- * `ReturnsPaymentsPort`/`UnimplementedReturnsPaymentsAdapter` уже задокументировал для EP-11
- * (DTJ-274). Здесь пробел закрыт РЕАЛЬНОЙ реализацией (не заглушкой) — `PaymentProvider.
+ * `ReturnsPaymentsPort` (`returns`, EP-11, DTJ-274/285). Здесь пробел закрыт РЕАЛЬНОЙ реализацией
+ * (не заглушкой) — `PaymentProvider.
  * refund()`/`EscrowLedgerRepository` (`entryType='partially_refunded'`/`'adjustment'`)
  * физически существуют в `payments` (EP-10, закрыт) и переиспользуются `PartiallyRefundOrder
  * UseCase` (`modules/payments/application/use-cases/`, тот же модуль, что `RefundOrderUseCase`).

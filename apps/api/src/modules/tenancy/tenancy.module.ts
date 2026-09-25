@@ -5,11 +5,17 @@
 import { Module } from '@nestjs/common'
 import { APP_GUARD } from '@nestjs/core'
 import { DatabaseModule } from '@/infrastructure/database/database.module.js'
+// AuthModule — DTJ-033: TenantMetaController использует `AuthGuard`/`RolesGuard`
+// (экспортированы auth.module.ts), НЕ `@Global()` — тот же приём, что `imports: [AuthModule]`
+// в inventory.module.ts/orders.module.ts. AuthModule не импортирует tenancy — цикла нет.
+import { AuthModule } from '@/modules/auth/auth.module.js'
 import { DrizzleTenantRepository } from './infrastructure/repositories/tenant.repository.js'
 import { DrizzleTenantSettingsRepository } from './infrastructure/repositories/tenant-settings.repository.js'
 import { RedisTenantCacheAdapter } from './infrastructure/adapters/tenant-cache.adapter.js'
 import { TenantCacheInvalidationHandler } from './infrastructure/events/tenant-cache-invalidation.handler.js'
 import { TenantResolutionMiddleware } from './presentation/middleware/tenant-resolution.middleware.js'
+import { TenantMetaController } from './presentation/tenant-meta.controller.js'
+import { GetTenantMetaUseCase } from './application/use-cases/get-tenant-meta.use-case.js'
 import { TenantScopeGuard } from '@/common/guards/tenant-scope.guard.js'
 import {
   TENANT_REPOSITORY,
@@ -22,7 +28,8 @@ import {
 import { TENANT_CACHE, type TenantCachePort } from './application/ports/tenant-cache.port.js'
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, AuthModule],
+  controllers: [TenantMetaController],
   providers: [
     { provide: TENANT_REPOSITORY, useClass: DrizzleTenantRepository },
     { provide: TENANT_SETTINGS_REPOSITORY, useClass: DrizzleTenantSettingsRepository },
@@ -32,6 +39,7 @@ import { TENANT_CACHE, type TenantCachePort } from './application/ports/tenant-c
     RedisTenantCacheAdapter,
     TenantCacheInvalidationHandler,
     TenantResolutionMiddleware,
+    GetTenantMetaUseCase,
     // Глобальный guard: проверяет, что `TenantResolutionMiddleware` оставил
     // резолвленный тенант в `TenantContext` (DTJ-055). `APP_GUARD` — единственный
     // поддерживаемый NestJS способ зарегистрировать guard на ВСЕ маршруты разом

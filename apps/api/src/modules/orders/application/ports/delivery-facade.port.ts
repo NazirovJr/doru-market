@@ -19,7 +19,16 @@ import type { GeoPoint } from '@/shared-kernel/index.js'
 /** DI-токен для провайдера `DeliveryFacadePort`. */
 export const DELIVERY_FACADE_PORT = Symbol.for('@dorutj/orders/delivery-facade')
 
+// tenantId/itemsTotalDiram — DTJ-322 (см. отчёт сдачи): без них формула тарифа невозможна;
+// не breaking в рантайме — resolveDeliveryFee сегодня не вызывает порт с реальными геоточками.
+export interface CalculateDeliveryFeeQuery {
+  readonly pharmacyGeoPoint: GeoPoint
+  readonly deliveryGeoPoint: GeoPoint
+  readonly tenantId: string
+  readonly itemsTotalDiram: bigint
+}
+
 export interface DeliveryFacadePort {
   /** Стоимость доставки в целых дирамах (никогда float, правило 6 AGENTS.md). */
-  calculateFee(pharmacyGeoPoint: GeoPoint, deliveryGeoPoint: GeoPoint): Promise<bigint>
+  calculateFee(query: CalculateDeliveryFeeQuery): Promise<bigint>
 }

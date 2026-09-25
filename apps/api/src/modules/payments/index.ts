@@ -37,6 +37,7 @@ export const PAYMENTS_FACADE = Symbol.for('@dorutj/payments/payments-facade')
  * `holdPayout` — см. её JSDoc про несовпадение имён метода use case'а и метода фасада).
  */
 export type { PaymentsFacade, HoldPayoutResult } from './application/ports/payments-facade.port.js'
+export type { RefundOrderFullCommand, RecordLedgerAdjustmentCommand } from './application/ports/payments-facade.port.js'
 
 /**
  * `PaymentInvoiceAdapter` (DTJ-241) — реализация `orders`-контракта `PaymentInvoicePort`

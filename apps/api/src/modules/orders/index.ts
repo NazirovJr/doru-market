@@ -10,7 +10,7 @@
  * `files_owned`) — здесь только ре-экспорт типа + DI-токен, тот же приём, что
  * `modules/catalog/index.ts` (`CATALOG_FACADE`).
  */
-export type { OrdersFacade } from './application/orders.facade.js'
+export type { OrdersFacade, DeliverySnapshot } from './application/orders.facade.js'
 
 /** DI-токен для провайдера `OrdersFacade` (`{ provide: ORDERS_FACADE, useClass: OrdersFacade }`, DTJ-222). */
 export const ORDERS_FACADE = Symbol.for('@dorutj/orders/orders-facade')

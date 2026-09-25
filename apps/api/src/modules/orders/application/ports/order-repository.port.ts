@@ -81,6 +81,9 @@ export interface OrderQueueRow {
 export interface OrderRepositoryPort {
   findById(tenantId: string, orderId: string, tx?: OrderUnitOfWorkTx): Promise<Order | null>
   findByCheckoutAttemptId(tenantId: string, checkoutAttemptId: string, tx?: OrderUnitOfWorkTx): Promise<Order | null>
+
+  // Тенант-независимый поиск для OrdersFacade.getDeliverySnapshot — вызывающий ещё не знает tenantId.
+  findByIdAcrossTenants(orderId: string, tx?: OrderUnitOfWorkTx): Promise<Order | null>
   /** Upsert по `id` (правило 6 волны 5 — `saveMany`/`save` обязаны быть upsert, не голый `UPDATE`). */
   save(order: Order, tx?: OrderUnitOfWorkTx): Promise<void>
 

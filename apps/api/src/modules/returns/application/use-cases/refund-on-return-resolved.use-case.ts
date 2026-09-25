@@ -9,9 +9,8 @@
  * SRS-RET-009 — НЕ пересчитывается по текущему `tenant_settings.useSplitBilling`).
  *
  * Деньги ходят ТОЛЬКО через `ReturnsPaymentsPort` (DTJ-270) — прямой импорт `modules/payments/**`
- * отсюда запрещён (`dependency-cruiser`). Реальной реализации порта нет на момент этого тикета
- * (см. JSDoc `UnimplementedReturnsPaymentsAdapter`) — use case реализован и протестирован против
- * интерфейса порта, это НЕ блокирует написание кода (явно оговорено «Рисками» тикета).
+ * отсюда запрещён (`dependency-cruiser`). Реализация порта — `PaymentsFacadeAdapter`
+ * (`infrastructure/adapters/payments-facade.adapter.ts`).
  */
 import { Inject, Injectable } from '@nestjs/common'
 import type { Logger } from 'pino'

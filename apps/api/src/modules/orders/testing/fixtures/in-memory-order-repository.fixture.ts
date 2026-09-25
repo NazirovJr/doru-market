@@ -56,6 +56,10 @@ export class InMemoryOrderRepository implements OrderRepositoryPort {
     return Promise.resolve(found ?? null)
   }
 
+  findByIdAcrossTenants(orderId: string): Promise<Order | null> {
+    return Promise.resolve(this.orders.get(orderId) ?? null)
+  }
+
   save(order: Order): Promise<void> {
     this.orders.set(order.id, order) // upsert (правило 6 волны 5 — не голый UPDATE)
     return Promise.resolve()

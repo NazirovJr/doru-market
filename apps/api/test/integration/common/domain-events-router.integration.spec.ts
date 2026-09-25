@@ -109,12 +109,27 @@ describe.skipIf(!postgresAvailable || !redisAvailable)('DomainEventsRouter — i
     const { DatabaseModule } = await import('@/infrastructure/database/database.module.js')
     const { RedisModule } = await import('@/infrastructure/redis/redis.module.js')
     const { IdempotencyModule } = await import('@/common/idempotency/idempotency.module.js')
+    const { AuditLogModule } = await import('@/common/audit/audit-log.module.js')
     const { DomainEventsModule } = await import('@/common/events/domain-events.module.js')
     const { DomainEventHandlerRegistry } = await import('@/common/events/domain-event-handler.js')
+    const { OrdersModule } = await import('@/modules/orders/orders.module.js')
     const { ReturnsModule } = await import('@/modules/returns/returns.module.js')
 
+    // OrdersModule (@Global()) экспортирует ORDERS_FACADE и сам импортирует PaymentsModule — после
+    // волны 5 ReturnsModule → PaymentsModule → OrdersFacadeAdapter требует ORDERS_FACADE в графе.
     moduleRef = await Test.createTestingModule({
-      imports: [AppConfigModule, LoggerModule, SharedKernelModule, DatabaseModule, RedisModule, IdempotencyModule, DomainEventsModule, ReturnsModule],
+      imports: [
+        AppConfigModule,
+        LoggerModule,
+        SharedKernelModule,
+        DatabaseModule,
+        RedisModule,
+        IdempotencyModule,
+        AuditLogModule,
+        DomainEventsModule,
+        OrdersModule,
+        ReturnsModule,
+      ],
     }).compile()
     await moduleRef.init()
 
