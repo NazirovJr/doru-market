@@ -1,6 +1,7 @@
-// GET /api/v1/analytics/funnel (DTJ-381) — контракт держится локально, files_owned тикета не включает packages/contracts.
+// GET /api/v1/analytics/funnel (DTJ-381) — форма запроса/ответа теперь единый источник `@dorutj/contracts` (правка CTO по ревью).
 import { useMemo, useState } from 'react'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
+import type { FunnelConversionRatesDto, FunnelResponseDto, FunnelWeeklyTrendPointDto } from '@dorutj/contracts'
 import { httpGetJson, type HttpError } from '@/shared/api/http-client'
 
 const FUNNEL_PATH = '/api/v1/analytics/funnel'
@@ -11,29 +12,8 @@ const PAD_LENGTH = 2
 
 export type FunnelPeriodMode = 'week' | 'month'
 
-export interface FunnelConversionRates {
-  readonly shownToClicked: number
-  readonly clickedToCart: number
-  readonly cartToOrder: number
-  readonly overallShownToOrder: number
-}
-
-export interface FunnelWeeklyTrendPoint {
-  readonly weekLabel: string
-  readonly realizedSavingsDiram: number
-}
-
-export interface FunnelData {
-  readonly searchPerformed: number
-  readonly analogShown: number
-  readonly analogClicked: number
-  readonly addedToCart: number
-  readonly orderPlaced: number
-  readonly conversionRates: FunnelConversionRates
-  readonly totalSavingsShownDiram: number
-  readonly totalSavingsRealizedDiram: number
-  readonly weeklyTrend: readonly FunnelWeeklyTrendPoint[]
-}
+export type FunnelData = FunnelResponseDto
+export type { FunnelConversionRatesDto as FunnelConversionRates, FunnelWeeklyTrendPointDto as FunnelWeeklyTrendPoint }
 
 function pad(value: number): string {
   return String(value).padStart(PAD_LENGTH, '0')

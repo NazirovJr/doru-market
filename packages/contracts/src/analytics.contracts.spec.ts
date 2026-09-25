@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ProductEventInputSchema, ProductEventsBatchSchema } from './analytics.js'
+import { FunnelQuerySchema, ProductEventInputSchema, ProductEventsBatchSchema } from './analytics.js'
 
 const VALID_MEDICINE_ID = '11111111-1111-4111-8111-111111111111'
 
@@ -83,5 +83,25 @@ describe('ProductEventsBatchSchema', () => {
   it('один элемент батча с невалидной формой (нет sessionId) — вся Zod-валидация батча падает (частичный успех — забота use case, не контракта)', () => {
     const events = [validEvent(), { eventType: 'analog_shown' }]
     expect(ProductEventsBatchSchema.safeParse(events).success).toBe(false)
+  })
+})
+
+describe('FunnelQuerySchema (DTJ-381)', () => {
+  const VALID_TENANT_ID = '11111111-1111-4111-8111-111111111111'
+
+  it('period в формате YYYY-MM принимается', () => {
+    expect(FunnelQuerySchema.safeParse({ tenantId: VALID_TENANT_ID, period: '2026-08' }).success).toBe(true)
+  })
+
+  it('period в формате YYYY-Www (ISO-неделя) принимается', () => {
+    expect(FunnelQuerySchema.safeParse({ tenantId: VALID_TENANT_ID, period: '2026-W35' }).success).toBe(true)
+  })
+
+  it('period произвольного формата — отклоняется (точный диапазон месяца/недели проверяет apps/api)', () => {
+    expect(FunnelQuerySchema.safeParse({ tenantId: VALID_TENANT_ID, period: 'август-2026' }).success).toBe(false)
+  })
+
+  it('tenantId не-UUID — отклоняется', () => {
+    expect(FunnelQuerySchema.safeParse({ tenantId: 'not-a-uuid', period: '2026-08' }).success).toBe(false)
   })
 })

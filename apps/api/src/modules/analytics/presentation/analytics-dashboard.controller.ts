@@ -1,38 +1,9 @@
 // DTJ-381 — воронка платформы (SRS-ADM-069), доступ только super_admin: не разрезается по сети/тенанту роли.
 import { Controller, Get, Inject, Query, UseGuards } from '@nestjs/common'
-import { z } from 'zod'
-import { ok, type SuccessEnvelope } from '@dorutj/contracts'
+import { FunnelQuerySchema, ok, type FunnelQueryDto, type FunnelResponseDto, type SuccessEnvelope } from '@dorutj/contracts'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
 import { AuthGuard, Roles, RolesGuard } from '@/modules/auth/index.js'
 import { GetFunnelUseCase, type GetFunnelResult } from '../application/use-cases/get-funnel.use-case.js'
-
-const FunnelQuerySchema = z.object({
-  tenantId: z.uuid(),
-  period: z.string().min(1),
-})
-type FunnelQueryDto = z.infer<typeof FunnelQuerySchema>
-
-export interface FunnelWeeklyTrendPointDto {
-  readonly weekLabel: string
-  readonly realizedSavingsDiram: number
-}
-
-export interface FunnelResponseDto {
-  readonly searchPerformed: number
-  readonly analogShown: number
-  readonly analogClicked: number
-  readonly addedToCart: number
-  readonly orderPlaced: number
-  readonly conversionRates: {
-    readonly shownToClicked: number
-    readonly clickedToCart: number
-    readonly cartToOrder: number
-    readonly overallShownToOrder: number
-  }
-  readonly totalSavingsShownDiram: number
-  readonly totalSavingsRealizedDiram: number
-  readonly weeklyTrend: readonly FunnelWeeklyTrendPointDto[]
-}
 
 @Controller({ version: '1' })
 @UseGuards(AuthGuard, RolesGuard)
