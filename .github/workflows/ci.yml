@@ -1,0 +1,472 @@
+# DoruTJ — CI-пайплайн (DTJ-414, SRS-NFR-029/057/058/059/061/066).
+# BARREL-файл (D-27, tickets/00-EPICS.md §«Порядок владения файлами») — правится ТОЛЬКО
+# добавлением строк/job'ов, перечитать перед правкой, слияние конфликтов — за архитектором
+# EP-19. Создан этим тикетом (первое касание файла), поэтому начальное наполнение — не
+# «добавление строки» к существующему файлу.
+#
+# СЕМЬ JOB'ОВ (тикет «Технический контекст»):
+#   typecheck-lint-arch → { unit-tests, integration-tests, security-audit } → build → e2e →
+#   release-tag-only (только по тегу vX.Y.Z, требует зелёных e2e+security-audit).
+#
+# ВАЖНО — контракт vs факт (см. тикет, «Риски и подводные камни»): пайплайн вызывает ТОЛЬКО
+# команды, реально существующие в package.json репозитория на момент написания (проверено
+# `grep` по всем package.json перед реализацией). Тикет DTJ-414 в исходной формулировке называет
+# несколько скриптов, которых в репозитории НЕТ (`test:unit`, `test:contracts`, `test:security`,
+# `generate:openapi`, пакет `wait-on`) — АГЕНТ, ВЫПОЛНЯВШИЙ ЭТОТ ТИКЕТ, СОЗНАТЕЛЬНО НЕ СТАЛ ИХ
+# ВЫДУМЫВАТЬ (AGENTS.md §11: «не можешь запустить проверку — это блокер, а не разрешение
+# работать вслепую», §7: «не изобретай несуществующие API») и заменил их на реально
+# существующие эквиваленты:
+#   - `test:unit` (матрица по приложению)  → `pnpm turbo run test --filter=<app>` — это и есть
+#     unit-скрипт каждого apps/* пакета (`"test": "vitest run"`), coverage уже включён внутри
+#     каждого vitest.config.ts (`coverage.enabled: true`), отдельный флаг не нужен.
+#   - `test:contracts`                     → НЕ вызывается — такого скрипта нет нигде в
+#     репозитории и не отвечает ни одному существующему пакету; TODO(DTJ-416/будущий тикет
+#     EP-19) — завести, когда появится реальный контрактный тест-сьют.
+#   - `test:security`                      → НЕ вызывается — сьют ещё не существует (DTJ-425,
+#     волна 3 EP-19, ещё не сделан на момент этого тикета). `security-audit` job ниже вызывает
+#     ТОЛЬКО реально существующую `pnpm audit --audit-level=high`; шаг для `pnpm test:security`
+#     оставлен закомментированным с явной ссылкой на тикет (AGENTS.md §15) — раскомментировать
+#     в DTJ-425, не раньше.
+#   - `pnpm generate:openapi`              → реальное имя скрипта в apps/api —
+#     `openapi:generate`. Более того, `openapi:check` (тоже реальный скрипт, apps/api) уже
+#     САМ генерирует спеку во временный файл и сравнивает с закоммиченной (см. его исходник,
+#     `apps/api/src/common/openapi/openapi.scripts.ts`) — job `integration-tests` вызывает его
+#     напрямую, отдельный `git diff --exit-code` не нужен, `openapi:check` уже возвращает
+#     ненулевой код при расхождении.
+#   - `pnpm wait-on ...`                   → пакет `wait-on` НЕ установлен нигде в репозитории
+#     (ставить зависимость внутри тикета реализации запрещено, AGENTS.md §10) — заменено на
+#     обычный bash-опрос `curl` в цикле с тем же таймаутом (60s), без новой зависимости.
+#
+# integration-tests использует НАТИВНЫЕ GitHub Actions `services:` (Postgres/Redis) — ДРУГОЙ
+# механизм подъёма БД, чем `docker-compose.test.yml` (DTJ-413), который используется ТОЛЬКО
+# стадией `e2e` (см. риск DTJ-413, не спутать два механизма).
+#
+# ГОТОВНОСТЬ ЗАВИСИМЫХ КОМАНД (тикет «Риски», ожидаемо для волны 1 EP-19, не дефект этого
+# файла): `pnpm db:seed`, `pnpm --filter @dorutj/api openapi:check` и полный `docker compose up`
+# зависят от кода EP-01/EP-04 и далее — сквозная зелёность всех job'ов наступит по мере
+# готовности зависимых эпиков.
+
+name: CI
+
+on:
+  push:
+    branches: [main, development]
+    tags: ['v*.*.*']
+  pull_request:
+    branches: [main, development]
+
+env:
+  NODE_VERSION: '22.12'
+
+jobs:
+  # ---------------------------------------------------------------------------------------------
+  # Job 1 — быстрый статический гейт (без БД). typecheck/lint/arch:check — реальные root-скрипты
+  # package.json (НЕ единая `turbo run typecheck lint arch:check` — `lint`/`arch:check` не
+  # зарегистрированы как turbo-таски в turbo.json, только `typecheck`/`test`/`build`; вызывать
+  # несуществующую turbo-задачу значило бы выдумывать, AGENTS.md §11 — вызываем то, что реально
+  # запускается). `test:arch` (тоже часть `pnpm verify`, тоже без БД — vitest над tests/arch/**)
+  # добавлен в этот же job: он ловит именно те архитектурные нарушения/фикстуры-нарушители,
+  # которые логически принадлежат этому «быстрому статическому» этапу, не unit/integration.
+  #
+  # lint/arch:check требуют СОБРАННЫХ packages/* (импорты `@dorutj/contracts` и т.п. резолвятся
+  # только после `tsc`/`vite build` — проверено живым прогоном при реализации этого тикета:
+  # `pnpm lint`/`pnpm arch:check` без предварительной сборки падают на неразрешённых импортах
+  # рабочих пакетов) — отдельный шаг `turbo run build --filter='./packages/*'` ПЕРЕД ними.
+  # ---------------------------------------------------------------------------------------------
+  typecheck-lint-arch:
+    name: typecheck / lint / arch:check / test:arch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ github.sha }}
+          restore-keys: turbo-
+
+      # lint/arch:check резолвят @dorutj/* пакеты только после сборки — см. шапку job'а.
+      - run: pnpm exec turbo run build --filter='./packages/*' --cache-dir=.turbo
+
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm arch:check
+      - run: pnpm test:arch
+
+  # ---------------------------------------------------------------------------------------------
+  # Job 2 — unit-тесты, матрица по приложению (параллельные прогоны). `test` — реальный скрипт
+  # КАЖДОГО apps/* package.json, coverage уже включён внутри vitest.config.ts каждого пакета
+  # (`coverage.enabled: true`) — отдельный `--coverage` флаг не нужен (нет и в реальном скрипте).
+  # ---------------------------------------------------------------------------------------------
+  unit-tests:
+    name: unit-tests (${{ matrix.app }})
+    needs: typecheck-lint-arch
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [api, worker, web, admin]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ github.sha }}
+          restore-keys: turbo-
+
+      # apps/* импортируют packages/* — те же сборочные пакеты, что и job 1.
+      - run: pnpm exec turbo run build --filter='./packages/*' --cache-dir=.turbo
+
+      - run: pnpm exec turbo run test --filter=@dorutj/${{ matrix.app }} --cache-dir=.turbo
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-${{ matrix.app }}
+          path: apps/${{ matrix.app }}/coverage
+          if-no-files-found: ignore
+
+  # ---------------------------------------------------------------------------------------------
+  # Job 3 — интеграционные тесты + инварианты + сверка openapi. Postgres/Redis — нативные
+  # GitHub Actions `services:`, ИЗОЛИРОВАННЫЕ на джобу (TC-NFR-066: два параллельных PR получают
+  # каждый СВОЙ контейнер сервиса — гарантия платформы GitHub Actions, не требует доп. настройки
+  # с нашей стороны). `POSTGRES_USER: dorutj_migrator` — та же бутстрап-суперпользовательская
+  # роль, что использует `docker-compose.yml` (DTJ-412): применению миграции `0031_app_role_
+  # privileges.sql` нужны CREATEROLE/ALTER DEFAULT PRIVILEGES, которых нет у прикладной роли
+  # `test` (см. postgres-init/01-test-database.sql — она NOSUPERUSER NOCREATEROLE) — миграции
+  # ОБЯЗАНЫ идти под `dorutj_migrator`, прикладные интеграционные/инвариантные тесты — под `test`
+  # (та же роль, что жёстко зашита дефолтом в apps/api/vitest.integration.config.ts и
+  # tests/invariants/vitest.config.ts — `postgres://test:test@localhost:5432/dorutj_test`).
+  # ---------------------------------------------------------------------------------------------
+  integration-tests:
+    name: integration-tests
+    needs: typecheck-lint-arch
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: dorutj_migrator
+          # `dorutj_dev_only_password` — та же committed non-prod пара, что уже используется
+          # секретом infra/docker/secrets/db_password.txt (Ж13) — НЕ произвольный новый CI-пароль:
+          # несколько apps/api integration-спеков (`audit-log.controller.integration.spec.ts` и
+          # др., см. grep по репозиторию перед реализацией, AGENTS.md §12) хардкодят ИМЕННО это
+          # значение как fallback-дефолт для отдельного `migratorPool` (append-only audit_log
+          # чистится/двигается только под dorutj_migrator) — другой пароль здесь ломает эти
+          # тесты с `password authentication failed`, что и было живым прогоном обнаружено при
+          # реализации этого тикета до того, как значение унифицировали.
+          POSTGRES_PASSWORD: dorutj_dev_only_password
+          POSTGRES_DB: dorutj
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U dorutj_migrator -d dorutj"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ github.sha }}
+          restore-keys: turbo-
+
+      - run: pnpm exec turbo run build --filter='./packages/*' --filter=@dorutj/api... --cache-dir=.turbo
+
+      # `docker-entrypoint-initdb.d` НЕ применяется к нативным GH Actions `services:` (сервис
+      # стартует ДО checkout'а этого шага) — воспроизводим тот же идемпотентный
+      # postgres-init/01-test-database.sql (DTJ-412) вручную поверх уже поднятого сервиса.
+      - name: Bootstrap test role/database (postgres-init/01-test-database.sql)
+        env:
+          PGPASSWORD: dorutj_dev_only_password
+        run: psql -h localhost -U dorutj_migrator -d dorutj -f infra/docker/postgres-init/01-test-database.sql
+
+      # Миграции — ролью dorutj_migrator (DDL-права), НАПРЯМУЮ в dorutj_test (см. шапку job'а).
+      - name: Apply migrations to dorutj_test
+        env:
+          DATABASE_URL: postgres://dorutj_migrator:dorutj_dev_only_password@localhost:5432/dorutj_test
+        run: pnpm db:migrate
+
+      - name: apps/api — test:integration
+        env:
+          DATABASE_URL: postgres://test:test@localhost:5432/dorutj_test
+          REDIS_URL: redis://localhost:6379
+        run: pnpm --filter @dorutj/api test:integration
+
+      - name: tests/invariants — сквозные гейт-тесты доменных инвариантов
+        env:
+          DATABASE_URL: postgres://test:test@localhost:5432/dorutj_test
+          REDIS_URL: redis://localhost:6379
+        run: pnpm test:invariants
+
+      # Сверяет закоммиченный docs/api/openapi.json со сгенерированным заново — ненулевой код
+      # при расхождении (см. её исходник, комментарий в шапке файла).
+      - run: pnpm --filter @dorutj/api openapi:check
+
+  # ---------------------------------------------------------------------------------------------
+  # Job 4 — security-audit. `pnpm audit --audit-level=high` — реальная встроенная команда pnpm.
+  # `pnpm test:security` НЕ вызывается — сьюта ещё нет в репозитории (DTJ-425, следующая волна
+  # EP-19). TODO(DTJ-425): раскомментировать шаг ниже, когда сьют появится — до тех пор он не
+  # часть этого гейта, чтобы не выдумывать несуществующую команду (AGENTS.md §11).
+  # ---------------------------------------------------------------------------------------------
+  security-audit:
+    name: security-audit
+    needs: typecheck-lint-arch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm audit --audit-level=high
+
+      # TODO(DTJ-425): раскомментировать, когда security test suite (SQLi/XSS/SSRF/CSRF/DoS/
+      # rate-limit) реализован и скрипт `test:security` реально существует в package.json.
+      # - run: pnpm test:security
+
+  # ---------------------------------------------------------------------------------------------
+  # Job 5 — сборка Docker-образов (проверка, что Dockerfile'ы из DTJ-412 реально собираются),
+  # `push: false`. Матрица по приложению; api/worker используют Dockerfile.api (разные target),
+  # web/admin — Dockerfile.web (ARG APP).
+  # ---------------------------------------------------------------------------------------------
+  build:
+    name: build (${{ matrix.app }})
+    needs: [unit-tests, integration-tests]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: api
+            dockerfile: infra/docker/Dockerfile.api
+            target: runtime
+          - app: worker
+            dockerfile: infra/docker/Dockerfile.api
+            target: runtime-worker
+          - app: web
+            dockerfile: infra/docker/Dockerfile.web
+            target: runtime
+            build_arg_app: web
+          - app: admin
+            dockerfile: infra/docker/Dockerfile.web
+            target: runtime
+            build_arg_app: admin
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          push: false
+          build-args: |
+            ${{ matrix.build_arg_app && format('APP={0}', matrix.build_arg_app) || '' }}
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+  # ---------------------------------------------------------------------------------------------
+  # Job 6 — e2e. Полный стек: docker-compose.yml (DTJ-412) + docker-compose.test.yml (DTJ-413).
+  # `--build` пересобирает образы В ЭТОЙ джобе — образы job'а `build` (push:false) физически не
+  # доступны в другом job'е/раннере без публикации в registry (GitHub Actions job'ы — отдельные
+  # эфемерные машины); `needs: build` здесь про ПОРЯДОК гейта (Dockerfile'ы уже подтверждены
+  # собираемыми), не про переиспользование конкретных слоёв — Docker layer cache (`cache-from:
+  # type=gha` в job'е build) частично ускоряет и этот пересбор через тот же GHA cache backend.
+  #
+  # JWT_PRIVATE_KEY/JWT_PUBLIC_KEY — БЕЗ дефолта в docker-compose.yml (SRS-NFR-053, fail-fast) —
+  # api не поднимется без них. Пара ниже — ТА ЖЕ committed non-prod тестовая RSA-пара, что уже
+  # используется tests/invariants/vitest.config.ts (Ж13, заведомо непроизводственная, коммитить
+  # можно). TODO(DTJ-417): централизовать эту пару в одном месте (packages/testing-kit или
+  # tests/e2e/helpers), когда каркас E2E заводит свои fixtures — дублирование inline-константы
+  # в третьем месте (после apps/api/test/.../test-app.ts и tests/invariants/vitest.config.ts) не
+  # идеально, но не блокирует этот тикет.
+  # ---------------------------------------------------------------------------------------------
+  e2e:
+    name: e2e
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      JWT_PRIVATE_KEY: |
+        -----BEGIN PRIVATE KEY-----
+        MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDEARjrYl91iNxF
+        3YVeQZ430Q7TeFxZ7HN7jqKIEXKvNyU/oTk3Dkd/m1l13uGqpmrtLK/XqH0Gg2mT
+        brJRBLbaTYv1UKbTUBukaRbGhsz8tWA9T1PL5uqeiPoYQs+HAM6lA1cOciITae85
+        SH39PbW8r9JneN5yWIfU61QprHmqhmlkespOmYIefhs1Vz8Ml00ykOo7edOMc6JQ
+        ztZbmdFPtQiO26rYggeoe+U6C0+xv0M/nHOrwrhs5vr1mr4vkjunTZC29TU03pjJ
+        HEzHG+UVvs2yrmmFfO3Y+1iyuWum6ObiIhn1xUdYf4iTZ21kulVlTdjb2lkQp0Ri
+        2CihgFW3AgMBAAECggEABTt4RFRYcwVHyA+tT0JWLGxGxotof7gJrys0GIjKtHW2
+        51dw9RDLBNOLVFOyV4FgylsOiKXFTKa2a0qhtPr4vKQkT9Sq12pEiqOJiZwwnbBj
+        1M8o0AEmkzvZ3UrvSk3RtmL78HVIhpcl3TQbtOZwUwyog72cxpWpbpwnn4Msrkoj
+        RqBx6NyhQq9UIpk4iP1fVbSNQO0rwLCSbVX4SG1te6sXKlQm2VEVBMuwo4LPG/w8
+        +cFKJjUDvYiC/MShGAQfWlhGCqVlhXB+4JX3ioI7wvm3lK/antJ5eGhV5lQO9NyY
+        619qCj95IxSgrxAR/P240wdyGKVwqwJAh0dQShEPoQKBgQDzpnco0s883mRiqr+1
+        FMaRUH80ohFeT5AWXPH76ORUPzANrfwbXrLQYWEa1n8HM1p9l6gY/Qyp2yufiZnr
+        1a90F5847gHoQ78aHQO+WHlDfqK8iGmgcQPH6AYJRr0M4KxKQyyjz0GGV/vKZpk5
+        WfguQSOEZs82GvSX01/cxLtrVwKBgQDN8GRGWYsveYVe/+T/80rxbXZ2PhxXaEz1
+        ZSKiWLR6MnTohrBqwJGi2KuEomc+pY7+SSsq+ux/mat6QY0YyVsUdg4hgls95Ob3
+        TrBHikBCcmJxPkB/O2HpmTCsm8ST5ycPfg86WhfarLQQv8EZeX9horL7QdLT4JC4
+        e0zBA9xMoQKBgQDF9nrasG2xBwCJKjKY7khnyP+RxBxYhEyN3va9tnvN94kTlElB
+        869Vn8lGBQEw2IitgosRwoiHeYv4E9T7yKLFsGut1bO3A1RB41EnVrswG7QderhX
+        o3tu8RX2c4Mm82UI8YtTjRGwFcx+pt3Xu0HqUwKIkP/K9hvFP/ijZzTgAQKBgQCV
+        Vt8QmPyzB7es5XqGFULigtOl+XKJ/CvaxGVyP0tZVd+rg4jJUS4LXn46555hMqPY
+        SO0R9PatrZ1JQeH0+Ieg9d9Xc3WBE85dxuVUa7Afv10d69vPqBtfz+QZN7g83SJZ
+        PLwEP7MOs7C8eKGqPI4gGmEajWg6l526+kb1rTwDIQKBgB+V4z8skw4IXnQ934n/
+        nblbPu+2y9Y74eCULe+i8RXE9zcG1KOsSs4e7jDm3HKhXlljVT2xZT8YHWxhBP3j
+        0O//tkV0DVL8VgrLtqnkkOl5sGUwxYTI7fQwh6pC+JMJdm+NoGB3Enue6WPKS/QQ
+        nyAA7xR2Sj44+PgsgK3GEq8r
+        -----END PRIVATE KEY-----
+      JWT_PUBLIC_KEY: |
+        -----BEGIN PUBLIC KEY-----
+        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxAEY62JfdYjcRd2FXkGe
+        N9EO03hcWexze46iiBFyrzclP6E5Nw5Hf5tZdd7hqqZq7Syv16h9BoNpk26yUQS2
+        2k2L9VCm01AbpGkWxobM/LVgPU9Ty+bqnoj6GELPhwDOpQNXDnIiE2nvOUh9/T21
+        vK/SZ3jecliH1OtUKax5qoZpZHrKTpmCHn4bNVc/DJdNMpDqO3nTjHOiUM7WW5nR
+        T7UIjtuq2IIHqHvlOgtPsb9DP5xzq8K4bOb69Zq+L5I7p02QtvU1NN6YyRxMxxvl
+        Fb7Nsq5phXzt2PtYsrlrpujm4iIZ9cVHWH+Ik2dtZLpVZU3Y29pZEKdEYtgooYBV
+        twIDAQAB
+        -----END PUBLIC KEY-----
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: docker compose up -d --build (base + test overlay)
+        run: >-
+          docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.test.yml
+          up -d --build
+
+      # Замена невыдуманного `pnpm wait-on ...` (пакет не установлен, AGENTS.md §10) —
+      # обычный опрос curl'ом, тот же таймаут (60s), что просил тикет.
+      - name: Wait for api readiness (http://localhost:3000/ready)
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/ready >/dev/null; then
+              echo "api ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "api did not become ready within 60s" >&2
+          docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.test.yml logs api
+          exit 1
+
+      - name: pnpm db:seed
+        env:
+          DATABASE_URL: postgres://app_role:dorutj_dev_app_role_password@localhost:5432/dorutj
+        run: pnpm db:seed
+
+      - run: pnpm test:e2e
+
+      - name: docker compose down -v
+        if: always()
+        run: >-
+          docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.test.yml
+          down -v
+
+  # ---------------------------------------------------------------------------------------------
+  # Job 7 — релиз, ТОЛЬКО по тегу vX.Y.Z, требует зелёных e2e+security-audit. Публикация образов
+  # (push:true) требует секретов registry (DOCKER_REGISTRY/DOCKER_REGISTRY_USERNAME/
+  # DOCKER_REGISTRY_TOKEN) — ОПЕРАЦИОННЫЙ шаг настройки вне этого YAML (тикет «Риски», владелец
+  # репозитория настраивает GitHub Environments protection rule + секреты отдельно; без них этот
+  # job ожидаемо красный на первом реальном прогоне — не дефект самого пайплайна).
+  # ---------------------------------------------------------------------------------------------
+  release-tag-only:
+    name: release-tag-only
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [e2e, security-audit]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ github.sha }}
+          restore-keys: turbo-
+
+      - run: pnpm exec turbo run build --filter='./packages/*' --filter=@dorutj/api... --cache-dir=.turbo
+
+      # Реально существующий скрипт (apps/api) — генерирует во временный файл и падает при
+      # расхождении с закоммиченным docs/api/openapi.json (см. шапку файла, объяснение выбора
+      # openapi:check вместо выдуманного `generate:openapi && git diff`).
+      - run: pnpm --filter @dorutj/api openapi:check
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Docker registry login
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.DOCKER_REGISTRY }}
+          username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+          password: ${{ secrets.DOCKER_REGISTRY_TOKEN }}
+
+      - name: Build & push release images
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile.api
+          target: runtime
+          push: true
+          tags: ${{ secrets.DOCKER_REGISTRY }}/dorutj-api:${{ github.ref_name }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
