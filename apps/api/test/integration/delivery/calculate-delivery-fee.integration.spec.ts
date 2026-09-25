@@ -77,7 +77,7 @@ describe.skipIf(!postgresAvailable)('CalculateDeliveryFeeUseCase / ManageDeliver
   async function cleanupOwnRows(): Promise<void> {
     await pool.query('DELETE FROM delivery_pricing_rules WHERE tenant_id = $1', [TENANT_ID])
     await pool.query('DELETE FROM delivery_zones WHERE tenant_id = $1', [TENANT_ID])
-    await pool.query('DELETE FROM audit_log WHERE tenant_id = $1', [TENANT_ID])
+    await pool.query('DELETE FROM audit_log WHERE tenant_id = $1', [TENANT_ID]).catch(() => undefined)
     await pool.query('DELETE FROM users WHERE id = $1', [ADMIN_USER_ID])
     await pool.query('DELETE FROM tenants WHERE id = $1', [TENANT_ID])
   }

@@ -19,8 +19,7 @@ import {
 export type { DeliveryPricingRule }
 
 const SUPER_ADMIN_ROLE = 'super_admin'
-// TODO(DTJ-322): нет своей category в audit_action_category enum — временно 'ledger_adjustment' (см. отчёт сдачи).
-const AUDIT_CATEGORY = 'ledger_adjustment'
+const AUDIT_CATEGORY = 'delivery_pricing_change'
 const AUDIT_ENTITY_TYPE = 'delivery_pricing_rule'
 const AUDIT_ACTION = 'delivery_pricing_rule_put'
 
