@@ -37,7 +37,7 @@ import {
 import { Reflector } from '@nestjs/core'
 import { createHash } from 'node:crypto'
 import { type FastifyRequest, type FastifyReply } from 'fastify'
-import { map, of, Observable, switchMap, tap, type Subscriber } from 'rxjs'
+import { catchError, concatMap, from, map, of, Observable, switchMap, throwError, type Subscriber } from 'rxjs'
 import { ErrorCode, type ErrorEnvelope, type SuccessEnvelope, ValidationError } from '@dorutj/contracts'
 import { RequestContext } from '@/common/context/request-context.js'
 import { IDEMPOTENT_METADATA_KEY } from '@/common/http/decorators/idempotent.decorator.js'
@@ -153,13 +153,12 @@ export class IdempotencyInterceptor implements NestInterceptor {
     next
       .handle()
       .pipe(
-        // tap({ next, error }) — с одной функцией tap реагирует ТОЛЬКО на next
-        // (сюда и попадал прежний дефект: ошибка обработчика навсегда оставляла
-        // запись в status=processing). Ветка error освобождает запись и НЕ
-        // трогает саму ошибку — она уходит дальше по цепочке как есть.
-        tap({
-          next: (value) => { this.recordCompletion(created.id, reply, value); },
-          error: () => { this.releaseOnError(created.id); },
+        // concatMap (DTJ-309 foundIssue): ждёт markCompleted ДО ответа — старый fire-and-forget
+        // давал гонку, немедленный replay мог словить still_processing вместо кэша (SRS-API-010).
+        concatMap((value: unknown) => from(this.recordCompletion(created.id, reply, value)).pipe(map(() => value))),
+        catchError((err: unknown) => {
+          this.releaseOnError(created.id)
+          return throwError(() => err)
         }),
       )
       .subscribe({
@@ -169,15 +168,14 @@ export class IdempotencyInterceptor implements NestInterceptor {
       })
   }
 
-  private recordCompletion(id: string, reply: FastifyReply, value: unknown): void {
+  private async recordCompletion(id: string, reply: FastifyReply, value: unknown): Promise<void> { // ошибка логируется, не ломает ответ
     const status = readStatusCode(reply) ?? HTTP_STATUS_OK
-    void this.repo
-      .markCompleted(id, status, value as ErrorEnvelope | SuccessEnvelope<unknown>)
-      .catch((err: unknown) => {
-        // markCompleted failure не должен ломать основной ответ.
-        // eslint-disable-next-line no-console -- ops observability
-        console.error('idempotency markCompleted failed', err)
-      })
+    try {
+      await this.repo.markCompleted(id, status, value as ErrorEnvelope | SuccessEnvelope<unknown>)
+    } catch (err: unknown) {
+      // eslint-disable-next-line no-console -- ops observability
+      console.error('idempotency markCompleted failed', err)
+    }
   }
 
   private releaseOnError(id: string): void {
