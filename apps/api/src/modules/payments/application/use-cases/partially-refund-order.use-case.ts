@@ -175,8 +175,8 @@ export class PartiallyRefundOrderUseCase {
 
   /** См. JSDoc `RefundOrderUseCase.resolveHoldProviderRef` (тот же приём, 1:1). */
   private async resolveHoldProviderRef(tenantId: string, orderId: string): Promise<string> {
-    const entries = await this.escrowLedger.findByOrderId(tenantId, orderId)
-    const holdEntry = entries.find((entry) => entry.entryType === HOLD_ENTRY_TYPE)
+    const records = await this.escrowLedger.findByOrderId(tenantId, orderId)
+    const holdEntry = records.find((record) => record.entry.entryType === HOLD_ENTRY_TYPE)?.entry
     if (holdEntry?.paymentTransactionRef == null) {
       throw new Error(
         `PartiallyRefundOrderUseCase: missing '${HOLD_ENTRY_TYPE}' escrow entry with paymentTransactionRef for order ${orderId} — invariant violation.`,

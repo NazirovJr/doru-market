@@ -42,44 +42,6 @@ export const PAYMENT_OPERATION_STATUS_VALUES = ['pending', 'succeeded', 'failed'
 export type PaymentOperationStatus = (typeof PAYMENT_OPERATION_STATUS_VALUES)[number]
 
 /**
- * `EscrowLedgerEntryDto` (заготовка, DTJ-236) — строка эскроу-леджера для presentation-слоя
- * (`GET /api/v1/orders/:id/ledger`, SRS-PAY-016, будущий тикет). Append-only на стороне БД —
- * DTO читает, не пишет.
- */
-export interface EscrowLedgerEntryDto {
-  readonly id: string
-  readonly orderId: string
-  readonly entryType: EscrowEntryType
-  readonly direction: EscrowEntryDirection
-  readonly amountDiram: number
-  readonly paymentTransactionRef: string | null
-  readonly reason: string | null
-  readonly actorUserId: string | null
-  readonly createdAt: string
-}
-
-/**
- * `PayoutScheduleDto` (заготовка, DTJ-236) — строка расписания выплат для presentation-слоя
- * (`GET /api/v1/pharmacy-accounts/:id/payouts`, SRS-PAY-038, будущий тикет).
- */
-export interface PayoutScheduleDto {
-  readonly id: string
-  readonly orderId: string
-  readonly pharmacyId: string
-  readonly status: PayoutStatus
-  readonly grossAmountDiram: number
-  readonly commissionDiram: number
-  readonly netAmountDiram: number
-  readonly holdPeriodDays: number
-  readonly dueAt: string | null
-  readonly heldByDisputeId: string | null
-  readonly paidAt: string | null
-  readonly payoutBatchRef: string | null
-  readonly createdAt: string
-  readonly updatedAt: string
-}
-
-/**
  * `PaymentOperationDto` (заготовка, DTJ-236) — строка идемпотентности вызовов `PaymentProvider`
  * (REQ-PAY-8). `rawWebhookPayload` намеренно ОТСУТСТВУЕТ здесь — сырое тело вебхука не
  * пересекает границу presentation (PII-риск, см. `db/schema/payments.ts` комментарий колонки).
