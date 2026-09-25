@@ -16,8 +16,8 @@ import { initialState, loginFlowReducer } from '@/features/auth/model/login-flow
  * SRS-UX-027 для этого приложения, см. `phone-step.tsx` JSDoc).
  *
  * Критерий приёмки 4 (DTJ-166): `customer`/`courier` технически проходят OTP-verify (эндпоинт
- * роле-агностичен, см. `use-verify-otp.ts`), но здесь, СРАЗУ после успеха и ДО навигации на
- * `/inventory`, проверяется `user.role`. Неподходящая роль → сессия немедленно очищается
+ * роле-агностичен, см. `use-verify-otp.ts`), но здесь, СРАЗУ после успеха и ДО навигации на `/`
+ * (очередь заказов, DTJ-310), проверяется `user.role`. Неподходящая роль → сессия немедленно очищается
  * (`useAuthStore.clear()` — нет смысла держать в localStorage валидный refresh-токен для
  * кабинета, куда этой роли нет доступа), пользователь возвращается на шаг «телефон» с понятным
  * сообщением, БЕЗ навигации. `shared/auth/auth-guard.tsx` — вторая линия защиты (defense-in-depth)
@@ -43,7 +43,7 @@ const LoginPage = (): ReactElement => {
       dispatch({ type: 'goBackToPhone' })
       return
     }
-    void navigate('/inventory', { replace: true })
+    void navigate('/', { replace: true })
   }, [navigate, t])
 
   const handleLockedResend = useCallback((): void => {
