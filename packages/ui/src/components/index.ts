@@ -26,3 +26,32 @@ export { Chip } from './chip/chip'
 
 export type { CardInteractiveProps, CardProps } from './card/card'
 export { Card } from './card/card'
+
+// DTJ-408 — навигация и данные (Tabs, Stepper, CursorTable/CursorList, SearchBar,
+// LanguageSwitcher, BrandLogo).
+export type { TabItem, TabsProps } from './tabs/tabs'
+export { Tabs } from './tabs/tabs'
+
+export type { StepperProps, StepperStep, StepStatus } from './stepper/stepper'
+export { Stepper } from './stepper/stepper'
+
+export type {
+  UseCursorPaginationOptions,
+  UseCursorPaginationResult,
+} from './cursor-list/use-cursor-pagination'
+export { useCursorPagination } from './cursor-list/use-cursor-pagination'
+
+export type { CursorTableColumn, CursorTableProps } from './cursor-list/cursor-table'
+export { CursorTable } from './cursor-list/cursor-table'
+
+export type { CursorListProps } from './cursor-list/cursor-list'
+export { CursorList } from './cursor-list/cursor-list'
+
+export type { SearchBarProps } from './search-bar/search-bar'
+export { DEFAULT_SEARCH_DEBOUNCE_MS, SearchBar } from './search-bar/search-bar'
+
+export type { LanguageSwitcherProps } from './language-switcher/language-switcher'
+export { LanguageSwitcher } from './language-switcher/language-switcher'
+
+export type { BrandLogoProps } from './brand-logo/brand-logo'
+export { BrandLogo } from './brand-logo/brand-logo'
