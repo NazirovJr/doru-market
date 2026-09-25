@@ -269,8 +269,11 @@ module.exports = {
         // неприменимо (STATE-AND-RESUME-POINT.md §11.4 задача 5.1).
         // Тестовая обвязка (test-utils, contract-test, фикстуры, Storybook) — не продуктовый
         // код, как и *.spec; она стала видна правилу после сужения options.exclude ниже.
+        // `.stories.tsx` (DTJ-404) — Storybook-демонстрация компонента, собирается отдельным
+        // `storybook build`, не входит в продуктовый `vite build` пакета (см. `dts.exclude` и
+        // `tsconfig.json` пакета `packages/ui`, которые уже её исключают по той же причине).
         pathNot:
-          '\\.(test|spec)\\.(ts|tsx)$|/__tests__/|\\.config\\.|\\.d\\.ts$|/test-utils\\.tsx?$|\\.contract-test\\.ts$|/__fixtures__/|/\\.storybook/',
+          '\\.(test|spec)\\.(ts|tsx)$|/__tests__/|\\.config\\.|\\.d\\.ts$|/test-utils\\.tsx?$|\\.contract-test\\.ts$|/__fixtures__/|/\\.storybook/|\\.stories\\.tsx$',
       },
       // Библиотечный пакет (packages/ui) объявляет react одновременно в peerDependencies
       // (рантайм даёт хост-приложение) и devDependencies (для локальных тестов/Storybook) —

@@ -74,7 +74,19 @@ export default tseslint.config(
       ecmaVersion: 2023,
       sourceType: 'module',
       parserOptions: {
-        projectService: true,
+        // `allowDefaultProject` (DTJ-404): `*.stories.tsx` намеренно исключены из
+        // `tsconfig.json` каждого пакета (Storybook собирается отдельно, не участвует в
+        // `tsc --noEmit` продуктовой сборки) — без этого typescript-eslint падает с
+        // parsing error «was not found by the project service» на каждом файле историй.
+        // Глобы без `**` (typescript-eslint запрещает рекурсивный `**` в этой опции) —
+        // перечислены явно по фактической глубине `src/components/<component>/*.stories.tsx`.
+        projectService: {
+          allowDefaultProject: [
+            'packages/ui/src/components/*/*.stories.tsx',
+            'packages/ui/src/components/*/*/*.stories.tsx',
+          ],
+          defaultProject: 'packages/ui/.storybook/tsconfig.json',
+        },
         tsconfigRootDir: import.meta.dirname,
       },
       globals: { ...globals.node },
