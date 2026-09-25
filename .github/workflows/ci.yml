@@ -108,13 +108,25 @@ jobs:
   # (`coverage.enabled: true`) — отдельный `--coverage` флаг не нужен (нет и в реальном скрипте).
   # ---------------------------------------------------------------------------------------------
   unit-tests:
-    name: unit-tests (${{ matrix.app }})
+    name: unit-tests (${{ matrix.name }})
     needs: typecheck-lint-arch
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Каждый workspace-пакет со скриптом `test` — иначе его тесты в CI не выполняются вовсе
+      # (apps/pharmacy и packages/* изначально не были в матрице).
       matrix:
-        app: [api, worker, web, admin]
+        include:
+          - { name: api, dir: apps/api }
+          - { name: worker, dir: apps/worker }
+          - { name: web, dir: apps/web }
+          - { name: admin, dir: apps/admin }
+          - { name: pharmacy, dir: apps/pharmacy }
+          - { name: ui, dir: packages/ui }
+          - { name: i18n, dir: packages/i18n }
+          - { name: contracts, dir: packages/contracts }
+          - { name: domain-kernel, dir: packages/domain-kernel }
+          - { name: testing-kit, dir: packages/testing-kit }
     steps:
       - uses: actions/checkout@v4
 
@@ -136,13 +148,13 @@ jobs:
       # apps/* импортируют packages/* — те же сборочные пакеты, что и job 1.
       - run: pnpm exec turbo run build --filter='./packages/*' --cache-dir=.turbo
 
-      - run: pnpm exec turbo run test --filter=@dorutj/${{ matrix.app }} --cache-dir=.turbo
+      - run: pnpm exec turbo run test --filter=./${{ matrix.dir }} --cache-dir=.turbo
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-${{ matrix.app }}
-          path: apps/${{ matrix.app }}/coverage
+          name: coverage-${{ matrix.name }}
+          path: ${{ matrix.dir }}/coverage
           if-no-files-found: ignore
 
   # ---------------------------------------------------------------------------------------------
