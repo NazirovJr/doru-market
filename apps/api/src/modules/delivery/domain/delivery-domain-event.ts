@@ -35,6 +35,13 @@ export type DeliveryDomainEvent =
       readonly expiresAt: Date
     }
   | {
+      readonly type: 'CourierAssignedEvent' // assign() не эмитирует сама — orderId вне агрегата DeliveryAssignment.assign()
+      readonly deliveryAssignmentId: string
+      readonly orderId: string
+      readonly courierId: string
+      readonly assignedAt: Date
+    }
+  | {
       readonly type: 'DeliveryOfferExpiredEvent'
       readonly offerId: string
       readonly deliveryAssignmentId: string

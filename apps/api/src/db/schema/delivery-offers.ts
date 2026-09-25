@@ -45,3 +45,6 @@ export const deliveryOffers = pgTable(
       .where(sql`${table.status} = 'pending'`),
   ],
 )
+
+export type DeliveryOfferRow = typeof deliveryOffers.$inferSelect
+export type DeliveryOfferInsert = typeof deliveryOffers.$inferInsert

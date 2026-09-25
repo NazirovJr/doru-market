@@ -78,6 +78,15 @@ export class DrizzleOrderRepository implements OrderRepositoryPort {
     return this.hydrate(client, row)
   }
 
+  /** DTJ-315 — см. JSDoc порта: без tenant-фильтра, orderId уже глобально уникален. */
+  async findByIdAcrossTenants(orderId: string, tx?: OrderUnitOfWorkTx): Promise<Order | null> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const rows = await client.select().from(orders).where(eq(orders.id, orderId)).limit(1)
+    const row = rows[0]
+    if (row === undefined) return null
+    return this.hydrate(client, row)
+  }
+
   async save(order: Order, tx?: OrderUnitOfWorkTx): Promise<void> {
     const client = resolveDrizzleClient(this.db, tx)
     const s = order.toSnapshot()
