@@ -143,6 +143,12 @@ services:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
     environment: *api-env
+    # dev-профиль (та же логика, что у postgres/redis/minio выше) — публикуется на хост, чтобы
+    # локальный разработчик и CI e2e-стадия (DTJ-414) могли curl'ить `/ready` напрямую, без
+    # прохождения через Nginx (который DTJ-413's docker-compose.test.yml снимает с автозапуска
+    # для тестового стека). `docker-compose.prod.yml` (DTJ-412) снимает эту публикацию тем же
+    # `!reset []`, что и у postgres/redis/minio — в проде api доступен только через Nginx.
+    ports: ['3000:3000']
     healthcheck:
       test:
         [

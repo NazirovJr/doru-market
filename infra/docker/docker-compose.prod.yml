@@ -34,6 +34,7 @@ services:
         limits: { cpus: '1', memory: 1g }
 
   api:
+    ports: !reset [] # БЕЗ публикации порта на хост в prod — только через Nginx (как postgres/redis/minio)
     deploy:
       replicas: 2 # горизонтальное масштабирование stateless API
       resources:
