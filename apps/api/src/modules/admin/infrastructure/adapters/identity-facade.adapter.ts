@@ -22,6 +22,7 @@ export class IdentityFacadeAdapter implements IdentityFacadePort {
     const page = await this.usersRepository.list({
       filter: {
         ...(query.filter.role !== undefined && { role: query.filter.role }),
+        ...(query.filter.roles !== undefined && { roles: query.filter.roles }),
         ...(query.filter.phoneLike !== undefined && { phoneLike: query.filter.phoneLike }),
         ...(query.filter.tenantId !== undefined && { tenantId: query.filter.tenantId }),
         ...(query.filter.chainId !== undefined && { chainId: query.filter.chainId }),

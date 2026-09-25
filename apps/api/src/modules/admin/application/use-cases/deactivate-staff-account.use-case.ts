@@ -1,5 +1,4 @@
-// DTJ-364: PATCH /staff-accounts/:id. Отзывает все сессии сотрудника (DTJ-026) — иначе уже
-// выданный accessToken продолжает работать до истечения TTL несмотря на isActive=false.
+// DTJ-364: PATCH /staff-accounts/:id. Отзывает все сессии (DTJ-026) — иначе accessToken живёт до истечения TTL несмотря на isActive=false.
 import { Inject, Injectable } from '@nestjs/common'
 import { ForbiddenError, NotFoundError } from '@dorutj/contracts'
 import { CrossChainAccessDeniedError } from '../errors/cross-chain-access-denied.error.js'

@@ -6,10 +6,20 @@ import type { INestApplication } from '@nestjs/common'
 import request from 'supertest'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { AUTH_SESSIONS_REPOSITORY, SMS_PROVIDER, type AuthSessionsRepository, type SmsProviderPort } from '@/modules/auth/index.js'
-import { createTestApp, seedActor, type TestApp } from './__tests__/staff-accounts-test-app.js'
+import { createTestApp, seedActor, seedChain, type TestApp } from './__tests__/staff-accounts-test-app.js'
 
 const CHAIN_A = randomUUID()
 const CHAIN_B = randomUUID()
+const PHONE_DIGITS = 9
+
+// PhoneNumber.parse (use case, не Zod) требует E.164 ЦИФРЫ — randomUUID() hex содержит буквы a-f.
+function randomPhone(): string {
+  let digits = ''
+  for (let i = 0; i < PHONE_DIGITS; i += 1) {
+    digits += Math.floor(Math.random() * 10).toString()
+  }
+  return `+992${digits}`
+}
 
 interface CreateBody {
   readonly data: { readonly userId: string; readonly role: string; readonly temporaryOtpHint: boolean }
@@ -30,6 +40,8 @@ describe('admin.staff-accounts (DTJ-364, SRS-ADM-041/042)', () => {
     ctx = await createTestApp()
     app = ctx.app
     httpServer = ctx.httpServer
+    await seedChain(app, CHAIN_A)
+    await seedChain(app, CHAIN_B)
   })
 
   afterEach(async () => {
@@ -38,7 +50,7 @@ describe('admin.staff-accounts (DTJ-364, SRS-ADM-041/042)', () => {
 
   it('A. pharmacy_admin создаёт pharmacist → видит его в scope=own → деактивирует', async () => {
     const admin = await seedActor(app, 'pharmacy_admin', CHAIN_A)
-    const phone = `+992${randomUUID().replace(/-/g, '').slice(0, 9)}`
+    const phone = randomPhone()
     const pharmacyId = randomUUID()
 
     const create = await request(httpServer)
@@ -66,7 +78,7 @@ describe('admin.staff-accounts (DTJ-364, SRS-ADM-041/042)', () => {
   it('B. pharmacy_admin (chain A) НЕ видит сотрудника сети B в scope=own', async () => {
     const adminA = await seedActor(app, 'pharmacy_admin', CHAIN_A)
     const adminB = await seedActor(app, 'pharmacy_admin', CHAIN_B)
-    const phoneB = `+992${randomUUID().replace(/-/g, '').slice(0, 9)}`
+    const phoneB = randomPhone()
     const createB = await request(httpServer)
       .post('/api/v1/staff-accounts')
       .set('Authorization', `Bearer ${adminB.accessToken}`)
@@ -84,7 +96,7 @@ describe('admin.staff-accounts (DTJ-364, SRS-ADM-041/042)', () => {
   it('C. pharmacy_admin (chain A) деактивирует сотрудника ЧУЖОЙ сети (chain B) → 403 CROSS_TENANT_ACCESS_DENIED', async () => {
     const adminA = await seedActor(app, 'pharmacy_admin', CHAIN_A)
     const adminB = await seedActor(app, 'pharmacy_admin', CHAIN_B)
-    const phoneB = `+992${randomUUID().replace(/-/g, '').slice(0, 9)}`
+    const phoneB = randomPhone()
     const createB = await request(httpServer)
       .post('/api/v1/staff-accounts')
       .set('Authorization', `Bearer ${adminB.accessToken}`)
@@ -111,7 +123,7 @@ describe('admin.staff-accounts (DTJ-364, SRS-ADM-041/042)', () => {
 
   it('E. pharmacy_admin создаёт courier → provision-courier создаёт delivery.couriers (chainId заполнен, БЕЗ pharmacyId)', async () => {
     const admin = await seedActor(app, 'pharmacy_admin', CHAIN_A)
-    const phone = `+992${randomUUID().replace(/-/g, '').slice(0, 9)}`
+    const phone = randomPhone()
 
     const create = await request(httpServer)
       .post('/api/v1/staff-accounts')
@@ -140,7 +152,7 @@ describe('admin.staff-accounts (DTJ-364, SRS-ADM-041/042)', () => {
   it('F. provision-courier для чужой сети → 403 CROSS_TENANT_ACCESS_DENIED', async () => {
     const adminA = await seedActor(app, 'pharmacy_admin', CHAIN_A)
     const adminB = await seedActor(app, 'pharmacy_admin', CHAIN_B)
-    const phoneB = `+992${randomUUID().replace(/-/g, '').slice(0, 9)}`
+    const phoneB = randomPhone()
     const createB = await request(httpServer)
       .post('/api/v1/staff-accounts')
       .set('Authorization', `Bearer ${adminB.accessToken}`)
@@ -157,7 +169,7 @@ describe('admin.staff-accounts (DTJ-364, SRS-ADM-041/042)', () => {
 
   it('G. деактивация отзывает активные сессии сотрудника, БЕЗ удаления его записи (только isActive=false)', async () => {
     const admin = await seedActor(app, 'pharmacy_admin', CHAIN_A)
-    const phone = `+992${randomUUID().replace(/-/g, '').slice(0, 9)}`
+    const phone = randomPhone()
     const create = await request(httpServer)
       .post('/api/v1/staff-accounts')
       .set('Authorization', `Bearer ${admin.accessToken}`)

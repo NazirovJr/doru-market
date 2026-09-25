@@ -58,7 +58,7 @@ import { ChangeStaffRoleUseCase } from './application/use-cases/change-staff-rol
 import { GrantPlatformRoleUseCase } from './application/use-cases/grant-platform-role.use-case.js'
 import { ListStaffAccountsUseCase } from './application/use-cases/list-staff-accounts.use-case.js'
 import { DeactivateStaffAccountUseCase } from './application/use-cases/deactivate-staff-account.use-case.js'
-import { CreateStaffAccountUseCase } from './application/use-cases/create-staff-account.use-case.js'
+import { ProvisionCourierForChainUseCase } from './application/use-cases/provision-courier-for-chain.use-case.js'
 import { FeatureFlagsController } from './presentation/feature-flags.controller.js'
 import { TenantsController } from './presentation/tenants.controller.js'
 import { UsersAdminController } from './presentation/users-admin.controller.js'
@@ -89,7 +89,7 @@ import { StaffAccountsController } from './presentation/staff-accounts.controlle
     DELIVERY_FACADE_PORT_PROVIDER,
     ListStaffAccountsUseCase,
     DeactivateStaffAccountUseCase,
-    CreateStaffAccountUseCase,
+    ProvisionCourierForChainUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.

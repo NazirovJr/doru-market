@@ -1,5 +1,4 @@
-// DTJ-364: useCreateStaffAccount — 2 HTTP-вызова (identity, затем provision-courier для
-// role=courier); шаг 2 может упасть после успешного шага 1, см. StaffAccountCreatePartialError.
+// DTJ-364: useCreateStaffAccount — 2 HTTP-вызова (identity, затем provision-courier); шаг 2 может упасть после успешного шага 1 — StaffAccountCreatePartialError.
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query'
 import type { CreateStaffAccountRequestDto, StaffAccountRole, StaffAccountSummaryDto } from '@dorutj/contracts'
 import { httpGetJsonWithMeta, httpPatchJson, httpPostJson, type HttpError, type QueryParams } from '@/shared/api/http-client'

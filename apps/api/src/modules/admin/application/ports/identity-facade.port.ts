@@ -11,6 +11,7 @@ export interface IdentityListCursor {
 
 export interface IdentityListFilter {
   readonly role?: UserRole
+  readonly roles?: readonly UserRole[] // DTJ-364: набор ролей, SQL IN (...)
   readonly phoneLike?: string
   readonly tenantId?: string
   readonly chainId?: string // DTJ-364: scope=own изоляция, независима от tenantId

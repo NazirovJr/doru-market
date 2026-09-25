@@ -1,5 +1,5 @@
-// DTJ-364: НЕ дублирует POST /api/v1/staff-accounts (DTJ-030, переиспользуется) — второй POST на
-// тот же путь невозможен физически (Fastify). Этот use case — только шаг 2 для role='courier'.
+// DTJ-364: НЕ дублирует POST /api/v1/staff-accounts (DTJ-030) — только policy сети перед вызовом
+// DeliveryFacade.provisionCourier (идемпотентность — на стороне facade).
 import { Inject, Injectable } from '@nestjs/common'
 import { ForbiddenError, NotFoundError } from '@dorutj/contracts'
 import { CrossChainAccessDeniedError } from '../errors/cross-chain-access-denied.error.js'
@@ -10,19 +10,19 @@ import {
   type DeliveryFacadePort,
 } from '../ports/delivery-facade.port.js'
 
-export interface ProvisionCourierCommand {
+export interface ProvisionCourierForChainCommand {
   readonly userId: string
   readonly actor: { readonly role: string; readonly chainId: string | null }
 }
 
 @Injectable()
-export class CreateStaffAccountUseCase {
+export class ProvisionCourierForChainUseCase {
   public constructor(
     @Inject(IDENTITY_FACADE_PORT) private readonly identityFacade: IdentityFacadePort,
     @Inject(DELIVERY_FACADE_PORT) private readonly deliveryFacade: DeliveryFacadePort,
   ) {}
 
-  public async execute(command: ProvisionCourierCommand): Promise<CourierSummaryView> {
+  public async execute(command: ProvisionCourierForChainCommand): Promise<CourierSummaryView> {
     const target = await this.identityFacade.getUser?.(command.userId)
     if (target === undefined || target === null) {
       throw new NotFoundError({ resource: 'user', userId: command.userId })
@@ -44,10 +44,6 @@ export class CreateStaffAccountUseCase {
       throw new ForbiddenError('Cannot provision a platform-pool courier via chain staff-accounts', { userId: command.userId })
     }
 
-    const existing = await this.deliveryFacade.findCourierByUserId(command.userId)
-    if (existing !== null) {
-      return existing
-    }
-    return this.deliveryFacade.createCourier({ userId: command.userId, chainId: targetChainId })
+    return this.deliveryFacade.provisionCourier({ userId: command.userId, chainId: targetChainId })
   }
 }

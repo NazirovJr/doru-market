@@ -19,7 +19,7 @@ import type { IdentityListCursor, UserSummaryView } from '../application/ports/i
 import type { CourierSummaryView } from '../application/ports/delivery-facade.port.js'
 import { ListStaffAccountsUseCase } from '../application/use-cases/list-staff-accounts.use-case.js'
 import { DeactivateStaffAccountUseCase } from '../application/use-cases/deactivate-staff-account.use-case.js'
-import { CreateStaffAccountUseCase } from '../application/use-cases/create-staff-account.use-case.js'
+import { ProvisionCourierForChainUseCase } from '../application/use-cases/provision-courier-for-chain.use-case.js'
 
 const ID_PARSE_UUID = new ParseUUIDPipe({ version: '4' })
 
@@ -30,7 +30,7 @@ export class StaffAccountsController {
   public constructor(
     @Inject(ListStaffAccountsUseCase) private readonly listUseCase: ListStaffAccountsUseCase,
     @Inject(DeactivateStaffAccountUseCase) private readonly deactivateUseCase: DeactivateStaffAccountUseCase,
-    @Inject(CreateStaffAccountUseCase) private readonly provisionCourierUseCase: CreateStaffAccountUseCase,
+    @Inject(ProvisionCourierForChainUseCase) private readonly provisionCourierUseCase: ProvisionCourierForChainUseCase,
   ) {}
 
   @Get()

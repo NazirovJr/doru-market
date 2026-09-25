@@ -3,7 +3,7 @@
 import { randomUUID } from 'node:crypto'
 import { generateKeyPairSync } from 'node:crypto'
 import { type Server } from 'node:http'
-import { type INestApplication, Module, VersioningType } from '@nestjs/common'
+import { Global, type INestApplication, Module, VersioningType } from '@nestjs/common'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import { Test } from '@nestjs/testing'
 import type Redis from 'ioredis'
@@ -11,23 +11,26 @@ import type { Pool } from 'pg'
 import { AppConfigService } from '@/config/app-config.service.js'
 import { AllExceptionsFilter } from '@/common/filters/all-exceptions.filter.js'
 import { ResponseInterceptor } from '@/common/http/interceptors/response.interceptor.js'
+import { DomainEventsModule } from '@/common/events/domain-events.module.js' // @Global() — DeliveryModule's OrderPickedUpEventHandler требует DomainEventHandlerRegistry
+import { AuditLogModule } from '@/common/audit/audit-log.module.js' // @Global() — DeliveryModule's ManageDeliveryZonesUseCase требует AUDIT_LOG_PORT
 import type { UserRole } from '@dorutj/contracts'
 import { AuthModule } from '@/modules/auth/auth.module.js'
 import { JWT_SIGNER, USERS_REPOSITORY, type JwtSignerPort, type UsersRepository } from '@/modules/auth/index.js'
 import { DeliveryModule } from '@/modules/delivery/delivery.module.js'
-import { OrdersModule } from '@/modules/orders/orders.module.js' // @Global() — DeliveryModule нужен ORDERS_FACADE (DeliveryOrdersAdapter)
+import { ORDERS_FACADE, type OrdersFacade } from '@/modules/orders/index.js'
 import { StaffAccountsController } from '@/modules/admin/presentation/staff-accounts.controller.js'
 import { IDENTITY_FACADE_PORT_PROVIDER } from '@/modules/admin/infrastructure/adapters/identity-facade.adapter.js'
 import { DELIVERY_FACADE_PORT_PROVIDER } from '@/modules/admin/infrastructure/adapters/delivery-facade.adapter.js'
 import { ListStaffAccountsUseCase } from '@/modules/admin/application/use-cases/list-staff-accounts.use-case.js'
 import { DeactivateStaffAccountUseCase } from '@/modules/admin/application/use-cases/deactivate-staff-account.use-case.js'
-import { CreateStaffAccountUseCase } from '@/modules/admin/application/use-cases/create-staff-account.use-case.js'
+import { ProvisionCourierForChainUseCase } from '@/modules/admin/application/use-cases/provision-courier-for-chain.use-case.js'
 import { SharedKernelModule } from '@/shared-kernel/shared-kernel.module.js'
 import { LoggerModule } from '@/common/logging/logger.module.js'
 import { TenantContext } from '@/common/context/tenant-context.js'
 import { RequestContext } from '@/common/context/request-context.js'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { REDIS_CLIENT } from '@/infrastructure/redis/redis.token.js'
+import { pharmacyChains } from '@/db/schema/pharmacy-chains.js'
 
 const { privateKey: TEST_JWT_PRIVATE_KEY, publicKey: TEST_JWT_PUBLIC_KEY } = generateKeyPairSync('rsa', {
   modulusLength: 2048,
@@ -64,15 +67,22 @@ function applyTestEnv(): void {
   }
 }
 
+// Заглушка ORDERS_FACADE (не весь OrdersModule — тот тянет PaymentsModule) — @Global(), т.к.
+// DeliveryModule резолвит токен из глобального инжектора, не из providers соседнего модуля.
+@Global()
+@Module({ providers: [{ provide: ORDERS_FACADE, useValue: {} as OrdersFacade }], exports: [ORDERS_FACADE] })
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- модуль тест-харнесса
+class StubOrdersFacadeModule {}
+
 @Module({
-  imports: [AuthModule, OrdersModule, DeliveryModule],
+  imports: [AuthModule, DeliveryModule],
   controllers: [StaffAccountsController],
   providers: [
     IDENTITY_FACADE_PORT_PROVIDER,
     DELIVERY_FACADE_PORT_PROVIDER,
     ListStaffAccountsUseCase,
     DeactivateStaffAccountUseCase,
-    CreateStaffAccountUseCase,
+    ProvisionCourierForChainUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- модуль тест-харнесса
@@ -89,7 +99,7 @@ const BEARER_PREFIX = 'Bearer '
 export async function createTestApp(): Promise<TestApp> {
   applyTestEnv()
   const moduleRef = await Test.createTestingModule({
-    imports: [SharedKernelModule, LoggerModule, AuthModule, StaffAccountsAdminTestModule],
+    imports: [SharedKernelModule, LoggerModule, AuthModule, DomainEventsModule, AuditLogModule, StubOrdersFacadeModule, StaffAccountsAdminTestModule],
   }).compile()
   const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter())
   const config = app.get(AppConfigService)
@@ -139,11 +149,13 @@ function installDefaultTenantContextHook(app: NestFastifyApplication): void {
   })
 }
 
+const NEUTRAL_TENANT_ID = '00000000-0000-4000-8000-000000000001' // приём auth/__tests__/test-app.ts, /otp/request требует нерезолвленный ≠ null
+
 function resolveFromBearerClaims(
   app: NestFastifyApplication,
   authHeader: string | undefined,
 ): { tenantId: string | null; slug: string; chainId: string | null; isNeutral: boolean } {
-  const guest = { tenantId: null, slug: 'test-staff-accounts-guest', chainId: null, isNeutral: true }
+  const guest = { tenantId: NEUTRAL_TENANT_ID, slug: 'test-staff-accounts-guest', chainId: null, isNeutral: true }
   if (typeof authHeader !== 'string' || !authHeader.startsWith(BEARER_PREFIX)) {
     return guest
   }
@@ -180,4 +192,13 @@ export async function seedActor(
     sessionId: randomUUID(),
   })
   return { userId: created.id, accessToken }
+}
+
+// couriers.chain_id — РЕАЛЬНЫЙ FK на pharmacy_chains.id (в отличие от users.chain_id, отложенного).
+export async function seedChain(app: INestApplication, chainId: string): Promise<void> {
+  const db = app.get<DrizzleDb>(DRIZZLE_DB)
+  await db
+    .insert(pharmacyChains)
+    .values({ id: chainId, name: `Test Chain ${chainId}`, legalEntityName: 'Test LLC', tinInn: randomUUID().slice(0, 20) })
+    .onConflictDoNothing()
 }
