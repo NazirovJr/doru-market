@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { OrderDto, OrderItemDto } from '@dorutj/contracts'
+import type { OrderDto, OrderItemDto, PharmacyTerminalOrderItemDto } from '@dorutj/contracts'
 import {
   areAllItemsResolved,
   computeRemainingSeconds,
@@ -11,10 +11,9 @@ import {
   mergeUpdatedItem,
   resolveScanErrorMessageKey,
   resolveWrongBarcodeMessage,
-  type PickingOrderItem,
 } from './picking.model'
 
-function makeItem(overrides: Partial<PickingOrderItem>): PickingOrderItem {
+function makeItem(overrides: Partial<PharmacyTerminalOrderItemDto>): PharmacyTerminalOrderItemDto {
   return {
     id: 'item-1',
     orderId: 'order-1',

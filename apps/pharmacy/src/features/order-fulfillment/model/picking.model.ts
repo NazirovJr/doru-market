@@ -1,33 +1,28 @@
 /** Чистые функции производного UI-состояния экрана сборки — вычисления вынесены из компонентов. */
-import { ErrorCode, type OrderDto, type OrderItemDto } from '@dorutj/contracts'
-
-export interface PickingOrderItem extends OrderItemDto {
-  readonly medicineName: string
-}
-
-export interface PickingOrder extends OrderDto {
-  readonly items: readonly PickingOrderItem[]
-}
+import { ErrorCode, type OrderDto, type OrderItemDto, type PharmacyTerminalOrderItemDto } from '@dorutj/contracts'
 
 export function isOrderCancelled(order: Pick<OrderDto, 'status'>): boolean {
   return order.status === 'cancelled'
 }
 
-export function isItemActionable(item: PickingOrderItem, order: Pick<OrderDto, 'status'>): boolean {
+export function isItemActionable(item: PharmacyTerminalOrderItemDto, order: Pick<OrderDto, 'status'>): boolean {
   return item.fulfillmentStatus === 'pending' && !isOrderCancelled(order)
 }
 
-export function areAllItemsResolved(items: readonly PickingOrderItem[]): boolean {
+export function areAllItemsResolved(items: readonly PharmacyTerminalOrderItemDto[]): boolean {
   return items.every((item) => item.fulfillmentStatus !== 'pending')
 }
 
 // `medicineName` не перезаписывается — её нет в ответе `scan`/`report-issue`, остальное — от сервера.
-export function mergeUpdatedItem(items: readonly PickingOrderItem[], updated: OrderItemDto): readonly PickingOrderItem[] {
+export function mergeUpdatedItem(
+  items: readonly PharmacyTerminalOrderItemDto[],
+  updated: OrderItemDto,
+): readonly PharmacyTerminalOrderItemDto[] {
   return items.map((item) => (item.id === updated.id ? { ...item, ...updated } : item))
 }
 
 // Следующая pending-позиция после решённой, обход зацикливается на начало списка.
-export function findNextPendingItemId(items: readonly PickingOrderItem[], resolvedItemId: string): string | null {
+export function findNextPendingItemId(items: readonly PharmacyTerminalOrderItemDto[], resolvedItemId: string): string | null {
   const resolvedIndex = items.findIndex((item) => item.id === resolvedItemId)
   const ordered = resolvedIndex === -1 ? items : [...items.slice(resolvedIndex + 1), ...items.slice(0, resolvedIndex + 1)]
   const next = ordered.find((item) => item.id !== resolvedItemId && item.fulfillmentStatus === 'pending')

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query'
-import type { OrderItemDto, ReportItemIssueReason } from '@dorutj/contracts'
+import type { OrderItemDto, PharmacyTerminalOrderDetailDto, ReportItemIssueReason } from '@dorutj/contracts'
 import { httpRequestJson, HttpError } from '@/shared/api/http-client'
-import { mergeUpdatedItem, type PickingOrder } from '@/features/order-fulfillment/model/picking.model'
+import { mergeUpdatedItem } from '@/features/order-fulfillment/model/picking.model'
 
 // TODO(DTJ-308): заменить опрос точечным WS-патчем, когда появится канал терминала.
 const ORDER_DETAIL_POLL_INTERVAL_MS = 4_000
@@ -10,13 +10,13 @@ export function orderDetailQueryKey(orderId: string): readonly [string, string, 
   return ['order-fulfillment', 'order-detail', orderId] as const
 }
 
-function fetchOrderDetail(orderId: string): Promise<PickingOrder> {
-  return httpRequestJson<PickingOrder>(`/api/v1/orders/${orderId}`)
+function fetchOrderDetail(orderId: string): Promise<PharmacyTerminalOrderDetailDto> {
+  return httpRequestJson<PharmacyTerminalOrderDetailDto>(`/api/v1/orders/${orderId}`)
 }
 
 // Опрос чаще, чем в очереди — опоздавшая отмена держит фармацевта в работе над мёртвым заказом.
-export function useOrderDetail(orderId: string): UseQueryResult<PickingOrder, HttpError> {
-  return useQuery<PickingOrder, HttpError>({
+export function useOrderDetail(orderId: string): UseQueryResult<PharmacyTerminalOrderDetailDto, HttpError> {
+  return useQuery<PharmacyTerminalOrderDetailDto, HttpError>({
     queryKey: orderDetailQueryKey(orderId),
     queryFn: () => fetchOrderDetail(orderId),
     refetchInterval: ORDER_DETAIL_POLL_INTERVAL_MS,
@@ -41,7 +41,7 @@ function postItemAction<T>({ orderId, itemId, action, idempotencyKey, body }: Po
 }
 
 function patchItemInCache(queryClient: ReturnType<typeof useQueryClient>, orderId: string, updated: OrderItemDto): void {
-  queryClient.setQueryData<PickingOrder>(orderDetailQueryKey(orderId), (current) =>
+  queryClient.setQueryData<PharmacyTerminalOrderDetailDto>(orderDetailQueryKey(orderId), (current) =>
     current === undefined ? current : { ...current, items: mergeUpdatedItem(current.items, updated) },
   )
 }

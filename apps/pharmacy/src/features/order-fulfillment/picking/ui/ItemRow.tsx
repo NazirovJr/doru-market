@@ -1,24 +1,25 @@
 import { useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
-import { findNextPendingItemId, isItemActionable, type PickingOrder, type PickingOrderItem } from '@/features/order-fulfillment/model/picking.model'
+import type { PharmacyTerminalOrderDetailDto, PharmacyTerminalOrderItemDto } from '@dorutj/contracts'
+import { findNextPendingItemId, isItemActionable } from '@/features/order-fulfillment/model/picking.model'
 import { BarcodeScanForm } from './BarcodeScanForm'
 import { ReportIssueModal } from './ReportIssueModal'
 
 export interface ItemRowProps {
-  readonly order: PickingOrder
-  readonly item: PickingOrderItem
+  readonly order: PharmacyTerminalOrderDetailDto
+  readonly item: PharmacyTerminalOrderItemDto
   readonly isSelected: boolean
   readonly onSelect: (itemId: string | null) => void
 }
 
 // Статус различим без цвета — у каждого состояния своя иконка и свой текст.
-const STATUS_GLYPH: Readonly<Record<PickingOrderItem['fulfillmentStatus'], string>> = {
+const STATUS_GLYPH: Readonly<Record<PharmacyTerminalOrderItemDto['fulfillmentStatus'], string>> = {
   pending: '•',
   scanned_ok: '✓',
   unavailable: '✕',
 }
 
-const StatusBadge = ({ item }: { readonly item: PickingOrderItem }): ReactElement => {
+const StatusBadge = ({ item }: { readonly item: PharmacyTerminalOrderItemDto }): ReactElement => {
   const { t } = useT('tj')
   const colorClass =
     item.fulfillmentStatus === 'scanned_ok'
