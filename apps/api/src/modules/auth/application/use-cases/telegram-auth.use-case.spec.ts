@@ -31,6 +31,8 @@ import {
 import {
   type CreateUserInput,
   type UpdateUserPatch,
+  type UsersListPage,
+  type UsersListQuery,
   type UsersRepository,
 } from '../ports/users.repository.port.js'
 import {
@@ -119,6 +121,19 @@ class StubUsersRepository implements UsersRepository {
   }
 
   update(_id: string, _patch: UpdateUserPatch): Promise<User> {
+    throw new Error('not used')
+  }
+
+  // [DTJ-354] Расширение порта — не используется этими тестами.
+  list(_query: UsersListQuery): Promise<UsersListPage> {
+    throw new Error('not used')
+  }
+
+  setActive(_id: string, _isActive: boolean): Promise<User | null> {
+    throw new Error('not used')
+  }
+
+  setRole(_id: string, _role: UserRole): Promise<User | null> {
     throw new Error('not used')
   }
 }

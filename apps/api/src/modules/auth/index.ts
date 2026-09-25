@@ -22,6 +22,10 @@ export {
   type UsersRepository,
   type CreateUserInput,
   type UpdateUserPatch,
+  type UsersListFilter,
+  type UsersListCursor,
+  type UsersListQuery,
+  type UsersListPage,
 } from './application/ports/users.repository.port.js'
 export { type User } from './domain/user.js'
 export {

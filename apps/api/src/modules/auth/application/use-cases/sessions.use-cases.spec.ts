@@ -31,7 +31,7 @@ import type {
   RevokeReason,
   RotateAuthSessionInput,
 } from '../ports/auth-sessions.repository.port.js'
-import type { CreateUserInput, UsersRepository } from '../ports/users.repository.port.js'
+import type { CreateUserInput, UsersListPage, UsersListQuery, UsersRepository } from '../ports/users.repository.port.js'
 import type { UnitOfWorkPort, UnitOfWorkTx } from '../ports/unit-of-work.port.js'
 import { LogoutUseCase } from './logout.use-case.js'
 import { LogoutAllUseCase } from './logout-all.use-case.js'
@@ -164,6 +164,19 @@ class StubUsersRepository implements UsersRepository {
   }
 
   update(_id: string, _patch: never): Promise<User> {
+    throw new Error('not used in DTJ-026 tests')
+  }
+
+  // [DTJ-354] Расширение порта — не используется этими тестами, та же заглушка.
+  list(_query: UsersListQuery): Promise<UsersListPage> {
+    throw new Error('not used in DTJ-026 tests')
+  }
+
+  setActive(_id: string, _isActive: boolean): Promise<User | null> {
+    throw new Error('not used in DTJ-026 tests')
+  }
+
+  setRole(_id: string, _role: UserRole): Promise<User | null> {
     throw new Error('not used in DTJ-026 tests')
   }
 }
