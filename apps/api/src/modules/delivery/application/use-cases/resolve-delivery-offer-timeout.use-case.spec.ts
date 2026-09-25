@@ -12,7 +12,7 @@ const OFFER_ID = 'offer-1'
 const ASSIGNMENT_ID = 'assignment-1'
 
 function makeOffer(): DeliveryOffer {
-  return DeliveryOffer.create({
+  const offer = DeliveryOffer.create({
     id: OFFER_ID,
     deliveryAssignmentId: ASSIGNMENT_ID,
     courierId: 'courier-1',
@@ -22,6 +22,8 @@ function makeOffer(): DeliveryOffer {
     offeredAt: NOW,
     expiresAt: new Date(NOW.getTime() - 1000), // уже истёк — таймер и сработал
   })
+  offer.pullDomainEvents() // как из БД: CreatedEvent уже опубликован ранее, при создании
+  return offer
 }
 
 function makeFakeEscalate(execute: EscalateDeliveryOfferService['execute'] = vi.fn().mockResolvedValue(undefined)): EscalateDeliveryOfferService {
