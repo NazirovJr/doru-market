@@ -29,6 +29,23 @@ const FALLBACK_LOCALE: Locale = 'en'
 
 const DICTIONARIES: Readonly<Record<Locale, Dictionary>> = { tj, ru, en }
 
+/**
+ * `TranslationKey` (DTJ-402) — объединение всех ключей `ru`-словаря (три словаря — паритетны по
+ * ключам, тест `dictionary key parity` в `use-t.spec.ts` это гарантирует). Даёт TS-ошибку при
+ * опечатке в ключе НОВОМУ коду, который явно типизирует свой вызов этим типом.
+ *
+ * ВАЖНО (обратная совместимость, зафиксировано условиями тикета DTJ-402): сигнатура
+ * `TranslateFunction`/`useT` ниже сознательно НЕ сужена до `(key: TranslationKey, …)` — десятки
+ * существующих мест в `apps/web`/`apps/admin`/`apps/pharmacy` вызывают `t(key)` с `key`,
+ * вычисленным как обычный `string` (через маппинги `Record<string, TranslationKey-подобное>`,
+ * тернарники, `mapping.key` и т.п. — см. компоненты `apps/web`/`apps/admin`/`apps/pharmacy`), и были обязаны компилироваться
+ * и проходить тесты без правок. Сужение сигнатуры сломало бы эти вызовы. `TranslationKey`
+ * экспортируется как typed-safe тип для НОВОГО кода (DTJ-404+), который может явно типизировать
+ * свои собственные ключи/пропсы этим типом (см. `format.spec.ts` — тест типов демонстрирует
+ * отказ компиляции для несуществующего литерала ключа, приёмочный критерий 5 DTJ-402).
+ */
+export type TranslationKey = keyof typeof ru
+
 function isDevelopmentEnvironment(): boolean {
   return process.env.NODE_ENV !== 'production'
 }
