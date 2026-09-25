@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ForbiddenError, NotFoundError, OfferAlreadyRespondedError, OfferExpiredError } from '@dorutj/contracts'
+import { CourierNotEligibleError, ForbiddenError, NotFoundError, OfferAlreadyRespondedError, OfferExpiredError } from '@dorutj/contracts'
 import type { Clock } from '@/shared-kernel/index.js'
 import { GeoPoint } from '@/shared-kernel/domain/value-objects/geo-point.vo.js'
 import { Courier } from '../../domain/courier.entity.js'
@@ -14,6 +14,7 @@ import type { PharmacyLookupPort, PharmacyLocation } from '../ports/pharmacy-loo
 import type { DeliveryOutboxPort } from '../ports/delivery-outbox.port.js'
 import type { DeliveryUnitOfWorkPort } from '../ports/delivery-unit-of-work.port.js'
 import type { DeliveryOfferTimeoutQueuePort } from '../ports/delivery-offer-timeout-queue.port.js'
+import type { CourierDepartSlaWatchdogQueuePort } from '../ports/courier-depart-sla-watchdog-queue.port.js'
 import { AcceptDeliveryOfferUseCase } from './accept-delivery-offer.use-case.js'
 
 const NOW = new Date('2026-09-25T10:00:00.000Z')
@@ -68,8 +69,9 @@ function makeAssignment(): DeliveryAssignment {
   return DeliveryAssignment.restore(snapshot)
 }
 
-function makeCourier(): Courier {
-  return Courier.create({ id: COURIER_ID, userId: USER_ID, chainId: null, taxStatus: 'individual_patent', vehicleType: 'car', now: NOW })
+function makeCourier(overrides: { status?: Courier['status'] } = {}): Courier {
+  const courier = Courier.create({ id: COURIER_ID, userId: USER_ID, chainId: null, taxStatus: 'individual_patent', vehicleType: 'car', now: NOW })
+  return overrides.status === undefined ? Courier.restore({ ...courier.props, status: 'active' }) : Courier.restore({ ...courier.props, status: overrides.status })
 }
 
 interface Harness {
@@ -78,6 +80,7 @@ interface Harness {
   readonly assignmentsSave: ReturnType<typeof vi.fn>
   readonly outboxAppend: ReturnType<typeof vi.fn>
   readonly timeoutCancel: ReturnType<typeof vi.fn>
+  readonly departWatchdogSchedule: ReturnType<typeof vi.fn>
 }
 
 function makeUseCase(params: { offer?: DeliveryOffer | null; courier?: Courier | null }): Harness {
@@ -125,23 +128,26 @@ function makeUseCase(params: { offer?: DeliveryOffer | null; courier?: Courier |
   const geoPoint = GeoPoint.create(38.5598, 68.787)
   if (!geoPoint.ok) throw new Error('fixture error')
   const pharmacyLocation: PharmacyLocation = { id: PHARMACY_ID, name: 'Pharmacy', addressText: 'Address', geoPoint: geoPoint.value, chainId: null }
-  const pharmacies: PharmacyLookupPort = { findById: vi.fn().mockResolvedValue(pharmacyLocation) }
+  const pharmacies: PharmacyLookupPort = { findById: vi.fn().mockResolvedValue(pharmacyLocation), findByIds: vi.fn().mockResolvedValue([]) }
   const outbox: DeliveryOutboxPort = { append: outboxAppend }
   const uow: DeliveryUnitOfWorkPort = { run: async (cb) => cb(undefined) }
   const timeoutQueue: DeliveryOfferTimeoutQueuePort = { schedule: vi.fn().mockResolvedValue(undefined), cancel: timeoutCancel }
+  const departWatchdogSchedule = vi.fn().mockResolvedValue(undefined)
+  const departWatchdog: CourierDepartSlaWatchdogQueuePort = { schedule: departWatchdogSchedule, cancel: vi.fn().mockResolvedValue(undefined) }
   const clock: Clock = { now: () => NOW }
   return {
-    useCase: new AcceptDeliveryOfferUseCase(offers, assignments, couriers, orders, pharmacies, outbox, uow, timeoutQueue, clock),
+    useCase: new AcceptDeliveryOfferUseCase(offers, assignments, couriers, orders, pharmacies, outbox, uow, timeoutQueue, departWatchdog, clock),
     offersSave,
     assignmentsSave,
     outboxAppend,
     timeoutCancel,
+    departWatchdogSchedule,
   }
 }
 
 describe('AcceptDeliveryOfferUseCase', () => {
-  it('TC-DELIV-001: pending + не истёк + актор = адресат -> 200, assignment.status=assigned, CourierAssignedEvent опубликовано, таймаут отменён', async () => {
-    const { useCase, assignmentsSave, outboxAppend, timeoutCancel } = makeUseCase({})
+  it('TC-DELIV-001: pending + не истёк + актор = адресат -> 200, assignment.status=assigned, CourierAssignedEvent опубликовано, таймаут отменён, SLA-watchdog запланирован', async () => {
+    const { useCase, assignmentsSave, outboxAppend, timeoutCancel, departWatchdogSchedule } = makeUseCase({})
 
     const result = await useCase.execute({ offerId: OFFER_ID, userId: USER_ID })
 
@@ -152,6 +158,7 @@ describe('AcceptDeliveryOfferUseCase', () => {
     expect(timeoutCancel).toHaveBeenCalledWith(OFFER_ID)
     const [publishedEvent] = outboxAppend.mock.calls[0] as [unknown]
     expect(publishedEvent).toMatchObject({ type: 'CourierAssignedEvent', deliveryAssignmentId: ASSIGNMENT_ID, courierId: COURIER_ID })
+    expect(departWatchdogSchedule).toHaveBeenCalledWith({ deliveryAssignmentId: ASSIGNMENT_ID, delayMinutes: expect.any(Number) as number })
   })
 
   it('TC-DELIV-002: expires_at в прошлом (гонка) -> OfferExpiredError, assignment не сохраняется', async () => {
@@ -183,5 +190,11 @@ describe('AcceptDeliveryOfferUseCase', () => {
     const { useCase } = makeUseCase({ offer: null })
 
     await expect(useCase.execute({ offerId: OFFER_ID, userId: USER_ID })).rejects.toBeInstanceOf(NotFoundError)
+  })
+
+  it.each(['pending_verification', 'suspended'] as const)('courier.status=%s -> CourierNotEligibleError', async (status) => {
+    const { useCase } = makeUseCase({ courier: makeCourier({ status }) })
+
+    await expect(useCase.execute({ offerId: OFFER_ID, userId: USER_ID })).rejects.toBeInstanceOf(CourierNotEligibleError)
   })
 })

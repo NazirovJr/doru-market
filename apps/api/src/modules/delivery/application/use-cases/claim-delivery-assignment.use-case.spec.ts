@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { AssignmentAlreadyClaimedError, CourierNotOnShiftError, CourierTenantMismatchError, NotFoundError } from '@dorutj/contracts'
+import { AssignmentAlreadyClaimedError, CourierNotEligibleError, CourierNotOnShiftError, CourierTenantMismatchError, NotFoundError } from '@dorutj/contracts'
 import type { Clock } from '@/shared-kernel/index.js'
 import { GeoPoint } from '@/shared-kernel/domain/value-objects/geo-point.vo.js'
 import { Courier } from '../../domain/courier.entity.js'
@@ -48,14 +48,14 @@ function makeAssignment(overrides: { status?: DeliveryAssignmentSnapshot['status
   return DeliveryAssignment.restore(snapshot)
 }
 
-function makeCourier(overrides: { chainId?: string | null; shiftStatus?: 'on_shift' | 'off_shift'; coldChainCertified?: boolean } = {}): Courier {
+function makeCourier(
+  overrides: { chainId?: string | null; shiftStatus?: 'on_shift' | 'off_shift'; coldChainCertified?: boolean; status?: Courier['status'] } = {},
+): Courier {
   let courier = Courier.create({ id: COURIER_ID, userId: USER_ID, chainId: overrides.chainId ?? null, taxStatus: 'individual_patent', vehicleType: 'car', now: NOW })
   if ((overrides.shiftStatus ?? 'on_shift') === 'on_shift') {
     courier = courier.goOnShift()
   }
-  if (overrides.coldChainCertified === true) {
-    courier = Courier.restore({ ...courier.props, coldChainCertified: true })
-  }
+  courier = Courier.restore({ ...courier.props, coldChainCertified: overrides.coldChainCertified === true, status: overrides.status ?? 'active' })
   return courier
 }
 
@@ -111,7 +111,7 @@ function makeUseCase(params: {
     deliveryFeeDiram: 1000n,
   }
   const orders: DeliveryOrdersPort = { getOrderForRating: vi.fn().mockResolvedValue(null), getDeliveryContext: vi.fn().mockResolvedValue(orderContext) }
-  const pharmacies: PharmacyLookupPort = { findById: vi.fn().mockResolvedValue(pharmacyLocation) }
+  const pharmacies: PharmacyLookupPort = { findById: vi.fn().mockResolvedValue(pharmacyLocation), findByIds: vi.fn().mockResolvedValue([]) }
   const outbox: DeliveryOutboxPort = { append: outboxAppend }
   const uow: DeliveryUnitOfWorkPort = { run: async (cb) => cb(undefined) }
   const watchdog: CourierDepartSlaWatchdogQueuePort = { schedule: watchdogSchedule, cancel: vi.fn().mockResolvedValue(undefined) }
@@ -173,6 +173,13 @@ describe('ClaimDeliveryAssignmentUseCase', () => {
     const { useCase, claimUnassigned } = makeUseCase({ assignment: makeAssignment({ requiresColdChain: true }) })
 
     await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID })).rejects.toThrow()
+    expect(claimUnassigned).not.toHaveBeenCalled()
+  })
+
+  it.each(['pending_verification', 'suspended'] as const)('courier.status=%s -> CourierNotEligibleError, claimUnassigned не вызван', async (status) => {
+    const { useCase, claimUnassigned } = makeUseCase({ courier: makeCourier({ status }) })
+
+    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID })).rejects.toBeInstanceOf(CourierNotEligibleError)
     expect(claimUnassigned).not.toHaveBeenCalled()
   })
 })

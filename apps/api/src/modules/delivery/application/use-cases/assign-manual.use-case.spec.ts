@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { AssignmentAlreadyClaimedError, ForbiddenError, NotFoundError } from '@dorutj/contracts'
+import { AssignmentAlreadyClaimedError, CourierNotEligibleError, ForbiddenError, NotFoundError } from '@dorutj/contracts'
 import type { Clock } from '@/shared-kernel/index.js'
 import { GeoPoint } from '@/shared-kernel/domain/value-objects/geo-point.vo.js'
 import { Courier } from '../../domain/courier.entity.js'
@@ -49,8 +49,9 @@ function makeAssignment(): DeliveryAssignment {
   return DeliveryAssignment.restore(snapshot)
 }
 
-function makeCourier(chainId: string | null = null): Courier {
-  return Courier.create({ id: COURIER_ID, userId: 'courier-user-1', chainId, taxStatus: 'individual_patent', vehicleType: 'car', now: NOW })
+function makeCourier(chainId: string | null = null, status: Courier['status'] = 'active'): Courier {
+  const courier = Courier.create({ id: COURIER_ID, userId: 'courier-user-1', chainId, taxStatus: 'individual_patent', vehicleType: 'car', now: NOW })
+  return Courier.restore({ ...courier.props, status })
 }
 
 function makePendingOffer(): DeliveryOffer {
@@ -122,7 +123,7 @@ function makeUseCase(
     deliveryFeeDiram: 1000n,
   }
   const orders: DeliveryOrdersPort = { getOrderForRating: vi.fn().mockResolvedValue(null), getDeliveryContext: vi.fn().mockResolvedValue(orderContext) }
-  const pharmacies: PharmacyLookupPort = { findById: vi.fn().mockResolvedValue(pharmacyLocation) }
+  const pharmacies: PharmacyLookupPort = { findById: vi.fn().mockResolvedValue(pharmacyLocation), findByIds: vi.fn().mockResolvedValue([]) }
   const outbox: DeliveryOutboxPort = { append: outboxAppend }
   const uow: DeliveryUnitOfWorkPort = { run: async (cb) => cb(undefined) }
   const watchdog: CourierDepartSlaWatchdogQueuePort = { schedule: vi.fn().mockResolvedValue(undefined), cancel: vi.fn().mockResolvedValue(undefined) }
@@ -202,5 +203,13 @@ describe('AssignManualUseCase', () => {
     await expect(
       useCase.execute({ assignmentId: ASSIGNMENT_ID, courierId: COURIER_ID, actor: { userId: 'admin-1', role: 'super_admin', chainId: null } }),
     ).rejects.toBeInstanceOf(NotFoundError)
+  })
+
+  it.each(['pending_verification', 'suspended'] as const)('courier.status=%s -> CourierNotEligibleError', async (status) => {
+    const { useCase } = makeUseCase({ courier: makeCourier(null, status) })
+
+    await expect(
+      useCase.execute({ assignmentId: ASSIGNMENT_ID, courierId: COURIER_ID, actor: { userId: 'admin-1', role: 'super_admin', chainId: null } }),
+    ).rejects.toBeInstanceOf(CourierNotEligibleError)
   })
 })

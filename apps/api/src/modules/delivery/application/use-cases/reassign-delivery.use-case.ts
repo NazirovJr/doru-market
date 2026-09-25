@@ -51,7 +51,7 @@ export class ReassignDeliveryUseCase {
     assertCourierInDispatcherScope(cmd.actor, courier.chainId)
 
     const now = this.clock.now()
-    assignment.reassign({ newCourierId: courier.id, reason: cmd.reason, reassignedBy: cmd.actor.userId, now })
+    assignment.reassign({ newCourierId: courier.id, courierStatus: courier.status, reason: cmd.reason, reassignedBy: cmd.actor.userId, now })
 
     return this.uow.run(async (tx) => {
       await this.assignments.save(assignment, tx)

@@ -59,18 +59,15 @@ export class ListDeliveryAssignmentsUseCase {
     }
   }
 
+  // Пакетный запрос: одна выборка pharmacies по всем pharmacyId страницы, вместо findById на каждую строку.
   private async filterByChain(page: readonly DeliveryAssignment[], chainId: string | null): Promise<readonly DeliveryAssignment[]> {
-    const flags = await Promise.all(page.map((assignment) => this.belongsToChain(assignment, chainId)))
-    return page.filter((_, index) => flags[index] === true)
-  }
-
-  private async belongsToChain(assignment: DeliveryAssignment, chainId: string | null): Promise<boolean> {
-    const orderContext = await this.orders.getDeliveryContext(assignment.orderId)
-    if (orderContext === null) {
-      return false
-    }
-    const pharmacy = await this.pharmacies.findById(orderContext.pharmacyId)
-    return pharmacy !== null && pharmacy.chainId === chainId
+    const contexts = await Promise.all(page.map((assignment) => this.orders.getDeliveryContext(assignment.orderId)))
+    const pharmacyIds = [...new Set(contexts.filter((c) => c !== null).map((c) => c.pharmacyId))]
+    const chainByPharmacyId = new Map((await this.pharmacies.findByIds(pharmacyIds)).map((p) => [p.id, p.chainId]))
+    return page.filter((_, index) => {
+      const pharmacyId = contexts[index]?.pharmacyId
+      return pharmacyId !== undefined && chainByPharmacyId.get(pharmacyId) === chainId
+    })
   }
 }
 

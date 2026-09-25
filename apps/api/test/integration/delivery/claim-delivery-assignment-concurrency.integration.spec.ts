@@ -132,7 +132,7 @@ describe.skipIf(!postgresAvailable)('ClaimDeliveryAssignmentUseCase — TC-DELIV
       deliveryFeeDiram: 1000n,
     }
     const orders: DeliveryOrdersPort = { getOrderForRating: () => Promise.resolve(null), getDeliveryContext: () => Promise.resolve(orderContext) }
-    const pharmacies: PharmacyLookupPort = { findById: () => Promise.resolve(pharmacyLocation) }
+    const pharmacies: PharmacyLookupPort = { findById: () => Promise.resolve(pharmacyLocation), findByIds: () => Promise.resolve([]) }
     const outbox: DeliveryOutboxPort = { append: () => Promise.resolve() }
     const uow: DeliveryUnitOfWorkPort = { run: <T>(cb: DeliveryUnitOfWorkCallback<T>) => db.transaction((tx: unknown) => cb(tx)) }
     const watchdog: CourierDepartSlaWatchdogQueuePort = { schedule: () => Promise.resolve(), cancel: () => Promise.resolve() }

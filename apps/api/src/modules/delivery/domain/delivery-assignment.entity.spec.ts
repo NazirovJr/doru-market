@@ -20,6 +20,7 @@ const COURIER: CourierAssignmentEligibility = {
   courierId: 'courier-1',
   courierChainId: null,
   coldChainCertified: false,
+  status: 'active',
 }
 
 function freshAssignment(requiresColdChain = false): DeliveryAssignment {
@@ -91,6 +92,16 @@ describe('assign() — unassigned → assigned (SRS-DOM-037/038)', () => {
       CourierNotEligibleError,
     )
   })
+
+  it.each(['pending_verification', 'suspended', 'terminated'] as const)(
+    'courier.status=%s → CourierNotEligibleError',
+    (status) => {
+      const assignment = freshAssignment()
+      expect(() => { assignment.assign({ courier: { ...COURIER, status }, orderPharmacyChainId: null, now: NOW }); }).toThrow(
+        CourierNotEligibleError,
+      )
+    },
+  )
 
   it('requiresColdChain=true, courier сертифицирован — успешно', () => {
     const assignment = freshAssignment(true)
@@ -232,7 +243,7 @@ describe('markFailed() (SRS-DOM-143, TC-DELIV-015) — эмитирует Delive
 describe('reassign() — SRS-DOM-041/SRS-DELIV-034 (bespoke-guard)', () => {
   it('из assigned — успешно, сбрасывает прогресс и пишет reassignReason/reassignedBy', () => {
     const assignment = assignmentAtStatus('assigned')
-    assignment.reassign({ newCourierId: 'courier-2', reason: 'SLA breach', reassignedBy: 'dispatcher-1', now: LATER })
+    assignment.reassign({ newCourierId: 'courier-2', courierStatus: 'active', reason: 'SLA breach', reassignedBy: 'dispatcher-1', now: LATER })
     expect(assignment.status).toBe('assigned')
     expect(assignment.courierId).toBe('courier-2')
     expect(assignment.toSnapshot().reassignReason).toBe('SLA breach')
@@ -241,34 +252,43 @@ describe('reassign() — SRS-DOM-041/SRS-DELIV-034 (bespoke-guard)', () => {
 
   it('из picked_up_from_pharmacy — успешно, сбрасывает pickedUpFromPharmacyAt', () => {
     const assignment = assignmentAtStatus('picked_up_from_pharmacy')
-    assignment.reassign({ newCourierId: 'courier-2', reason: 'lost', reassignedBy: 'dispatcher-1', now: LATER })
+    assignment.reassign({ newCourierId: 'courier-2', courierStatus: 'active', reason: 'lost', reassignedBy: 'dispatcher-1', now: LATER })
     expect(assignment.toSnapshot().pickedUpFromPharmacyAt).toBeNull()
   })
 
   it('из en_route_to_customer — успешно', () => {
     const assignment = assignmentAtStatus('en_route_to_customer')
-    assignment.reassign({ newCourierId: 'courier-2', reason: 'lost', reassignedBy: 'dispatcher-1', now: LATER })
+    assignment.reassign({ newCourierId: 'courier-2', courierStatus: 'active', reason: 'lost', reassignedBy: 'dispatcher-1', now: LATER })
     expect(assignment.status).toBe('assigned')
   })
 
   it('из unassigned (нечего переназначать) → ForbiddenTransitionError', () => {
     const assignment = freshAssignment()
-    expect(() => { assignment.reassign({ newCourierId: 'courier-2', reason: 'x', reassignedBy: 'dispatcher-1', now: NOW }); },
+    expect(() => { assignment.reassign({ newCourierId: 'courier-2', courierStatus: 'active', reason: 'x', reassignedBy: 'dispatcher-1', now: NOW }); },
     ).toThrow(ForbiddenTransitionError)
   })
 
   it('после delivered (терминально) → ForbiddenTransitionError', () => {
     const assignment = assignmentAtStatus('en_route_to_customer')
     assignment.markDelivered(LATER, false)
-    expect(() => { assignment.reassign({ newCourierId: 'courier-2', reason: 'x', reassignedBy: 'dispatcher-1', now: LATER }); },
+    expect(() => { assignment.reassign({ newCourierId: 'courier-2', courierStatus: 'active', reason: 'x', reassignedBy: 'dispatcher-1', now: LATER }); },
     ).toThrow(ForbiddenTransitionError)
   })
 
   it('reason пустая строка → ValidationError (обязателен, в отличие от assign-manual)', () => {
     const assignment = assignmentAtStatus('assigned')
-    expect(() => { assignment.reassign({ newCourierId: 'courier-2', reason: '   ', reassignedBy: 'dispatcher-1', now: LATER }); },
+    expect(() => { assignment.reassign({ newCourierId: 'courier-2', courierStatus: 'active', reason: '   ', reassignedBy: 'dispatcher-1', now: LATER }); },
     ).toThrow(ValidationError)
   })
+
+  it.each(['pending_verification', 'suspended', 'terminated'] as const)(
+    'новый курьер status=%s → CourierNotEligibleError',
+    (courierStatus) => {
+      const assignment = assignmentAtStatus('assigned')
+      expect(() => { assignment.reassign({ newCourierId: 'courier-2', courierStatus, reason: 'x', reassignedBy: 'dispatcher-1', now: LATER }); },
+      ).toThrow(CourierNotEligibleError)
+    },
+  )
 })
 
 describe('setDistanceSnapshot()/setHandoverOtp() — D.2/базовые поля', () => {

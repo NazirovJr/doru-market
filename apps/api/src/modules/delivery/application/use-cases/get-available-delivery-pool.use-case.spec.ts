@@ -101,6 +101,7 @@ function makeUseCase(input: SetupInput = {}): GetAvailableDeliveryPoolUseCase {
   }
   const pharmacyLookup: PharmacyLookupPort = {
     findById: vi.fn().mockImplementation((pharmacyId: string) => Promise.resolve(pharmacies[pharmacyId] ?? null)),
+    findByIds: vi.fn().mockResolvedValue([]),
   }
   return new GetAvailableDeliveryPoolUseCase(couriers, assignments, orders, pharmacyLookup)
 }

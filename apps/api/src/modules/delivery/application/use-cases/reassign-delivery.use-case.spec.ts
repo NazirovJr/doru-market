@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ForbiddenError, ForbiddenTransitionError, NotFoundError, ValidationError } from '@dorutj/contracts'
+import { CourierNotEligibleError, ForbiddenError, ForbiddenTransitionError, NotFoundError, ValidationError } from '@dorutj/contracts'
 import type { Clock } from '@/shared-kernel/index.js'
 import { Courier } from '../../domain/courier.entity.js'
 import { DeliveryAssignment } from '../../domain/delivery-assignment.entity.js'
@@ -44,8 +44,9 @@ function makeAssignment(status: DeliveryAssignmentSnapshot['status'] = 'en_route
   return DeliveryAssignment.restore(snapshot)
 }
 
-function makeCourier(chainId: string | null = null): Courier {
-  return Courier.create({ id: NEW_COURIER_ID, userId: 'courier-user-new', chainId, taxStatus: 'individual_patent', vehicleType: 'car', now: NOW })
+function makeCourier(chainId: string | null = null, status: Courier['status'] = 'active'): Courier {
+  const courier = Courier.create({ id: NEW_COURIER_ID, userId: 'courier-user-new', chainId, taxStatus: 'individual_patent', vehicleType: 'car', now: NOW })
+  return Courier.restore({ ...courier.props, status })
 }
 
 interface Harness {
@@ -148,5 +149,13 @@ describe('ReassignDeliveryUseCase', () => {
     await expect(
       useCase.execute({ assignmentId: ASSIGNMENT_ID, newCourierId: NEW_COURIER_ID, reason: 'x', actor: { userId: 'a', role: 'super_admin', chainId: null } }),
     ).rejects.toBeInstanceOf(NotFoundError)
+  })
+
+  it.each(['pending_verification', 'suspended'] as const)('новый курьер status=%s -> CourierNotEligibleError', async (status) => {
+    const { useCase } = makeUseCase({ courier: makeCourier(null, status) })
+
+    await expect(
+      useCase.execute({ assignmentId: ASSIGNMENT_ID, newCourierId: NEW_COURIER_ID, reason: 'x', actor: { userId: 'a', role: 'super_admin', chainId: null } }),
+    ).rejects.toBeInstanceOf(CourierNotEligibleError)
   })
 })

@@ -38,7 +38,7 @@ function makeAssignment(id: string): DeliveryAssignment {
 function makeUseCase(params: {
   page: readonly DeliveryAssignment[]
   pharmacyChainByOrder: Record<string, string | null>
-}): { useCase: ListDeliveryAssignmentsUseCase; findByStatuses: ReturnType<typeof vi.fn> } {
+}): { useCase: ListDeliveryAssignmentsUseCase; findByStatuses: ReturnType<typeof vi.fn>; findByIds: ReturnType<typeof vi.fn> } {
   const findByStatuses = vi.fn().mockImplementation((_input: FindByStatusesInput) => Promise.resolve(params.page))
   const assignments: DeliveryAssignmentRepositoryPort = {
     findById: vi.fn().mockResolvedValue(null),
@@ -60,15 +60,16 @@ function makeUseCase(params: {
       return Promise.resolve(context)
     }),
   }
-  const pharmacies: PharmacyLookupPort = {
-    findById: vi.fn().mockImplementation((pharmacyId: string) => {
+  const findByIds = vi.fn().mockImplementation((pharmacyIds: readonly string[]) => {
+    const locations: PharmacyLocation[] = pharmacyIds.map((pharmacyId) => {
       const orderId = pharmacyId.replace('pharmacy-', '')
       const chainId = params.pharmacyChainByOrder[orderId] ?? null
-      const location: PharmacyLocation = { id: pharmacyId, name: 'P', addressText: 'A', geoPoint: { latitude: 0, longitude: 0 } as never, chainId }
-      return Promise.resolve(location)
-    }),
-  }
-  return { useCase: new ListDeliveryAssignmentsUseCase(assignments, orders, pharmacies), findByStatuses }
+      return { id: pharmacyId, name: 'P', addressText: 'A', geoPoint: { latitude: 0, longitude: 0 } as never, chainId }
+    })
+    return Promise.resolve(locations)
+  })
+  const pharmacies: PharmacyLookupPort = { findById: vi.fn(), findByIds }
+  return { useCase: new ListDeliveryAssignmentsUseCase(assignments, orders, pharmacies), findByStatuses, findByIds }
 }
 
 describe('ListDeliveryAssignmentsUseCase', () => {
@@ -81,13 +82,15 @@ describe('ListDeliveryAssignmentsUseCase', () => {
     expect(result.items.map((i) => i.id)).toEqual(['a1', 'a2'])
   })
 
-  it('SRS-DELIV-072: pharmacy_admin видит только назначения своей сети (implicit chainId-скоуп)', async () => {
+  it('SRS-DELIV-072: pharmacy_admin видит только назначения своей сети (implicit chainId-скоуп), один пакетный запрос pharmacies', async () => {
     const page = [makeAssignment('own'), makeAssignment('other')]
-    const { useCase } = makeUseCase({ page, pharmacyChainByOrder: { 'order-own': 'chain-A', 'order-other': 'chain-B' } })
+    const { useCase, findByIds } = makeUseCase({ page, pharmacyChainByOrder: { 'order-own': 'chain-A', 'order-other': 'chain-B' } })
 
     const result = await useCase.execute({ statuses: ['unassigned'], limit: 20, cursor: null, actor: { role: 'pharmacy_admin', chainId: 'chain-A' } })
 
     expect(result.items.map((i) => i.id)).toEqual(['own'])
+    expect(findByIds).toHaveBeenCalledTimes(1)
+    expect(findByIds).toHaveBeenCalledWith(['pharmacy-order-own', 'pharmacy-order-other'])
   })
 
   it('hasMore=true, когда репозиторий вернул limit+1 строк (внутренний over-fetch)', async () => {
