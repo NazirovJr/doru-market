@@ -61,7 +61,6 @@
  */
 import { Inject, Injectable } from '@nestjs/common'
 import type { Logger } from 'pino'
-import type { OrderCancelReason } from '@/modules/orders/index.js'
 import { PINO_LOGGER } from '@/common/logging/pino-logger.token.js'
 import {
   PAYMENTS_ORDERS_PORT,
@@ -93,7 +92,8 @@ const ZERO_DIRAM = 0n
 export interface RefundOrderCommand {
   readonly tenantId: string
   readonly orderId: string
-  readonly reason: OrderCancelReason
+  /** Было `OrderCancelReason` — сужение случайное (единственный тогдашний вызывающий код), `EscrowLedgerEntry.reason` в домене — `string | null`. */
+  readonly reason: string
 }
 
 @Injectable()
