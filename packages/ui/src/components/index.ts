@@ -26,3 +26,27 @@ export { Chip } from './chip/chip'
 
 export type { CardInteractiveProps, CardProps } from './card/card'
 export { Card } from './card/card'
+
+// DTJ-406 — обратная связь и оверлеи (Toast, Modal/BottomSheet, EmptyState, ErrorState,
+// OfflineBanner, ProgressBar).
+export type { ToastApi, ToastItem, ToastOptions, ToastVariant } from './toast/use-toast'
+export { useToast } from './toast/use-toast'
+export type { ToastProviderProps } from './toast/toast'
+export { ToastProvider } from './toast/toast'
+
+export type { ModalProps } from './modal/modal'
+export { Modal } from './modal/modal'
+export type { BottomSheetProps } from './modal/bottom-sheet'
+export { BottomSheet } from './modal/bottom-sheet'
+
+export type { EmptyStateProps } from './empty-state/empty-state'
+export { EmptyState } from './empty-state/empty-state'
+
+export type { ErrorStateProps, ErrorStateVariant } from './error-state/error-state'
+export { ErrorState } from './error-state/error-state'
+
+export type { OfflineBannerProps } from './offline-banner/offline-banner'
+export { OfflineBanner } from './offline-banner/offline-banner'
+
+export type { ProgressBarProps } from './progress-bar/progress-bar'
+export { ProgressBar } from './progress-bar/progress-bar'
