@@ -98,3 +98,11 @@ export { OfflineBanner } from './offline-banner/offline-banner'
 
 export type { ProgressBarProps } from './progress-bar/progress-bar'
 export { ProgressBar } from './progress-bar/progress-bar'
+
+// DTJ-410 — FileDropzone (загрузка фото рецепта/документов онбординга) + AudioAlertPlayer
+// (двойной канал звук+визуал для критичных событий терминала аптеки, SRS-UX-007).
+export type { FileDropzoneProps, FileDropzoneQualityCheck, FileDropzoneState, FileValidationResult } from './file-dropzone/file-dropzone'
+export { FileDropzone, validateFile } from './file-dropzone/file-dropzone'
+
+export type { AudioAlertPlayerProps, UseAudioAlertPlayerResult } from './audio-alert-player/audio-alert-player'
+export { AudioAlertPlayer, useAudioAlertPlayer } from './audio-alert-player/audio-alert-player'

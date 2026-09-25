@@ -517,5 +517,17 @@
   "quantity.piece.other": "{count} шт.",
   "ui.phone_input.incomplete_error": "Введите полный номер телефона",
   "ui.otp_input.group_label": "Код подтверждения",
-  "ui.otp_input.cell_label": "Цифра {index} из {total}"
+  "ui.otp_input.cell_label": "Цифра {index} из {total}",
+  "ui.file_dropzone.placeholder_idle": "Перетащите файл сюда или нажмите «Выбрать файл»",
+  "ui.file_dropzone.placeholder_dragging": "Отпустите файл здесь",
+  "ui.file_dropzone.select_button": "Выбрать файл",
+  "ui.file_dropzone.selected_file": "Выбран файл: {name}",
+  "ui.file_dropzone.uploading_label": "Загрузка файла",
+  "ui.file_dropzone.preview_alt": "Превью загруженного файла",
+  "ui.file_dropzone.error_invalid_type": "Неверный тип файла",
+  "ui.file_dropzone.error_too_large": "Файл слишком большой (максимум {maxSizeMb} МБ)",
+  "ui.file_dropzone.quality_check_passed": "Пройдено",
+  "ui.file_dropzone.quality_check_failed": "Не пройдено",
+  "ui.audio_alert_player.default_label": "Новое событие — требуется внимание",
+  "ui.audio_alert_player.acknowledge_button": "Понятно"
 }

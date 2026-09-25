@@ -517,5 +517,17 @@
   "quantity.piece.other": "{count} pcs.",
   "ui.phone_input.incomplete_error": "Enter the full phone number",
   "ui.otp_input.group_label": "Confirmation code",
-  "ui.otp_input.cell_label": "Digit {index} of {total}"
+  "ui.otp_input.cell_label": "Digit {index} of {total}",
+  "ui.file_dropzone.placeholder_idle": "Drag a file here or tap \"Choose file\"",
+  "ui.file_dropzone.placeholder_dragging": "Drop the file here",
+  "ui.file_dropzone.select_button": "Choose file",
+  "ui.file_dropzone.selected_file": "Selected file: {name}",
+  "ui.file_dropzone.uploading_label": "Uploading file",
+  "ui.file_dropzone.preview_alt": "Preview of the uploaded file",
+  "ui.file_dropzone.error_invalid_type": "Invalid file type",
+  "ui.file_dropzone.error_too_large": "File is too large (maximum {maxSizeMb} MB)",
+  "ui.file_dropzone.quality_check_passed": "Passed",
+  "ui.file_dropzone.quality_check_failed": "Not passed",
+  "ui.audio_alert_player.default_label": "New event — attention required",
+  "ui.audio_alert_player.acknowledge_button": "Got it"
 }

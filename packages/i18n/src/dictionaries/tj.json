@@ -517,5 +517,17 @@
   "quantity.piece.other": "{count} дона",
   "ui.phone_input.incomplete_error": "Рақами пурраи телефонро ворид кунед",
   "ui.otp_input.group_label": "Рамзи тасдиқ",
-  "ui.otp_input.cell_label": "Рақами {index} аз {total}"
+  "ui.otp_input.cell_label": "Рақами {index} аз {total}",
+  "ui.file_dropzone.placeholder_idle": "Файлро ба ин ҷо кашед ё «Файл интихоб кунед»-ро пахш кунед",
+  "ui.file_dropzone.placeholder_dragging": "Файлро ин ҷо сар диҳед",
+  "ui.file_dropzone.select_button": "Файл интихоб кунед",
+  "ui.file_dropzone.selected_file": "Файли интихобшуда: {name}",
+  "ui.file_dropzone.uploading_label": "Боркунии файл",
+  "ui.file_dropzone.preview_alt": "Пешнамоиши файли боркардашуда",
+  "ui.file_dropzone.error_invalid_type": "Навъи файл нодуруст аст",
+  "ui.file_dropzone.error_too_large": "Файл хеле калон аст (ҳадди аксар {maxSizeMb} МБ)",
+  "ui.file_dropzone.quality_check_passed": "Иҷро шуд",
+  "ui.file_dropzone.quality_check_failed": "Иҷро нашуд",
+  "ui.audio_alert_player.default_label": "Рӯйдоди нав — диққат лозим аст",
+  "ui.audio_alert_player.acknowledge_button": "Фаҳмо"
 }
