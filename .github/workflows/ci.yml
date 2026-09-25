@@ -254,14 +254,31 @@ jobs:
 
   # ---------------------------------------------------------------------------------------------
   # Job 4 — security-audit. `pnpm audit --audit-level=high` — реальная встроенная команда pnpm.
-  # `pnpm test:security` НЕ вызывается — сьюта ещё нет в репозитории (DTJ-425, следующая волна
-  # EP-19). TODO(DTJ-425): раскомментировать шаг ниже, когда сьют появится — до тех пор он не
-  # часть этого гейта, чтобы не выдумывать несуществующую команду (AGENTS.md §11).
+  # `pnpm test:security` (DTJ-425, `tests/security/**`, package `@dorutj/security`) бьёт по
+  # РЕАЛЬНОМУ поднятому API (не мок), поэтому job нуждается в собственных Postgres/Redis —
+  # ТОТ ЖЕ приём, что job `integration-tests` (нативные GH Actions `services:`, изолированные НА
+  # ДЖОБУ, `TC-NFR-066`), НЕ `docker-compose.test.yml` (тот — только `e2e`, см. риск DTJ-413).
   # ---------------------------------------------------------------------------------------------
   security-audit:
     name: security-audit
     needs: typecheck-lint-arch
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: dorutj_migrator
+          POSTGRES_PASSWORD: dorutj_dev_only_password
+          POSTGRES_DB: dorutj
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U dorutj_migrator -d dorutj"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -276,9 +293,25 @@ jobs:
 
       - run: pnpm audit --audit-level=high
 
-      # TODO(DTJ-425): раскомментировать, когда security test suite (SQLi/XSS/SSRF/CSRF/DoS/
-      # rate-limit) реализован и скрипт `test:security` реально существует в package.json.
-      # - run: pnpm test:security
+      - run: pnpm exec turbo run build --filter='./packages/*' --filter=@dorutj/api... --cache-dir=.turbo
+
+      # `docker-entrypoint-initdb.d` НЕ применяется к нативным GH Actions `services:` (тот же
+      # приём/обоснование, что job `integration-tests` — см. её шаг «Bootstrap test role/database»).
+      - name: Bootstrap test role/database (postgres-init/01-test-database.sql)
+        env:
+          PGPASSWORD: dorutj_dev_only_password
+        run: psql -h localhost -U dorutj_migrator -d dorutj -f infra/docker/postgres-init/01-test-database.sql
+
+      - name: Apply migrations to dorutj_test
+        env:
+          DATABASE_URL: postgres://dorutj_migrator:dorutj_dev_only_password@localhost:5432/dorutj_test
+        run: pnpm db:migrate
+
+      - name: pnpm test:security (DTJ-425 — tests/security/**)
+        env:
+          DATABASE_URL: postgres://test:test@localhost:5432/dorutj_test
+          REDIS_URL: redis://localhost:6379
+        run: pnpm test:security
 
   # ---------------------------------------------------------------------------------------------
   # Job 5 — сборка Docker-образов (проверка, что Dockerfile'ы из DTJ-412 реально собираются),

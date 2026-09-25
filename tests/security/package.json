@@ -1,0 +1,26 @@
+{
+  "name": "@dorutj/security",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "DoruTJ — tests/security: сквозной security test suite (DTJ-425, SRS-NFR-005/006/010/011/012/014/015/017/018/020) — SQLi/XSS/SSRF/rate-limit/файловые загрузки/межтенантный IDOR/OTP-брутфорс/утечка PII в логах против РЕАЛЬНОГО поднятого API (не мока). Отдельный CI-этап `security-audit` (DTJ-414).",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run && pnpm run test:rate-limit && pnpm run test:log-pii",
+    "test:rate-limit": "vitest run --config vitest.rate-limit.config.ts",
+    "test:log-pii": "vitest run --config vitest.log-pii.config.ts"
+  },
+  "devDependencies": {
+    "@dorutj/contracts": "workspace:*",
+    "@nestjs/common": "^11.2.3",
+    "@nestjs/platform-fastify": "^11.2.3",
+    "@types/node": "^24.13.3",
+    "@types/pg": "^8.23.1",
+    "@types/supertest": "^7.2.1",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.23.0",
+    "supertest": "^7.2.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  }
+}
