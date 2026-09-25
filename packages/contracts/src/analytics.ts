@@ -12,7 +12,10 @@ export const ProductEventInputSchema = z.object({
   eventType: z.string().min(1).max(EVENT_TYPE_MAX_LENGTH),
   sessionId: z.string().min(1).max(SESSION_ID_MAX_LENGTH),
   medicineId: z.uuid().optional(),
+  // DTJ-385: препарат, к которому показан аналог (analog_shown/added_to_cart) — экономию считает сервер.
+  referenceMedicineId: z.uuid().optional(),
   pharmacyId: z.uuid().optional(),
+  // DTJ-385: сохранено для совместимости клиентов, сервер это значение игнорирует и не пишет.
   savingsDiram: z.number().int().nonnegative().optional(),
   metadata: z
     .record(z.string(), z.unknown())
