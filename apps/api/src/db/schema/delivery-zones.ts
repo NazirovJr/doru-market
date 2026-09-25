@@ -39,3 +39,6 @@ export const deliveryZones = pgTable(
     index('ix_delivery_zones_lat_lon').on(table.centerLatitude, table.centerLongitude),
   ],
 )
+
+/** DTJ-322 — форма строки для `DrizzleDeliveryZoneRepository` (тот же приём, что `CourierRow`). */
+export type DeliveryZoneRow = typeof deliveryZones.$inferSelect

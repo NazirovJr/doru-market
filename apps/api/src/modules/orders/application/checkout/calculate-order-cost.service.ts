@@ -102,11 +102,11 @@ export class CalculateOrderCostService {
   ) {}
 
   async calculate(input: CalculateOrderCostInput): Promise<OrderCostResult> {
+    const itemsTotalDiram = input.items.reduce((sum, item) => sum + item.unitPriceDiram * BigInt(item.quantity), ZERO_DIRAM)
     const [items, deliveryFeeDiram] = await Promise.all([
       this.calculateLines(input),
-      this.resolveDeliveryFee(input),
+      this.resolveDeliveryFee(input, itemsTotalDiram),
     ])
-    const itemsTotalDiram = input.items.reduce((sum, item) => sum + item.unitPriceDiram * BigInt(item.quantity), ZERO_DIRAM)
     return {
       items,
       itemsTotalDiram,
@@ -139,11 +139,16 @@ export class CalculateOrderCostService {
    * `CalculateOrderCostInput`) пропускают вызов порта: без ОБЕИХ точек `calculateFee` не может
    * вернуть осмысленное расстояние.
    */
-  private async resolveDeliveryFee(input: CalculateOrderCostInput): Promise<bigint> {
+  private async resolveDeliveryFee(input: CalculateOrderCostInput, itemsTotalDiram: bigint): Promise<bigint> {
     if (input.pharmacyGeoPoint === null || input.deliveryGeoPoint === null) {
       return ZERO_DIRAM
     }
-    return this.deliveryFacade.calculateFee(input.pharmacyGeoPoint, input.deliveryGeoPoint)
+    return this.deliveryFacade.calculateFee({
+      pharmacyGeoPoint: input.pharmacyGeoPoint,
+      deliveryGeoPoint: input.deliveryGeoPoint,
+      tenantId: input.tenantId,
+      itemsTotalDiram,
+    })
   }
 }
 

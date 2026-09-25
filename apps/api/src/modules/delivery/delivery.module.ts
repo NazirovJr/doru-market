@@ -8,7 +8,12 @@ import { EndCourierShiftUseCase } from './application/use-cases/end-courier-shif
 import { SubmitCourierRatingUseCase } from './application/use-cases/submit-courier-rating.use-case.js'
 import { GetCourierEarningsUseCase } from './application/use-cases/get-courier-earnings.use-case.js'
 import { GetCourierPayoutsUseCase } from './application/use-cases/get-courier-payouts.use-case.js'
+import { CalculateDeliveryFeeUseCase } from './application/use-cases/calculate-delivery-fee.use-case.js'
+import { ManageDeliveryZonesUseCase } from './application/use-cases/manage-delivery-zones.use-case.js'
+import { ManageDeliveryPricingRulesUseCase } from './application/use-cases/manage-delivery-pricing-rules.use-case.js'
 import { COURIER_REPOSITORY_PROVIDER } from './infrastructure/repositories/courier.repository.js'
+import { DELIVERY_ZONE_REPOSITORY_PROVIDER } from './infrastructure/repositories/delivery-zone.repository.js'
+import { DELIVERY_PRICING_RULE_REPOSITORY_PROVIDER } from './infrastructure/repositories/delivery-pricing-rule.repository.js'
 import { DELIVERY_ASSIGNMENT_REPOSITORY_PROVIDER } from './infrastructure/repositories/delivery-assignment.repository.js'
 import { COURIER_SHIFT_REPOSITORY_PROVIDER } from './infrastructure/repositories/courier-shift.repository.js'
 import { COURIER_RATING_REPOSITORY_PROVIDER } from './infrastructure/repositories/courier-rating.repository.js'
@@ -23,10 +28,19 @@ import { CourierShiftsController } from './presentation/courier-shifts.controlle
 import { CourierEarningsController } from './presentation/courier-earnings.controller.js'
 import { CourierPayoutsController } from './presentation/courier-payouts.controller.js'
 import { CourierRatingsController } from './presentation/courier-ratings.controller.js'
+import { DeliveryPricingController } from './presentation/delivery-pricing.controller.js'
+import { DeliveryZonesController } from './presentation/delivery-zones.controller.js'
 
 @Module({
   imports: [AuthModule, TenancyModule],
-  controllers: [CourierShiftsController, CourierEarningsController, CourierPayoutsController, CourierRatingsController],
+  controllers: [
+    CourierShiftsController,
+    CourierEarningsController,
+    CourierPayoutsController,
+    CourierRatingsController,
+    DeliveryPricingController,
+    DeliveryZonesController,
+  ],
   providers: [
     COURIER_REPOSITORY_PROVIDER,
     DELIVERY_ASSIGNMENT_REPOSITORY_PROVIDER,
@@ -39,12 +53,17 @@ import { CourierRatingsController } from './presentation/courier-ratings.control
     DELIVERY_OUTBOX_PROVIDER,
     DELIVERY_ORDERS_PORT_PROVIDER,
     DELIVERY_UNIT_OF_WORK_PROVIDER,
+    DELIVERY_ZONE_REPOSITORY_PROVIDER,
+    DELIVERY_PRICING_RULE_REPOSITORY_PROVIDER,
     SuggestNearestCourierUseCase,
     StartCourierShiftUseCase,
     EndCourierShiftUseCase,
     SubmitCourierRatingUseCase,
     GetCourierEarningsUseCase,
     GetCourierPayoutsUseCase,
+    CalculateDeliveryFeeUseCase,
+    ManageDeliveryZonesUseCase,
+    ManageDeliveryPricingRulesUseCase,
     DeliveryFacade,
   ],
   exports: [DeliveryFacade],
