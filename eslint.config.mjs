@@ -86,6 +86,12 @@ export default tseslint.config(
             'packages/ui/src/components/*/*/*.stories.tsx',
           ],
           defaultProject: 'packages/ui/.storybook/tsconfig.json',
+          // DTJ-405: DTJ-404 создал 8 файлов `*.stories.tsx` — ровно порог `allowDefaultProject`
+          // по умолчанию (typescript-eslint предупреждает про производительность при >8). DTJ-405
+          // добавил ещё 2 (`otp-input`/`phone-input`), порог превышен — явный числовой лимит вместо
+          // ошибки парсинга. `*.stories.tsx` — Storybook-демонстрация, не продуктовый код,
+          // производительность линтинга остаётся приемлемой при этом количестве файлов.
+          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 20,
         },
         tsconfigRootDir: import.meta.dirname,
       },

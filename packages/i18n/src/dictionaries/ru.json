@@ -510,5 +510,8 @@
   "quantity.piece.one": "{count} шт.",
   "quantity.piece.few": "{count} шт.",
   "quantity.piece.many": "{count} шт.",
-  "quantity.piece.other": "{count} шт."
+  "quantity.piece.other": "{count} шт.",
+  "ui.phone_input.incomplete_error": "Введите полный номер телефона",
+  "ui.otp_input.group_label": "Код подтверждения",
+  "ui.otp_input.cell_label": "Цифра {index} из {total}"
 }
