@@ -1,6 +1,6 @@
 // Поднимает AnalyticsModule реальным Nest-контейнером (ловит забытый провайдер) и проверяет
 // вставку в product_events через реальный Postgres (тот же приём, что audit-log-repository.e2e.spec.ts).
-import { randomUUID } from 'node:crypto'
+import { randomUUID, generateKeyPairSync } from 'node:crypto'
 import { Pool } from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { Test } from '@nestjs/testing'
@@ -15,9 +15,20 @@ const REQUIRED_TEST_ENV: Readonly<Record<string, string>> = {
   LOG_LEVEL: 'silent',
 }
 
+// AnalyticsModule импортирует AuthModule (DTJ-379, guard телеметрии) — Rs256JwtSignerAdapter требует ключи.
 function applyRequiredTestEnv(): void {
   for (const [key, value] of Object.entries(REQUIRED_TEST_ENV)) {
     process.env[key] ??= value
+  }
+  if (process.env.JWT_PRIVATE_KEY === undefined || process.env.JWT_PUBLIC_KEY === undefined) {
+    const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+    })
+    process.env.JWT_PRIVATE_KEY = privateKey
+    process.env.JWT_PUBLIC_KEY = publicKey
+    process.env.JWT_KID = 'test-v1'
   }
 }
 
