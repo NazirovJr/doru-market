@@ -21,7 +21,8 @@ import { type UnitOfWorkTx } from '@/modules/auth/application/ports/unit-of-work
 export class InMemoryOtpCodesRepository implements OtpCodesRepository {
   private readonly rows = new Map<string, OtpCodeRecord>()
 
-  async create(input: CreateOtpCodeInput): Promise<OtpCodeRecord> {
+  // `tx` игнорируется — см. JSDoc файла (Map-операции атомарны без реальной транзакции).
+  async create(input: CreateOtpCodeInput, _tx?: UnitOfWorkTx): Promise<OtpCodeRecord> {
     // `input.id` — обязан прийти от вызывающего (см. JSDoc порта): используется
     // КАК СОЛЬ хеша ДО вызова create, генерировать свой id здесь — дефект
     // (verify перестаёт находить строку по `otpRequestId`).
