@@ -454,5 +454,22 @@
   "admin.undelivered_notifications.status.sent": "Фиристода шуд",
   "admin.undelivered_notifications.status.delivered": "Расонида шуд",
   "admin.undelivered_notifications.status.failed": "Ноком",
-  "admin.undelivered_notifications.status.suppressed_rate_limit": "Бо маҳдудият боздошта шуд"
+  "admin.undelivered_notifications.status.suppressed_rate_limit": "Бо маҳдудият боздошта шуд",
+  "admin.nav.analytics_funnel": "Қифи сарфа",
+  "admin.analytics_funnel.title": "Қифи сарфа",
+  "admin.analytics_funnel.loading": "Боргирии қиф…",
+  "admin.analytics_funnel.error": "Боргирии қиф ноком шуд",
+  "admin.analytics_funnel.period.week": "Ҳафта",
+  "admin.analytics_funnel.period.month": "Моҳ",
+  "admin.analytics_funnel.amount_somoni": "{amount} сомонӣ",
+  "admin.analytics_funnel.hero.shown_title": "Ҳамагӣ сарфаи нишондодашуда",
+  "admin.analytics_funnel.hero.realized_title": "Сарфаи амалишуда",
+  "admin.analytics_funnel.hero.realized_percent": "{percent} аз нишондодашуда",
+  "admin.analytics_funnel.funnel.title": "Нишондиҳии сарфа → клик → сабад → фармоиш",
+  "admin.analytics_funnel.step.analog_shown": "Нишондиҳии сарфа",
+  "admin.analytics_funnel.step.analog_clicked": "Клик ба аналог",
+  "admin.analytics_funnel.step.added_to_cart": "Илова ба сабад",
+  "admin.analytics_funnel.step.order_placed": "Фармоиш",
+  "admin.analytics_funnel.conversion_from_previous": "{percent} аз қадами қаблӣ",
+  "admin.analytics_funnel.trend.title": "Тамоюли сарфаи амалишуда"
 }

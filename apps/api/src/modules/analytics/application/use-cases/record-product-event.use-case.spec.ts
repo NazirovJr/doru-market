@@ -32,6 +32,10 @@ function buildHarness() {
     insert: insertMock,
     insertBatch: insertBatchMock,
     findMatchingSavingsEvents: findMatchingSavingsEventsMock,
+    // DTJ-381 — воронка не используется этим use case, стаб для соответствия расширенному порту.
+    countByEventType: vi.fn<ProductEventsRepositoryPort['countByEventType']>().mockResolvedValue({}),
+    sumSavingsByEventType: vi.fn<ProductEventsRepositoryPort['sumSavingsByEventType']>().mockResolvedValue(0n),
+    getWeeklyRealizedSavingsTrend: vi.fn<ProductEventsRepositoryPort['getWeeklyRealizedSavingsTrend']>().mockResolvedValue([]),
   }
   const calculator = new RealizedSavingsCalculator(repository)
   const useCase = new RecordProductEventUseCase(repository, new FixedClock(), calculator)

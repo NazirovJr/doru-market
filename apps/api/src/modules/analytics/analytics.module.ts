@@ -7,8 +7,10 @@ import { RecordProductEventUseCase } from './application/use-cases/record-produc
 import { RecordProductEventsBatchUseCase } from './application/use-cases/record-product-events-batch.use-case.js'
 import { RealizedSavingsCalculator } from './application/services/realized-savings-calculator.js'
 import { ANALOG_SAVINGS_PORT_PROVIDER } from './infrastructure/adapters/catalog-analog-savings.adapter.js'
+import { GetFunnelUseCase } from './application/use-cases/get-funnel.use-case.js'
 import { AnalyticsFacade } from './analytics.facade.js'
 import { AnalyticsEventsController } from './presentation/analytics-events.controller.js'
+import { AnalyticsDashboardController } from './presentation/analytics-dashboard.controller.js'
 import { AnalyticsEventsIdentityGuard } from './presentation/guards/analytics-events-identity.guard.js'
 
 @Module({
@@ -16,13 +18,14 @@ import { AnalyticsEventsIdentityGuard } from './presentation/guards/analytics-ev
   // auth.module.ts), тот же приём, что CartIdentityGuard/orders.module.ts.
   // CatalogModule — DTJ-385: ANALOG_SAVINGS_PORT_PROVIDER инжектит CATALOG_FACADE.
   imports: [AuthModule, CatalogModule],
-  controllers: [AnalyticsEventsController],
+  controllers: [AnalyticsEventsController, AnalyticsDashboardController],
   providers: [
     PRODUCT_EVENTS_REPOSITORY_PROVIDER,
     RecordProductEventUseCase,
     RecordProductEventsBatchUseCase,
     RealizedSavingsCalculator,
     ANALOG_SAVINGS_PORT_PROVIDER,
+    GetFunnelUseCase,
     AnalyticsEventsIdentityGuard,
     AnalyticsFacade,
   ],

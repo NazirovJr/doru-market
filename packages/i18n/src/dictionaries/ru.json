@@ -454,5 +454,22 @@
   "admin.undelivered_notifications.status.sent": "Отправлено",
   "admin.undelivered_notifications.status.delivered": "Доставлено",
   "admin.undelivered_notifications.status.failed": "Отказ",
-  "admin.undelivered_notifications.status.suppressed_rate_limit": "Подавлено лимитом"
+  "admin.undelivered_notifications.status.suppressed_rate_limit": "Подавлено лимитом",
+  "admin.nav.analytics_funnel": "Воронка экономии",
+  "admin.analytics_funnel.title": "Воронка экономии",
+  "admin.analytics_funnel.loading": "Загружаем воронку…",
+  "admin.analytics_funnel.error": "Не удалось загрузить воронку",
+  "admin.analytics_funnel.period.week": "Неделя",
+  "admin.analytics_funnel.period.month": "Месяц",
+  "admin.analytics_funnel.amount_somoni": "{amount} сомони",
+  "admin.analytics_funnel.hero.shown_title": "Показано экономии всего",
+  "admin.analytics_funnel.hero.realized_title": "Реализовано экономии",
+  "admin.analytics_funnel.hero.realized_percent": "{percent} от показанного",
+  "admin.analytics_funnel.funnel.title": "Показ экономии → клик → корзина → заказ",
+  "admin.analytics_funnel.step.analog_shown": "Показ экономии",
+  "admin.analytics_funnel.step.analog_clicked": "Клик на аналог",
+  "admin.analytics_funnel.step.added_to_cart": "Добавление в корзину",
+  "admin.analytics_funnel.step.order_placed": "Заказ",
+  "admin.analytics_funnel.conversion_from_previous": "{percent} от предыдущего",
+  "admin.analytics_funnel.trend.title": "Тренд реализованной экономии"
 }
