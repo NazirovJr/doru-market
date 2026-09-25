@@ -80,11 +80,15 @@ const isColorKey = (key: string): key is BrandColorKey =>
 const isLockedKey = (key: string): key is LockedSemanticKey =>
   (LOCKED_SEMANTIC_KEYS as readonly string[]).includes(key)
 
+const SHORT_HEX_DIGIT = /[0-9a-f]/g
+
 /** `#ABC` → `#aabbcc`: единая каноническая форма `^#[0-9a-f]{6}$` для хранения (SRS-TEN-014). */
 function normalizeHex(hex: string): string {
   const lower = hex.toLowerCase()
   if (lower.length !== SHORT_HEX_LENGTH) return lower
-  return `#${[...lower.slice(1)].map((digit) => digit + digit).join('')}`
+  // Замена по regex вместо spread/`.split('')` по строке (`@typescript-eslint/no-misused-spread`):
+  // HEX уже прошёл `HEX_COLOR`, поэтому здесь ровно 3 ASCII hex-символа после `#`.
+  return `#${lower.slice(1).replace(SHORT_HEX_DIGIT, (digit) => digit + digit)}`
 }
 
 function validateColor(raw: unknown): FieldOutcome {

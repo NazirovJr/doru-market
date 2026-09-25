@@ -262,7 +262,14 @@ describe('design tokens CSS', () => {
     expect(rootVar('--font-size-h2')).toBe('22px')
     expect(rootVar('--font-size-h1')).toBe('28px')
     expect(rootVar('--font-weight-semibold')).toBe('600')
-    expect(BRAND_FONT_FAMILY_ALLOWLIST).toContain(rootVar('--brand-font-family'))
+    // CSSOM сериализует кавычки/пробелы font-family иначе, чем литерал в исходном CSS
+    // ('Inter', system-ui → "Inter",system-ui) — сравнение нормализует оба представления,
+    // не ослабляя сам allowlist в branding-allowlist.ts.
+    const normalizeFontStack = (stack: string): string =>
+      stack.replace(/'/g, '"').replace(/,\s*/g, ',')
+    expect(BRAND_FONT_FAMILY_ALLOWLIST.map(normalizeFontStack)).toContain(
+      normalizeFontStack(rootVar('--brand-font-family')),
+    )
   })
 
   it('colors expose neutral defaults, locked semantics and [D-26] warning tokens', () => {
