@@ -194,6 +194,8 @@ import { SystemCancelOrderController } from './presentation/internal/system-canc
 import { GetOrderQueueUseCase } from './application/pharmacy-terminal/get-order-queue.use-case.js'
 import { AcceptOrderUseCase } from './application/pharmacy-terminal/accept-order.use-case.js'
 import { ReclaimOrderUseCase } from './application/pharmacy-terminal/reclaim-order.use-case.js'
+// GetOrderDetailUseCase (`GET /orders/:id`) — те же порты, что уже забинжены (ORDER_REPOSITORY_PORT/CATALOG_FACADE_PORT).
+import { GetOrderDetailUseCase } from './application/pharmacy-terminal/get-order-detail.use-case.js'
 import { PharmacyTerminalQueueController } from './presentation/pharmacy-terminal/pharmacy-terminal-queue.controller.js'
 // DTJ-302 (EP-12, терминал фармацевта §A.3) — ScanOrderItemUseCase +
 // PharmacyTerminalItemsController (`POST /orders/:id/items/:itemId/scan`). Использует ТОЛЬКО уже
@@ -511,6 +513,7 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     GetOrderQueueUseCase,
     AcceptOrderUseCase,
     ReclaimOrderUseCase,
+    GetOrderDetailUseCase,
     // DTJ-302 (EP-12, терминал фармацевта §A.3, см. JSDoc импортов выше).
     ScanOrderItemUseCase,
     // DTJ-303 (EP-12, терминал фармацевта §A.4, см. JSDoc импортов выше).

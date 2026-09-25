@@ -32,7 +32,14 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { z } from 'zod'
-import { ErrorCode, ok, ReclaimOrderRequestSchema, type ReclaimOrderRequestDto, type SuccessEnvelope } from '@dorutj/contracts'
+import {
+  ErrorCode,
+  ok,
+  ReclaimOrderRequestSchema,
+  type PharmacyTerminalOrderDetailDto,
+  type ReclaimOrderRequestDto,
+  type SuccessEnvelope,
+} from '@dorutj/contracts'
 import { HttpStatus } from '@/common/http/http-status.constants.js'
 import { Idempotent } from '@/common/http/decorators/idempotent.decorator.js'
 import { CursorQueryPipe, type CursorQuerySchema } from '@/common/http/pipes/cursor-query.pipe.js'
@@ -41,6 +48,7 @@ import { AuthGuard, CurrentUser, Roles, RolesGuard, type JwtClaims } from '@/mod
 import { GetOrderQueueUseCase } from '@/modules/orders/application/pharmacy-terminal/get-order-queue.use-case.js'
 import { AcceptOrderUseCase } from '@/modules/orders/application/pharmacy-terminal/accept-order.use-case.js'
 import { ReclaimOrderUseCase } from '@/modules/orders/application/pharmacy-terminal/reclaim-order.use-case.js'
+import { GetOrderDetailUseCase } from '@/modules/orders/application/pharmacy-terminal/get-order-detail.use-case.js'
 import {
   toAcceptResponseData,
   toQueueResponseData,
@@ -58,10 +66,12 @@ const QUEUE_CURSOR_PIPE = new CursorQueryPipe(QUEUE_SORT_ENUM, 'string')
 @Controller({ path: 'orders', version: '1' })
 @UseGuards(AuthGuard, RolesGuard)
 export class PharmacyTerminalQueueController {
+  // eslint-disable-next-line max-params -- 4 use case DI-инъекции, тот же приём, что AcceptOrderUseCase (явные @Inject, esbuild/vitest не эмитит design:paramtypes, DTJ-001).
   constructor(
     @Inject(GetOrderQueueUseCase) private readonly getOrderQueue: GetOrderQueueUseCase,
     @Inject(AcceptOrderUseCase) private readonly acceptOrder: AcceptOrderUseCase,
     @Inject(ReclaimOrderUseCase) private readonly reclaimOrder: ReclaimOrderUseCase,
+    @Inject(GetOrderDetailUseCase) private readonly getOrderDetail: GetOrderDetailUseCase,
   ) {}
 
   // `filter[pharmacyId]` — читается ОТДЕЛЬНЫМ `@Query('filter[pharmacyId]')`, НЕ через
@@ -94,6 +104,27 @@ export class PharmacyTerminalQueueController {
       limit: query.limit,
     })
     return ok(toQueueResponseData(result), toQueueResponseMeta(result, query.limit))
+  }
+
+  /** `GET /orders/:id` — деталь заказа для экрана сборки. Своя аптека всегда доступна,
+   *  pharmacy_admin дополнительно видит всю сеть — авторизация внутри `GetOrderDetailUseCase`. */
+  @Get(':id')
+  @HttpCode(HttpStatus.Ok)
+  @Roles('pharmacist', 'pharmacy_admin')
+  async detail(
+    @Param('id', UUID_PIPE) orderId: string,
+    @CurrentUser() claims: JwtClaims,
+  ): Promise<SuccessEnvelope<PharmacyTerminalOrderDetailDto>> {
+    const result = await this.getOrderDetail.execute({
+      orderId,
+      actor: {
+        role: claims.role,
+        tenantId: requireTenantId(claims),
+        pharmacyId: claims.pharmacyId,
+        chainId: claims.chainId,
+      },
+    })
+    return ok(result)
   }
 
   // `Idempotency-Key` — заголовок ПРОВЕРЯЕТСЯ `IdempotencyInterceptor` (формат/наличие) ДО вызова
