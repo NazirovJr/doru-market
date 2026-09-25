@@ -327,57 +327,20 @@ jobs:
   # type=gha` в job'е build) частично ускоряет и этот пересбор через тот же GHA cache backend.
   #
   # JWT_PRIVATE_KEY/JWT_PUBLIC_KEY — БЕЗ дефолта в docker-compose.yml (SRS-NFR-053, fail-fast) —
-  # api не поднимется без них. Пара ниже — ТА ЖЕ committed non-prod тестовая RSA-пара, что уже
+  # api не поднимется без них. Пара — ТА ЖЕ committed non-prod тестовая RSA-пара, что уже
   # используется tests/invariants/vitest.config.ts (Ж13, заведомо непроизводственная, коммитить
-  # можно). TODO(DTJ-417): централизовать эту пару в одном месте (packages/testing-kit или
-  # tests/e2e/helpers), когда каркас E2E заводит свои fixtures — дублирование inline-константы
-  # в третьем месте (после apps/api/test/.../test-app.ts и tests/invariants/vitest.config.ts) не
-  # идеально, но не блокирует этот тикет.
+  # можно). DTJ-417 закрывает TODO, ранее висевший здесь («централизовать эту пару в одном
+  # месте, когда каркас E2E заводит свои fixtures»): пара теперь ОДИН РАЗ хранится в
+  # `tests/e2e/fixtures/test-jwt-{private,public}-key.pem` (третье место дублирования — не
+  # четвёртое: `apps/api/test/.../test-app.ts` и `tests/invariants/vitest.config.ts` — TS-файлы,
+  # инлайн-константа им нужна на этапе импорта модуля, YAML не может их заменить без нового
+  # шага чтения файла в каждом из них — вне владения/объёма этого тикета) — первый шаг ниже
+  # грузит их в `$GITHUB_ENV`, а не хардкодит PEM повторно в самом YAML.
   # ---------------------------------------------------------------------------------------------
   e2e:
     name: e2e
     needs: build
     runs-on: ubuntu-latest
-    env:
-      JWT_PRIVATE_KEY: |
-        -----BEGIN PRIVATE KEY-----
-        MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDEARjrYl91iNxF
-        3YVeQZ430Q7TeFxZ7HN7jqKIEXKvNyU/oTk3Dkd/m1l13uGqpmrtLK/XqH0Gg2mT
-        brJRBLbaTYv1UKbTUBukaRbGhsz8tWA9T1PL5uqeiPoYQs+HAM6lA1cOciITae85
-        SH39PbW8r9JneN5yWIfU61QprHmqhmlkespOmYIefhs1Vz8Ml00ykOo7edOMc6JQ
-        ztZbmdFPtQiO26rYggeoe+U6C0+xv0M/nHOrwrhs5vr1mr4vkjunTZC29TU03pjJ
-        HEzHG+UVvs2yrmmFfO3Y+1iyuWum6ObiIhn1xUdYf4iTZ21kulVlTdjb2lkQp0Ri
-        2CihgFW3AgMBAAECggEABTt4RFRYcwVHyA+tT0JWLGxGxotof7gJrys0GIjKtHW2
-        51dw9RDLBNOLVFOyV4FgylsOiKXFTKa2a0qhtPr4vKQkT9Sq12pEiqOJiZwwnbBj
-        1M8o0AEmkzvZ3UrvSk3RtmL78HVIhpcl3TQbtOZwUwyog72cxpWpbpwnn4Msrkoj
-        RqBx6NyhQq9UIpk4iP1fVbSNQO0rwLCSbVX4SG1te6sXKlQm2VEVBMuwo4LPG/w8
-        +cFKJjUDvYiC/MShGAQfWlhGCqVlhXB+4JX3ioI7wvm3lK/antJ5eGhV5lQO9NyY
-        619qCj95IxSgrxAR/P240wdyGKVwqwJAh0dQShEPoQKBgQDzpnco0s883mRiqr+1
-        FMaRUH80ohFeT5AWXPH76ORUPzANrfwbXrLQYWEa1n8HM1p9l6gY/Qyp2yufiZnr
-        1a90F5847gHoQ78aHQO+WHlDfqK8iGmgcQPH6AYJRr0M4KxKQyyjz0GGV/vKZpk5
-        WfguQSOEZs82GvSX01/cxLtrVwKBgQDN8GRGWYsveYVe/+T/80rxbXZ2PhxXaEz1
-        ZSKiWLR6MnTohrBqwJGi2KuEomc+pY7+SSsq+ux/mat6QY0YyVsUdg4hgls95Ob3
-        TrBHikBCcmJxPkB/O2HpmTCsm8ST5ycPfg86WhfarLQQv8EZeX9horL7QdLT4JC4
-        e0zBA9xMoQKBgQDF9nrasG2xBwCJKjKY7khnyP+RxBxYhEyN3va9tnvN94kTlElB
-        869Vn8lGBQEw2IitgosRwoiHeYv4E9T7yKLFsGut1bO3A1RB41EnVrswG7QderhX
-        o3tu8RX2c4Mm82UI8YtTjRGwFcx+pt3Xu0HqUwKIkP/K9hvFP/ijZzTgAQKBgQCV
-        Vt8QmPyzB7es5XqGFULigtOl+XKJ/CvaxGVyP0tZVd+rg4jJUS4LXn46555hMqPY
-        SO0R9PatrZ1JQeH0+Ieg9d9Xc3WBE85dxuVUa7Afv10d69vPqBtfz+QZN7g83SJZ
-        PLwEP7MOs7C8eKGqPI4gGmEajWg6l526+kb1rTwDIQKBgB+V4z8skw4IXnQ934n/
-        nblbPu+2y9Y74eCULe+i8RXE9zcG1KOsSs4e7jDm3HKhXlljVT2xZT8YHWxhBP3j
-        0O//tkV0DVL8VgrLtqnkkOl5sGUwxYTI7fQwh6pC+JMJdm+NoGB3Enue6WPKS/QQ
-        nyAA7xR2Sj44+PgsgK3GEq8r
-        -----END PRIVATE KEY-----
-      JWT_PUBLIC_KEY: |
-        -----BEGIN PUBLIC KEY-----
-        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxAEY62JfdYjcRd2FXkGe
-        N9EO03hcWexze46iiBFyrzclP6E5Nw5Hf5tZdd7hqqZq7Syv16h9BoNpk26yUQS2
-        2k2L9VCm01AbpGkWxobM/LVgPU9Ty+bqnoj6GELPhwDOpQNXDnIiE2nvOUh9/T21
-        vK/SZ3jecliH1OtUKax5qoZpZHrKTpmCHn4bNVc/DJdNMpDqO3nTjHOiUM7WW5nR
-        T7UIjtuq2IIHqHvlOgtPsb9DP5xzq8K4bOb69Zq+L5I7p02QtvU1NN6YyRxMxxvl
-        Fb7Nsq5phXzt2PtYsrlrpujm4iIZ9cVHWH+Ik2dtZLpVZU3Y29pZEKdEYtgooYBV
-        twIDAQAB
-        -----END PUBLIC KEY-----
     steps:
       - uses: actions/checkout@v4
 
@@ -389,6 +352,14 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
+
+      # DTJ-417: единственное место хранения committed non-prod JWT-пары для тестового
+      # окружения (см. комментарий job'а выше) — многострочные значения в $GITHUB_ENV требуют
+      # heredoc-разделителя (документированный синтаксис Actions), не обычного `>>`.
+      - name: Load test JWT keypair (non-prod, tests/e2e/fixtures/test-jwt-*-key.pem)
+        run: |
+          { echo "JWT_PRIVATE_KEY<<JWT_PRIVATE_KEY_EOF"; cat tests/e2e/fixtures/test-jwt-private-key.pem; echo "JWT_PRIVATE_KEY_EOF"; } >> "$GITHUB_ENV"
+          { echo "JWT_PUBLIC_KEY<<JWT_PUBLIC_KEY_EOF"; cat tests/e2e/fixtures/test-jwt-public-key.pem; echo "JWT_PUBLIC_KEY_EOF"; } >> "$GITHUB_ENV"
 
       - uses: docker/setup-buildx-action@v3
 
@@ -418,6 +389,13 @@ jobs:
         run: pnpm db:seed
 
       - run: pnpm test:e2e
+
+      # DTJ-417: живой smoke-прогон каркаса против уже поднятого выше стека (GET /health,
+      # GET /ready) — НЕ CUJ-сценарий (те — DTJ-418..423, вне объёма этого тикета), см. JSDoc
+      # tests/e2e/smoke/api-health.pw.spec.ts. Отдельным шагом (не частью `pnpm test:e2e`) —
+      # `test:smoke` требует живой `E2E_REQUIRE_API=true` стек и НЕ должен запускаться в
+      # `pnpm verify`/`pnpm test:e2e` на машине без докера (DoD DTJ-417).
+      - run: pnpm --filter @dorutj/e2e test:smoke
 
       - name: docker compose down -v
         if: always()

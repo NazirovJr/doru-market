@@ -1,0 +1,15 @@
+<!doctype html>
+<!-- DTJ-417 — контрольная страница БЕЗ нарушений: подтверждает, что runAxeCheck не падает
+     всегда «на автомате», а реагирует именно на нарушения (симметрична a11y-violation.html). -->
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>DTJ-417 a11y clean fixture</title>
+  </head>
+  <body>
+    <h1>Фикстура без нарушений</h1>
+    <button type="button" aria-label="Закрыть" style="width: 24px; height: 24px">
+      <svg width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="6" /></svg>
+    </button>
+  </body>
+</html>
