@@ -1,9 +1,11 @@
-// Публичный фасад модуля (см. index.ts). Порог устаревания — дефолт схемы
-// tenant_settings.inventory_delta_sla_minutes; реальный per-tenant override требует tenantId
-// аптеки (chain->tenant, чужой модуль) — вне бюджета, тот же fallback-приём, что уже
-// использован для того же порога в поиске каталога (postgres-search.adapter.ts).
+// Порог устаревания — дефолт tenant_settings.inventory_delta_sla_minutes: per-tenant override
+// требует tenantId аптеки из чужого модуля; тот же fallback, что в postgres-search.adapter.ts.
 import { Inject, Injectable } from '@nestjs/common'
 import { CLOCK, type Clock } from '@/shared-kernel/application/ports/clock.port.js'
+import {
+  INVENTORY_SYNC_BATCH_REPOSITORY,
+  type InventorySyncBatchRepository,
+} from './application/ports/inventory-sync-batch.repository.port.js'
 import {
   PHARMACY_INVENTORY_REPOSITORY,
   type PharmacyInventoryRepository,
@@ -23,6 +25,7 @@ export class InventoryFacade {
   constructor(
     @Inject(PHARMACY_INVENTORY_REPOSITORY) private readonly repository: PharmacyInventoryRepository,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(INVENTORY_SYNC_BATCH_REPOSITORY) private readonly syncBatchRepository: InventorySyncBatchRepository,
   ) {}
 
   async getInventorySummary(pharmacyId: string): Promise<InventorySummary> {
@@ -30,5 +33,13 @@ export class InventoryFacade {
     const { skuCount, totalRowCount, staleRowCount } = await this.repository.getSummary({ pharmacyId, staleBefore })
     const staleDataSharePercent = totalRowCount === 0 ? 0 : Math.round((staleRowCount / totalRowCount) * PERCENT_MULTIPLIER)
     return { skuCount, staleDataSharePercent }
+  }
+
+  async findPharmacyIdsWithRecentSyncActivity(
+    pharmacyIds: readonly string[],
+    sinceDate: Date,
+  ): Promise<ReadonlySet<string>> {
+    const ids = await this.syncBatchRepository.findPharmacyIdsWithActivitySince(pharmacyIds, sinceDate)
+    return new Set(ids)
   }
 }

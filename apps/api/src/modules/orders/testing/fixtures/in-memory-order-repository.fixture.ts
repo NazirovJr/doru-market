@@ -10,14 +10,49 @@
  * перебор `orders`, никакого JOIN/SQL (фикстура, не Drizzle).
  */
 import type { OrderStatus } from '@dorutj/contracts'
-import type { Order } from '@/modules/orders/domain/order.entity.js'
+import type { Order, OrderSnapshot } from '@/modules/orders/domain/order.entity.js'
 import type {
   LockedOrderRow,
+  OrderCancellationAggregate,
+  OrderGmvAggregate,
+  OrderMetricsPeriod,
   OrderQueueQuery,
   OrderQueueRow,
   OrderRepositoryPort,
+  OrderSlaAggregate,
   OrderUnitOfWorkTx,
 } from '@/modules/orders/application/ports/order-repository.port.js'
+
+const MS_PER_MINUTE = 60_000
+
+function inPeriod(date: Date | null, period: OrderMetricsPeriod): boolean {
+  return date !== null && date >= period.start && date < period.end
+}
+
+interface SlaOutcome {
+  readonly eligible: 0 | 1
+  readonly met: 0 | 1
+}
+
+const NOT_ELIGIBLE: SlaOutcome = { eligible: 0, met: 0 }
+
+// Вынесено из getSlaAggregate ради max-complexity — чистые функции (no-param-reassign).
+function pickupSlaOutcome(s: OrderSnapshot, period: OrderMetricsPeriod): SlaOutcome {
+  if (!inPeriod(s.pickedUpAt, period)) return NOT_ELIGIBLE
+  const met = s.slaDeadlineAt !== null && s.pickedUpAt !== null && s.pickedUpAt <= s.slaDeadlineAt
+  return { eligible: 1, met: met ? 1 : 0 }
+}
+
+interface DeliverySlaInput {
+  readonly period: OrderMetricsPeriod
+  readonly deliverySlaMs: number
+}
+
+function deliverySlaOutcome(s: OrderSnapshot, input: DeliverySlaInput): SlaOutcome {
+  if (!inPeriod(s.deliveredAt, input.period) || s.pickedUpAt === null) return NOT_ELIGIBLE
+  const met = s.deliveredAt !== null && s.deliveredAt.getTime() - s.pickedUpAt.getTime() <= input.deliverySlaMs
+  return { eligible: 1, met: met ? 1 : 0 }
+}
 
 interface AssignedPharmacist {
   readonly id: string
@@ -98,6 +133,42 @@ export class InMemoryOrderRepository implements OrderRepositoryPort {
       .filter((order) => order.tenantId === query.tenantId && pharmacyIds.includes(order.pharmacyId) && statuses.has(order.status))
       .map((order) => this.toQueueRow(order))
     return Promise.resolve(rows)
+  }
+
+  getGmvAggregate(tenantId: string, period: OrderMetricsPeriod): Promise<OrderGmvAggregate> {
+    const delivered = [...this.orders.values()].filter((o) => {
+      const s = o.toSnapshot()
+      return o.tenantId === tenantId && o.status === 'delivered' && inPeriod(s.deliveredAt, period)
+    })
+    const gmvDiram = delivered.reduce((sum, o) => sum + o.totalAmount.diram, 0n)
+    return Promise.resolve({ gmvDiram, orderCount: delivered.length })
+  }
+
+  getSlaAggregate(tenantId: string, period: OrderMetricsPeriod, deliverySlaMinutes: number): Promise<OrderSlaAggregate> {
+    const deliverySlaMs = deliverySlaMinutes * MS_PER_MINUTE
+    let pickupEligibleCount = 0
+    let pickupMetCount = 0
+    let deliveryEligibleCount = 0
+    let deliveryMetCount = 0
+    for (const order of this.orders.values()) {
+      if (order.tenantId !== tenantId) continue
+      const s = order.toSnapshot()
+      const pickup = pickupSlaOutcome(s, period)
+      pickupEligibleCount += pickup.eligible
+      pickupMetCount += pickup.met
+      const delivery = deliverySlaOutcome(s, { period, deliverySlaMs })
+      deliveryEligibleCount += delivery.eligible
+      deliveryMetCount += delivery.met
+    }
+    return Promise.resolve({ pickupEligibleCount, pickupMetCount, deliveryEligibleCount, deliveryMetCount })
+  }
+
+  getCancellationAggregate(tenantId: string, period: OrderMetricsPeriod): Promise<OrderCancellationAggregate> {
+    const inTenantAndPeriod = [...this.orders.values()].filter(
+      (o) => o.tenantId === tenantId && o.createdAt >= period.start && o.createdAt < period.end,
+    )
+    const cancelledCount = inTenantAndPeriod.filter((o) => o.status === 'cancelled').length
+    return Promise.resolve({ totalCount: inTenantAndPeriod.length, cancelledCount })
   }
 
   private toQueueRow(order: Order): OrderQueueRow {

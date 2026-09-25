@@ -247,6 +247,17 @@ export class InMemoryInventorySyncBatchRepository implements InventorySyncBatchR
   getAllErrors(): readonly InventorySyncRowError[] {
     return this.errors
   }
+
+  findPharmacyIdsWithActivitySince(pharmacyIds: readonly string[], sinceDate: Date): Promise<readonly string[]> {
+    const wanted = new Set(pharmacyIds)
+    const active = new Set<string>()
+    for (const batch of this.batches.values()) {
+      if (wanted.has(batch.pharmacyId) && batch.receivedAt >= sinceDate) {
+        active.add(batch.pharmacyId)
+      }
+    }
+    return Promise.resolve([...active])
+  }
 }
 
 export { INVENTORY_SYNC_BATCH_REPOSITORY }

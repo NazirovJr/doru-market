@@ -65,3 +65,14 @@ export interface FunnelResponseDto {
   readonly totalSavingsRealizedDiram: number
   readonly weeklyTrend: readonly FunnelWeeklyTrendPointDto[]
 }
+
+// Query — переиспользует FunnelQuerySchema/FunnelQueryDto (та же форма tenantId+period).
+export interface PlatformMetricsResponseDto {
+  readonly gmvDiram: number
+  readonly orderCount: number
+  readonly averageCheckDiram: number
+  readonly pickupSlaComplianceRate: number
+  readonly deliverySlaComplianceRate: number
+  readonly cancellationRate: number
+  readonly activePharmaciesSendingDataRate: number
+}

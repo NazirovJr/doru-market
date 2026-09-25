@@ -73,6 +73,10 @@ export class OnboardingFacade {
     return out
   }
 
+  async listActivePharmacyIds(tenantId: string): Promise<readonly string[]> {
+    return this.pharmacyAccountRepository.listActiveIdsByTenant(tenantId)
+  }
+
   // РАСШИРЕНИЕ (DTJ-353), тот же приём, что getPharmacyNames — имя сети догружается батчем по
   // уникальным chainId страницы, не всей таблицы.
   async findPharmacyAccountsAny(

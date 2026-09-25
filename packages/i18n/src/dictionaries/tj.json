@@ -540,5 +540,16 @@
   "admin.analytics_funnel.step.added_to_cart": "Илова ба сабад",
   "admin.analytics_funnel.step.order_placed": "Фармоиш",
   "admin.analytics_funnel.conversion_from_previous": "{percent} аз қадами қаблӣ",
-  "admin.analytics_funnel.trend.title": "Тамоюли сарфаи амалишуда"
+  "admin.analytics_funnel.trend.title": "Тамоюли сарфаи амалишуда",
+  "admin.nav.platform_metrics": "Нишондиҳандаҳои платформа",
+  "admin.platform_metrics.title": "Нишондиҳандаҳои платформа",
+  "admin.platform_metrics.loading": "Боргирии нишондиҳандаҳо…",
+  "admin.platform_metrics.error": "Боргирии нишондиҳандаҳо ноком шуд",
+  "admin.platform_metrics.card.gmv.title": "GMV",
+  "admin.platform_metrics.card.gmv.average_check": "Чеки миёна: {amount} сомонӣ",
+  "admin.platform_metrics.card.pickup_sla.title": "Риояи SLA-и ҷамъоварӣ",
+  "admin.platform_metrics.card.delivery_sla.title": "Риояи SLA-и расонидан",
+  "admin.platform_metrics.card.cancellation_rate.title": "Ҳиссаи бекоркунӣ",
+  "admin.platform_metrics.card.active_pharmacies.title": "Дорухонаҳое, ки маълумот мефиристанд",
+  "admin.platform_metrics.card.active_pharmacies.below_threshold": "Поёнтар аз ҳадди пилот"
 }

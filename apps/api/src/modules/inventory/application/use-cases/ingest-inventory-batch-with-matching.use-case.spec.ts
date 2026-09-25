@@ -193,6 +193,13 @@ class FakeInventorySyncBatchRepository implements InventorySyncBatchRepository {
     throw new Error('not used in ingest tests')
   }
 
+  findPharmacyIdsWithActivitySince(
+    _pharmacyIds: readonly string[],
+    _sinceDate: Date,
+  ): ReturnType<InventorySyncBatchRepository['findPharmacyIdsWithActivitySince']> {
+    throw new Error('not used in ingest tests')
+  }
+
   /** TEST-ONLY: прочитать все накопленные ошибки. */
   getAllErrors(): readonly InventorySyncRowError[] {
     return this.errors

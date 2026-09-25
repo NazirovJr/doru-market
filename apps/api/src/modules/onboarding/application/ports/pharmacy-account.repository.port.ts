@@ -31,6 +31,8 @@ export interface PharmacyAccountRepositoryPort {
   listByStatus(filter: ListByStatusFilter): Promise<ListByStatusResult>
   listByChain(chainId: string): Promise<readonly PharmacyAccount[]>
   save(account: PharmacyAccount): Promise<void>
+  // Аптеки status='active' сети tenantId, чья сеть в approved|active — тот же критерий, что isPharmacyActive, батчем.
+  listActiveIdsByTenant(tenantId: string): Promise<readonly string[]>
   listAny(query: ListAnyQuery): Promise<ListAnyPage>
 }
 
