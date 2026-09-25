@@ -164,7 +164,8 @@ export class ProposePartialFulfillmentUseCase {
       orderId: order.id,
       requestId: created.id,
       itemsSnapshot: preview.itemsSnapshot,
-      refundAmountDiram: preview.refundAmountDiram,
+      // `.toString()` — событие уходит в `outbox.payload` (jsonb), см. JSDoc `OrderDomainEvent`.
+      refundAmountDiram: preview.refundAmountDiram.toString(),
       expiresAt: preview.expiresAt,
       at: preview.now,
     }

@@ -6,11 +6,9 @@
  * побочные эффекты (`createProcessing`/`markCompleted`) проверяются через
  * его реальное состояние, а не через подсчёт вызовов.
  *
- * Ловушка таймингов: `tap()` в интерцепторе вызывает `markCompleted` через
- * `void promise.catch(...)` — fire-and-forget, эмиссия значения подписчику
- * не ждёт его завершения. Поэтому после `firstValueFrom(...)` тесты
- * дополнительно `await` результат самого `markCompleted` (через shпион),
- * иначе провека состояния репозитория была бы гонкой самого теста.
+ * DTJ-309 foundIssue (исправлено): `markCompleted` теперь ЖДЁТСЯ (`concatMap`) ДО ответа —
+ * `await markCompletedSpy...` ниже больше не обязателен, оставлен как есть; тест «4a» проверяет
+ * фикс напрямую (немедленный повтор без ручного ожидания получает кэш, не still_processing).
  */
 import { randomUUID } from 'node:crypto'
 import { BadRequestException, ConflictException, type CallHandler, type ExecutionContext } from '@nestjs/common'
@@ -206,6 +204,25 @@ describe('IdempotencyInterceptor (DTJ-019, SRS-API-009/010)', () => {
     // Суть идемпотентности: обработчик вызывался ОДИН раз за оба запроса.
     expect(handleSpy).toHaveBeenCalledTimes(1)
     expect(secondReply.statusCode).toBe(HTTP_STATUS_OK)
+  })
+
+  it('4a. DTJ-309 foundIssue: немедленный повтор СРАЗУ после ответа (без ручного ожидания markCompleted) получает кэш, а не still_processing', async () => {
+    const reflector = new Reflector()
+    const repo = new InMemoryIdempotencyKeysRepository()
+    const interceptor = new IdempotencyInterceptor(reflector, repo)
+    const key = randomUUID()
+    const { next, handleSpy } = makeNext({ data: { orderId: 'o1' } })
+    const body = { amount: 100 }
+
+    const firstCtx = makeContext(makeRequest({ userId: 'u1', headerValue: key, body }), makeReply(), true)
+    // НЕТ `await markCompletedSpy...` — ровно тот сценарий, что раньше ловил гонку.
+    await firstValueFrom(interceptor.intercept(firstCtx, next))
+
+    const secondCtx = makeContext(makeRequest({ userId: 'u1', headerValue: key, body }), makeReply(), true)
+    const secondResult = await firstValueFrom(interceptor.intercept(secondCtx, next))
+
+    expect(secondResult).toEqual({ data: { orderId: 'o1' } })
+    expect(handleSpy).toHaveBeenCalledTimes(1)
   })
 
   it('5. повтор с тем же ключом, но ДРУГИМ телом → 409 IDEMPOTENCY_KEY_CONFLICT (body_mismatch), контроллер не вызывается повторно', async () => {

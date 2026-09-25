@@ -83,6 +83,7 @@ interface Harness {
   readonly appendAll: ReturnType<typeof vi.fn<OrdersOutboxPort['appendAll']>>
   readonly otpGenerate: ReturnType<typeof vi.fn<OtpGeneratorPort['generate']>>
   readonly otpCodesCreate: ReturnType<typeof vi.fn<OtpCodesRepository['create']>>
+  readonly markConsumed: ReturnType<typeof vi.fn<OtpCodesRepository['markConsumed']>>
   readonly findById: ReturnType<typeof vi.fn<OtpCodesRepository['findById']>>
   readonly countBySubjectAndPurpose: ReturnType<typeof vi.fn<OtpCodesRepository['countBySubjectAndPurpose']>>
   readonly getMaxRegenerations: ReturnType<typeof vi.fn<TenancyFacadePort['getHandoverOtpMaxRegenerationsPerOrder']>>
@@ -102,11 +103,12 @@ function makeHarness(): Harness {
   const findById = vi.fn<OtpCodesRepository['findById']>().mockResolvedValue(oldOtpRecord())
   // 1 (исходная строка от CompletePickingUseCase) — по умолчанию 0 регенераций уже выполнено.
   const countBySubjectAndPurpose = vi.fn<OtpCodesRepository['countBySubjectAndPurpose']>().mockResolvedValue(1)
+  const markConsumed = vi.fn<OtpCodesRepository['markConsumed']>().mockResolvedValue(undefined)
   const otpCodesRepository: OtpCodesRepository = {
     create: otpCodesCreate,
     findById,
     findByIdForUpdate: vi.fn(),
-    markConsumed: vi.fn(),
+    markConsumed,
     incrementAttempts: vi.fn(),
     findActiveBySubject: vi.fn(),
     countBySubjectAndPurpose,
@@ -146,6 +148,7 @@ function makeHarness(): Harness {
     appendAll,
     otpGenerate,
     otpCodesCreate,
+    markConsumed,
     findById,
     countBySubjectAndPurpose,
     getMaxRegenerations,
@@ -164,11 +167,18 @@ beforeEach(() => {
 
 describe('RegenerateHandoverOtpUseCase — success (TC-PHT-019)', () => {
   it('код истёк → 200, новый code, старый FK заменён, regenerationsUsed=1, audit_log записан', async () => {
-    const { useCase, orderRepo, appendAll, otpGenerate, auditWrite } = makeHarness()
+    const { useCase, orderRepo, appendAll, otpGenerate, auditWrite, markConsumed, otpCodesCreate } = makeHarness()
     const order = makeOrder('picked_up')
     orderRepo.seed(order)
 
     const result = await useCase.execute(cmd(order.id))
+
+    // DTJ-309 foundIssue: старая строка ОБЯЗАНА консьюмиться ДО вставки новой, в ТОЙ ЖЕ tx —
+    // иначе `ux_otp_codes_uniq_active` (партиальный уникальный индекс) падает на реальном Postgres
+    // (юнит-тест этого не ловит — mock, но фиксирует контракт вызова, который ловит интеграционный).
+    expect(markConsumed).toHaveBeenCalledTimes(1)
+    expect(markConsumed).toHaveBeenCalledWith(undefined, OLD_OTP_ID, NOW)
+    expect(otpCodesCreate.mock.invocationCallOrder[0]).toBeGreaterThan(markConsumed.mock.invocationCallOrder[0] ?? 0)
 
     expect(result).toEqual({
       code: '4821',

@@ -209,7 +209,7 @@ export class ResolvePartialFulfillmentUseCase {
       type: 'PartialFulfillmentRefundRetryRequestedEvent',
       orderId: outcome.orderId,
       requestId: outcome.requestId,
-      refundAmountDiram: outcome.refundAmountDiram,
+      refundAmountDiram: outcome.refundAmountDiram.toString(),
       at: this.clock.now(),
     }
     await this.unitOfWork.run((tx) => this.ordersOutbox.appendAll(tenantId, [event], tx))
