@@ -15,6 +15,7 @@ import type { UserRole } from '@dorutj/contracts'
 import { AuthModule } from '@/modules/auth/auth.module.js'
 import { JWT_SIGNER, USERS_REPOSITORY, type JwtSignerPort, type UsersRepository } from '@/modules/auth/index.js'
 import { DeliveryModule } from '@/modules/delivery/delivery.module.js'
+import { OrdersModule } from '@/modules/orders/orders.module.js' // @Global() — DeliveryModule нужен ORDERS_FACADE (DeliveryOrdersAdapter)
 import { StaffAccountsController } from '@/modules/admin/presentation/staff-accounts.controller.js'
 import { IDENTITY_FACADE_PORT_PROVIDER } from '@/modules/admin/infrastructure/adapters/identity-facade.adapter.js'
 import { DELIVERY_FACADE_PORT_PROVIDER } from '@/modules/admin/infrastructure/adapters/delivery-facade.adapter.js'
@@ -64,7 +65,7 @@ function applyTestEnv(): void {
 }
 
 @Module({
-  imports: [AuthModule, DeliveryModule],
+  imports: [AuthModule, OrdersModule, DeliveryModule],
   controllers: [StaffAccountsController],
   providers: [
     IDENTITY_FACADE_PORT_PROVIDER,
