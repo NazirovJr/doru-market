@@ -331,6 +331,12 @@
       "when": 1700000560000,
       "tag": "0052_product_events",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "when": 1700000590000,
+      "tag": "0055_audit_retention_role",
+      "breakpoints": true
     }
   ]
 }

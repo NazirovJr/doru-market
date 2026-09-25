@@ -41,3 +41,4 @@ export * from './notifications.js'
 // DTJ-375 (EP-16) — единый список чувствительных полей (pino-редактор + маскирование audit_log).
 export * from './sensitive-fields.js'
 export * from './domain-event-envelope.js'
+export * from './audit-retention.js'

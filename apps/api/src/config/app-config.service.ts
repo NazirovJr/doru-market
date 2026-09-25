@@ -188,4 +188,8 @@ export class AppConfigService {
   get excelImportMaxRows(): number {
     return this.configService.get('EXCEL_IMPORT_MAX_ROWS', { infer: true })
   }
+
+  get auditLogRetentionYears(): number {
+    return this.configService.get('AUDIT_LOG_RETENTION_YEARS', { infer: true })
+  }
 }
