@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { InventorySyncBatchListItemDto } from '@dorutj/contracts'
 import { StaleDataBadge } from './StaleDataBadge'
 
@@ -19,33 +21,64 @@ function freshBatch(overrides?: Partial<InventorySyncBatchListItemDto>): Invento
   }
 }
 
-describe('<StaleDataBadge /> (DTJ-169, критерий приёмки 5)', () => {
-  it('акцентирует предупреждение, когда свежесть 1С-батча превышает INVENTORY_DELTA_SLA_MINUTES', () => {
-    const receivedAt = '2026-01-01T00:00:00.000Z'
-    const now = new Date('2026-01-01T03:00:00.000Z') // 3 часа спустя, порог для REST — 5 минут
+type FetchImpl = () => Promise<Response>
 
-    render(<StaleDataBadge freshestBatch={freshBatch({ receivedAt })} now={now} />)
+function stubTenantMeta(inventoryDeltaSlaMinutes: number, inventoryManualStaleHours = 72): ReturnType<typeof vi.fn<FetchImpl>> {
+  const fetchMock = vi.fn<FetchImpl>(() =>
+    Promise.resolve(new Response(JSON.stringify({ data: { inventoryDeltaSlaMinutes, inventoryManualStaleHours } }), { status: 200 })),
+  )
+  vi.stubGlobal('fetch', fetchMock)
+  return fetchMock
+}
 
-    const badge = screen.getByTestId('stale-data-badge')
-    expect(badge.dataset.stale).toBe('true')
-    expect(screen.getByRole('alert')).toBeInTheDocument()
-    expect(badge).toHaveTextContent('3')
-  })
+function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>)
+}
 
-  it('не акцентирует предупреждение, когда синхронизация в пределах порога', () => {
-    const receivedAt = '2026-01-01T00:00:00.000Z'
-    const now = new Date('2026-01-01T00:02:00.000Z') // 2 минуты спустя, порог REST — 5 минут
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
-    render(<StaleDataBadge freshestBatch={freshBatch({ receivedAt })} now={now} />)
+describe('<StaleDataBadge /> (DTJ-169/DTJ-033 — пороги из GET /tenant/meta)', () => {
+  it('критерий 2 DTJ-033: REST-батч 10 минут назад, порог тенанта 15 минут — не устарело', async () => {
+    stubTenantMeta(15)
+    const now = new Date('2026-01-01T00:10:00.000Z')
 
+    renderWithQueryClient(<StaleDataBadge freshestBatch={freshBatch()} now={now} />)
+
+    await waitFor(() => { expect(screen.getByTestId('stale-data-badge')).toBeInTheDocument() })
     expect(screen.getByTestId('stale-data-badge').dataset.stale).toBe('false')
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('без единого батча — нейтральное сообщение, не предупреждение', () => {
-    render(<StaleDataBadge freshestBatch={null} />)
+  it('критерий 2 DTJ-033: тот же REST-батч 10 минут назад, порог тенанта 5 минут — устарело', async () => {
+    stubTenantMeta(5)
+    const now = new Date('2026-01-01T00:10:00.000Z')
+
+    renderWithQueryClient(<StaleDataBadge freshestBatch={freshBatch()} now={now} />)
+
+    await waitFor(() => { expect(screen.getByTestId('stale-data-badge').dataset.stale).toBe('true') })
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(screen.getByTestId('stale-data-badge')).toHaveTextContent('0')
+  })
+
+  it('канал manual — порог в часах из тенанта (inventoryManualStaleHours), не REST-минуты', async () => {
+    stubTenantMeta(15, 1)
+    const now = new Date('2026-01-01T02:00:00.000Z') // 2 часа спустя, порог manual — 1 час
+
+    renderWithQueryClient(<StaleDataBadge freshestBatch={freshBatch({ channel: 'manual' })} now={now} />)
+
+    await waitFor(() => { expect(screen.getByTestId('stale-data-badge').dataset.stale).toBe('true') })
+  })
+
+  it('без единого батча — нейтральное сообщение, пороги не запрашиваются (enabled=false)', () => {
+    const fetchMock = stubTenantMeta(5)
+
+    renderWithQueryClient(<StaleDataBadge freshestBatch={null} />)
 
     expect(screen.getByTestId('stale-data-badge-empty')).toBeInTheDocument()
     expect(screen.queryByTestId('stale-data-badge')).not.toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })
