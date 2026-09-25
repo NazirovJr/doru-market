@@ -15,8 +15,12 @@ afterEach(() => {
 
 describe('downloadAuthenticatedFile', () => {
   it('скачивает файл через fetch + Blob и кликает по временной ссылке с заданным именем', async () => {
-    const blob = new Blob(['content'])
-    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(blob, { status: 200 }))))
+    // Тело ответа — строка, не `new Blob(...)`: глобальный `Blob` в jsdom-окружении не реализует
+    // `.stream()`, который нужен нативному `Response` (undici) при построении тела — конструктор
+    // падает `TypeError: object.stream is not a function` детерминированно (несовместимость
+    // jsdom-Blob и Node-Response, а не флейк). Строка — валидный BodyInit в обоих рантаймах;
+    // `response.blob()` в продуктовом коде всё равно возвращает настоящий Blob.
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response('content', { status: 200 }))))
     const { createObjectURL, revokeObjectURL } = stubUrlObjectMethods()
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockReturnValue(undefined)
 
