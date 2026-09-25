@@ -6,6 +6,15 @@
  *
  * Не пишет строк в `orders` вне собственной транзакции ROLLBACK (проверка CHECK требует
  * попытки INSERT, откатываемой немедленно) — безопасен для параллельного использования БД.
+ *
+ * ИСПРАВЛЕНО (гейт CI, воспроизведение `postgres-init/01-test-database.sql` → `pnpm db:migrate`
+ * под `dorutj_migrator` → `test:integration` под `test`): тест идемпотентности реплеил
+ * `ALTER TABLE orders ADD COLUMN`/`ADD CONSTRAINT` ПОД РОЛЬЮ `test` через общий `pool`, а после
+ * реальных миграций владелец `orders` — `dorutj_migrator` (`test` имеет только
+ * `SELECT/INSERT/UPDATE/DELETE/TRUNCATE` через `ALTER DEFAULT PRIVILEGES`, см.
+ * `infra/docker/postgres-init/01-test-database.sql`) — падало `must be owner of table orders`.
+ * DDL теперь идёт под отдельным `migratorPool` (тот же приём, что
+ * `payments-migration.integration.spec.ts`/`support-ticket-sla-fields-migration.integration.spec.ts`).
  */
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -15,6 +24,21 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 const TEST_DATABASE_URL =
   process.env.ORDERS_TEST_DATABASE_URL ?? process.env.DATABASE_URL ?? 'postgres://test:test@localhost:5432/dorutj_test'
+
+/** DDL (реплей миграции) — под ролью-владельцем `dorutj_migrator` (см. блок «ИСПРАВЛЕНО» выше). */
+const MIGRATOR_DATABASE_URL = process.env.ORDERS_MIGRATOR_DATABASE_URL ?? buildMigratorUrl(TEST_DATABASE_URL)
+
+function buildMigratorUrl(appUrl: string): string {
+  try {
+    const url = new URL(appUrl)
+    url.username = 'dorutj_migrator'
+    // Дев-дефолт, коммитится в открытом виде (правило 13 AGENTS.md), не секрет.
+    url.password = 'dorutj_dev_only_password'
+    return url.toString()
+  } catch {
+    return appUrl
+  }
+}
 
 const PROBE_TIMEOUT_MS = 1_500
 
@@ -31,6 +55,7 @@ async function isPostgresReachable(url: string): Promise<boolean> {
 }
 
 const postgresAvailable = await isPostgresReachable(TEST_DATABASE_URL)
+const migratorAvailable = postgresAvailable && (await isPostgresReachable(MIGRATOR_DATABASE_URL))
 
 const MIGRATION_SQL_PATH = fileURLToPath(
   new URL('../../../migrations/0028_orders_payments_extensions.sql', import.meta.url),
@@ -45,13 +70,16 @@ interface ColumnRow {
 
 describe.skipIf(!postgresAvailable)('0028_orders_payments_extensions.sql — billing_strategy (DTJ-228)', () => {
   let pool: Pool
+  let migratorPool: Pool
 
   beforeAll(() => {
     pool = new Pool({ connectionString: TEST_DATABASE_URL })
+    migratorPool = new Pool({ connectionString: MIGRATOR_DATABASE_URL })
   })
 
   afterAll(async () => {
     await pool.end().catch(() => undefined)
+    await migratorPool.end().catch(() => undefined)
   })
 
   it('orders.billing_strategy — VARCHAR(20) NOT NULL DEFAULT single_invoice', async () => {
@@ -103,9 +131,14 @@ describe.skipIf(!postgresAvailable)('0028_orders_payments_extensions.sql — bil
     }
   })
 
-  it('идемпотентность (правило 9 AGENTS.md) — применяется ДВАЖДЫ подряд без ошибки', async () => {
-    const sql = readFileSync(MIGRATION_SQL_PATH, 'utf8')
-    await pool.query(sql)
-    await expect(pool.query(sql)).resolves.toBeDefined()
-  })
+  it.skipIf(!migratorAvailable)(
+    'идемпотентность (правило 9 AGENTS.md) — применяется ДВАЖДЫ подряд без ошибки',
+    async () => {
+      const sql = readFileSync(MIGRATION_SQL_PATH, 'utf8')
+      // DDL — под ролью-владельцем `dorutj_migrator` (см. блок «ИСПРАВЛЕНО» в шапке файла),
+      // не под `test` (`pool`): `test` не владеет `orders` после реальных миграций.
+      await migratorPool.query(sql)
+      await expect(migratorPool.query(sql)).resolves.toBeDefined()
+    },
+  )
 })

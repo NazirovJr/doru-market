@@ -62,6 +62,26 @@ const EXTENSIONS_SQL = readFileSync(new URL('0001_extensions.sql', MIGRATIONS_DI
 const CATALOG_CORE_SQL = readFileSync(new URL('0006_catalog_core.sql', MIGRATIONS_DIR), 'utf8')
 
 /**
+ * ИСПРАВЛЕНО (гейт CI): весь DDL этого файла (расширения/функции/таблицы/индекс) реплеился под
+ * ролью `test` — когда реальные миграции уже применены `dorutj_migrator`, `CREATE OR REPLACE
+ * FUNCTION immutable_unaccent` падает `must be owner of function immutable_unaccent`. DDL теперь
+ * идёт под ОТДЕЛЬНЫМ `migratorPool` (тот же приём, что `i18n-overrides-catalog.seed.integration.
+ * spec.ts`).
+ */
+const MIGRATOR_DATABASE_URL = process.env.CATALOG_MIGRATOR_DATABASE_URL ?? buildMigratorUrl(TEST_DATABASE_URL)
+
+function buildMigratorUrl(appUrl: string): string {
+  try {
+    const url = new URL(appUrl)
+    url.username = 'dorutj_migrator'
+    url.password = 'dorutj_dev_only_password'
+    return url.toString()
+  } catch {
+    return appUrl
+  }
+}
+
+/**
  * `ix_medicines_trade_name_prefix` НЕ копируется вручную — извлекается дословно из
  * `0018_search_schema_additions.sql` (см. JSDoc файла п. «Миграции»), чтобы этот тест не мог
  * разойтись с реальной миграцией (в частности, с обёрткой `immutable_unaccent()`, объявленной
@@ -105,18 +125,23 @@ async function isPostgresReachable(url: string): Promise<boolean> {
 }
 
 const postgresAvailable = await isPostgresReachable(TEST_DATABASE_URL)
+const migratorAvailable = postgresAvailable && (await isPostgresReachable(MIGRATOR_DATABASE_URL))
 
-describe.skipIf(!postgresAvailable)('PostgresSearchProvider.suggest() — integration (DTJ-186)', () => {
+describe.skipIf(!postgresAvailable || !migratorAvailable)('PostgresSearchProvider.suggest() — integration (DTJ-186)', () => {
   let pool: Pool
   let db: NodePgDatabase
+  let migratorPool: Pool
   let provider: PostgresSearchProvider
 
   beforeAll(async () => {
     pool = new Pool({ connectionString: TEST_DATABASE_URL })
     db = drizzle(pool)
-    await db.execute(EXTENSIONS_SQL)
-    await db.execute(CATALOG_CORE_SQL)
-    await db.execute(TRADE_NAME_PREFIX_INDEX_SQL)
+    migratorPool = new Pool({ connectionString: MIGRATOR_DATABASE_URL })
+    // DDL — под ролью-владельцем `dorutj_migrator` (см. блок «ИСПРАВЛЕНО» у объявления
+    // MIGRATOR_DATABASE_URL).
+    await migratorPool.query(EXTENSIONS_SQL)
+    await migratorPool.query(CATALOG_CORE_SQL)
+    await migratorPool.query(TRADE_NAME_PREFIX_INDEX_SQL)
     // `suggest()` не использует logger/clock/config (DTJ-185 добавил их конструктору для
     // search()/searchByBarcode()) — минимальные заглушки, этот файл их поведение не проверяет.
     provider = new PostgresSearchProvider(
@@ -128,11 +153,14 @@ describe.skipIf(!postgresAvailable)('PostgresSearchProvider.suggest() — integr
   })
 
   afterAll(async () => {
+    await migratorPool.end().catch(() => undefined)
     await pool.end().catch(() => undefined)
   })
 
   async function truncateCatalog(): Promise<void> {
-    await db.execute('TRUNCATE medicine_substances, medicines, categories RESTART IDENTITY CASCADE')
+    // `RESTART IDENTITY` требует владения sequence — `test` им не владеет (см. блок
+    // «ИСПРАВЛЕНО» у объявления MIGRATOR_DATABASE_URL) — под `migratorPool`.
+    await migratorPool.query('TRUNCATE medicine_substances, medicines, categories RESTART IDENTITY CASCADE')
   }
 
   beforeEach(async () => {

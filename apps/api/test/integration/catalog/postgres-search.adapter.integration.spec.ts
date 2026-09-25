@@ -31,6 +31,15 @@
  * **Окружение**: см. JSDoc `postgres-search-suggest.adapter.integration.spec.ts` — тот же
  * `describe.skipIf`, честный skip при недоступном Postgres (не «зелёный по умолчанию»).
  *
+ * **ИСПРАВЛЕНО (гейт CI)**: `migrate()` вызывался под ролью `test` — когда реальные миграции
+ * уже применены `dorutj_migrator` (см. `infra/docker/postgres-init/01-test-database.sql` →
+ * `pnpm db:migrate` → `test:integration`, точный порядок CI), схема бухгалтерии `drizzle`
+ * УЖЕ существует и принадлежит `dorutj_migrator` — `test` не имеет прав писать в неё,
+ * `migrate()` падает `permission denied for schema drizzle`. `migrate()` теперь идёт под
+ * ОТДЕЛЬНЫМ `migratorPool` (идемпотентно — при уже применённых миграциях это no-op, drizzle
+ * сверяется со своей бухгалтерией); `db`/`pool` (роль `test`) остаются для самого теста —
+ * тот же приём, что `i18n-overrides-catalog.seed.integration.spec.ts`.
+ *
  * @see docs/spec/20-module-catalog-search.md (SRS-CAT-013..024, 044-048, 055-056, 075, 077)
  * @see tickets/ep05-search-map/DTJ-185.md
  */
@@ -62,6 +71,21 @@ const TEST_DATABASE_URL =
   process.env.DATABASE_URL ??
   'postgres://test:test@localhost:5432/dorutj_test'
 
+/** DDL (`migrate()`) — под ролью-владельцем `dorutj_migrator` (см. блок «ИСПРАВЛЕНО» выше). */
+const MIGRATOR_DATABASE_URL = process.env.CATALOG_MIGRATOR_DATABASE_URL ?? buildMigratorUrl(TEST_DATABASE_URL)
+
+function buildMigratorUrl(appUrl: string): string {
+  try {
+    const url = new URL(appUrl)
+    url.username = 'dorutj_migrator'
+    // Дев-дефолт, коммитится в открытом виде (правило 13 AGENTS.md), не секрет.
+    url.password = 'dorutj_dev_only_password'
+    return url.toString()
+  } catch {
+    return appUrl
+  }
+}
+
 const MIGRATIONS_DIR = fileURLToPath(new URL('../../../migrations/', import.meta.url))
 const PROBE_TIMEOUT_MS = 1_500
 const NEUTRAL_TENANT_ID = '00000000-0000-4000-8000-000000000001'
@@ -83,6 +107,7 @@ async function isPostgresReachable(url: string): Promise<boolean> {
 }
 
 const postgresAvailable = await isPostgresReachable(TEST_DATABASE_URL)
+const migratorAvailable = postgresAvailable && (await isPostgresReachable(MIGRATOR_DATABASE_URL))
 
 function baseSearchQuery(overrides: Partial<SearchQuery> = {}): SearchQuery {
   return {
@@ -96,15 +121,18 @@ function baseSearchQuery(overrides: Partial<SearchQuery> = {}): SearchQuery {
   }
 }
 
-describe.skipIf(!postgresAvailable)('PostgresSearchProvider.search() — integration (DTJ-185)', () => {
+describe.skipIf(!postgresAvailable || !migratorAvailable)('PostgresSearchProvider.search() — integration (DTJ-185)', () => {
   let pool: Pool
   let db: NodePgDatabase
+  let migratorPool: Pool
   let provider: PostgresSearchProvider
 
   beforeAll(async () => {
     pool = new Pool({ connectionString: TEST_DATABASE_URL })
     db = drizzle(pool)
-    await migrate(db, { migrationsFolder: MIGRATIONS_DIR })
+    migratorPool = new Pool({ connectionString: MIGRATOR_DATABASE_URL })
+    // DDL — под ролью-владельцем `dorutj_migrator` (см. блок «ИСПРАВЛЕНО» в шапке файла).
+    await migrate(drizzle(migratorPool), { migrationsFolder: MIGRATIONS_DIR })
     const logger = pino({ enabled: false })
     provider = new PostgresSearchProvider(
       db,
@@ -115,11 +143,14 @@ describe.skipIf(!postgresAvailable)('PostgresSearchProvider.search() — integra
   })
 
   afterAll(async () => {
+    await migratorPool.end().catch(() => undefined)
     await pool.end().catch(() => undefined)
   })
 
   async function truncateAll(): Promise<void> {
-    await db.execute(
+    // `RESTART IDENTITY` требует владения соответствующими sequence — `test` им не владеет
+    // (см. блок «ИСПРАВЛЕНО» в шапке файла) — под `migratorPool`, как и остальной DDL/admin-DML.
+    await migratorPool.query(
       'TRUNCATE pharmacy_reliability_scores, pharmacy_inventory, pharmacies, pharmacy_chains, tenants, medicine_substances, medicines, categories RESTART IDENTITY CASCADE',
     )
   }

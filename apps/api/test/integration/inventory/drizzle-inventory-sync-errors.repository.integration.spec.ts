@@ -52,6 +52,25 @@ const INVENTORY_SYNC_ERRORS_SQL = readFileSync(
   'utf8',
 )
 
+/**
+ * ИСПРАВЛЕНО (гейт CI): `EXTENSIONS_SQL`/`INVENTORY_SYNC_ERRORS_SQL` реплеились под ролью
+ * `test` — при уже применённых реальных миграциях `CREATE OR REPLACE FUNCTION
+ * immutable_unaccent` падает `must be owner of function immutable_unaccent`. DDL теперь идёт
+ * под ОТДЕЛЬНЫМ `migratorPool` (тот же приём, что `i18n-overrides-catalog.seed.integration.spec.ts`).
+ */
+const MIGRATOR_DATABASE_URL = process.env.INVENTORY_MIGRATOR_DATABASE_URL ?? buildMigratorUrl(TEST_DATABASE_URL)
+
+function buildMigratorUrl(appUrl: string): string {
+  try {
+    const url = new URL(appUrl)
+    url.username = 'dorutj_migrator'
+    url.password = 'dorutj_dev_only_password'
+    return url.toString()
+  } catch {
+    return appUrl
+  }
+}
+
 const PROBE_TIMEOUT_MS = 1_500
 
 async function isPostgresReachable(url: string): Promise<boolean> {
@@ -67,12 +86,14 @@ async function isPostgresReachable(url: string): Promise<boolean> {
 }
 
 const postgresAvailable = await isPostgresReachable(TEST_DATABASE_URL)
+const migratorAvailable = postgresAvailable && (await isPostgresReachable(MIGRATOR_DATABASE_URL))
 
-describe.skipIf(!postgresAvailable)(
+describe.skipIf(!postgresAvailable || !migratorAvailable)(
   'DrizzleInventorySyncErrorsRepository — integration (DTJ-145, SRS-INV-011)',
   () => {
     let pool: Pool
     let db: NodePgDatabase
+    let migratorPool: Pool
     let repo: DrizzleInventorySyncErrorsRepository
     let pharmacyId: string
     let batchId: string
@@ -80,15 +101,19 @@ describe.skipIf(!postgresAvailable)(
     beforeAll(async () => {
       pool = new Pool({ connectionString: TEST_DATABASE_URL })
       db = drizzle(pool)
+      migratorPool = new Pool({ connectionString: MIGRATOR_DATABASE_URL })
       // `pharmacies`/`inventory_sync_batch` — предполагаются уже созданными
       // миграциями вне зоны этого тикета (см. JSDoc выше). Проверяем явно:
       // отсутствие таблицы даёт понятную ошибку вместо непонятного FK-сбоя ниже.
-      await db.execute(EXTENSIONS_SQL)
-      await db.execute(INVENTORY_SYNC_ERRORS_SQL)
+      // DDL — под ролью-владельцем `dorutj_migrator` (см. блок «ИСПРАВЛЕНО» у объявления
+      // MIGRATOR_DATABASE_URL).
+      await migratorPool.query(EXTENSIONS_SQL)
+      await migratorPool.query(INVENTORY_SYNC_ERRORS_SQL)
       repo = new DrizzleInventorySyncErrorsRepository(db)
     })
 
     afterAll(async () => {
+      await migratorPool.end().catch(() => undefined)
       await pool.end().catch(() => undefined)
     })
 
