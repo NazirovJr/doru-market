@@ -166,6 +166,13 @@ export class ForbiddenError extends DomainError {
   }
 }
 
+// Application-policy отказ (не RolesGuard): роль без кросс-тенантной видимости, scope != 'own'.
+export class CrossTenantAccessDeniedError extends SecurityError {
+  constructor(details?: Record<string, unknown>) {
+    super(ErrorCode.CROSS_TENANT_ACCESS_DENIED, 'Cross-tenant access denied', details)
+  }
+}
+
 // ==================== Telegram TWA: 401 (SecurityError) ====================
 
 /**

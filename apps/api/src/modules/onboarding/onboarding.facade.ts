@@ -67,6 +67,44 @@ export class OnboardingFacade {
     return out
   }
 
+  // РАСШИРЕНИЕ (DTJ-353), тот же приём, что getPharmacyNames — имя сети догружается батчем по
+  // уникальным chainId страницы, не всей таблицы.
+  async findPharmacyAccountsAny(
+    filter: { readonly status?: string; readonly chainId?: string; readonly nameLike?: string },
+    pagination: { readonly limit: number; readonly cursor?: { readonly v: string; readonly id: string } | null },
+  ): Promise<{
+    readonly items: readonly {
+      readonly id: string
+      readonly chainId: string | null
+      readonly chainName: string | null
+      readonly name: string
+      readonly status: string
+      readonly licenseExpiryDate: Date | null
+    }[]
+    readonly nextCursor: { readonly v: string; readonly id: string } | null
+    readonly hasMore: boolean
+  }> {
+    const page = await this.pharmacyAccountRepository.listAny({ filter, limit: pagination.limit, cursor: pagination.cursor ?? null })
+    const chainNames = await this.resolveChainNames(page.items.map((item) => item.chainId))
+    return {
+      items: page.items.map((item) => ({ ...item, chainName: item.chainId === null ? null : (chainNames.get(item.chainId) ?? null) })),
+      nextCursor: page.nextCursor,
+      hasMore: page.hasMore,
+    }
+  }
+
+  private async resolveChainNames(chainIds: readonly (string | null)[]): Promise<ReadonlyMap<string, string>> {
+    const uniqueIds = [...new Set(chainIds.filter((id): id is string => id !== null))]
+    const chains = await Promise.all(uniqueIds.map((id) => this.pharmacyChainRepository.findById(id)))
+    const out = new Map<string, string>()
+    for (const chain of chains) {
+      if (chain !== null) {
+        out.set(chain.id, chain.name)
+      }
+    }
+    return out
+  }
+
   /** Контракт для EP-02 DTJ-057 — провижининг тенанта с правами whitelabel. */
   async getChainEligibilityForWhitelabel(
     chainId: string,

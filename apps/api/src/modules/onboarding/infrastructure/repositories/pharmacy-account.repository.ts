@@ -3,11 +3,14 @@
  * `pharmacy-chain.repository.ts` (DTJ-064) — те же `findById`/`save` + `chainFromRow`.
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { and, asc, count, eq, isNotNull, lte } from 'drizzle-orm'
+import { and, asc, count, desc, eq, ilike, isNotNull, lt, lte, or, type SQL } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { pharmacies } from '@/db/schema/pharmacies.js'
 import { PharmacyAccount } from '@/modules/onboarding/domain/pharmacy-account.entity.js'
 import type {
+  ListAnyCursor,
+  ListAnyPage,
+  ListAnyQuery,
   ListByStatusFilter,
   ListByStatusResult,
   PharmacyAccountRepositoryPort,
@@ -79,6 +82,38 @@ export class DrizzlePharmacyAccountRepository implements PharmacyAccountReposito
     }
   }
 
+  /** [DTJ-353] Кросс-тенантный курсорный список (`super_admin`) — см. JSDoc порта `listAny`. */
+  async listAny(query: ListAnyQuery): Promise<ListAnyPage> {
+    const conditions = buildListAnyConditions(query)
+    const rows = await this.db
+      .select({
+        id: pharmacies.id,
+        chainId: pharmacies.chainId,
+        name: pharmacies.name,
+        status: pharmacies.status,
+        licenseExpiryDate: pharmacies.licenseExpiryDate,
+        createdAt: pharmacies.createdAt,
+      })
+      .from(pharmacies)
+      .where(and(...conditions))
+      .orderBy(desc(pharmacies.createdAt), desc(pharmacies.id))
+      .limit(query.limit + 1)
+    const hasMore = rows.length > query.limit
+    const page = hasMore ? rows.slice(0, query.limit) : rows
+    const last = page[page.length - 1]
+    return {
+      items: page.map((row) => ({
+        id: row.id,
+        chainId: row.chainId,
+        name: row.name,
+        status: row.status,
+        licenseExpiryDate: parseDate(row.licenseExpiryDate),
+      })),
+      nextCursor: hasMore && last !== undefined ? { v: normalizeCreatedAt(last.createdAt).toISOString(), id: last.id } : null,
+      hasMore,
+    }
+  }
+
   async save(account: PharmacyAccount): Promise<void> {
     const baseRow = this.buildRow(account)
     await this.db.insert(pharmacies).values(baseRow).onConflictDoUpdate({
@@ -136,6 +171,27 @@ export class DrizzlePharmacyAccountRepository implements PharmacyAccountReposito
       suspensionReason: row.suspensionReason,
     }
   }
+}
+
+/** Вынесено из `listAny()` — снижает цикломатическую сложность (C1), тот же приём, что `drizzle-users.repository.ts`. */
+function buildListAnyConditions(query: ListAnyQuery): SQL[] {
+  const conditions: SQL[] = [isNotNull(pharmacies.id)]
+  if (query.filter.status !== undefined) conditions.push(eq(pharmacies.status, query.filter.status))
+  if (query.filter.chainId !== undefined) conditions.push(eq(pharmacies.chainId, query.filter.chainId))
+  if (query.filter.nameLike !== undefined) conditions.push(ilike(pharmacies.name, `%${query.filter.nameLike}%`))
+  const cursorCondition = query.cursor != null ? keysetConditionAny(query.cursor) : undefined
+  if (cursorCondition !== undefined) conditions.push(cursorCondition)
+  return conditions
+}
+
+function keysetConditionAny(cursor: ListAnyCursor): SQL | undefined {
+  const anchorCreatedAt = new Date(cursor.v)
+  return or(lt(pharmacies.createdAt, anchorCreatedAt), and(eq(pharmacies.createdAt, anchorCreatedAt), lt(pharmacies.id, cursor.id)))
+}
+
+// created_at приходит от pg то Date, то строкой — тот же приём, что tenant.repository.ts.
+function normalizeCreatedAt(value: Date | string | null): Date {
+  return value === null ? new Date(0) : new Date(value)
 }
 
 function formatDate(value: Date | string | null): string | null {
