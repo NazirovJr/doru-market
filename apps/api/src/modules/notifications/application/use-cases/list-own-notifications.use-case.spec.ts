@@ -32,6 +32,7 @@ function buildHarness() {
   const repository: NotificationsRepositoryPort = {
     create: vi.fn(),
     list: listMock,
+    findUndeliveredAcrossAllChannels: vi.fn(),
   }
   const useCase = new ListOwnNotificationsUseCase(repository)
   return { useCase, listMock }

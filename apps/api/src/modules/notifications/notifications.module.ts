@@ -38,6 +38,8 @@
  *
  * `NOTIFICATION_PREFERENCES_REPOSITORY_PORT` → `NotificationPreferencesRepository`; добавлены
  * `GetUserPreferencesUseCase`/`UpdateUserPreferencesUseCase` и `NotificationPreferencesController`.
+ *
+ * `ListUndeliveredNotificationsUseCase`/`NotificationsDiagnosticsController` — читают уже провайженный `NOTIFICATIONS_REPOSITORY_PORT`, новых портов не требуют.
  */
 import { Module } from '@nestjs/common'
 import { AuthModule } from '@/modules/auth/auth.module.js'
@@ -60,8 +62,10 @@ import { ListOwnNotificationsUseCase } from './application/use-cases/list-own-no
 import { DispatchNotificationUseCase } from './application/use-cases/dispatch-notification.use-case.js'
 import { GetUserPreferencesUseCase } from './application/use-cases/get-user-preferences.use-case.js'
 import { UpdateUserPreferencesUseCase } from './application/use-cases/update-user-preferences.use-case.js'
+import { ListUndeliveredNotificationsUseCase } from './application/use-cases/list-undelivered-notifications.use-case.js'
 import { NotificationsFeedController } from './presentation/notifications-feed.controller.js'
 import { NotificationPreferencesController } from './presentation/notification-preferences.controller.js'
+import { NotificationsDiagnosticsController } from './presentation/notifications-diagnostics.controller.js'
 
 @Module({
   imports: [AuthModule, TenancyModule],
@@ -77,6 +81,7 @@ import { NotificationPreferencesController } from './presentation/notification-p
     { provide: NOTIFICATION_PREFERENCES_REPOSITORY_PORT, useClass: NotificationPreferencesRepository },
     { provide: GetUserPreferencesUseCase, useClass: GetUserPreferencesUseCase },
     { provide: UpdateUserPreferencesUseCase, useClass: UpdateUserPreferencesUseCase },
+    { provide: ListUndeliveredNotificationsUseCase, useClass: ListUndeliveredNotificationsUseCase },
     UsersRepositoryIdentityFacadeAdapter,
     NotificationsRepository,
     TelegramNotifyProvider,
@@ -95,7 +100,7 @@ import { NotificationPreferencesController } from './presentation/notification-p
     NOTIFICATION_PREFERENCES_REPOSITORY_PORT,
     DispatchNotificationUseCase,
   ],
-  controllers: [NotificationsFeedController, NotificationPreferencesController],
+  controllers: [NotificationsFeedController, NotificationPreferencesController, NotificationsDiagnosticsController],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.
 export class NotificationsModule {}

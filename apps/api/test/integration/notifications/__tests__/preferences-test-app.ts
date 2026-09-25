@@ -16,6 +16,7 @@ import { DatabaseModule } from '@/infrastructure/database/database.module.js'
 import { RedisModule } from '@/infrastructure/redis/redis.module.js'
 import { AuthModule } from '@/modules/auth/auth.module.js'
 import { JWT_SIGNER, type JwtSignerPort } from '@/modules/auth/index.js'
+import { DomainEventsModule } from '@/common/events/domain-events.module.js'
 import { NotificationsModule } from '@/modules/notifications/notifications.module.js'
 import { TenantContext } from '@/common/context/tenant-context.js'
 import { RequestContext } from '@/common/context/request-context.js'
@@ -71,7 +72,8 @@ export interface TestApp {
 export async function createTestApp(databaseUrl: string, redisUrl: string): Promise<TestApp> {
   applyTestEnv(databaseUrl, redisUrl)
   const moduleRef = await Test.createTestingModule({
-    imports: [AppConfigModule, SharedKernelModule, LoggerModule, DatabaseModule, RedisModule, AuthModule, NotificationsModule],
+    // DomainEventsModule — без него не резолвится PROCESSED_EVENTS_PORT для OutboxToNotificationsConsumer.
+    imports: [AppConfigModule, SharedKernelModule, LoggerModule, DatabaseModule, RedisModule, DomainEventsModule, AuthModule, NotificationsModule],
   }).compile()
   const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter())
   const config = app.get(AppConfigService)
