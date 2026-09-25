@@ -16,7 +16,12 @@ import { ResolveDeliveryOfferTimeoutUseCase } from './application/use-cases/reso
 import { GetPendingDeliveryOffersUseCase } from './application/use-cases/get-pending-delivery-offers.use-case.js'
 import { BuildCourierCandidateQueryService } from './application/services/build-courier-candidate-query.service.js'
 import { EscalateDeliveryOfferService } from './application/services/escalate-delivery-offer.service.js'
+import { CalculateDeliveryFeeUseCase } from './application/use-cases/calculate-delivery-fee.use-case.js'
+import { ManageDeliveryZonesUseCase } from './application/use-cases/manage-delivery-zones.use-case.js'
+import { ManageDeliveryPricingRulesUseCase } from './application/use-cases/manage-delivery-pricing-rules.use-case.js'
 import { COURIER_REPOSITORY_PROVIDER } from './infrastructure/repositories/courier.repository.js'
+import { DELIVERY_ZONE_REPOSITORY_PROVIDER } from './infrastructure/repositories/delivery-zone.repository.js'
+import { DELIVERY_PRICING_RULE_REPOSITORY_PROVIDER } from './infrastructure/repositories/delivery-pricing-rule.repository.js'
 import { DELIVERY_ASSIGNMENT_REPOSITORY_PROVIDER } from './infrastructure/repositories/delivery-assignment.repository.js'
 import { DELIVERY_OFFER_REPOSITORY_PROVIDER } from './infrastructure/repositories/delivery-offer.repository.js'
 import { COURIER_SHIFT_REPOSITORY_PROVIDER } from './infrastructure/repositories/courier-shift.repository.js'
@@ -38,6 +43,8 @@ import { CourierPayoutsController } from './presentation/courier-payouts.control
 import { CourierRatingsController } from './presentation/courier-ratings.controller.js'
 import { DeliveryOffersController } from './presentation/delivery-offers.controller.js'
 import { DeliveryOfferTimeoutController } from './presentation/internal/delivery-offer-timeout.controller.js'
+import { DeliveryPricingController } from './presentation/delivery-pricing.controller.js'
+import { DeliveryZonesController } from './presentation/delivery-zones.controller.js'
 
 @Module({
   imports: [AuthModule, TenancyModule, CatalogModule],
@@ -48,6 +55,8 @@ import { DeliveryOfferTimeoutController } from './presentation/internal/delivery
     CourierRatingsController,
     DeliveryOffersController,
     DeliveryOfferTimeoutController,
+    DeliveryPricingController,
+    DeliveryZonesController,
   ],
   providers: [
     COURIER_REPOSITORY_PROVIDER,
@@ -65,6 +74,8 @@ import { DeliveryOfferTimeoutController } from './presentation/internal/delivery
     DELIVERY_CANDIDATE_CACHE_PORT_PROVIDER,
     DELIVERY_OFFER_TIMEOUT_QUEUE_PROVIDER,
     DELIVERY_UNIT_OF_WORK_PROVIDER,
+    DELIVERY_ZONE_REPOSITORY_PROVIDER,
+    DELIVERY_PRICING_RULE_REPOSITORY_PROVIDER,
     SuggestNearestCourierUseCase,
     StartCourierShiftUseCase,
     EndCourierShiftUseCase,
@@ -79,6 +90,9 @@ import { DeliveryOfferTimeoutController } from './presentation/internal/delivery
     ResolveDeliveryOfferTimeoutUseCase,
     GetPendingDeliveryOffersUseCase,
     OrderPickedUpEventHandler,
+    CalculateDeliveryFeeUseCase,
+    ManageDeliveryZonesUseCase,
+    ManageDeliveryPricingRulesUseCase,
     DeliveryFacade,
   ],
   exports: [DeliveryFacade],

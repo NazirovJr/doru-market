@@ -40,3 +40,6 @@ export const deliveryPricingRules = pgTable(
     ),
   ],
 )
+
+/** DTJ-322 — форма строки для `DrizzleDeliveryPricingRuleRepository` (тот же приём, что `CourierRow`). */
+export type DeliveryPricingRuleRow = typeof deliveryPricingRules.$inferSelect
