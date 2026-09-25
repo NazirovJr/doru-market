@@ -517,5 +517,10 @@
   "quantity.piece.other": "{count} pcs.",
   "ui.phone_input.incomplete_error": "Enter the full phone number",
   "ui.otp_input.group_label": "Confirmation code",
-  "ui.otp_input.cell_label": "Digit {index} of {total}"
+  "ui.otp_input.cell_label": "Digit {index} of {total}",
+  "ux.savings.badge_title": "Save {amount}",
+  "ux.savings.badge_explanation": "compared to the regular price",
+  "catalog.analogs.banner_message": "Same active ingredient — {substanceName} {dosage} — for {analogPrice} instead of {referencePrice} ({savingsPercent}% cheaper)",
+  "catalog.analogs.disclaimer": "This information is for reference only and does not replace advice from a doctor or pharmacist. Consult a specialist before switching medicines.",
+  "cart.add_item_cta": "Add to cart"
 }

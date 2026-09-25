@@ -98,3 +98,26 @@ export { OfflineBanner } from './offline-banner/offline-banner'
 
 export type { ProgressBarProps } from './progress-bar/progress-bar'
 export { ProgressBar } from './progress-bar/progress-bar'
+
+// DTJ-407 — доменные витринные компоненты (PriceTag, SavingsBadge, AnalogBanner, MedicineCard,
+// PharmacyOfferRow, CountdownTimer, OrderTimeline).
+export type { PriceTagProps } from './price-tag/price-tag'
+export { PriceTag } from './price-tag/price-tag'
+
+export type { SavingsBadgeProps } from './savings-badge/savings-badge'
+export { SavingsBadge } from './savings-badge/savings-badge'
+
+export type { AnalogBannerProps } from './analog-banner/analog-banner'
+export { AnalogBanner } from './analog-banner/analog-banner'
+
+export type { MedicineCardControlCategory, MedicineCardProps } from './medicine-card/medicine-card'
+export { MedicineCard } from './medicine-card/medicine-card'
+
+export type { PharmacyOfferRowProps } from './pharmacy-offer-row/pharmacy-offer-row'
+export { PharmacyOfferRow } from './pharmacy-offer-row/pharmacy-offer-row'
+
+export type { CountdownEscalationStatus, CountdownTimerProps } from './countdown-timer/countdown-timer'
+export { CountdownTimer, computeRemainingSeconds, formatCountdown, resolveEscalationStatus } from './countdown-timer/countdown-timer'
+
+export type { OrderTimelineProps, OrderTimelineStep } from './order-timeline/order-timeline'
+export { OrderTimeline } from './order-timeline/order-timeline'

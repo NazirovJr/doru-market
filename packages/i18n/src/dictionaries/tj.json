@@ -517,5 +517,10 @@
   "quantity.piece.other": "{count} дона",
   "ui.phone_input.incomplete_error": "Рақами пурраи телефонро ворид кунед",
   "ui.otp_input.group_label": "Рамзи тасдиқ",
-  "ui.otp_input.cell_label": "Рақами {index} аз {total}"
+  "ui.otp_input.cell_label": "Рақами {index} аз {total}",
+  "ux.savings.badge_title": "{amount} сарфа кунед",
+  "ux.savings.badge_explanation": "нисбат ба нархи муқаррарӣ",
+  "catalog.analogs.banner_message": "Ҳамон моддаи фаъол — {substanceName} {dosage} — бо нархи {analogPrice} ба ҷои {referencePrice} ({savingsPercent}% арзонтар)",
+  "catalog.analogs.disclaimer": "Маълумот хусусияти маълумотнок дорад ва машварати духтур ё дорусозро иваз намекунад. Пеш аз иваз кардани дору бо мутахассис маслиҳат кунед.",
+  "cart.add_item_cta": "Ба сабад"
 }
