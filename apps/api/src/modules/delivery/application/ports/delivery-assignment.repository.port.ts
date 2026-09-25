@@ -20,4 +20,25 @@ export interface DeliveryAssignmentRepositoryPort {
   findByOrderId(orderId: string, tx?: DeliveryUnitOfWorkTx): Promise<DeliveryAssignment | null>
   hasActiveAssignmentForCourier(courierId: string, tx?: DeliveryUnitOfWorkTx): Promise<boolean>
   save(assignment: DeliveryAssignment, tx?: DeliveryUnitOfWorkTx): Promise<void>
+  // Условный UPDATE (status='unassigned' AND NOT EXISTS активного оффера) — единственная точка записи claim, не save().
+  claimUnassigned(input: AssignUnassignedInput, tx: DeliveryUnitOfWorkTx): Promise<boolean>
+  // Тот же условный UPDATE, но без условия «нет оффера» — диспетчер обходит очередь предложений целиком.
+  assignManual(input: AssignUnassignedInput, tx: DeliveryUnitOfWorkTx): Promise<boolean>
+  findUnassignedPool(tx?: DeliveryUnitOfWorkTx): Promise<readonly DeliveryAssignment[]>
+  findByStatuses(
+    input: FindByStatusesInput,
+    tx?: DeliveryUnitOfWorkTx,
+  ): Promise<readonly DeliveryAssignment[]>
+}
+
+export interface FindByStatusesInput {
+  readonly statuses: readonly DeliveryAssignmentStatus[]
+  readonly limit: number
+  readonly cursor: { readonly createdAt: Date; readonly id: string } | null
+}
+
+export interface AssignUnassignedInput {
+  readonly id: string
+  readonly courierId: string
+  readonly now: Date
 }

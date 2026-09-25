@@ -1,17 +1,27 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { and, eq, notInArray } from 'drizzle-orm'
+import { and, desc, eq, inArray, lt, notInArray, or, sql } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { deliveryAssignments, type DeliveryAssignmentRow } from '@/db/schema/delivery-assignments.js'
+import { deliveryOffers } from '@/db/schema/delivery-offers.js'
 import { Money } from '@/shared-kernel/domain/value-objects/money.vo.js'
 import { DeliveryAssignment } from '@/modules/delivery/domain/delivery-assignment.entity.js'
 import type { DeliveryAssignmentSnapshot } from '@/modules/delivery/domain/delivery-assignment-snapshot.js'
 import {
   DELIVERY_ASSIGNMENT_REPOSITORY,
   TERMINAL_DELIVERY_ASSIGNMENT_STATUSES,
+  type AssignUnassignedInput,
   type DeliveryAssignmentRepositoryPort,
+  type FindByStatusesInput,
 } from '@/modules/delivery/application/ports/delivery-assignment.repository.port.js'
 import type { DeliveryUnitOfWorkTx } from '@/modules/delivery/application/ports/delivery-unit-of-work.port.js'
 import { resolveDrizzleClient } from '../drizzle-tx.util.js'
+
+// «В пуле» — нет pending/accepted оффера этого назначения.
+const NOT_IN_ACTIVE_OFFER = sql`NOT EXISTS (
+  SELECT 1 FROM ${deliveryOffers}
+  WHERE ${deliveryOffers.deliveryAssignmentId} = ${deliveryAssignments.id}
+    AND ${deliveryOffers.status} IN ('pending', 'accepted')
+)`
 
 @Injectable()
 export class DrizzleDeliveryAssignmentRepository implements DeliveryAssignmentRepositoryPort {
@@ -57,6 +67,58 @@ export class DrizzleDeliveryAssignmentRepository implements DeliveryAssignmentRe
       )
       .limit(1)
     return row !== undefined
+  }
+
+  public async claimUnassigned(input: AssignUnassignedInput, tx: DeliveryUnitOfWorkTx): Promise<boolean> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const result = await client
+      .update(deliveryAssignments)
+      .set({ status: 'assigned', courierId: input.courierId, assignedAt: input.now })
+      .where(and(eq(deliveryAssignments.id, input.id), eq(deliveryAssignments.status, 'unassigned'), NOT_IN_ACTIVE_OFFER))
+      .returning({ id: deliveryAssignments.id })
+    return result.length > 0
+  }
+
+  public async assignManual(input: AssignUnassignedInput, tx: DeliveryUnitOfWorkTx): Promise<boolean> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const result = await client
+      .update(deliveryAssignments)
+      .set({ status: 'assigned', courierId: input.courierId, assignedAt: input.now })
+      .where(and(eq(deliveryAssignments.id, input.id), eq(deliveryAssignments.status, 'unassigned')))
+      .returning({ id: deliveryAssignments.id })
+    return result.length > 0
+  }
+
+  public async findUnassignedPool(tx?: DeliveryUnitOfWorkTx): Promise<readonly DeliveryAssignment[]> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const rows = await client
+      .select()
+      .from(deliveryAssignments)
+      .where(and(eq(deliveryAssignments.status, 'unassigned'), NOT_IN_ACTIVE_OFFER))
+    return rows.map(toDomain)
+  }
+
+  public async findByStatuses(input: FindByStatusesInput, tx?: DeliveryUnitOfWorkTx): Promise<readonly DeliveryAssignment[]> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const { statuses, limit, cursor } = input
+    const conditions = [inArray(deliveryAssignments.status, [...statuses])]
+    if (cursor !== null) {
+      // createdAt DESC, id DESC — устойчивый tie-break на одинаковый createdAt (тот же приём, что courier-earnings.repository.ts).
+      const keysetCondition = or(
+        lt(deliveryAssignments.createdAt, cursor.createdAt),
+        and(eq(deliveryAssignments.createdAt, cursor.createdAt), lt(deliveryAssignments.id, cursor.id)),
+      )
+      if (keysetCondition !== undefined) {
+        conditions.push(keysetCondition)
+      }
+    }
+    const rows = await client
+      .select()
+      .from(deliveryAssignments)
+      .where(and(...conditions))
+      .orderBy(desc(deliveryAssignments.createdAt), desc(deliveryAssignments.id))
+      .limit(limit)
+    return rows.map(toDomain)
   }
 
   public async save(assignment: DeliveryAssignment, tx?: DeliveryUnitOfWorkTx): Promise<void> {

@@ -51,6 +51,7 @@ function resolveAggregateRef(event: DeliveryDomainEvent): AggregateRef {
     case 'DeliveryFailedEvent':
     case 'OrderRefusedAtDoorEvent':
     case 'CourierAssignedEvent':
+    case 'SlaBreachedEvent':
       return { aggregateType: AGGREGATE_TYPE_DELIVERY_ASSIGNMENT, aggregateId: event.deliveryAssignmentId }
     case 'CashReconciliationDiscrepancyEvent':
       return { aggregateType: AGGREGATE_TYPE_COURIER_SHIFT, aggregateId: event.courierShiftId }

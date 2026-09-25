@@ -16,6 +16,7 @@
  * - `DeliveryEscalatedToPoolEvent` — публикуется application-слоем (BullMQ timeout job,
  *   DTJ-314+), КОГДА список офферов исчерпан — это факт об ОТСУТСТВИИ pending-офферов у
  *   назначения, не мутация состояния одной сущности, естественного места на entity нет.
+ * - `SlaBreachedEvent` — публикуется `CourierDepartSlaWatchdogProcessor` (BullMQ delayed job), тоже не мутация сущности.
  * - `OrderRefusedAtDoorEvent` — публикуется application-слоем (DTJ-314+) напрямую: SRS-DELIV-026
  *   явно указывает, что `en_route_to_customer → delivery_failed` НЕ используется для этого
  *   случая — `DeliveryAssignment.status` не меняется вовсе, значит нет entity-метода-намерения,
@@ -77,4 +78,13 @@ export type DeliveryDomainEvent =
       readonly orderId: string
       readonly courierId: string
       readonly rating: number
+    }
+  | {
+      readonly type: 'SlaBreachedEvent'
+      readonly deliveryAssignmentId: string
+      readonly orderId: string
+      readonly entityType: 'delivery_assignment'
+      readonly entityId: string
+      readonly breachedAt: Date
+      readonly slaMinutes: number
     }

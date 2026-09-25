@@ -97,6 +97,10 @@ function makeUseCase(params: { offer?: DeliveryOffer | null; courier?: Courier |
     findActiveByOrderId: vi.fn().mockResolvedValue(null),
     findByOrderId: vi.fn().mockResolvedValue(null),
     hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(false),
+    claimUnassigned: vi.fn().mockResolvedValue(true),
+    assignManual: vi.fn().mockResolvedValue(true),
+    findUnassignedPool: vi.fn().mockResolvedValue([]),
+    findByStatuses: vi.fn().mockResolvedValue([]),
     save: assignmentsSave,
   }
   const couriers: CourierRepositoryPort = {

@@ -56,6 +56,10 @@ function makeFacade(params: { assignment?: DeliveryAssignment | null; courier?: 
     findActiveByOrderId: vi.fn().mockResolvedValue(assignment),
     findByOrderId: vi.fn().mockResolvedValue(assignment),
     hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(false),
+    claimUnassigned: vi.fn().mockResolvedValue(true),
+    assignManual: vi.fn().mockResolvedValue(true),
+    findUnassignedPool: vi.fn().mockResolvedValue([]),
+    findByStatuses: vi.fn().mockResolvedValue([]),
     save: assignmentsSave,
   }
   const couriers: CourierRepositoryPort = {

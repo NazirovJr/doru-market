@@ -78,6 +78,10 @@ describe('GetPendingDeliveryOffersUseCase', () => {
       findActiveByOrderId: vi.fn().mockResolvedValue(null),
       findByOrderId: vi.fn().mockResolvedValue(null),
       hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(false),
+      claimUnassigned: vi.fn(),
+      assignManual: vi.fn(),
+      findUnassignedPool: vi.fn(),
+      findByStatuses: vi.fn(),
       save: vi.fn(),
     }
     const couriers: CourierRepositoryPort = {
@@ -126,6 +130,10 @@ describe('GetPendingDeliveryOffersUseCase', () => {
       findActiveByOrderId: vi.fn(),
       findByOrderId: vi.fn(),
       hasActiveAssignmentForCourier: vi.fn(),
+      claimUnassigned: vi.fn(),
+      assignManual: vi.fn(),
+      findUnassignedPool: vi.fn(),
+      findByStatuses: vi.fn(),
       save: vi.fn(),
     }
     const couriers: CourierRepositoryPort = { findById: vi.fn(), findByUserId: vi.fn().mockResolvedValue(null), save: vi.fn() }
