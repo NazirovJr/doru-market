@@ -393,6 +393,12 @@ jobs:
           DATABASE_URL: postgres://app_role:dorutj_dev_app_role_password@localhost:5432/dorutj
         run: pnpm db:seed
 
+      # Браузер Playwright на чистом GitHub-раннере не предустановлен (в отличие от песочницы
+      # разработки с PLAYWRIGHT_BROWSERS_PATH) — без этого шага `playwright test` падает
+      # с «Executable doesn't exist».
+      - name: Install Playwright Chromium
+        run: pnpm --filter @dorutj/e2e exec playwright install --with-deps chromium
+
       - run: pnpm test:e2e
 
       # DTJ-417: живой smoke-прогон каркаса против уже поднятого выше стека (GET /health,
