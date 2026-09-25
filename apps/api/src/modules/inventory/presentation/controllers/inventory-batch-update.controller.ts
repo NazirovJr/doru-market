@@ -18,14 +18,15 @@
  *      в R2 это переедет в worker.
  *   7. `202 Accepted` с `{ batchId, status, acceptedForProcessing: true }`.
  *
+ * `@RateLimit(...)` ниже — `RATE_LIMIT_1C_BATCH_PER_MIN`, ключ `keyId` из `X-Pharmacy-API-Key`
+ * (DTJ-432, SRS-API-012, REQ-SYNC-4/D-05).
+ *
  * **TODO(EP-19, DTJ-157 follow-up):**
  *   - явная `PHARMACY_NOT_IN_CHAIN_SCOPE` проверка (DTJ-156 §5):
  *     если `principal.chainId !== null`, проверить
  *     `pharmacies WHERE id=principal.pharmacyId AND chain_id=principal.chainId`,
  *     иначе `403`. Сейчас — доверяем `principal.pharmacyId` напрямую
  *     (InMemory-адаптер его контролирует);
- *   - `@RateLimit({ max: 20, windowSec: 60, keyBy: 'pharmacyId' })`
- *     (тикет DTJ-157 §2, требует EP-01 декоратор);
  *   - `bodyLimit: 5 * 1024 * 1024` на уровне Fastify route
  *     (SRS-INV-003, требует EP-01 конфигурации);
  *   - UoW-обёртка вокруг `createIfNotExists` + `appendRawItems` + `append`
@@ -72,6 +73,11 @@ import {
   ok,
 } from '@dorutj/contracts'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
+import {
+  RateLimit,
+  resolveRateLimit1cBatchPerMin,
+} from '@/common/http/rate-limit/rate-limit.decorator.js'
+import { TIME_CONSTANTS } from '@/config/env.schema.js'
 import { CLOCK, type Clock } from '@/shared-kernel/application/ports/clock.port.js'
 import { IngestInventoryBatchWithMatchingUseCase } from '@/modules/inventory/application/use-cases/ingest-inventory-batch-with-matching.use-case.js'
 import { PersistInventorySyncBatchService } from '@/modules/inventory/application/services/persist-inventory-sync-batch.service.js'
@@ -98,6 +104,7 @@ export class InventoryBatchUpdateController {
   ) {}
 
   @Post('batch-update')
+  @RateLimit({ max: resolveRateLimit1cBatchPerMin, windowSec: TIME_CONSTANTS.SECONDS_PER_MINUTE, keyBy: 'pharmacyId' })
   async batchUpdate(
     @Body(new ZodValidationPipe(inventoryBatchUpdateRequestSchema))
     dto: InventoryBatchUpdateRequest,

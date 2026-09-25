@@ -192,4 +192,19 @@ export class AppConfigService {
   get auditLogRetentionYears(): number {
     return this.configService.get('AUDIT_LOG_RETENTION_YEARS', { infer: true })
   }
+
+  /** [DTJ-432, SRS-API-012] Глобальный дефолт rate-limit, ключ — IP (неаутентифицированный запрос). */
+  get rateLimitAnonPerMin(): number {
+    return this.configService.get('RATE_LIMIT_ANON_PER_MIN', { infer: true })
+  }
+
+  /** [DTJ-432, SRS-API-012] Глобальный дефолт rate-limit, ключ — `userId`. */
+  get rateLimitUserPerMin(): number {
+    return this.configService.get('RATE_LIMIT_USER_PER_MIN', { infer: true })
+  }
+
+  /** [DTJ-432, SRS-API-012] `POST /inventory/batch-update` (канал 1С), ключ — `pharmacyId`. */
+  get rateLimit1cBatchPerMin(): number {
+    return this.configService.get('RATE_LIMIT_1C_BATCH_PER_MIN', { infer: true })
+  }
 }

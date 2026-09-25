@@ -42,6 +42,9 @@ const BASE_ENV: EnvConfig = {
   MOCK_PAYOUT_DELAY_MS: 0,
   EXCEL_IMPORT_MAX_ROWS: 20_000,
   AUDIT_LOG_RETENTION_YEARS: 5,
+  RATE_LIMIT_ANON_PER_MIN: 100,
+  RATE_LIMIT_USER_PER_MIN: 300,
+  RATE_LIMIT_1C_BATCH_PER_MIN: 20,
 }
 
 describe('AppConfigService', () => {
@@ -63,6 +66,9 @@ describe('AppConfigService', () => {
     expect(config.payoutDriver).toBe('mock')
     expect(config.mockPayoutDelayMs).toBe(0)
     expect(config.auditLogRetentionYears).toBe(5)
+    expect(config.rateLimitAnonPerMin).toBe(100)
+    expect(config.rateLimitUserPerMin).toBe(300)
+    expect(config.rateLimit1cBatchPerMin).toBe(20)
   })
 
   it('mockBankWebhookSecret — прокидывает значение из ENV, когда задано (DTJ-238)', () => {
