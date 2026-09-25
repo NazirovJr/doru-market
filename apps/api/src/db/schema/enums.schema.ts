@@ -367,3 +367,10 @@ export const notificationStatusEnum = pgEnum('notification_status', [
   'failed',
   'suppressed_rate_limit',
 ])
+
+export const courierPayoutBatchStatusEnum = pgEnum('courier_payout_batch_status', [
+  'draft',
+  'issued',
+  'paid',
+  'failed',
+])

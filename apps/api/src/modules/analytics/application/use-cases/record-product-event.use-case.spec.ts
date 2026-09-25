@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { ValidationError } from '@dorutj/contracts'
 import type { Clock } from '@/shared-kernel/application/ports/clock.port.js'
 import type { ProductEventsRepositoryPort } from '../ports/product-events-repository.port.js'
+import { RealizedSavingsCalculator } from '../services/realized-savings-calculator.js'
 import { RecordProductEventUseCase, type RecordProductEventCommand } from './record-product-event.use-case.js'
 
 const NOW = new Date('2026-09-24T10:00:00.000Z')
@@ -24,9 +25,17 @@ function baseCommand(overrides: Partial<RecordProductEventCommand> = {}): Record
 function buildHarness() {
   const insertMock = vi.fn<ProductEventsRepositoryPort['insert']>().mockResolvedValue(undefined)
   const insertBatchMock = vi.fn<ProductEventsRepositoryPort['insertBatch']>().mockResolvedValue(undefined)
-  const repository: ProductEventsRepositoryPort = { insert: insertMock, insertBatch: insertBatchMock }
-  const useCase = new RecordProductEventUseCase(repository, new FixedClock())
-  return { useCase, insertMock }
+  const findMatchingSavingsEventsMock = vi
+    .fn<ProductEventsRepositoryPort['findMatchingSavingsEvents']>()
+    .mockResolvedValue(new Map())
+  const repository: ProductEventsRepositoryPort = {
+    insert: insertMock,
+    insertBatch: insertBatchMock,
+    findMatchingSavingsEvents: findMatchingSavingsEventsMock,
+  }
+  const calculator = new RealizedSavingsCalculator(repository)
+  const useCase = new RecordProductEventUseCase(repository, new FixedClock(), calculator)
+  return { useCase, insertMock, findMatchingSavingsEventsMock }
 }
 
 describe('RecordProductEventUseCase', () => {
@@ -61,5 +70,31 @@ describe('RecordProductEventUseCase', () => {
     await useCase.execute(baseCommand())
 
     expect(insertMock.mock.calls[0]?.[0]?.userId).toBeNull()
+  })
+
+  it('DTJ-380 — eventType="order_placed" делегирует savingsDiram RealizedSavingsCalculator (не command.savingsDiram буквально)', async () => {
+    const { useCase, insertMock, findMatchingSavingsEventsMock } = buildHarness()
+    findMatchingSavingsEventsMock.mockResolvedValue(new Map([['medicine-1', 5_000n]]))
+
+    await useCase.execute(
+      baseCommand({
+        eventType: 'order_placed',
+        orderId: 'order-1',
+        orderItems: [{ medicineId: 'medicine-1' }],
+        savingsDiram: 999n, // не должно попасть в запись напрямую — калькулятор пересчитывает.
+      }),
+    )
+
+    expect(findMatchingSavingsEventsMock).toHaveBeenCalledWith('tenant-1', 'session-1', ['medicine-1'])
+    expect(insertMock.mock.calls[0]?.[0]?.toSnapshot().savingsDiram).toBe(5_000n)
+  })
+
+  it('DTJ-380 — eventType≠"order_placed" НЕ вызывает RealizedSavingsCalculator, savingsDiram передан буквально', async () => {
+    const { useCase, insertMock, findMatchingSavingsEventsMock } = buildHarness()
+
+    await useCase.execute(baseCommand({ eventType: 'analog_shown', savingsDiram: 4_200n }))
+
+    expect(findMatchingSavingsEventsMock).not.toHaveBeenCalled()
+    expect(insertMock.mock.calls[0]?.[0]?.toSnapshot().savingsDiram).toBe(4_200n)
   })
 })

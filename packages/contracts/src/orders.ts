@@ -12,6 +12,9 @@
 import { z } from 'zod'
 import type { ReportItemIssueReason } from './orders-pharmacy-terminal.contracts.js'
 
+/** DTJ-380 — 1:1 с `product_events.session_id VARCHAR(128)` (`db/schema/product-events.ts`). */
+const SESSION_ID_MAX_LENGTH = 128
+
 /** 1:1 с enum `order_status` (D-25: `confirmed` — синхронный результат `cash_courier`). */
 export const ORDER_STATUS_VALUES = [
   'pending_payment',
@@ -286,6 +289,8 @@ export const CreateOrderRequestSchema = z.object({
   paymentMethod: z.enum(ORDER_PAYMENT_METHOD_VALUES),
   prescriptionIds: z.array(z.uuid()).optional(),
   expectedTotalDiramByPharmacy: z.record(z.string(), z.number().int().nonnegative()).optional(),
+  /** DTJ-380 — клиентский телеметрийный sessionId (см. `analytics.ts#ProductEventInputSchema`), для реализованной экономии `order_placed`. */
+  sessionId: z.string().min(1).max(SESSION_ID_MAX_LENGTH).nullable().optional(),
 })
 export type CreateOrderRequestDto = z.infer<typeof CreateOrderRequestSchema>
 

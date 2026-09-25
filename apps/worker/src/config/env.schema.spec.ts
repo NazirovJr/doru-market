@@ -57,4 +57,22 @@ describe('validateWorkerEnv', () => {
   it('бросает на неизвестное значение LOG_LEVEL', () => {
     expect(() => validateWorkerEnv({ ...VALID_ENV, LOG_LEVEL: 'verbose' })).toThrow()
   })
+
+  it('DTJ-377: дефолты AUDIT_LOG_RETENTION_*, AUDIT_RETENTION_DATABASE_URL не задан по умолчанию', () => {
+    const result = validateWorkerEnv(VALID_ENV)
+
+    expect(result.AUDIT_LOG_RETENTION_YEARS).toBe(5)
+    expect(result.AUDIT_LOG_RETENTION_CRON).toBe('0 3 1 */3 *')
+    expect(result.AUDIT_LOG_RETENTION_BATCH_SIZE).toBe(1000)
+    expect(result.AUDIT_RETENTION_DATABASE_URL).toBeUndefined()
+  })
+
+  it('DTJ-377: уважает явно заданный AUDIT_RETENTION_DATABASE_URL, бросает на невалидный', () => {
+    const result = validateWorkerEnv({ ...VALID_ENV, AUDIT_RETENTION_DATABASE_URL: 'postgres://a:b@localhost:5432/x' })
+    expect(result.AUDIT_RETENTION_DATABASE_URL).toBe('postgres://a:b@localhost:5432/x')
+
+    expect(() => validateWorkerEnv({ ...VALID_ENV, AUDIT_RETENTION_DATABASE_URL: 'not-a-url' })).toThrow(
+      /AUDIT_RETENTION_DATABASE_URL/,
+    )
+  })
 })

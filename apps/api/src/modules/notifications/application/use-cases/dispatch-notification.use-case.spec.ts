@@ -74,7 +74,7 @@ function buildHarness(options?: {
     callOrder.push('notifications.create')
     return Promise.resolve(fakeRecord(input))
   })
-  const notificationsRepository: NotificationsRepositoryPort = { create, list: vi.fn() }
+  const notificationsRepository: NotificationsRepositoryPort = { create, list: vi.fn(), findUndeliveredAcrossAllChannels: vi.fn() }
 
   const findByEventChannelLocale = vi.fn().mockResolvedValue(options?.template === undefined ? template() : options.template)
   const templatesRepository: NotificationTemplatesRepositoryPort = { findByEventChannelLocale }

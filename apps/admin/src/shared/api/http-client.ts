@@ -131,3 +131,8 @@ export function httpGetJsonWithMeta<T>(path: string, params?: QueryParams): Prom
 export function httpPostJson<T>(path: string, body: unknown): Promise<T> {
   return requestJsonEnvelope<T>(path, { method: 'POST', body: JSON.stringify(body) }).then((r) => r.data)
 }
+
+/** DTJ-354 — добавлено тем же приёмом, что `httpPostJson` (деактивация/смена роли пользователя). */
+export function httpPatchJson<T>(path: string, body: unknown): Promise<T> {
+  return requestJsonEnvelope<T>(path, { method: 'PATCH', body: JSON.stringify(body) }).then((r) => r.data)
+}

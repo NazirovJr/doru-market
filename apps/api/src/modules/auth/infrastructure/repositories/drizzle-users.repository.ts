@@ -6,7 +6,8 @@
  * `DrizzleDatabase` тип, экспортируемый `drizzleProvider`.
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, desc, eq, ilike, isNull, lt, or, type SQL } from 'drizzle-orm'
+import { type UserRole } from '@dorutj/contracts'
 import { type DrizzleDb, DRIZZLE_DB } from '@/infrastructure/database/drizzle.provider.js'
 import { users } from '@/db/schema/users.js'
 import { userRowToDomain } from '@/modules/auth/infrastructure/mappers/user.mapper.js'
@@ -14,6 +15,9 @@ import {
   USERS_REPOSITORY,
   type CreateUserInput,
   type UpdateUserPatch,
+  type UsersListCursor,
+  type UsersListPage,
+  type UsersListQuery,
   type UsersRepository,
 } from '@/modules/auth/application/ports/users.repository.port.js'
 import { type UnitOfWorkTx } from '@/modules/auth/application/ports/unit-of-work.port.js'
@@ -156,6 +160,67 @@ export class DrizzleUsersRepository implements UsersRepository {
     }
     return Promise.resolve(userRowToDomain(row))
   }
+
+  /** [DTJ-354] Кросс-тенантный курсорный список (`super_admin`). */
+  async list(query: UsersListQuery): Promise<UsersListPage> {
+    const conditions = buildListConditions(query)
+    const rows = await this.db
+      .select()
+      .from(users)
+      .where(and(...conditions))
+      .orderBy(desc(users.createdAt), desc(users.id))
+      .limit(query.limit + 1)
+    const hasMore = rows.length > query.limit
+    const page = hasMore ? rows.slice(0, query.limit) : rows
+    const last = page[page.length - 1]
+    return {
+      items: page.map(userRowToDomain),
+      nextCursor: hasMore && last !== undefined ? { v: normalizeCreatedAt(last.createdAt).toISOString(), id: last.id } : null,
+      hasMore,
+    }
+  }
+
+  async setActive(id: string, isActive: boolean, tx?: UnitOfWorkTx): Promise<User | null> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const rows = await client
+      .update(users)
+      .set({ isActive })
+      .where(and(eq(users.id, id), isNull(users.deletedAt)))
+      .returning()
+    const row = rows[0]
+    return row === undefined ? null : userRowToDomain(row)
+  }
+
+  async setRole(id: string, role: UserRole, tx?: UnitOfWorkTx): Promise<User | null> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const rows = await client
+      .update(users)
+      .set({ role })
+      .where(and(eq(users.id, id), isNull(users.deletedAt)))
+      .returning()
+    const row = rows[0]
+    return row === undefined ? null : userRowToDomain(row)
+  }
+}
+
+function keysetCondition(cursor: UsersListCursor): SQL | undefined {
+  const anchorCreatedAt = new Date(cursor.v)
+  return or(lt(users.createdAt, anchorCreatedAt), and(eq(users.createdAt, anchorCreatedAt), lt(users.id, cursor.id)))
+}
+
+/** Вынесено из `list()` — снижает цикломатическую сложность (C1). */
+function buildListConditions(query: UsersListQuery): SQL[] {
+  const conditions: SQL[] = [isNull(users.deletedAt)]
+  if (query.filter.role !== undefined) conditions.push(eq(users.role, query.filter.role))
+  if (query.filter.tenantId !== undefined) conditions.push(eq(users.tenantId, query.filter.tenantId))
+  if (query.filter.phoneLike !== undefined) conditions.push(ilike(users.phoneNumber, `%${query.filter.phoneLike}%`))
+  const cursorCondition = query.cursor != null ? keysetCondition(query.cursor) : undefined
+  if (cursorCondition !== undefined) conditions.push(cursorCondition)
+  return conditions
+}
+
+function normalizeCreatedAt(value: Date | string | null): Date {
+  return value === null ? new Date(0) : new Date(value)
 }
 
 export { USERS_REPOSITORY }

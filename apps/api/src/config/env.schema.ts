@@ -10,6 +10,7 @@
  * останавливает процесс до открытия порта (критерий приёмки DTJ-001 №4).
  */
 import { z } from 'zod'
+import { AUDIT_LOG_RETENTION_YEARS_DEFAULT } from '@dorutj/contracts'
 
 const DEFAULT_PORT = 3000
 /** SRS-API-067 (ASSUMPTION 30000). */
@@ -154,6 +155,7 @@ export const envSchema = z.object({
   // [DTJ-160, SRS-INV-014] Максимум строк в одном Excel/CSV-файле импорта остатков —
   // ASSUMPTION 20000 (тикет). Превышение отклоняет весь файл целиком, до построчного разбора.
   EXCEL_IMPORT_MAX_ROWS: z.coerce.number().int().positive().default(DEFAULT_EXCEL_IMPORT_MAX_ROWS),
+  AUDIT_LOG_RETENTION_YEARS: z.coerce.number().int().positive().default(AUDIT_LOG_RETENTION_YEARS_DEFAULT),
 })
 
 /** [DTJ-023] Секунды в N минутах/часах/дне — для use case расчёта rate-limit окон. */

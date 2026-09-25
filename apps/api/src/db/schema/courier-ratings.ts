@@ -33,3 +33,6 @@ export const courierRatings = pgTable(
   },
   (table) => [check('chk_courier_ratings_range', sql`${table.rating} BETWEEN 1 AND 5`)],
 )
+
+export type CourierRatingRow = typeof courierRatings.$inferSelect
+export type CourierRatingInsert = typeof courierRatings.$inferInsert

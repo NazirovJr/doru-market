@@ -74,3 +74,6 @@ export const deliveryAssignments = pgTable(
       .where(sql`${table.status} NOT IN ('delivered', 'delivery_failed')`),
   ],
 )
+
+export type DeliveryAssignmentRow = typeof deliveryAssignments.$inferSelect
+export type DeliveryAssignmentInsert = typeof deliveryAssignments.$inferInsert

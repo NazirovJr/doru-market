@@ -46,4 +46,7 @@ export interface CheckoutCommand {
   readonly expectedTotalDiramByPharmacy: Readonly<Record<string, bigint>>
   /** = заголовок `Idempotency-Key`, СЫРОЙ UUID v4 (SRS-DOM-166). */
   readonly checkoutAttemptId: string
+  // Клиентский телеметрийный sessionId (не auth-сессия, не X-Cart-Session-Token) — связывает order_placed
+  // с ранее показанным аналогом той же сессии; опционален, null не блокирует оформление заказа.
+  readonly sessionId: string | null
 }

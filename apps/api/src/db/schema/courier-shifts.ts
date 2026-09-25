@@ -42,3 +42,6 @@ export const courierShifts = pgTable(
     uniqueIndex('ux_courier_shifts_one_active').on(table.courierId).where(sql`${table.status} = 'active'`),
   ],
 )
+
+export type CourierShiftRow = typeof courierShifts.$inferSelect
+export type CourierShiftInsert = typeof courierShifts.$inferInsert

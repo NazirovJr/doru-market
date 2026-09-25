@@ -7,3 +7,4 @@
 export * from './feature-flags.js'
 export * from './tenants.js'
 export * from './audit-log.js'
+export * from './users.js'

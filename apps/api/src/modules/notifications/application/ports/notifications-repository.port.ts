@@ -72,6 +72,36 @@ export interface ListNotificationsPage {
   readonly hasMore: boolean
 }
 
+/** Один опробованный канал группы (userId, sourceEventId), от старого к новому. */
+export interface UndeliveredChannelAttempt {
+  readonly channel: NotificationChannel
+  readonly status: NotificationStatus
+  readonly failedReason: string | null
+  /** Момент постановки канала в очередь — в схеме нет отдельного поля времени отказа. */
+  readonly attemptedAt: Date
+}
+
+/** Одно событие, полностью провалившееся по всем внешним каналам фолбэк-цепочки для одного получателя. */
+export interface UndeliveredNotificationGroup {
+  readonly userId: string
+  readonly tenantId: string
+  readonly eventType: string
+  readonly sourceEventId: string
+  readonly attempts: readonly UndeliveredChannelAttempt[]
+  readonly lastAttemptAt: Date
+}
+
+export interface FindUndeliveredInput {
+  readonly limit: number
+  readonly cursor: ListNotificationsCursor | null
+}
+
+export interface FindUndeliveredPage {
+  readonly items: readonly UndeliveredNotificationGroup[]
+  readonly nextCursor: ListNotificationsCursor | null
+  readonly hasMore: boolean
+}
+
 export interface NotificationsRepositoryPort {
   /** UNIQUE-конфликт по sourceEventId — идемпотентный no-op, возвращает существующую запись, не бросает. */
   create(input: CreateNotificationInput): Promise<NotificationRecord>
@@ -82,4 +112,6 @@ export interface NotificationsRepositoryPort {
    * Реализация — DTJ-370.
    */
   list(input: ListNotificationsInput): Promise<ListNotificationsPage>
+  /** Группы, у которых последний ВНЕШНИЙ канал фолбэка (без `in_app` — он не участвует в каскаде) провалился. */
+  findUndeliveredAcrossAllChannels(input: FindUndeliveredInput): Promise<FindUndeliveredPage>
 }

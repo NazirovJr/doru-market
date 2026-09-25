@@ -162,6 +162,8 @@ import { DELIVERY_FACADE_PORT } from './application/ports/delivery-facade.port.j
 import type { PrescriptionsFacadePort } from './application/ports/prescriptions-facade.port.js'
 import { PRESCRIPTIONS_FACADE_PORT } from './application/ports/prescriptions-facade.port.js'
 import { TenancyModule } from '@/modules/tenancy/tenancy.module.js'
+import { DeliveryModule } from '@/modules/delivery/delivery.module.js'
+import { DeliveryFacadeAdapter } from './infrastructure/adapters/delivery-facade.adapter.js'
 import { TENANCY_FACADE_PORT_PROVIDER } from './infrastructure/adapters/tenancy-facade.adapter.js'
 import { USER_ADDRESS_FACADE_PORT_PROVIDER } from './infrastructure/adapters/user-address-facade.adapter.js'
 import { CalculateOrderCostService } from './application/checkout/calculate-order-cost.service.js'
@@ -248,6 +250,10 @@ import { PickingSlaBreachController } from './presentation/internal/picking-sla-
 // DTJ-307 (EP-12, SLA сборки) — постановка мягкого и жёсткого watchdog-джоба при accept.
 import { ScheduleSlaWatchdogUseCase } from './application/pharmacy-terminal/schedule-sla-watchdog.use-case.js'
 import { SLA_WATCHDOG_QUEUE_PROVIDER } from './infrastructure/jobs/sla-watchdog.processor.js'
+// DTJ-380 (SRS-ADM-068/069) — order_placed из CheckoutUseCase, orders → analytics ТОЛЬКО через порт.
+import { AnalyticsModule } from '@/modules/analytics/index.js'
+import { ANALYTICS_FACADE_PORT_PROVIDER } from './infrastructure/adapters/analytics-facade.adapter.js'
+import { RecordOrdersPlacedService } from './application/checkout/record-orders-placed.service.js'
 
 /**
  * `UnimplementedCatalogFacadeAdapter`/`UnimplementedOrderRepositoryAdapter` (DTJ-220/222) —
@@ -434,7 +440,7 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
   // чтобы верифицировать ОПЦИОНАЛЬНЫЙ Bearer на /api/v1/cart (аутентифицированный customer ИЛИ гость).
   // TenancyModule — DTJ-228/229: `TenancyFacadeAdapter` инжектит TENANT_SETTINGS_REPOSITORY
   // (экспортирован tenancy.module.ts) для `getCodLimitDiram`.
-  imports: [CatalogModule, OnboardingModule, AuthModule, TenancyModule, PaymentsModule],
+  imports: [CatalogModule, OnboardingModule, AuthModule, TenancyModule, PaymentsModule, DeliveryModule, AnalyticsModule],
   controllers: [
     CartController,
     CheckoutController,
@@ -484,7 +490,8 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     // PRESCRIPTIONS_FACADE_PORT).
     TENANCY_FACADE_PORT_PROVIDER,
     USER_ADDRESS_FACADE_PORT_PROVIDER,
-    { provide: DELIVERY_FACADE_PORT, useClass: UnimplementedDeliveryFacadeAdapter },
+    DeliveryFacadeAdapter,
+    { provide: DELIVERY_FACADE_PORT, useClass: DeliveryFacadeAdapter },
     { provide: PRESCRIPTIONS_FACADE_PORT, useClass: UnimplementedPrescriptionsFacadeAdapter },
     CalculateOrderCostService,
     ResolveBillingStrategyService,
@@ -522,6 +529,9 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     ReportPickingSlaBreachUseCase,
     SLA_WATCHDOG_QUEUE_PROVIDER,
     ScheduleSlaWatchdogUseCase,
+    // DTJ-380 — order_placed + реализованная экономия (см. JSDoc импорта выше).
+    ANALYTICS_FACADE_PORT_PROVIDER,
+    RecordOrdersPlacedService,
   ],
   // DTJ-226 (правка приёмки CTO, правило 2 AGENTS.md): без `exports` `OrdersFacade`/
   // `ORDERS_FACADE` были написаны, но физически недостижимы через `imports: [OrdersModule]` —

@@ -12,14 +12,14 @@
  */
 import { createHash } from 'node:crypto'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { OtpAttemptsExceededError, OtpExpiredError, OtpMismatchError } from '@dorutj/contracts'
+import { OtpAttemptsExceededError, OtpExpiredError, OtpMismatchError, type UserRole } from '@dorutj/contracts'
 import { type Clock, type IdGenerator } from '@/shared-kernel/index.js'
 import { VerifyOtpUseCase } from './verify-otp.use-case.js'
 import type {
   JwtClaims,
   JwtSignerPort,
 } from '../ports/jwt-signer.port.js'
-import type { CreateUserInput, UsersRepository } from '../ports/users.repository.port.js'
+import type { CreateUserInput, UsersListPage, UsersListQuery, UsersRepository } from '../ports/users.repository.port.js'
 import type {
   CreateOtpCodeInput,
   OtpCodeRecord,
@@ -214,6 +214,27 @@ class StubUsersRepository implements UsersRepository {
     const existing = this.byId.get(id)
     if (existing === undefined) throw new Error(`user not found: ${id}`)
     const updated: User = { ...existing, fullName: patch.fullName, preferredLocale: patch.preferredLocale ?? existing.preferredLocale, telegramChatId: patch.telegramChatId }
+    this.byId.set(id, updated)
+    return Promise.resolve(updated)
+  }
+
+  // [DTJ-354] Не используется этим тест-планом — минимальные заглушки поверх расширенного порта.
+  async list(_query: UsersListQuery): Promise<UsersListPage> {
+    return Promise.resolve({ items: [...this.byId.values()], nextCursor: null, hasMore: false })
+  }
+
+  async setActive(id: string, isActive: boolean): Promise<User | null> {
+    const existing = this.byId.get(id)
+    if (existing === undefined) return Promise.resolve(null)
+    const updated: User = { ...existing, isActive }
+    this.byId.set(id, updated)
+    return Promise.resolve(updated)
+  }
+
+  async setRole(id: string, role: UserRole): Promise<User | null> {
+    const existing = this.byId.get(id)
+    if (existing === undefined) return Promise.resolve(null)
+    const updated: User = { ...existing, role }
     this.byId.set(id, updated)
     return Promise.resolve(updated)
   }

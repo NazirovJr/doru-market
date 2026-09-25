@@ -67,4 +67,13 @@ describe('CreateOrderRequestSchema', () => {
   it('cartItemIds пуст → ZodError (минимум одна позиция)', () => {
     expect(() => CreateOrderRequestSchema.parse({ ...MINIMAL_BODY, cartItemIds: [] })).toThrow(ZodError)
   })
+
+  it('DTJ-380: sessionId отсутствует/null — поле опционально, тело всё равно валидно', () => {
+    expect(CreateOrderRequestSchema.parse(MINIMAL_BODY).sessionId).toBeUndefined()
+    expect(CreateOrderRequestSchema.parse({ ...MINIMAL_BODY, sessionId: null }).sessionId).toBeNull()
+  })
+
+  it('DTJ-380: sessionId пустая строка → ZodError', () => {
+    expect(() => CreateOrderRequestSchema.parse({ ...MINIMAL_BODY, sessionId: '' })).toThrow(ZodError)
+  })
 })
