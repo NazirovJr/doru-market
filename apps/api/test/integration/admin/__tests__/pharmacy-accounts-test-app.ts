@@ -1,4 +1,4 @@
-// Supertest-harness PharmacyAccountsAdminController на реальных Postgres/Redis, копия приёма users-test-app.ts.
+// Supertest-harness PharmacyAccountsOverviewController на реальных Postgres/Redis, копия приёма users-test-app.ts.
 import { randomUUID } from 'node:crypto'
 import { generateKeyPairSync } from 'node:crypto'
 import { type Server } from 'node:http'
@@ -15,7 +15,7 @@ import { JWT_SIGNER, type JwtSignerPort } from '@/modules/auth/index.js'
 import { OnboardingModule } from '@/modules/onboarding/onboarding.module.js'
 import { OnboardingFacade } from '@/modules/onboarding/index.js'
 import { AuditLogModule } from '@/common/audit/audit-log.module.js'
-import { PharmacyAccountsAdminController } from '@/modules/admin/presentation/pharmacy-accounts-admin.controller.js'
+import { PharmacyAccountsOverviewController } from '@/modules/admin/presentation/pharmacy-accounts-overview.controller.js'
 import { ONBOARDING_FACADE_PORT } from '@/modules/admin/application/ports/onboarding-facade.port.js'
 import { ListPharmacyAccountsAnyUseCase } from '@/modules/admin/application/use-cases/list-pharmacy-accounts-any.use-case.js'
 import { SharedKernelModule } from '@/shared-kernel/shared-kernel.module.js'
@@ -62,7 +62,7 @@ function applyTestEnv(): void {
 
 @Module({
   imports: [AuthModule, OnboardingModule],
-  controllers: [PharmacyAccountsAdminController],
+  controllers: [PharmacyAccountsOverviewController],
   providers: [{ provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade }, ListPharmacyAccountsAnyUseCase],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- модуль тест-харнесса

@@ -1,4 +1,4 @@
-// Supertest integration PharmacyAccountsAdminController против реальных Postgres/Redis (DTJ-353).
+// Supertest integration PharmacyAccountsOverviewController против реальных Postgres/Redis (DTJ-353).
 import { randomUUID } from 'node:crypto'
 import type { Server } from 'node:http'
 import type { INestApplication } from '@nestjs/common'
@@ -44,7 +44,7 @@ interface PharmacyAccountSummaryBody {
 
 const TEST_TENANT_ID = randomUUID()
 
-describe.skipIf(!postgresAvailable)('PharmacyAccountsAdminController — Supertest integration (DTJ-353)', () => {
+describe.skipIf(!postgresAvailable)('PharmacyAccountsOverviewController — Supertest integration (DTJ-353)', () => {
   let pool: Pool
   let ctx: TestApp
   let app: INestApplication

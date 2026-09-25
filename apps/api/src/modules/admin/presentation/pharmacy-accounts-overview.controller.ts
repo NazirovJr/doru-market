@@ -23,7 +23,7 @@ const HTTP_STATUS_NOT_IMPLEMENTED = 501
 
 @Controller({ version: '1' })
 @UseGuards(AuthGuard, RolesGuard)
-export class PharmacyAccountsAdminController {
+export class PharmacyAccountsOverviewController {
   public constructor(@Inject(ListPharmacyAccountsAnyUseCase) private readonly listPharmacyAccountsAnyUseCase: ListPharmacyAccountsAnyUseCase) {}
 
   @Get('pharmacy-accounts')

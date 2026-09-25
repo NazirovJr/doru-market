@@ -58,11 +58,11 @@ import { ListPharmacyAccountsAnyUseCase } from './application/use-cases/list-pha
 import { FeatureFlagsController } from './presentation/feature-flags.controller.js'
 import { TenantsController } from './presentation/tenants.controller.js'
 import { UsersAdminController } from './presentation/users-admin.controller.js'
-import { PharmacyAccountsAdminController } from './presentation/pharmacy-accounts-admin.controller.js'
+import { PharmacyAccountsOverviewController } from './presentation/pharmacy-accounts-overview.controller.js'
 
 @Module({
   imports: [OnboardingModule, OrdersModule, PaymentsModule, AuthModule, TenancyModule],
-  controllers: [FeatureFlagsController, TenantsController, UsersAdminController, PharmacyAccountsAdminController],
+  controllers: [FeatureFlagsController, TenantsController, UsersAdminController, PharmacyAccountsOverviewController],
   providers: [
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },
     { provide: ORDERS_FACADE_PORT, useExisting: ORDERS_FACADE },
