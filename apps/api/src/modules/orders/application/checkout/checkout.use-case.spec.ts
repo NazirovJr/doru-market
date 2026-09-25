@@ -36,6 +36,8 @@ import type { TenancyFacadePort } from '@/modules/orders/application/ports/tenan
 import type { DeliveryFacadePort } from '@/modules/orders/application/ports/delivery-facade.port.js'
 import type { UserAddressFacadePort } from '@/modules/orders/application/ports/user-address-facade.port.js'
 import type { PrescriptionsFacadePort } from '@/modules/orders/application/ports/prescriptions-facade.port.js'
+import type { AnalyticsFacadePort } from '@/modules/orders/application/ports/analytics-facade.port.js'
+import { RecordOrdersPlacedService } from './record-orders-placed.service.js'
 import type { OrderNumberGeneratorPort } from '@/shared-kernel/application/ports/order-number-generator.port.js'
 import type { OrdersUnitOfWorkPort } from '@/modules/orders/application/ports/unit-of-work.port.js'
 import type { IdempotencyAttemptAdapter } from '@/modules/orders/application/ports/idempotency-attempt.port.js'
@@ -162,6 +164,7 @@ function buildCommand(overrides: Partial<CheckoutCommand> = {}): CheckoutCommand
     prescriptionIds: [],
     expectedTotalDiramByPharmacy: {},
     checkoutAttemptId: randomUUID(),
+    sessionId: 'session-1',
     ...overrides,
   }
 }
@@ -183,6 +186,7 @@ interface Harness {
   readonly resolveCommissionRate: ReturnType<typeof vi.fn<TenancyFacadePort['resolveCommissionRate']>>
   readonly getUserAddressById: ReturnType<typeof vi.fn<UserAddressFacadePort['getById']>>
   readonly isVerifiedFor: ReturnType<typeof vi.fn<PrescriptionsFacadePort['isVerifiedFor']>>
+  readonly recordOrderPlaced: ReturnType<typeof vi.fn<AnalyticsFacadePort['recordOrderPlaced']>>
 }
 
 interface HarnessOverrides {
@@ -257,6 +261,9 @@ function makeHarness(overrides: Partial<HarnessOverrides> = {}): Harness {
   const isVerifiedFor = vi.fn<PrescriptionsFacadePort['isVerifiedFor']>().mockResolvedValue(true)
   const prescriptionsFacade: PrescriptionsFacadePort = { isVerifiedFor }
 
+  const recordOrderPlaced = vi.fn<AnalyticsFacadePort['recordOrderPlaced']>().mockResolvedValue(undefined)
+  const analyticsFacade: AnalyticsFacadePort = { recordOrderPlaced }
+
   const useCase = new CheckoutUseCase(
     cartRepo,
     onboarding,
@@ -280,6 +287,7 @@ function makeHarness(overrides: Partial<HarnessOverrides> = {}): Harness {
     new CodPolicyService(tenancyFacade),
     new PaymentMethodEnabledPolicyService(tenancyFacade),
     new DetectPriceDriftService(),
+    new RecordOrdersPlacedService(analyticsFacade),
   )
 
   return {
@@ -299,6 +307,7 @@ function makeHarness(overrides: Partial<HarnessOverrides> = {}): Harness {
     resolveCommissionRate,
     getUserAddressById,
     isVerifiedFor,
+    recordOrderPlaced,
   }
 }
 
@@ -723,6 +732,47 @@ describe('CheckoutUseCase', () => {
       await expect(h.useCase.execute(buildCommand({ cartItemIds: [item.id] }))).rejects.toBeInstanceOf(
         NoOrderableItemsError,
       )
+    })
+  })
+
+  describe('DTJ-380 — order_placed (SRS-ADM-068/069)', () => {
+    it('заказ создан → analyticsFacade.recordOrderPlaced вызван с orderId/sessionId/tenantId и medicineId всех позиций', async () => {
+      const h = makeHarness()
+      const item = cartItem({ pharmacyId: PHARMACY_A })
+      seedCart(h, [item])
+
+      const result = await h.useCase.execute(buildCommand({ cartItemIds: [item.id], sessionId: 'session-42' }))
+
+      expect(h.recordOrderPlaced).toHaveBeenCalledWith({
+        tenantId: TENANT_ID,
+        sessionId: 'session-42',
+        orderId: result.orders[0]?.orderId,
+        orderItems: [{ medicineId: item.medicineId }],
+      })
+    })
+
+    it('мультиаптечная корзина → recordOrderPlaced вызван РОВНО РАЗ НА КАЖДЫЙ созданный заказ', async () => {
+      const h = makeHarness()
+      const itemA = cartItem({ pharmacyId: PHARMACY_A })
+      const itemB = cartItem({ pharmacyId: PHARMACY_B })
+      seedCart(h, [itemA, itemB])
+
+      await h.useCase.execute(buildCommand({ cartItemIds: [itemA.id, itemB.id] }))
+
+      expect(h.recordOrderPlaced).toHaveBeenCalledTimes(2)
+    })
+
+    it('АС3 — analyticsFacade.recordOrderPlaced бросает исключение → заказ ВСЁ РАВНО создан и возвращён успешно (сбой аналитики не откатывает checkout)', async () => {
+      const h = makeHarness()
+      const item = cartItem({ pharmacyId: PHARMACY_A })
+      seedCart(h, [item])
+      h.recordOrderPlaced.mockRejectedValue(new Error('analytics db down'))
+
+      const result = await h.useCase.execute(buildCommand({ cartItemIds: [item.id] }))
+
+      expect(result.orders).toHaveLength(1)
+      const saved = await h.orderRepo.findById(TENANT_ID, result.orders[0]?.orderId ?? '')
+      expect(saved).not.toBeNull()
     })
   })
 })

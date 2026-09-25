@@ -34,6 +34,7 @@ function buildCommand(overrides: Partial<CheckoutCommand> = {}): CheckoutCommand
     prescriptionIds: [],
     expectedTotalDiramByPharmacy: {},
     checkoutAttemptId: randomUUID(),
+    sessionId: null,
     ...overrides,
   }
 }

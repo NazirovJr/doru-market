@@ -153,6 +153,7 @@ describe.skipIf(!postgresAvailable)('CheckoutUseCase — гонки и дрей�
       prescriptionIds: [],
       expectedTotalDiramByPharmacy: input.expectedTotalDiramByPharmacy ?? {},
       checkoutAttemptId: input.checkoutAttemptId,
+      sessionId: null,
     }
   }
 

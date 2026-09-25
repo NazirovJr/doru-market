@@ -4,6 +4,7 @@ import { AuthModule } from '@/modules/auth/auth.module.js'
 import { PRODUCT_EVENTS_REPOSITORY_PROVIDER } from './infrastructure/repositories/product-events.repository.js'
 import { RecordProductEventUseCase } from './application/use-cases/record-product-event.use-case.js'
 import { RecordProductEventsBatchUseCase } from './application/use-cases/record-product-events-batch.use-case.js'
+import { RealizedSavingsCalculator } from './application/services/realized-savings-calculator.js'
 import { AnalyticsFacade } from './analytics.facade.js'
 import { AnalyticsEventsController } from './presentation/analytics-events.controller.js'
 import { AnalyticsEventsIdentityGuard } from './presentation/guards/analytics-events-identity.guard.js'
@@ -17,6 +18,7 @@ import { AnalyticsEventsIdentityGuard } from './presentation/guards/analytics-ev
     PRODUCT_EVENTS_REPOSITORY_PROVIDER,
     RecordProductEventUseCase,
     RecordProductEventsBatchUseCase,
+    RealizedSavingsCalculator,
     AnalyticsEventsIdentityGuard,
     AnalyticsFacade,
   ],

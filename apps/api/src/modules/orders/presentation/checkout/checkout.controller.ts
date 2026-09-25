@@ -214,6 +214,7 @@ function toCheckoutCommand(body: CreateOrderRequestDto, ctx: CheckoutCommandCont
     prescriptionIds: body.prescriptionIds ?? [],
     expectedTotalDiramByPharmacy: toExpectedTotalDiramByPharmacy(body.expectedTotalDiramByPharmacy),
     checkoutAttemptId: ctx.checkoutAttemptId,
+    sessionId: body.sessionId ?? null, // DTJ-380 — см. JSDoc `CheckoutCommand.sessionId`.
   }
 }
 

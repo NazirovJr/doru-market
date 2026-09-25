@@ -84,6 +84,7 @@ import {
   IDEMPOTENCY_ATTEMPT_ADAPTER,
   type IdempotencyAttemptAdapter,
 } from '@/modules/orders/application/ports/idempotency-attempt.port.js'
+import { RecordOrdersPlacedService } from './record-orders-placed.service.js'
 import type { OrderCreateCommand } from '@/modules/orders/domain/order-create-command.js'
 import { Order } from '@/modules/orders/domain/order.entity.js'
 import { CalculateOrderCostService } from './calculate-order-cost.service.js'
@@ -103,6 +104,7 @@ import {
   buildItemCommands,
   buildOrderCreateCommand,
   collectFailedGroups,
+  extractCreatedOrders,
   toDushanbeYYMMDD,
   toRxCheckItems,
   withTimeout,
@@ -165,6 +167,8 @@ export class CheckoutUseCase {
     // с суммой ПОЗИЦИЙ, ПОСЛЕ `CalculateOrderCostService`, ДО `Order.create()` (см. вызов в
     // `createAndSaveOrder`).
     @Inject(DetectPriceDriftService) private readonly detectPriceDrift: DetectPriceDriftService,
+    // DTJ-380 (SRS-ADM-068/069) — гостевая правка, см. вызов в `runCheckout` ниже.
+    @Inject(RecordOrdersPlacedService) private readonly recordOrdersPlaced: RecordOrdersPlacedService,
   ) {}
 
   async execute(cmd: CheckoutCommand): Promise<CheckoutResultDto> {
@@ -205,9 +209,10 @@ export class CheckoutUseCase {
     if (groups.length === 0) {
       throw new NoOrderableItemsError({ checkoutAttemptId: cmd.checkoutAttemptId, excludedItemsCount: excludedItems.length, failedGroupsCount: 0 })
     }
-    const outcomes = await Promise.all(
-      groups.map((group) => this.processGroup({ group, cmd, address, billingStrategy, codLimitDiram })),
-    )
+    const outcomes = await Promise.all(groups.map((group) => this.processGroup({ group, cmd, address, billingStrategy, codLimitDiram })))
+    // DTJ-380 — ПОСЛЕ этой точки транзакция КАЖДОЙ группы (`unitOfWork.run` внутри `processGroup`)
+    // уже завершена (закоммичена или откатилась) — заказ оформлен независимо от исхода аналитики.
+    await this.recordOrdersPlaced.recordAll(extractCreatedOrders(outcomes), { tenantId: cmd.tenantId, sessionId: cmd.sessionId })
     const orders = await this.finalizeCreatedOrders(outcomes, cmd)
     const failedGroups = collectFailedGroups(outcomes)
     return { orders, failedGroups, meta: { excludedItems } }
@@ -264,11 +269,7 @@ export class CheckoutUseCase {
     snapshots: ReadonlyMap<string, MedicineOrderSnapshot>,
     cmd: CheckoutCommand,
   ): Promise<{ orderableItems: readonly CartItemRecord[]; excludedItems: readonly CheckoutExcludedItemDto[] }> {
-    const { orderable, excluded } = await this.excludeUnverifiedRx.exclude(
-      toRxCheckItems(items, snapshots),
-      cmd.prescriptionIds,
-      cmd.customerId,
-    )
+    const { orderable, excluded } = await this.excludeUnverifiedRx.exclude(toRxCheckItems(items, snapshots), cmd.prescriptionIds, cmd.customerId)
     const orderableIds = new Set(orderable.map((item) => item.cartItemId))
     return {
       orderableItems: items.filter((item) => orderableIds.has(item.id)),
@@ -419,8 +420,7 @@ export class CheckoutUseCase {
 
   /** ПОСЛЕ commit (D-EP09-17) — non-cash → `createInvoice`, ошибка/таймаут → `paymentPending: true`, заказ не трогается. */
   private async finalizeCreatedOrders(outcomes: readonly GroupOutcome[], cmd: CheckoutCommand): Promise<CheckoutOrderResultDto[]> {
-    const created = outcomes.filter((o): o is Extract<GroupOutcome, { kind: 'created' }> => o.kind === 'created')
-    return Promise.all(created.map((o) => this.finalizeOneOrder(o.order, cmd)))
+    return Promise.all(extractCreatedOrders(outcomes).map((order) => this.finalizeOneOrder(order, cmd)))
   }
 
   private async finalizeOneOrder(order: Order, cmd: CheckoutCommand): Promise<CheckoutOrderResultDto> {
