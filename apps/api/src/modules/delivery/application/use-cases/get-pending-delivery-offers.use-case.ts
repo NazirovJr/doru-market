@@ -11,7 +11,6 @@ import {
 import { COURIER_REPOSITORY, type CourierRepositoryPort } from '../ports/courier.repository.port.js'
 import { DELIVERY_ORDERS_PORT, type DeliveryOrdersPort } from '../ports/delivery-orders.port.js'
 import { PHARMACY_LOOKUP_PORT, type PharmacyLookupPort } from '../ports/pharmacy-lookup.port.js'
-import { DeliveryFacade } from '../delivery.facade.js'
 
 export interface PendingOfferView {
   readonly id: string
@@ -37,7 +36,6 @@ export class GetPendingDeliveryOffersUseCase {
     @Inject(COURIER_REPOSITORY) private readonly couriers: CourierRepositoryPort,
     @Inject(DELIVERY_ORDERS_PORT) private readonly orders: DeliveryOrdersPort,
     @Inject(PHARMACY_LOOKUP_PORT) private readonly pharmacies: PharmacyLookupPort,
-    @Inject(DeliveryFacade) private readonly deliveryFacade: DeliveryFacade,
   ) {}
 
   public async execute(userId: string): Promise<readonly PendingOfferView[]> {
@@ -62,8 +60,6 @@ export class GetPendingDeliveryOffersUseCase {
     if (pharmacy === null) {
       throw new NotFoundError({ resource: 'pharmacy', pharmacyId: orderContext.pharmacyId })
     }
-    const deliveryGeoPoint = orderContext.deliveryGeoPoint ?? pharmacy.geoPoint
-    const feeDiram = await this.deliveryFacade.calculateDeliveryFee(pharmacy.geoPoint, deliveryGeoPoint)
     return {
       id: offer.id,
       deliveryAssignmentId: offer.deliveryAssignmentId,
@@ -75,7 +71,7 @@ export class GetPendingDeliveryOffersUseCase {
         itemsCount: orderContext.itemsCount,
         requiresColdChain: assignment.toSnapshot().requiresColdChain,
         paymentMethod: orderContext.paymentMethod,
-        estimatedDeliveryFeeDiram: Number(feeDiram),
+        estimatedDeliveryFeeDiram: Number(orderContext.deliveryFeeDiram),
       },
     }
   }

@@ -112,6 +112,7 @@ function makeUseCase(params: { offer?: DeliveryOffer | null; courier?: Courier |
     itemsCount: 1,
     paymentMethod: 'cash_courier',
     deliveryGeoPoint: null,
+    deliveryFeeDiram: 1000n,
   }
   const orders: DeliveryOrdersPort = {
     getOrderForRating: vi.fn().mockResolvedValue(null),

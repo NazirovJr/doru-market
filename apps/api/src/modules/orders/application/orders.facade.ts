@@ -83,6 +83,8 @@ export interface DeliverySnapshot {
   readonly itemsCount: number
   readonly paymentMethod: OrderPaymentMethod
   readonly deliveryGeoPoint: GeoPoint | null
+  // Стоимость доставки, зафиксированная на checkout (Order.deliveryFee — readonly, тариф после не пересчитывается).
+  readonly deliveryFeeDiram: bigint
 }
 
 @Injectable()
@@ -119,6 +121,7 @@ export class OrdersFacade {
       itemsCount: order.items.length,
       paymentMethod: order.paymentMethod,
       deliveryGeoPoint: order.deliveryGeoPoint,
+      deliveryFeeDiram: order.deliveryFee.diram,
     }
   }
 

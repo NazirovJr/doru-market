@@ -17,6 +17,7 @@ export interface DeliveryOrderContext {
   readonly itemsCount: number
   readonly paymentMethod: string
   readonly deliveryGeoPoint: GeoPoint | null
+  readonly deliveryFeeDiram: bigint
 }
 
 export interface DeliveryOrdersPort {

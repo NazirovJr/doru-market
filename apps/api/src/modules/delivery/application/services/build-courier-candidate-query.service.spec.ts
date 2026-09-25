@@ -17,7 +17,7 @@ function geo(): GeoPoint {
 }
 
 function makeOrderContext(medicineIds: readonly string[]): DeliveryOrderContext {
-  return { orderId: ORDER_ID, tenantId: 'tenant-1', pharmacyId: PHARMACY_ID, medicineIds, itemsCount: 1, paymentMethod: 'cash_courier', deliveryGeoPoint: null }
+  return { orderId: ORDER_ID, tenantId: 'tenant-1', pharmacyId: PHARMACY_ID, medicineIds, itemsCount: 1, paymentMethod: 'cash_courier', deliveryGeoPoint: null, deliveryFeeDiram: 1000n }
 }
 
 function makeMedicineSnapshot(overrides: Partial<MedicineSnapshot> = {}): MedicineSnapshot {

@@ -10,7 +10,6 @@ import type { DeliveryAssignmentRepositoryPort } from '../ports/delivery-assignm
 import type { CourierRepositoryPort } from '../ports/courier.repository.port.js'
 import type { DeliveryOrdersPort, DeliveryOrderContext } from '../ports/delivery-orders.port.js'
 import type { PharmacyLocation, PharmacyLookupPort } from '../ports/pharmacy-lookup.port.js'
-import type { DeliveryFacade } from '../delivery.facade.js'
 import { GetPendingDeliveryOffersUseCase } from './get-pending-delivery-offers.use-case.js'
 
 const NOW = new Date('2026-09-25T10:00:00.000Z')
@@ -96,12 +95,12 @@ describe('GetPendingDeliveryOffersUseCase', () => {
       itemsCount: 3,
       paymentMethod: 'cash_courier',
       deliveryGeoPoint: null,
+      deliveryFeeDiram: 1000n,
     }
     const orders: DeliveryOrdersPort = { getOrderForRating: vi.fn().mockResolvedValue(null), getDeliveryContext: vi.fn().mockResolvedValue(orderContext) }
     const pharmacyLocation: PharmacyLocation = { id: 'pharmacy-1', name: 'Pharmacy', addressText: 'Addr', geoPoint: geo(), chainId: null }
     const pharmacies: PharmacyLookupPort = { findById: vi.fn().mockResolvedValue(pharmacyLocation) }
-    const deliveryFacade = { calculateDeliveryFee: vi.fn().mockResolvedValue(1000n) } as unknown as DeliveryFacade
-    const useCase = new GetPendingDeliveryOffersUseCase(offers, assignments, couriers, orders, pharmacies, deliveryFacade)
+    const useCase = new GetPendingDeliveryOffersUseCase(offers, assignments, couriers, orders, pharmacies)
 
     const [view] = await useCase.execute(USER_ID)
 
@@ -132,8 +131,7 @@ describe('GetPendingDeliveryOffersUseCase', () => {
     const couriers: CourierRepositoryPort = { findById: vi.fn(), findByUserId: vi.fn().mockResolvedValue(null), save: vi.fn() }
     const orders: DeliveryOrdersPort = { getOrderForRating: vi.fn(), getDeliveryContext: vi.fn() }
     const pharmacies: PharmacyLookupPort = { findById: vi.fn() }
-    const deliveryFacade = { calculateDeliveryFee: vi.fn() } as unknown as DeliveryFacade
-    const useCase = new GetPendingDeliveryOffersUseCase(offers, assignments, couriers, orders, pharmacies, deliveryFacade)
+    const useCase = new GetPendingDeliveryOffersUseCase(offers, assignments, couriers, orders, pharmacies)
 
     await expect(useCase.execute(USER_ID)).rejects.toBeInstanceOf(NotFoundError)
   })

@@ -99,7 +99,7 @@ function makeService(params: {
   const geo = GeoPoint.create(38.5598, 68.787)
   if (!geo.ok) throw new Error('fixture error')
   const context: AssignmentContext = {
-    order: { orderId: ORDER_ID, tenantId: 'tenant-1', pharmacyId: 'pharmacy-1', medicineIds: [], itemsCount: 1, paymentMethod: 'cash_courier', deliveryGeoPoint: null },
+    order: { orderId: ORDER_ID, tenantId: 'tenant-1', pharmacyId: 'pharmacy-1', medicineIds: [], itemsCount: 1, paymentMethod: 'cash_courier', deliveryGeoPoint: null, deliveryFeeDiram: 1000n },
     pharmacy: { id: 'pharmacy-1', name: 'Pharmacy', addressText: 'Addr', geoPoint: geo.value, chainId: null },
     requiresColdChain: false,
     candidateQuery: { tenantId: 'tenant-1', pharmacyChainId: null, pharmacyGeoPoint: geo.value, requiresColdChain: false },
