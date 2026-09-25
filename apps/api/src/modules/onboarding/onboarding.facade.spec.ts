@@ -41,19 +41,23 @@ function fakeAccountRepository(): PharmacyAccountRepositoryPort {
     listByStatus: vi.fn(),
     listByChain: vi.fn(),
     save: vi.fn(),
+    listAny: vi.fn(),
   }
 }
 
-/** Возвращает порт И отдельную переменную `save` (не `repository.save`) — @typescript-eslint/unbound-method. */
-function fakeChainRepository(chain: PharmacyChain | null): { repository: PharmacyChainRepositoryPort; save: ReturnType<typeof vi.fn> } {
+/** Возвращает порт И отдельные переменные `save`/`findById` (не `repository.save`) — @typescript-eslint/unbound-method. */
+function fakeChainRepository(
+  chain: PharmacyChain | null,
+): { repository: PharmacyChainRepositoryPort; save: ReturnType<typeof vi.fn>; findById: ReturnType<typeof vi.fn> } {
   const save = vi.fn().mockResolvedValue(undefined)
+  const findById = vi.fn().mockResolvedValue(chain)
   const repository: PharmacyChainRepositoryPort = {
-    findById: vi.fn().mockResolvedValue(chain),
+    findById,
     findByTinInn: vi.fn(),
     listByStatus: vi.fn(),
     save,
   }
-  return { repository, save }
+  return { repository, save, findById }
 }
 
 describe('OnboardingFacade.suspendChainForUnpaidInvoice (DTJ-252)', () => {
@@ -94,5 +98,46 @@ describe('OnboardingFacade.suspendChainForUnpaidInvoice (DTJ-252)', () => {
 
     await expect(facade.suspendChainForUnpaidInvoice(chain.id, ACTOR)).rejects.toBeInstanceOf(InvalidOnboardingTransitionError)
     expect(save).not.toHaveBeenCalled()
+  })
+})
+
+describe('OnboardingFacade.findPharmacyAccountsAny (DTJ-353)', () => {
+  it('пробрасывает filter/pagination репозиторию и догружает имена сетей батчем по уникальным chainId страницы', async () => {
+    const chain = chainAtStatus('active')
+    const listAny = vi.fn().mockResolvedValue({
+      items: [
+        { id: 'acc-1', chainId: chain.id, name: 'Salom Pharmacy', status: 'active', licenseExpiryDate: null },
+        { id: 'acc-2', chainId: chain.id, name: 'Salom Pharmacy 2', status: 'suspended', licenseExpiryDate: null },
+      ],
+      nextCursor: { v: '2026-09-01T00:00:00.000Z', id: 'acc-2' },
+      hasMore: true,
+    })
+    const accountRepository: PharmacyAccountRepositoryPort = { ...fakeAccountRepository(), listAny }
+    const { repository: chainRepository, findById } = fakeChainRepository(chain)
+    const facade = new OnboardingFacade(accountRepository, chainRepository)
+
+    const result = await facade.findPharmacyAccountsAny({ nameLike: 'Салом' }, { limit: 20 })
+
+    expect(listAny).toHaveBeenCalledWith({ filter: { nameLike: 'Салом' }, limit: 20, cursor: null })
+    // findById вызван РОВНО один раз, несмотря на 2 строки с одинаковым chainId (батч по уникальным id).
+    expect(findById).toHaveBeenCalledOnce()
+    expect(result.items.map((item) => item.chainName)).toEqual([chain.name, chain.name])
+    expect(result.hasMore).toBe(true)
+  })
+
+  it('chainId отсутствует (аптека без сети) — chainName: null, findById НЕ вызывается для неё', async () => {
+    const listAny = vi.fn().mockResolvedValue({
+      items: [{ id: 'acc-1', chainId: null, name: 'Independent Pharmacy', status: 'draft', licenseExpiryDate: null }],
+      nextCursor: null,
+      hasMore: false,
+    })
+    const accountRepository: PharmacyAccountRepositoryPort = { ...fakeAccountRepository(), listAny }
+    const { repository: chainRepository, findById } = fakeChainRepository(null)
+    const facade = new OnboardingFacade(accountRepository, chainRepository)
+
+    const result = await facade.findPharmacyAccountsAny({}, { limit: 20 })
+
+    expect(findById).not.toHaveBeenCalled()
+    expect(result.items[0]?.chainName).toBeNull()
   })
 })

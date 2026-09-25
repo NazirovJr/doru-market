@@ -1,19 +1,38 @@
-/**
- * DI-токен `ONBOARDING_FACADE_PORT` (DTJ-350, EP-15) — сужение `OnboardingFacade`
- * (`@/modules/onboarding`, DTJ-070) до методов, реально нужных use case'ам `admin`
- * (Interface Segregation, `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.3). `admin` не имеет
- * собственного домена (`SRS-ADM-002`) — читает `PharmacyChain`/`PharmacyAccount` ТОЛЬКО
- * через этот порт, прямой импорт `modules/onboarding/domain/*` запрещён (§1.1/§1.2,
- * ловится `pnpm arch:check`).
- *
- * Тип порта ПОКА не объявлен — первый метод (напр. `findPharmacyAccounts(filter):
- * Promise<Page<PharmacyAccountSummaryDto>>`) добавит тикет, которому он реально нужен
- * (DTJ-351..367), тем же приёмом, что `PAYMENTS_FACADE` в `modules/payments/index.ts`:
- * пустой `interface {}` запрещён `@typescript-eslint/no-empty-object-type`, а типизировать
- * несуществующие методы заранее нельзя. До первого потребителя `admin.module.ts` связывает
- * токен с РЕАЛЬНЫМ `OnboardingFacade` через `useExisting` — TypeScript не требует, чтобы
- * токен уже имел объявленный интерфейс для этой привязки.
- *
- * // заполняется тикетами DTJ-351..367
- */
+// Сужение OnboardingFacade (useExisting в admin.module.ts) до методов, нужных admin — тот же
+// приём расширения чужого фасада, что getPharmacyNames (DTJ-227), не отдельный адаптер.
 export const ONBOARDING_FACADE_PORT = Symbol.for('@dorutj/admin/onboarding-facade-port')
+
+export interface PharmacyAccountsAnyFilter {
+  readonly status?: string
+  readonly chainId?: string
+  readonly nameLike?: string
+}
+
+export interface PharmacyAccountsCursor {
+  readonly v: string
+  readonly id: string
+}
+
+export interface PharmacyAccountsAnyPagination {
+  readonly limit: number
+  readonly cursor?: PharmacyAccountsCursor | null
+}
+
+export interface PharmacyAccountAdminSummaryView {
+  readonly id: string
+  readonly chainId: string | null
+  readonly chainName: string | null
+  readonly name: string
+  readonly status: string
+  readonly licenseExpiryDate: Date | null
+}
+
+export interface PharmacyAccountsAnyPage {
+  readonly items: readonly PharmacyAccountAdminSummaryView[]
+  readonly nextCursor: PharmacyAccountsCursor | null
+  readonly hasMore: boolean
+}
+
+export interface OnboardingFacadePort {
+  findPharmacyAccountsAny(filter: PharmacyAccountsAnyFilter, pagination: PharmacyAccountsAnyPagination): Promise<PharmacyAccountsAnyPage>
+}

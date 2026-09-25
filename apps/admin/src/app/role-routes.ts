@@ -67,6 +67,11 @@ const UsersPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>>
   import('@/features/users/ui/users-page').then((m) => ({ default: m.UsersPage })),
 )
 
+/** DTJ-353 — та же схема совместимости без пропсов, что `AuditLogPage`. */
+const PharmacyAccountsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/pharmacies-crud/ui/pharmacy-accounts-page').then((m) => ({ default: m.PharmacyAccountsPage })),
+)
+
 function section(path: string, titleKey: string, icon: string): RouteConfig {
   return { path, titleKey, icon, Component: SectionPlaceholder }
 }
@@ -78,7 +83,7 @@ const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
   { path: 'audit-log', titleKey: 'admin.nav.audit_log', icon: 'audit-log', Component: AuditLogPage },
   { path: 'undelivered-notifications', titleKey: 'admin.nav.undelivered_notifications', icon: 'notifications', Component: UndeliveredNotificationsPage },
   { path: 'analytics/funnel', titleKey: 'admin.nav.analytics_funnel', icon: 'analytics', Component: FunnelPage },
-  section('pharmacies', 'admin.nav.pharmacies', 'pharmacies'),
+  { path: 'pharmacies', titleKey: 'admin.nav.pharmacies', icon: 'pharmacies', Component: PharmacyAccountsPage },
   { path: 'users', titleKey: 'admin.nav.users', icon: 'users', Component: UsersPage },
   section('orders', 'admin.nav.orders', 'orders'),
   section('finance', 'admin.nav.finance', 'finance'),

@@ -54,13 +54,15 @@ import { ListUsersUseCase } from './application/use-cases/list-users.use-case.js
 import { DeactivateUserUseCase } from './application/use-cases/deactivate-user.use-case.js'
 import { ChangeStaffRoleUseCase } from './application/use-cases/change-staff-role.use-case.js'
 import { GrantPlatformRoleUseCase } from './application/use-cases/grant-platform-role.use-case.js'
+import { ListPharmacyAccountsAnyUseCase } from './application/use-cases/list-pharmacy-accounts-any.use-case.js'
 import { FeatureFlagsController } from './presentation/feature-flags.controller.js'
 import { TenantsController } from './presentation/tenants.controller.js'
 import { UsersAdminController } from './presentation/users-admin.controller.js'
+import { PharmacyAccountsOverviewController } from './presentation/pharmacy-accounts-overview.controller.js'
 
 @Module({
   imports: [OnboardingModule, OrdersModule, PaymentsModule, AuthModule, TenancyModule],
-  controllers: [FeatureFlagsController, TenantsController, UsersAdminController],
+  controllers: [FeatureFlagsController, TenantsController, UsersAdminController, PharmacyAccountsOverviewController],
   providers: [
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },
     { provide: ORDERS_FACADE_PORT, useExisting: ORDERS_FACADE },
@@ -79,6 +81,8 @@ import { UsersAdminController } from './presentation/users-admin.controller.js'
     DeactivateUserUseCase,
     ChangeStaffRoleUseCase,
     GrantPlatformRoleUseCase,
+    // DTJ-353 — pharmacy-accounts (ONBOARDING_FACADE_PORT.findPharmacyAccountsAny, см. JSDoc порта).
+    ListPharmacyAccountsAnyUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.
