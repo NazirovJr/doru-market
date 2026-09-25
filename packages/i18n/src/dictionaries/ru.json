@@ -204,7 +204,6 @@
   "inventory.sync_row_error.duplicate_in_batch": "Повторяющаяся позиция в пачке",
   "inventory.sync_row_error.ambiguous_date_format": "Неоднозначный формат даты — используйте ДД.ММ.ГГГГ",
   "inventory.sync_row_error.missing_required_field": "Не заполнено обязательное поле",
-
   "support.category.order_not_received": "Заказ не получен",
   "support.category.payment_issue": "Проблема с оплатой",
   "support.category.order_item_damaged_or_expired": "Товар повреждён или просрочен",
@@ -215,7 +214,6 @@
   "support.status.in_progress": "В работе",
   "support.status.resolved": "Решён",
   "support.status.closed": "Закрыт",
-
   "admin.support.queue.title": "Обращения в поддержку",
   "admin.support.queue.loading": "Загружаем обращения…",
   "admin.support.queue.error": "Не удалось загрузить обращения",
@@ -248,7 +246,6 @@
   "admin.support.author_role.pharmacist": "Фармацевт",
   "admin.support.author_role.pharmacy_admin": "Администратор аптеки",
   "admin.support.author_role.courier": "Курьер",
-
   "customer.support.page_title": "Мои обращения",
   "customer.support.unauthenticated": "Войдите, чтобы создать обращение или увидеть свои обращения.",
   "customer.support.contact_button": "Написать в поддержку",
@@ -260,7 +257,6 @@
   "customer.support.form.submit": "Отправить",
   "customer.support.form.submit_pending": "Отправляем…",
   "customer.support.form.success": "Обращение отправлено. Мы ответим в ближайшее время.",
-
   "customer.returns.button.request_return": "Запросить возврат",
   "customer.returns.form.reason_label": "Причина возврата",
   "customer.returns.form.comment_label": "Комментарий (необязательно)",
@@ -474,7 +470,6 @@
   "admin.analytics_funnel.step.order_placed": "Заказ",
   "admin.analytics_funnel.conversion_from_previous": "{percent} от предыдущего",
   "admin.analytics_funnel.trend.title": "Тренд реализованной экономии",
-
   "ux.empty.search_no_results": "Ничего не найдено. Проверьте написание или увеличьте радиус поиска.",
   "ux.empty.orders": "У вас пока нет заказов.",
   "ux.empty.offers_pool": "Сейчас нет доступных доставок. Ждите оффер или проверьте позже.",
@@ -522,5 +517,17 @@
   "ux.savings.badge_explanation": "по сравнению с обычной ценой",
   "catalog.analogs.banner_message": "Тот же действующий компонент — {substanceName} {dosage} — за {analogPrice} вместо {referencePrice} ({savingsPercent}% дешевле)",
   "catalog.analogs.disclaimer": "Информация носит справочный характер и не заменяет консультацию врача или фармацевта. Перед заменой препарата проконсультируйтесь со специалистом.",
-  "cart.add_item_cta": "В корзину"
+  "cart.add_item_cta": "В корзину",
+  "ui.file_dropzone.placeholder_idle": "Перетащите файл сюда или нажмите «Выбрать файл»",
+  "ui.file_dropzone.placeholder_dragging": "Отпустите файл здесь",
+  "ui.file_dropzone.select_button": "Выбрать файл",
+  "ui.file_dropzone.selected_file": "Выбран файл: {name}",
+  "ui.file_dropzone.uploading_label": "Загрузка файла",
+  "ui.file_dropzone.preview_alt": "Превью загруженного файла",
+  "ui.file_dropzone.error_invalid_type": "Неверный тип файла",
+  "ui.file_dropzone.error_too_large": "Файл слишком большой (максимум {maxSizeMb} МБ)",
+  "ui.file_dropzone.quality_check_passed": "Пройдено",
+  "ui.file_dropzone.quality_check_failed": "Не пройдено",
+  "ui.audio_alert_player.default_label": "Новое событие — требуется внимание",
+  "ui.audio_alert_player.acknowledge_button": "Понятно"
 }
