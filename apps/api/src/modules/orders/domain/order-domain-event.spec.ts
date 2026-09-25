@@ -132,7 +132,9 @@ describe('OrderDomainEvent — 5 новых вариантов (DTJ-300, мод�
       orderId: 'order-1',
       requestId: 'request-1',
       itemsSnapshot,
-      refundAmountDiram: 200_000n,
+      // DTJ-309 foundIssue: `string`, не `bigint` — `outbox.payload` это jsonb, `JSON.stringify`
+      // не умеет сериализовать `bigint`.
+      refundAmountDiram: '200000',
       expiresAt,
       at,
     }
@@ -144,7 +146,7 @@ describe('OrderDomainEvent — 5 новых вариантов (DTJ-300, мод�
       quantity: 2,
       reason: 'out_of_stock',
     })
-    expect(typeof event.refundAmountDiram).toBe('bigint')
+    expect(typeof event.refundAmountDiram).toBe('string')
   })
 
   it.each([

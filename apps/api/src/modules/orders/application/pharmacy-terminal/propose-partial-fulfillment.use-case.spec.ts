@@ -223,7 +223,8 @@ describe('ProposePartialFulfillmentUseCase — успешный путь (SRS-PH
           type: 'PartialFulfillmentProposedEvent',
           orderId: order.id,
           requestId: result.id,
-          refundAmountDiram: 20_000n,
+          // DTJ-309 foundIssue: событие несёт `string`, не `bigint` — см. JSDoc `OrderDomainEvent`.
+          refundAmountDiram: '20000',
         }),
       ],
       undefined,
