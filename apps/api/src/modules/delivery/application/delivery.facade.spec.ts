@@ -31,8 +31,8 @@ function makeAssignment(): DeliveryAssignment {
   return result.value
 }
 
-function makeCourier(overrides: { chainId?: string | null } = {}): Courier {
-  return Courier.create({
+function makeCourier(overrides: { chainId?: string | null; status?: Courier['status'] } = {}): Courier {
+  const courier = Courier.create({
     id: COURIER_ID,
     userId: 'user-1',
     chainId: overrides.chainId ?? null,
@@ -40,6 +40,7 @@ function makeCourier(overrides: { chainId?: string | null } = {}): Courier {
     vehicleType: 'car',
     now: NOW,
   })
+  return Courier.restore({ ...courier.props, status: overrides.status ?? 'active' })
 }
 
 function makeFacade(params: { assignment?: DeliveryAssignment | null; courier?: Courier | null } = {}): {
@@ -58,6 +59,10 @@ function makeFacade(params: { assignment?: DeliveryAssignment | null; courier?: 
     findActiveByOrderId: vi.fn().mockResolvedValue(assignment),
     findByOrderId: vi.fn().mockResolvedValue(assignment),
     hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(false),
+    claimUnassigned: vi.fn().mockResolvedValue(true),
+    assignManual: vi.fn().mockResolvedValue(true),
+    findUnassignedPool: vi.fn().mockResolvedValue([]),
+    findByStatuses: vi.fn().mockResolvedValue([]),
     save: assignmentsSave,
   }
   const couriers: CourierRepositoryPort = {
@@ -112,6 +117,13 @@ describe('DeliveryFacade', () => {
     await expect(
       facade.reassign({ assignmentId: ASSIGNMENT_ID, newCourierId: 'courier-2', reason: '', reassignedBy: 'dispatcher-1' }),
     ).rejects.toThrow()
+  })
+
+  it('reassign: новый курьер не найден -> NotFoundError', async () => {
+    const { facade } = makeFacade({ courier: null })
+    await expect(
+      facade.reassign({ assignmentId: ASSIGNMENT_ID, newCourierId: 'courier-2', reason: 'x', reassignedBy: 'dispatcher-1' }),
+    ).rejects.toBeInstanceOf(NotFoundError)
   })
 
   it('hasActiveAssignment: true, когда репозиторий возвращает нетерминальное назначение', async () => {

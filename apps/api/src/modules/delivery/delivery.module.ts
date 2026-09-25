@@ -19,6 +19,12 @@ import { EscalateDeliveryOfferService } from './application/services/escalate-de
 import { CalculateDeliveryFeeUseCase } from './application/use-cases/calculate-delivery-fee.use-case.js'
 import { ManageDeliveryZonesUseCase } from './application/use-cases/manage-delivery-zones.use-case.js'
 import { ManageDeliveryPricingRulesUseCase } from './application/use-cases/manage-delivery-pricing-rules.use-case.js'
+import { ClaimDeliveryAssignmentUseCase } from './application/use-cases/claim-delivery-assignment.use-case.js'
+import { AssignManualUseCase } from './application/use-cases/assign-manual.use-case.js'
+import { ReassignDeliveryUseCase } from './application/use-cases/reassign-delivery.use-case.js'
+import { GetAvailableDeliveryPoolUseCase } from './application/use-cases/get-available-delivery-pool.use-case.js'
+import { ListDeliveryAssignmentsUseCase } from './application/use-cases/list-delivery-assignments.use-case.js'
+import { ResolveCourierDepartSlaWatchdogUseCase } from './application/use-cases/resolve-courier-depart-sla-watchdog.use-case.js'
 import { COURIER_REPOSITORY_PROVIDER } from './infrastructure/repositories/courier.repository.js'
 import { ProvisionCourierUseCase } from './application/use-cases/provision-courier.use-case.js'
 import { DELIVERY_ZONE_REPOSITORY_PROVIDER } from './infrastructure/repositories/delivery-zone.repository.js'
@@ -36,6 +42,7 @@ import { DELIVERY_ORDERS_PORT_PROVIDER } from './infrastructure/adapters/deliver
 import { PHARMACY_LOOKUP_PORT_PROVIDER } from './infrastructure/adapters/pharmacy-lookup.adapter.js'
 import { DELIVERY_CANDIDATE_CACHE_PORT_PROVIDER } from './infrastructure/adapters/redis-delivery-candidate-cache.adapter.js'
 import { DELIVERY_OFFER_TIMEOUT_QUEUE_PROVIDER } from './infrastructure/jobs/delivery-offer-timeout.processor.js'
+import { COURIER_DEPART_SLA_WATCHDOG_QUEUE_PROVIDER } from './infrastructure/jobs/courier-depart-sla-watchdog.processor.js'
 import { DELIVERY_UNIT_OF_WORK_PROVIDER } from './infrastructure/drizzle-delivery-unit-of-work.adapter.js'
 import { OrderPickedUpEventHandler } from './infrastructure/event-handlers/order-picked-up.handler.js'
 import { CourierShiftsController } from './presentation/courier-shifts.controller.js'
@@ -44,8 +51,10 @@ import { CourierPayoutsController } from './presentation/courier-payouts.control
 import { CourierRatingsController } from './presentation/courier-ratings.controller.js'
 import { DeliveryOffersController } from './presentation/delivery-offers.controller.js'
 import { DeliveryOfferTimeoutController } from './presentation/internal/delivery-offer-timeout.controller.js'
+import { CourierDepartSlaWatchdogController } from './presentation/internal/courier-depart-sla-watchdog.controller.js'
 import { DeliveryPricingController } from './presentation/delivery-pricing.controller.js'
 import { DeliveryZonesController } from './presentation/delivery-zones.controller.js'
+import { DeliveryAssignmentsDispatchController } from './presentation/delivery-assignments-dispatch.controller.js'
 
 @Module({
   imports: [AuthModule, TenancyModule, CatalogModule],
@@ -56,8 +65,10 @@ import { DeliveryZonesController } from './presentation/delivery-zones.controlle
     CourierRatingsController,
     DeliveryOffersController,
     DeliveryOfferTimeoutController,
+    CourierDepartSlaWatchdogController,
     DeliveryPricingController,
     DeliveryZonesController,
+    DeliveryAssignmentsDispatchController,
   ],
   providers: [
     COURIER_REPOSITORY_PROVIDER,
@@ -74,6 +85,7 @@ import { DeliveryZonesController } from './presentation/delivery-zones.controlle
     PHARMACY_LOOKUP_PORT_PROVIDER,
     DELIVERY_CANDIDATE_CACHE_PORT_PROVIDER,
     DELIVERY_OFFER_TIMEOUT_QUEUE_PROVIDER,
+    COURIER_DEPART_SLA_WATCHDOG_QUEUE_PROVIDER,
     DELIVERY_UNIT_OF_WORK_PROVIDER,
     DELIVERY_ZONE_REPOSITORY_PROVIDER,
     DELIVERY_PRICING_RULE_REPOSITORY_PROVIDER,
@@ -95,6 +107,12 @@ import { DeliveryZonesController } from './presentation/delivery-zones.controlle
     ProvisionCourierUseCase,
     ManageDeliveryZonesUseCase,
     ManageDeliveryPricingRulesUseCase,
+    ClaimDeliveryAssignmentUseCase,
+    AssignManualUseCase,
+    ReassignDeliveryUseCase,
+    GetAvailableDeliveryPoolUseCase,
+    ListDeliveryAssignmentsUseCase,
+    ResolveCourierDepartSlaWatchdogUseCase,
     DeliveryFacade,
   ],
   exports: [DeliveryFacade],

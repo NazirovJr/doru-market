@@ -152,6 +152,7 @@ describe('toEligibilitySnapshot()', () => {
       courierId: 'courier-2',
       courierChainId: 'chain-x',
       coldChainCertified: false,
+      status: 'pending_verification',
     })
   })
 })

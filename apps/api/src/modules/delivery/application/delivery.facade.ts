@@ -77,8 +77,10 @@ export class DeliveryFacade {
 
   public async reassign(input: ReassignDeliveryInput): Promise<void> {
     const assignment = await this.getAssignmentOrThrow(input.assignmentId)
+    const courier = await this.getCourierOrThrow(input.newCourierId)
     assignment.reassign({
-      newCourierId: input.newCourierId,
+      newCourierId: courier.id,
+      courierStatus: courier.status,
       reason: input.reason,
       reassignedBy: input.reassignedBy,
       now: this.clock.now(),

@@ -78,6 +78,10 @@ describe('GetPendingDeliveryOffersUseCase', () => {
       findActiveByOrderId: vi.fn().mockResolvedValue(null),
       findByOrderId: vi.fn().mockResolvedValue(null),
       hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(false),
+      claimUnassigned: vi.fn(),
+      assignManual: vi.fn(),
+      findUnassignedPool: vi.fn(),
+      findByStatuses: vi.fn(),
       save: vi.fn(),
     }
     const couriers: CourierRepositoryPort = {
@@ -99,7 +103,7 @@ describe('GetPendingDeliveryOffersUseCase', () => {
     }
     const orders: DeliveryOrdersPort = { getOrderForRating: vi.fn().mockResolvedValue(null), getDeliveryContext: vi.fn().mockResolvedValue(orderContext) }
     const pharmacyLocation: PharmacyLocation = { id: 'pharmacy-1', name: 'Pharmacy', addressText: 'Addr', geoPoint: geo(), chainId: null }
-    const pharmacies: PharmacyLookupPort = { findById: vi.fn().mockResolvedValue(pharmacyLocation) }
+    const pharmacies: PharmacyLookupPort = { findById: vi.fn().mockResolvedValue(pharmacyLocation), findByIds: vi.fn().mockResolvedValue([]) }
     const useCase = new GetPendingDeliveryOffersUseCase(offers, assignments, couriers, orders, pharmacies)
 
     const [view] = await useCase.execute(USER_ID)
@@ -126,11 +130,15 @@ describe('GetPendingDeliveryOffersUseCase', () => {
       findActiveByOrderId: vi.fn(),
       findByOrderId: vi.fn(),
       hasActiveAssignmentForCourier: vi.fn(),
+      claimUnassigned: vi.fn(),
+      assignManual: vi.fn(),
+      findUnassignedPool: vi.fn(),
+      findByStatuses: vi.fn(),
       save: vi.fn(),
     }
     const couriers: CourierRepositoryPort = { findById: vi.fn(), findByUserId: vi.fn().mockResolvedValue(null), save: vi.fn() }
     const orders: DeliveryOrdersPort = { getOrderForRating: vi.fn(), getDeliveryContext: vi.fn() }
-    const pharmacies: PharmacyLookupPort = { findById: vi.fn() }
+    const pharmacies: PharmacyLookupPort = { findById: vi.fn(), findByIds: vi.fn() }
     const useCase = new GetPendingDeliveryOffersUseCase(offers, assignments, couriers, orders, pharmacies)
 
     await expect(useCase.execute(USER_ID)).rejects.toBeInstanceOf(NotFoundError)

@@ -17,6 +17,7 @@ import type { PharmacyLookupPort, PharmacyLocation } from '@/modules/delivery/ap
 import type { DeliveryOutboxPort } from '@/modules/delivery/application/ports/delivery-outbox.port.js'
 import type { DeliveryUnitOfWorkPort, DeliveryUnitOfWorkCallback } from '@/modules/delivery/application/ports/delivery-unit-of-work.port.js'
 import type { DeliveryOfferTimeoutQueuePort } from '@/modules/delivery/application/ports/delivery-offer-timeout-queue.port.js'
+import type { CourierDepartSlaWatchdogQueuePort } from '@/modules/delivery/application/ports/courier-depart-sla-watchdog-queue.port.js'
 
 const TEST_DATABASE_URL =
   process.env.DELIVERY_TEST_DATABASE_URL ?? process.env.DATABASE_URL ?? 'postgres://test:test@localhost:5432/dorutj_test'
@@ -136,13 +137,14 @@ describe.skipIf(!postgresAvailable)('AcceptDeliveryOfferUseCase — TC-DELIV-071
       getOrderForRating: () => Promise.resolve(null),
       getDeliveryContext: () => Promise.resolve(orderContext),
     }
-    const pharmacies: PharmacyLookupPort = { findById: () => Promise.resolve(pharmacyLocation) }
+    const pharmacies: PharmacyLookupPort = { findById: () => Promise.resolve(pharmacyLocation), findByIds: () => Promise.resolve([]) }
     const outbox: DeliveryOutboxPort = { append: () => Promise.resolve() }
     const uow: DeliveryUnitOfWorkPort = { run: <T>(cb: DeliveryUnitOfWorkCallback<T>) => db.transaction((tx: unknown) => cb(tx)) }
     const timeoutQueue: DeliveryOfferTimeoutQueuePort = { schedule: () => Promise.resolve(), cancel: () => Promise.resolve() }
+    const departWatchdog: CourierDepartSlaWatchdogQueuePort = { schedule: () => Promise.resolve(), cancel: () => Promise.resolve() }
     const clock = { now: () => new Date() }
     void courierId
-    return new AcceptDeliveryOfferUseCase(offers, assignments, couriers, orders, pharmacies, outbox, uow, timeoutQueue, clock)
+    return new AcceptDeliveryOfferUseCase(offers, assignments, couriers, orders, pharmacies, outbox, uow, timeoutQueue, departWatchdog, clock)
   }
 
   it('TC-DELIV-071: две одновременные попытки accept ОДНОГО оффера — ровно одна успешна, вторая OfferAlreadyRespondedError', async () => {
