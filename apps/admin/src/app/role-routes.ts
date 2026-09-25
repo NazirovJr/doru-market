@@ -82,6 +82,11 @@ const OwnPharmaciesPage: LazyExoticComponent<ComponentType<SectionPlaceholderPag
   import('@/features/pharmacies-crud/ui/own-pharmacies-page').then((m) => ({ default: m.OwnPharmaciesPage })),
 )
 
+/** DTJ-364 — та же схема совместимости без пропсов, что `AuditLogPage`. */
+const StaffAccountsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/staff/ui/staff-accounts-page').then((m) => ({ default: m.StaffAccountsPage })),
+)
+
 function section(path: string, titleKey: string, icon: string): RouteConfig {
   return { path, titleKey, icon, Component: SectionPlaceholder }
 }
@@ -105,7 +110,7 @@ const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
 const PHARMACY_ADMIN_ROUTES: readonly RouteConfig[] = [
   { path: 'my-pharmacies', titleKey: 'admin.nav.my_pharmacies', icon: 'pharmacies', Component: OwnPharmaciesPage },
   section('my-orders', 'admin.nav.my_orders', 'orders'),
-  section('staff', 'admin.nav.staff', 'staff'),
+  { path: 'staff', titleKey: 'admin.nav.staff', icon: 'staff', Component: StaffAccountsPage },
   section('integration-keys', 'admin.nav.integration_keys', 'keys'),
   section('reports', 'admin.nav.reports', 'reports'),
   section('schedule', 'admin.nav.schedule', 'schedule'),

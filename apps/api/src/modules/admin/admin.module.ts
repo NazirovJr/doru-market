@@ -36,6 +36,7 @@ import { AuthModule } from '@/modules/auth/index.js'
 import { TenancyModule } from '@/modules/tenancy/tenancy.module.js'
 import { InventoryModule } from '@/modules/inventory/inventory.module.js'
 import { InventoryFacade } from '@/modules/inventory/index.js'
+import { DeliveryModule } from '@/modules/delivery/delivery.module.js'
 import { ONBOARDING_FACADE_PORT } from './application/ports/onboarding-facade.port.js'
 import { ORDERS_FACADE_PORT } from './application/ports/orders-facade.port.js'
 import { PAYMENTS_FACADE_PORT } from './application/ports/payments-facade.port.js'
@@ -43,6 +44,7 @@ import { INVENTORY_FACADE_PORT } from './application/ports/inventory-facade.port
 import { FEATURE_FLAGS_REPOSITORY_PROVIDER } from './infrastructure/repositories/feature-flags.repository.js'
 import { TENANCY_FACADE_PORT_PROVIDER } from './infrastructure/adapters/tenancy-facade.adapter.js'
 import { IDENTITY_FACADE_PORT_PROVIDER } from './infrastructure/adapters/identity-facade.adapter.js'
+import { DELIVERY_FACADE_PORT_PROVIDER } from './infrastructure/adapters/delivery-facade.adapter.js'
 import { ListFeatureFlagsUseCase } from './application/use-cases/list-feature-flags.use-case.js'
 import { UpsertFeatureFlagUseCase } from './application/use-cases/upsert-feature-flag.use-case.js'
 import { ListTenantsUseCase } from './application/use-cases/list-tenants.use-case.js'
@@ -55,14 +57,18 @@ import { GrantPlatformRoleUseCase } from './application/use-cases/grant-platform
 import { ListPharmacyAccountsAnyUseCase } from './application/use-cases/list-pharmacy-accounts-any.use-case.js'
 import { ListPharmacyAccountsOwnUseCase } from './application/use-cases/list-pharmacy-accounts-own.use-case.js'
 import { GetInventorySummaryUseCase } from './application/use-cases/get-inventory-summary.use-case.js'
+import { ListStaffAccountsUseCase } from './application/use-cases/list-staff-accounts.use-case.js'
+import { DeactivateStaffAccountUseCase } from './application/use-cases/deactivate-staff-account.use-case.js'
+import { ProvisionCourierForChainUseCase } from './application/use-cases/provision-courier-for-chain.use-case.js'
 import { FeatureFlagsController } from './presentation/feature-flags.controller.js'
 import { TenantsController } from './presentation/tenants.controller.js'
 import { UsersAdminController } from './presentation/users-admin.controller.js'
 import { PharmacyAccountsOverviewController } from './presentation/pharmacy-accounts-overview.controller.js'
+import { StaffAccountsController } from './presentation/staff-accounts.controller.js'
 
 @Module({
-  imports: [OnboardingModule, OrdersModule, PaymentsModule, AuthModule, TenancyModule, InventoryModule],
-  controllers: [FeatureFlagsController, TenantsController, UsersAdminController, PharmacyAccountsOverviewController],
+  imports: [OnboardingModule, OrdersModule, PaymentsModule, AuthModule, TenancyModule, InventoryModule, DeliveryModule],
+  controllers: [FeatureFlagsController, TenantsController, UsersAdminController, PharmacyAccountsOverviewController, StaffAccountsController],
   providers: [
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },
     { provide: ORDERS_FACADE_PORT, useExisting: ORDERS_FACADE },
@@ -87,6 +93,11 @@ import { PharmacyAccountsOverviewController } from './presentation/pharmacy-acco
     // scope=own — тот же ONBOARDING_FACADE_PORT, chainId резолвится из actor, не из query.
     ListPharmacyAccountsOwnUseCase,
     GetInventorySummaryUseCase,
+    // DTJ-364 — staff-accounts (список/деактивация + провижининг флота, DELIVERY_FACADE_PORT новый).
+    DELIVERY_FACADE_PORT_PROVIDER,
+    ListStaffAccountsUseCase,
+    DeactivateStaffAccountUseCase,
+    ProvisionCourierForChainUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.

@@ -20,6 +20,7 @@ import { CalculateDeliveryFeeUseCase } from './application/use-cases/calculate-d
 import { ManageDeliveryZonesUseCase } from './application/use-cases/manage-delivery-zones.use-case.js'
 import { ManageDeliveryPricingRulesUseCase } from './application/use-cases/manage-delivery-pricing-rules.use-case.js'
 import { COURIER_REPOSITORY_PROVIDER } from './infrastructure/repositories/courier.repository.js'
+import { ProvisionCourierUseCase } from './application/use-cases/provision-courier.use-case.js'
 import { DELIVERY_ZONE_REPOSITORY_PROVIDER } from './infrastructure/repositories/delivery-zone.repository.js'
 import { DELIVERY_PRICING_RULE_REPOSITORY_PROVIDER } from './infrastructure/repositories/delivery-pricing-rule.repository.js'
 import { DELIVERY_ASSIGNMENT_REPOSITORY_PROVIDER } from './infrastructure/repositories/delivery-assignment.repository.js'
@@ -91,6 +92,7 @@ import { DeliveryZonesController } from './presentation/delivery-zones.controlle
     GetPendingDeliveryOffersUseCase,
     OrderPickedUpEventHandler,
     CalculateDeliveryFeeUseCase,
+    ProvisionCourierUseCase,
     ManageDeliveryZonesUseCase,
     ManageDeliveryPricingRulesUseCase,
     DeliveryFacade,

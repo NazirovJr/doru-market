@@ -6,7 +6,7 @@
  * `DrizzleDatabase` тип, экспортируемый `drizzleProvider`.
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { and, desc, eq, ilike, isNull, lt, or, type SQL } from 'drizzle-orm'
+import { and, desc, eq, ilike, inArray, isNull, lt, or, type SQL } from 'drizzle-orm'
 import { type UserRole } from '@dorutj/contracts'
 import { type DrizzleDb, DRIZZLE_DB } from '@/infrastructure/database/drizzle.provider.js'
 import { users } from '@/db/schema/users.js'
@@ -212,7 +212,9 @@ function keysetCondition(cursor: UsersListCursor): SQL | undefined {
 function buildListConditions(query: UsersListQuery): SQL[] {
   const conditions: SQL[] = [isNull(users.deletedAt)]
   if (query.filter.role !== undefined) conditions.push(eq(users.role, query.filter.role))
+  if (query.filter.roles !== undefined) conditions.push(inArray(users.role, query.filter.roles as UserRole[]))
   if (query.filter.tenantId !== undefined) conditions.push(eq(users.tenantId, query.filter.tenantId))
+  if (query.filter.chainId !== undefined) conditions.push(eq(users.chainId, query.filter.chainId))
   if (query.filter.phoneLike !== undefined) conditions.push(ilike(users.phoneNumber, `%${query.filter.phoneLike}%`))
   const cursorCondition = query.cursor != null ? keysetCondition(query.cursor) : undefined
   if (cursorCondition !== undefined) conditions.push(cursorCondition)

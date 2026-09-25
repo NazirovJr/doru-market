@@ -13,8 +13,13 @@ import {
   type DeliveryAssignmentRepositoryPort,
 } from './ports/delivery-assignment.repository.port.js'
 import { CalculateDeliveryFeeUseCase, type CalculateDeliveryFeeInput } from './use-cases/calculate-delivery-fee.use-case.js'
+import {
+  ProvisionCourierUseCase,
+  type ProvisionCourierInput,
+  type CourierProvisionSnapshot,
+} from './use-cases/provision-courier.use-case.js'
 
-export type { CalculateDeliveryFeeInput }
+export type { CalculateDeliveryFeeInput, ProvisionCourierInput, CourierProvisionSnapshot }
 
 export interface CreateDeliveryAssignmentInput {
   readonly id: string
@@ -37,12 +42,13 @@ export interface ReassignDeliveryInput {
 
 @Injectable()
 export class DeliveryFacade {
-  // eslint-disable-next-line max-params -- 4 DI-инъекции, конструктор NestJS.
+  // eslint-disable-next-line max-params -- 5 DI-инъекций, конструктор NestJS.
   public constructor(
     @Inject(DELIVERY_ASSIGNMENT_REPOSITORY) private readonly assignments: DeliveryAssignmentRepositoryPort,
     @Inject(COURIER_REPOSITORY) private readonly couriers: CourierRepositoryPort,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(CalculateDeliveryFeeUseCase) private readonly calculateFee: CalculateDeliveryFeeUseCase,
+    @Inject(ProvisionCourierUseCase) private readonly provisionCourierUseCase: ProvisionCourierUseCase,
   ) {}
 
   public async createAssignment(input: CreateDeliveryAssignmentInput): Promise<DeliveryAssignmentSnapshot> {
@@ -92,6 +98,11 @@ export class DeliveryFacade {
   /** SRS-DELIV-048 (DTJ-322) — делегирует резолюцию зоны/тарифа/ночной надбавки `CalculateDeliveryFeeUseCase`. */
   public async calculateDeliveryFee(input: CalculateDeliveryFeeInput): Promise<bigint> {
     return this.calculateFee.execute(input)
+  }
+
+  // DTJ-364: делегирует ProvisionCourierUseCase (идемпотентно) — единственная точка входа admin в delivery.
+  public async provisionCourier(input: ProvisionCourierInput): Promise<CourierProvisionSnapshot> {
+    return this.provisionCourierUseCase.execute(input)
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await -- async — контракт порта
