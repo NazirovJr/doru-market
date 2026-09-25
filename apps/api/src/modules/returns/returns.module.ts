@@ -62,11 +62,12 @@ import { RETURNS_SUPPORT_FACADE_PROVIDER } from './infrastructure/adapters/retur
 import { RETURNS_DELIVERY_PORT } from './application/ports/delivery-facade.port.js'
 import { UnimplementedReturnsDeliveryAdapter } from './infrastructure/adapters/unimplemented-returns-delivery-facade.adapter.js'
 import { RETURNS_PAYMENTS_PORT } from './application/ports/payments-facade.port.js'
-import { UnimplementedReturnsPaymentsAdapter } from './infrastructure/adapters/unimplemented-returns-payments-facade.adapter.js'
+import { PaymentsModule } from '@/modules/payments/payments.module.js'
+import { PaymentsFacadeAdapter } from './infrastructure/adapters/payments-facade.adapter.js'
 import { OrderReturnsController } from './presentation/order-returns.controller.js'
 
 @Module({
-  imports: [TenancyModule, AuthModule, SupportModule],
+  imports: [TenancyModule, AuthModule, SupportModule, PaymentsModule],
   controllers: [OrderReturnsController],
   providers: [
     ReturnFinancialOutcomeResolver,
@@ -80,9 +81,7 @@ import { OrderReturnsController } from './presentation/order-returns.controller.
     // PROCESSED_EVENTS_PORT — теперь общий (common/events, DomainEventsModule, @Global()).
     // TODO(EP-13): заменить на реальный адаптер, когда у `delivery` появится публичный фасад.
     { provide: RETURNS_DELIVERY_PORT, useClass: UnimplementedReturnsDeliveryAdapter },
-    // TODO(EP-10): заменить, когда `PaymentsFacade` вырастет refund/adjustment-методами — см.
-    // JSDoc `UnimplementedReturnsPaymentsAdapter` (БЛОКЕР для прод-мержа DTJ-274, не для кода).
-    { provide: RETURNS_PAYMENTS_PORT, useClass: UnimplementedReturnsPaymentsAdapter },
+    { provide: RETURNS_PAYMENTS_PORT, useClass: PaymentsFacadeAdapter },
     RequestReturnUseCase,
     MarkReturnInTransitUseCase,
     ConfirmReturnReceivedUseCase,

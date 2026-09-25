@@ -203,7 +203,12 @@ import { AdjustLedgerUseCase } from './application/use-cases/adjust-ledger.use-c
 import { AdminPaymentOverrideController } from './presentation/admin-payment-override.controller.js'
 // DTJ-249 — HoldPayoutUseCase/PAYMENTS_FACADE (см. JSDoc блока providers выше).
 import { HoldPayoutUseCase } from './application/use-cases/hold-payout.use-case.js'
-import { PAYMENTS_FACADE, type PaymentsFacade } from './index.js'
+import {
+  PAYMENTS_FACADE,
+  type PaymentsFacade,
+  type RefundOrderFullCommand,
+  type RecordLedgerAdjustmentCommand,
+} from './index.js'
 // DTJ-251 — PlatformBillingInvoiceRepository, задел для DTJ-252 (см. JSDoc блока providers выше).
 import { PLATFORM_BILLING_INVOICE_REPOSITORY_PROVIDER } from './infrastructure/repositories/platform-billing-invoice.repository.js'
 // DTJ-252 — авто-блокировка сети за неоплаченный B2B-инвойс + отчёты аптеке (см. JSDoc блока providers выше).
@@ -380,10 +385,20 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
     HoldPayoutUseCase,
     {
       provide: PAYMENTS_FACADE,
-      useFactory: (useCase: HoldPayoutUseCase): PaymentsFacade => ({
+      useFactory: (useCase: HoldPayoutUseCase, refundOrderUseCase: RefundOrderUseCase, adjustLedgerUseCase: AdjustLedgerUseCase): PaymentsFacade => ({
         holdPayout: (tenantId: string, orderId: string, disputeId: string) => useCase.execute({ tenantId, orderId, disputeId }),
+        refundFull: (tenantId: string, command: RefundOrderFullCommand) =>
+          refundOrderUseCase.execute({ tenantId, orderId: command.orderId, reason: command.reason }),
+        recordAdjustment: (command: RecordLedgerAdjustmentCommand) =>
+          adjustLedgerUseCase.execute({
+            orderId: command.orderId,
+            amountDiram: command.amountDiram,
+            direction: 'credit',
+            reason: command.reason,
+            actorUserId: command.actorUserId,
+          }),
       }),
-      inject: [HoldPayoutUseCase],
+      inject: [HoldPayoutUseCase, RefundOrderUseCase, AdjustLedgerUseCase],
     },
     // DTJ-251 — см. JSDoc блока providers выше (нет вызывающего use case в ЭТОМ тикете, задел для DTJ-252).
     PLATFORM_BILLING_INVOICE_REPOSITORY_PROVIDER,

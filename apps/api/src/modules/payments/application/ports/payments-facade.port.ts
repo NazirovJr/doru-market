@@ -28,6 +28,18 @@ export interface HoldPayoutResult {
   readonly alreadyPaid: boolean
 }
 
+export interface RefundOrderFullCommand {
+  readonly orderId: string
+  readonly reason: string
+}
+
+export interface RecordLedgerAdjustmentCommand {
+  readonly orderId: string
+  readonly amountDiram: bigint
+  readonly reason: string
+  readonly actorUserId: string
+}
+
 export interface PaymentsFacade {
   /**
    * Атомарно переводит `payout_schedule` заказа в `status='disputed'` (SRS-DOM-058), если она
@@ -35,4 +47,10 @@ export interface PaymentsFacade {
    * `{ alreadyPaid: true }` (см. `HoldPayoutResult`).
    */
   holdPayout(tenantId: string, orderId: string, disputeId: string): Promise<HoldPayoutResult>
+
+  /** Полный возврат без отмены заказа — тонкая обёртка над `RefundOrderUseCase`, идемпотентна. */
+  refundFull(tenantId: string, command: RefundOrderFullCommand): Promise<void>
+
+  /** Учётная корректировка ledger, `direction` всегда `'credit'` — тонкая обёртка над `AdjustLedgerUseCase`. */
+  recordAdjustment(command: RecordLedgerAdjustmentCommand): Promise<void>
 }
