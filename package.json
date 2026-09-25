@@ -24,6 +24,8 @@
     "arch:graph": "depcruise --config .dependency-cruiser.cjs --output-type dot apps packages > arch-graph.dot",
     "test:arch": "vitest run tests/arch/run-fixture-check.spec.ts tests/arch/runtime-connectivity.spec.ts tests/arch/suppression-justification.spec.ts tests/arch/di-explicit-inject.spec.ts tests/arch/notification-templates-completeness.spec.ts",
     "typecheck:arch": "tsc --noEmit -p tests/arch/tsconfig.json",
+    "env:check": "tsx scripts/env-check.ts",
+    "test:env-check": "vitest run scripts/env-check.spec.ts",
     "db:generate": "pnpm --filter @dorutj/api db:generate",
     "db:migrate": "pnpm --filter @dorutj/api db:migrate",
     "db:push": "pnpm --filter @dorutj/api db:push",

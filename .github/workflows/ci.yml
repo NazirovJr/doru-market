@@ -102,6 +102,11 @@ jobs:
       - run: pnpm arch:check
       - run: pnpm test:arch
 
+      # DTJ-426, SRS-NFR-053/054: .env.example vs Zod-схемы конфигурации (apps/api, apps/worker) —
+      # без БД, быстрая статическая проверка, логично соседствует с typecheck/lint/arch:check.
+      - run: pnpm test:env-check
+      - run: pnpm env:check
+
   # ---------------------------------------------------------------------------------------------
   # Job 2 — unit-тесты, матрица по приложению (параллельные прогоны). `test` — реальный скрипт
   # КАЖДОГО apps/* package.json, coverage уже включён внутри vitest.config.ts каждого пакета
