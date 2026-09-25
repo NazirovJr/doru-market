@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, waitForElementToBeRemoved } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { UndeliveredNotificationDto } from '../api/use-undelivered-notifications'
@@ -50,7 +50,12 @@ describe('UndeliveredNotificationsPage', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ data: [] })))
     renderPage()
 
-    await waitFor(() => { expect(screen.queryByRole('status')).not.toBeInTheDocument() })
+    // waitForElementToBeRemoved вместо waitFor(() => expect(...).not.toBeInTheDocument()) — ждёт
+    // именно исчезновения статуса загрузки (MutationObserver), а не синхронного опроса раз в 50мс.
+    // Таймаут поднят с дефолтных 1000мс: под полным `pnpm test` (turbo параллельно гоняет
+    // api/web/admin/pharmacy/worker на 4 ядрах) резолюция мокнутого fetch + Response.json() +
+    // react-query стейт-апдейт иногда не укладываются в 1с — не баг компонента, а нагрузка среды.
+    await waitForElementToBeRemoved(() => screen.queryByRole('status'), { timeout: 5000 })
     expect(screen.queryAllByTestId('undelivered-notifications-row')).toHaveLength(0)
   })
 
