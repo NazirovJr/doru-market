@@ -5,7 +5,7 @@ import type { OnboardingFacadePort, PharmacyAccountsAnyPage } from '../ports/onb
 
 function fakeFacade(page: PharmacyAccountsAnyPage): { facade: OnboardingFacadePort; findPharmacyAccountsAny: ReturnType<typeof vi.fn> } {
   const findPharmacyAccountsAny = vi.fn().mockResolvedValue(page)
-  return { facade: { findPharmacyAccountsAny }, findPharmacyAccountsAny }
+  return { facade: { findPharmacyAccountsAny, getPharmacyChainId: vi.fn() }, findPharmacyAccountsAny }
 }
 
 const EMPTY_PAGE: PharmacyAccountsAnyPage = { items: [], nextCursor: null, hasMore: false }

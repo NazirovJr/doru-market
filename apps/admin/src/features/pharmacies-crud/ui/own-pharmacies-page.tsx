@@ -1,11 +1,10 @@
 // Обзор своих точек. Без фильтра по сети (chainId резолвится сервером через scope=own) —
 // единственный фильтр той же формы, что PharmacyAccountsPage, здесь избыточен.
 import { useEffect, useState, type ReactElement } from 'react'
-import { Link } from 'react-router'
 import { useT } from '@dorutj/i18n'
 import type { PharmacyAccountAdminSummaryDto } from '@dorutj/contracts'
 import { ADMIN_LOCALE } from '@/shared/config/locale'
-import { useOwnPharmacyAccounts } from '../api/use-pharmacy-accounts'
+import { useInventorySummary, useOwnPharmacyAccounts } from '../api/use-pharmacy-accounts'
 
 const STATUS_BADGE_STATE: Readonly<Record<string, 'success' | 'warning' | 'danger' | 'neutral'>> = {
   draft: 'neutral',
@@ -33,11 +32,13 @@ const MINUTES_PER_HOUR = 60
 const SECONDS_PER_MINUTE = 60
 const MS_PER_SECOND = 1000
 const MS_PER_DAY = HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND
+const INVENTORY_SUMMARY_COLSPAN = 3
 
 export const OwnPharmaciesPage = (): ReactElement => {
   const { t } = useT(ADMIN_LOCALE)
   const [cursor, setCursor] = useState<string | null>(null)
   const [items, setItems] = useState<readonly PharmacyAccountAdminSummaryDto[]>([])
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const query = useOwnPharmacyAccounts(cursor)
 
@@ -69,7 +70,12 @@ export const OwnPharmaciesPage = (): ReactElement => {
         </thead>
         <tbody>
           {items.map((account) => (
-            <OwnPharmacyRow key={account.id} account={account} />
+            <OwnPharmacyRow
+              key={account.id}
+              account={account}
+              expanded={expandedId === account.id}
+              onToggle={() => { setExpandedId((prev) => (prev === account.id ? null : account.id)) }}
+            />
           ))}
         </tbody>
       </table>
@@ -89,7 +95,13 @@ function isLicenseExpiringSoon(licenseExpiryDate: string | null): boolean {
   return daysLeft < LICENSE_EXPIRY_WARNING_DAYS
 }
 
-const OwnPharmacyRow = ({ account }: { readonly account: PharmacyAccountAdminSummaryDto }): ReactElement => {
+interface OwnPharmacyRowProps {
+  readonly account: PharmacyAccountAdminSummaryDto
+  readonly expanded: boolean
+  readonly onToggle: () => void
+}
+
+const OwnPharmacyRow = ({ account, expanded, onToggle }: OwnPharmacyRowProps): ReactElement => {
   const { t } = useT(ADMIN_LOCALE)
   const state = STATUS_BADGE_STATE[account.status] ?? 'neutral'
   const tokens = BADGE_TOKENS[state]
@@ -97,26 +109,66 @@ const OwnPharmacyRow = ({ account }: { readonly account: PharmacyAccountAdminSum
   const expiryTokens = expiringSoon ? BADGE_TOKENS.warning : null
 
   return (
-    <tr data-testid="own-pharmacy-row">
-      <td>
-        <Link to={`/admin/my-pharmacies/${account.id}`}>{account.name}</Link>
-      </td>
-      <td>
-        <span
-          data-testid="own-pharmacy-status-badge"
-          style={{ backgroundColor: tokens.bg, color: tokens.text, padding: BADGE_PADDING, borderRadius: BADGE_BORDER_RADIUS }}
-        >
-          {t(`admin.pharmacy_accounts.status.${account.status}`)}
-        </span>
-      </td>
-      <td>
-        {account.licenseExpiryDate ?? '—'}
-        {expiryTokens !== null ? (
+    <>
+      <tr data-testid="own-pharmacy-row">
+        <td>
+          <button type="button" onClick={onToggle} data-testid="own-pharmacy-name-toggle">
+            {account.name}
+          </button>
+        </td>
+        <td>
           <span
-            data-testid="own-pharmacy-license-warning-badge"
-            style={{ backgroundColor: expiryTokens.bg, color: expiryTokens.text, padding: BADGE_PADDING, borderRadius: BADGE_BORDER_RADIUS, marginLeft: '8px' }}
+            data-testid="own-pharmacy-status-badge"
+            style={{ backgroundColor: tokens.bg, color: tokens.text, padding: BADGE_PADDING, borderRadius: BADGE_BORDER_RADIUS }}
           >
-            {t('admin.own_pharmacies.license_expiring_soon')}
+            {t(`admin.pharmacy_accounts.status.${account.status}`)}
+          </span>
+        </td>
+        <td>
+          {account.licenseExpiryDate ?? '—'}
+          {expiryTokens !== null ? (
+            <span
+              data-testid="own-pharmacy-license-warning-badge"
+              style={{ backgroundColor: expiryTokens.bg, color: expiryTokens.text, padding: BADGE_PADDING, borderRadius: BADGE_BORDER_RADIUS, marginLeft: '8px' }}
+            >
+              {t('admin.own_pharmacies.license_expiring_soon')}
+            </span>
+          ) : null}
+        </td>
+      </tr>
+      {expanded ? <InventorySummaryRow pharmacyId={account.id} /> : null}
+    </>
+  )
+}
+
+const InventorySummaryRow = ({ pharmacyId }: { readonly pharmacyId: string }): ReactElement => {
+  const { t } = useT(ADMIN_LOCALE)
+  const query = useInventorySummary(pharmacyId)
+
+  return (
+    <tr data-testid="own-pharmacy-inventory-summary-row">
+      <td colSpan={INVENTORY_SUMMARY_COLSPAN}>
+        {query.isLoading ? <span role="status">{t('admin.own_pharmacies.inventory_summary.loading')}</span> : null}
+        {query.error !== null ? <span role="alert">{t('admin.own_pharmacies.inventory_summary.error')}</span> : null}
+        {query.data !== undefined ? (
+          <span data-testid="own-pharmacy-inventory-summary">
+            {t('admin.own_pharmacies.inventory_summary.sku_count', { count: query.data.skuCount })}
+            {' · '}
+            {t('admin.own_pharmacies.inventory_summary.stale_share', { percent: query.data.staleDataSharePercent })}
+            {query.data.staleDataSharePercent > 0 ? (
+              <span
+                data-testid="own-pharmacy-inventory-stale-warning-badge"
+                style={{
+                  backgroundColor: BADGE_TOKENS.warning.bg,
+                  color: BADGE_TOKENS.warning.text,
+                  padding: BADGE_PADDING,
+                  borderRadius: BADGE_BORDER_RADIUS,
+                  marginLeft: '8px',
+                }}
+              >
+                {t('admin.own_pharmacies.inventory_summary.stale_warning')}
+              </span>
+            ) : null}
           </span>
         ) : null}
       </td>

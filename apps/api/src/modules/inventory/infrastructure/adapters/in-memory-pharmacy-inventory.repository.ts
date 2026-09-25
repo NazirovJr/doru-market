@@ -11,6 +11,7 @@ import {
   type ListByPharmacyResult,
   type PharmacyInventoryListRow,
   type PharmacyInventoryRepository,
+  type PharmacyInventorySummary,
   type UpsertResult,
 } from '@/modules/inventory/application/ports/pharmacy-inventory.repository.port.js'
 import { type InventoryBatchUpsertRow } from '@/modules/inventory/domain/value-objects/inventory-batch-upsert-row.vo.js'
@@ -101,6 +102,14 @@ export class InMemoryPharmacyInventoryRepository implements PharmacyInventoryRep
     const hasMore = all.length > input.limit
     const items = hasMore ? all.slice(0, input.limit) : all
     return Promise.resolve({ items, hasMore })
+  }
+
+  // Считает по тем же seedListRow-строкам, что listByPharmacy — отдельного хранилища нет.
+  getSummary(input: { pharmacyId: string; staleBefore: Date }): Promise<PharmacyInventorySummary> {
+    const rows = this.listRowsByPharmacy.get(input.pharmacyId) ?? []
+    const skuCount = new Set(rows.map((row) => row.medicineId)).size
+    const staleRowCount = rows.filter((row) => row.lastSyncedAt < input.staleBefore).length
+    return Promise.resolve({ skuCount, totalRowCount: rows.length, staleRowCount })
   }
 
   private isAfterCursor(row: PharmacyInventoryListRow, cursor: ListByPharmacyCursor | null): boolean {

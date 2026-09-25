@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router'
-import type { PharmacyAccountAdminSummaryDto } from '@dorutj/contracts'
+import type { InventorySummaryDto, PharmacyAccountAdminSummaryDto } from '@dorutj/contracts'
 import { OwnPharmaciesPage } from './own-pharmacies-page'
 
 type FetchImpl = (input: string, init?: RequestInit) => Promise<Response>
@@ -14,6 +14,15 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 function stubFetch(response: Response): ReturnType<typeof vi.fn<FetchImpl>> {
   const fetchMock = vi.fn<FetchImpl>(() => Promise.resolve(response))
+  vi.stubGlobal('fetch', fetchMock)
+  return fetchMock
+}
+
+// Список и inventory-summary — разные эндпоинты одного мока, роутинг по вхождению пути.
+function stubFetchByPath(listResponse: Response, summaryResponse: Response): ReturnType<typeof vi.fn<FetchImpl>> {
+  const fetchMock = vi.fn<FetchImpl>((input) =>
+    Promise.resolve(input.includes('/inventory-summary') ? summaryResponse.clone() : listResponse.clone()),
+  )
   vi.stubGlobal('fetch', fetchMock)
   return fetchMock
 }
@@ -99,5 +108,42 @@ describe('OwnPharmaciesPage (DTJ-362)', () => {
     renderPage()
 
     await waitFor(() => { expect(screen.getByRole('alert')).toBeInTheDocument() })
+  })
+
+  it('клик на название точки раскрывает сводку остатков (skuCount, staleDataSharePercent)', async () => {
+    const summary: InventorySummaryDto = { skuCount: 12, staleDataSharePercent: 0 }
+    stubFetchByPath(jsonResponse({ data: [OWN_ACCOUNT] }), jsonResponse({ data: summary }))
+    renderPage()
+    await waitFor(() => { expect(screen.getAllByTestId('own-pharmacy-row')).toHaveLength(1) })
+
+    fireEvent.click(screen.getByTestId('own-pharmacy-name-toggle'))
+
+    await waitFor(() => { expect(screen.getByTestId('own-pharmacy-inventory-summary')).toBeInTheDocument() })
+    expect(screen.getByTestId('own-pharmacy-inventory-summary').textContent).toContain('12')
+    expect(screen.queryByTestId('own-pharmacy-inventory-stale-warning-badge')).not.toBeInTheDocument()
+  })
+
+  it('staleDataSharePercent > 0 — показан badge предупреждения об устаревших остатках', async () => {
+    const summary: InventorySummaryDto = { skuCount: 5, staleDataSharePercent: 25 }
+    stubFetchByPath(jsonResponse({ data: [OWN_ACCOUNT] }), jsonResponse({ data: summary }))
+    renderPage()
+    await waitFor(() => { expect(screen.getAllByTestId('own-pharmacy-row')).toHaveLength(1) })
+
+    fireEvent.click(screen.getByTestId('own-pharmacy-name-toggle'))
+
+    await waitFor(() => { expect(screen.getByTestId('own-pharmacy-inventory-stale-warning-badge')).toBeInTheDocument() })
+  })
+
+  it('повторный клик на название сворачивает сводку обратно', async () => {
+    const summary: InventorySummaryDto = { skuCount: 1, staleDataSharePercent: 0 }
+    stubFetchByPath(jsonResponse({ data: [OWN_ACCOUNT] }), jsonResponse({ data: summary }))
+    renderPage()
+    await waitFor(() => { expect(screen.getAllByTestId('own-pharmacy-row')).toHaveLength(1) })
+
+    fireEvent.click(screen.getByTestId('own-pharmacy-name-toggle'))
+    await waitFor(() => { expect(screen.getByTestId('own-pharmacy-inventory-summary-row')).toBeInTheDocument() })
+    fireEvent.click(screen.getByTestId('own-pharmacy-name-toggle'))
+
+    expect(screen.queryByTestId('own-pharmacy-inventory-summary-row')).not.toBeInTheDocument()
   })
 })

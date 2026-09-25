@@ -35,4 +35,6 @@ export interface PharmacyAccountsAnyPage {
 
 export interface OnboardingFacadePort {
   findPharmacyAccountsAny(filter: PharmacyAccountsAnyFilter, pagination: PharmacyAccountsAnyPagination): Promise<PharmacyAccountsAnyPage>
+  // Несуществующая аптека — null, не throw (policy use case'а сама решает, что с этим делать).
+  getPharmacyChainId(pharmacyId: string): Promise<string | null>
 }

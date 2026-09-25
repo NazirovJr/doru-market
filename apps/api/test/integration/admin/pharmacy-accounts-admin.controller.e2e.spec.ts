@@ -220,4 +220,45 @@ describe.skipIf(!postgresAvailable)('PharmacyAccountsOverviewController — Supe
     expect(res.status).toBe(403)
     expect((res.body as ErrorBody).error.code).toBe('CROSS_TENANT_ACCESS_DENIED')
   })
+
+  function getInventorySummary(token: string, pharmacyId: string): request.Test {
+    return request(httpServer).get(`/api/v1/pharmacy-accounts/${pharmacyId}/inventory-summary`).set('Authorization', `Bearer ${token}`)
+  }
+
+  it('DTJ-362 — pharmacy_admin сети A запрашивает сводку аптеки сети B → 403 CROSS_TENANT_ACCESS_DENIED', async () => {
+    const suffix = randomUUID().slice(0, 8)
+    const chainAId = await seedChain(`Inventory Chain A ${suffix}`)
+    const chainBId = await seedChain(`Inventory Chain B ${suffix}`)
+    const foreignPharmacyId = await seedPharmacy(`Foreign pharmacy inv ${suffix}`, 'active', chainBId)
+    const ownAdminToken = sign('pharmacy_admin', { chainId: chainAId })
+
+    const res = await getInventorySummary(ownAdminToken, foreignPharmacyId)
+
+    expect(res.status).toBe(403)
+    expect((res.body as ErrorBody).error.code).toBe('CROSS_TENANT_ACCESS_DENIED')
+  })
+
+  it('DTJ-362 — pharmacy_admin сети A запрашивает сводку СВОЕЙ аптеки → 200, skuCount/staleDataSharePercent', async () => {
+    const suffix = randomUUID().slice(0, 8)
+    const chainId = await seedChain(`Inventory Chain Own ${suffix}`)
+    const ownPharmacyId = await seedPharmacy(`Own pharmacy inv ${suffix}`, 'active', chainId)
+    const ownAdminToken = sign('pharmacy_admin', { chainId })
+
+    const res = await getInventorySummary(ownAdminToken, ownPharmacyId)
+
+    expect(res.status).toBe(200)
+    const body = res.body as SuccessBody<{ skuCount: number; staleDataSharePercent: number }>
+    expect(body.data.skuCount).toBe(0)
+    expect(body.data.staleDataSharePercent).toBe(0)
+  })
+
+  it('DTJ-362 — super_admin запрашивает сводку любой аптеки → 200 без policy-проверки владения', async () => {
+    const suffix = randomUUID().slice(0, 8)
+    const chainId = await seedChain(`Inventory Chain Super ${suffix}`)
+    const pharmacyId = await seedPharmacy(`Any pharmacy inv ${suffix}`, 'active', chainId)
+
+    const res = await getInventorySummary(superAdminToken, pharmacyId)
+
+    expect(res.status).toBe(200)
+  })
 })

@@ -49,6 +49,10 @@ class FakeListOnlyPharmacyInventoryRepository implements PharmacyInventoryReposi
   saveMany(): Promise<never> {
     throw new Error('not used in list tests')
   }
+
+  getSummary(): Promise<never> {
+    throw new Error('not used in list tests')
+  }
 }
 
 function makeRow(overrides: Partial<PharmacyInventoryListRow> = {}): PharmacyInventoryListRow {

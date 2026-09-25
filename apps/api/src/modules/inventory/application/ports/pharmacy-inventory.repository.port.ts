@@ -48,6 +48,12 @@ export interface ListByPharmacyResult {
   readonly hasMore: boolean
 }
 
+export interface PharmacyInventorySummary {
+  readonly skuCount: number
+  readonly totalRowCount: number
+  readonly staleRowCount: number
+}
+
 /** Описание одного row'а, который батчевый `upsertMany` принимает от старого use case'а. */
 export interface UpsertInput {
   readonly pharmacyId: string
@@ -95,4 +101,7 @@ export interface PharmacyInventoryRepository {
     readonly cursor: ListByPharmacyCursor | null
     readonly limit: number
   }): Promise<ListByPharmacyResult>
+
+  // Один агрегирующий запрос (COUNT/COUNT FILTER) — не постраничный обход listByPharmacy.
+  getSummary(input: { readonly pharmacyId: string; readonly staleBefore: Date }): Promise<PharmacyInventorySummary>
 }

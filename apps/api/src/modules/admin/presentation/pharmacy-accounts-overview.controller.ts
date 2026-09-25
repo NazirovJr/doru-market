@@ -1,12 +1,13 @@
 // Маршрут общий с DTJ-362 (scope=own, pharmacy_admin) — @Roles пускает обе роли, различие
 // по query.scope внутри метода, иначе RolesGuard дал бы INSUFFICIENT_ROLE вместо CROSS_TENANT_ACCESS_DENIED.
-import { Controller, Get, Inject, Query, UseGuards } from '@nestjs/common'
+import { Controller, Get, Inject, Param, ParseUUIDPipe, Query, UseGuards } from '@nestjs/common'
 import {
   decodeCursor,
   encodeCursor,
   InvalidCursorError,
   ok,
   PharmacyAccountsListQuerySchema,
+  type InventorySummaryDto,
   type PaginationMeta,
   type PharmacyAccountAdminSummaryDto,
   type PharmacyAccountsListQueryDto,
@@ -22,6 +23,9 @@ import type {
 } from '../application/ports/onboarding-facade.port.js'
 import { ListPharmacyAccountsAnyUseCase } from '../application/use-cases/list-pharmacy-accounts-any.use-case.js'
 import { ListPharmacyAccountsOwnUseCase, type PharmacyAccountsOwnFilter } from '../application/use-cases/list-pharmacy-accounts-own.use-case.js'
+import { GetInventorySummaryUseCase } from '../application/use-cases/get-inventory-summary.use-case.js'
+
+const ID_PARSE_UUID = new ParseUUIDPipe({ version: '4' })
 
 @Controller({ version: '1' })
 @UseGuards(AuthGuard, RolesGuard)
@@ -29,6 +33,7 @@ export class PharmacyAccountsOverviewController {
   public constructor(
     @Inject(ListPharmacyAccountsAnyUseCase) private readonly listPharmacyAccountsAnyUseCase: ListPharmacyAccountsAnyUseCase,
     @Inject(ListPharmacyAccountsOwnUseCase) private readonly listPharmacyAccountsOwnUseCase: ListPharmacyAccountsOwnUseCase,
+    @Inject(GetInventorySummaryUseCase) private readonly getInventorySummaryUseCase: GetInventorySummaryUseCase,
   ) {}
 
   @Get('pharmacy-accounts')
@@ -58,6 +63,16 @@ export class PharmacyAccountsOverviewController {
       limit: query.limit,
     }
     return ok(result.items.map(toSummaryDto), { pagination: meta })
+  }
+
+  @Get('pharmacy-accounts/:id/inventory-summary')
+  @Roles('super_admin', 'pharmacy_admin')
+  public async inventorySummary(
+    @Param('id', ID_PARSE_UUID) id: string,
+    @CurrentUser() claims: JwtClaims,
+  ): Promise<SuccessEnvelope<InventorySummaryDto>> {
+    const view = await this.getInventorySummaryUseCase.execute({ actor: { role: claims.role, chainId: claims.chainId }, pharmacyId: id })
+    return ok(view)
   }
 }
 

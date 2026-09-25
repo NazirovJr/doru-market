@@ -2,8 +2,8 @@
 import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
-import type { PharmacyAccountAdminSummaryDto } from '@dorutj/contracts'
-import { httpGetJsonWithMeta, type HttpError, type QueryParams } from '@/shared/api/http-client'
+import type { InventorySummaryDto, PharmacyAccountAdminSummaryDto } from '@dorutj/contracts'
+import { httpGetJson, httpGetJsonWithMeta, type HttpError, type QueryParams } from '@/shared/api/http-client'
 
 const PHARMACY_ACCOUNTS_PATH = '/api/v1/pharmacy-accounts'
 const DEFAULT_LIMIT = 50
@@ -86,6 +86,18 @@ export function useOwnPharmacyAccounts(
   return useQuery<PharmacyAccountsPageResult, HttpError>({
     queryKey: ownPharmacyAccountsQueryKey(cursor),
     queryFn: () => fetchPharmacyAccountsPage(EMPTY_FILTERS, { cursor, limit, scope: 'own' }),
+  })
+}
+
+export function inventorySummaryQueryKey(pharmacyId: string): readonly unknown[] {
+  return ['admin', 'pharmacy-accounts', 'inventory-summary', pharmacyId] as const
+}
+
+export function useInventorySummary(pharmacyId: string | null): UseQueryResult<InventorySummaryDto, HttpError> {
+  return useQuery<InventorySummaryDto, HttpError>({
+    queryKey: inventorySummaryQueryKey(pharmacyId ?? ''),
+    queryFn: () => httpGetJson<InventorySummaryDto>(`${PHARMACY_ACCOUNTS_PATH}/${pharmacyId ?? ''}/inventory-summary`),
+    enabled: pharmacyId !== null,
   })
 }
 

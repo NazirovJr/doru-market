@@ -230,4 +230,33 @@ describe.skipIf(!postgresAvailable)('DrizzlePharmacyInventoryRepository — inte
     ])
     expect(dbRows.rows[0]?.n).toBe(0)
   })
+
+  it('getSummary — skuCount по DISTINCT medicine_id, staleRowCount только по строкам старше staleBefore', async () => {
+    const secondMedicineId = await seedMedicine()
+    await repo.upsertMany({ pharmacyId, rows: [buildRow({ price: 100, quantity: 5, expiresAt: '2030-01-01' })] })
+    const secondRow = InventoryBatchUpsertRow.create(
+      { medicineId: secondMedicineId, barcode: null, price: 200, quantity: 3, expiresAt: '2030-01-01', batchNumber: null },
+      new Date('2020-01-01T00:00:00Z'),
+    )
+    if (!secondRow.ok) throw new Error('unexpected validation failure')
+    await repo.upsertMany({ pharmacyId, rows: [secondRow.value] })
+    // Задним числом состариваем ТОЛЬКО первую строку — она должна попасть в staleRowCount, вторая нет.
+    await pool.query('UPDATE pharmacy_inventory SET updated_at = now() - interval \'1 hour\' WHERE pharmacy_id = $1 AND medicine_id = $2', [
+      pharmacyId,
+      medicineId,
+    ])
+
+    const staleBefore = new Date(Date.now() - 5 * 60 * 1000)
+    const summary = await repo.getSummary({ pharmacyId, staleBefore })
+
+    expect(summary.skuCount).toBe(2)
+    expect(summary.totalRowCount).toBe(2)
+    expect(summary.staleRowCount).toBe(1)
+  })
+
+  it('getSummary — аптека без остатков: нули, не падает', async () => {
+    const summary = await repo.getSummary({ pharmacyId, staleBefore: new Date() })
+
+    expect(summary).toEqual({ skuCount: 0, totalRowCount: 0, staleRowCount: 0 })
+  })
 })

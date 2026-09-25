@@ -109,6 +109,10 @@ class FakePharmacyInventoryRepository implements PharmacyInventoryRepository {
   listByPharmacy(): Promise<never> {
     throw new Error('not used in ingest tests')
   }
+
+  getSummary(): Promise<never> {
+    throw new Error('not used in ingest tests')
+  }
 }
 
 class FakeInventorySyncBatchRepository implements InventorySyncBatchRepository {
