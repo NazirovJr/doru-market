@@ -471,3 +471,18 @@ jobs:
           tags: ${{ secrets.DOCKER_REGISTRY }}/dorutj-api:${{ github.ref_name }}
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
+
+      # DTJ-428: rolling-деплой/откат (scripts/deploy/rolling-deploy.sh, scripts/deploy/
+      # rollback.sh, SRS-NFR-062/063) пересоздают ОБА stateless-сервиса, `api` И `worker` —
+      # без публикации тега `worker`-образа `rollback.sh` не сможет найти его в registry для
+      # отката. Тот же Dockerfile.api, другой target (см. job `build` выше, матрица `worker`).
+      - name: Build & push release images (worker)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile.api
+          target: runtime-worker
+          push: true
+          tags: ${{ secrets.DOCKER_REGISTRY }}/dorutj-worker:${{ github.ref_name }}
+          cache-from: type=gha,scope=worker
+          cache-to: type=gha,mode=max,scope=worker

@@ -139,6 +139,12 @@ services:
       context: ../..
       dockerfile: infra/docker/Dockerfile.api
       target: runtime
+    # DTJ-428: имя+тег образа для `docker compose pull`/rolling-деплоя/отката
+    # (scripts/deploy/rolling-deploy.sh, scripts/deploy/rollback.sh, SRS-NFR-062/063). Локально
+    # (`build:` выше без `IMAGE_TAG` в ENV) резолвится в `dorutj-api:local` — `docker compose up`
+    # собирает и тегирует этим именем, `pull` в этом случае не находит ничего в registry и
+    # скрипты деплоя тогда запускаются с `SKIP_PULL=1` (см. их README-комментарии в шапке файлов).
+    image: ${API_IMAGE:-dorutj-api:local}
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
@@ -167,6 +173,8 @@ services:
       context: ../..
       dockerfile: infra/docker/Dockerfile.api
       target: runtime-worker
+    # DTJ-428: см. комментарий у `image:` сервиса `api` выше — тот же механизм тега для worker.
+    image: ${WORKER_IMAGE:-dorutj-worker:local}
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
