@@ -24,11 +24,18 @@ export class IdentityFacadeAdapter implements IdentityFacadePort {
         ...(query.filter.role !== undefined && { role: query.filter.role }),
         ...(query.filter.phoneLike !== undefined && { phoneLike: query.filter.phoneLike }),
         ...(query.filter.tenantId !== undefined && { tenantId: query.filter.tenantId }),
+        ...(query.filter.chainId !== undefined && { chainId: query.filter.chainId }),
       },
       limit: query.limit,
       cursor: query.cursor ?? null,
     })
     return { items: page.items.map(toSummaryView), nextCursor: page.nextCursor, hasMore: page.hasMore }
+  }
+
+  /** [DTJ-364] Для policy-проверок own-scope (staff-accounts) — читает актуальное состояние ДО мутации. */
+  public async getUser(userId: string): Promise<UserSummaryView | null> {
+    const user = await this.usersRepository.findById(userId)
+    return user === null ? null : toSummaryView(user)
   }
 
   public async deactivateUser(userId: string, _actor: IdentityFacadeActor): Promise<UserSummaryView | null> {
@@ -71,6 +78,8 @@ function toSummaryView(user: User): UserSummaryView {
     fullName: user.fullName,
     isActive: user.isActive,
     createdAt: user.createdAt,
+    chainId: user.chainId,
+    pharmacyId: user.pharmacyId,
   }
 }
 

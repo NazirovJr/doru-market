@@ -44,7 +44,17 @@ describe('IdentityFacadeAdapter', () => {
 
     expect(listMock).toHaveBeenCalledWith({ filter: { role: 'pharmacist' }, limit: 20, cursor: null })
     expect(page.items).toEqual([
-      { id: 'user-1', tenantId: 'tenant-1', phoneNumber: '+992900000001', role: 'pharmacist', fullName: 'Ismoilov I.', isActive: true, createdAt: USER.createdAt },
+      {
+        id: 'user-1',
+        tenantId: 'tenant-1',
+        phoneNumber: '+992900000001',
+        role: 'pharmacist',
+        fullName: 'Ismoilov I.',
+        isActive: true,
+        createdAt: USER.createdAt,
+        chainId: null, // DTJ-364: toSummaryView теперь всегда включает chainId/pharmacyId
+        pharmacyId: null,
+      },
     ])
   })
 

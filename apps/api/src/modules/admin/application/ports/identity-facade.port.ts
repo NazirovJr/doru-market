@@ -13,6 +13,7 @@ export interface IdentityListFilter {
   readonly role?: UserRole
   readonly phoneLike?: string
   readonly tenantId?: string
+  readonly chainId?: string // DTJ-364: scope=own изоляция, независима от tenantId
 }
 
 export interface IdentityListQuery {
@@ -29,6 +30,8 @@ export interface UserSummaryView {
   readonly fullName: string | null
   readonly isActive: boolean
   readonly createdAt: Date
+  readonly chainId?: string | null // DTJ-364, опционально — не ломает литералы DTJ-354 spec'ов
+  readonly pharmacyId?: string | null
 }
 
 export interface IdentityListPage {
@@ -60,10 +63,11 @@ export interface GrantPlatformRoleFacadeCommand {
   readonly tx: UnitOfWorkTx
 }
 
-// null у deactivateUser/changeStaffRole/grantPlatformRole — пользователь не найден (404 NOT_FOUND).
+// null у deactivateUser/changeStaffRole/grantPlatformRole/getUser — пользователь не найден (404 NOT_FOUND).
 export interface IdentityFacadePort {
   listUsers(query: IdentityListQuery): Promise<IdentityListPage>
   deactivateUser(userId: string, actor: IdentityFacadeActor): Promise<UserSummaryView | null>
   changeStaffRole(command: ChangeStaffRoleFacadeCommand): Promise<RoleChangeResult | null>
   grantPlatformRole(command: GrantPlatformRoleFacadeCommand): Promise<RoleChangeResult | null>
+  getUser?(userId: string): Promise<UserSummaryView | null> // DTJ-364, опционален — не ломает моки DTJ-354
 }

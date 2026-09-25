@@ -61,6 +61,8 @@ export interface CreateStaffAccountCommand {
 export interface CreateStaffAccountResult {
   readonly userId: string
   readonly role: UserRole
+  /** [DTJ-364, SRS-ADM-041] Всегда `false` — учётная запись без пароля, первый вход через OTP. */
+  readonly temporaryOtpHint: false
 }
 
 @Injectable()
@@ -109,7 +111,7 @@ export class CreateStaffAccountUseCase {
       ...(command.chainId !== undefined ? { chainId: command.chainId } : { chainId: null }),
     })
 
-    return ok({ userId: user.id, role: user.role })
+    return ok({ userId: user.id, role: user.role, temporaryOtpHint: false })
   }
 
   /** Шаг 1: валидация phone. */

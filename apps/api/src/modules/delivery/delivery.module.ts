@@ -20,6 +20,7 @@ import { CalculateDeliveryFeeUseCase } from './application/use-cases/calculate-d
 import { ManageDeliveryZonesUseCase } from './application/use-cases/manage-delivery-zones.use-case.js'
 import { ManageDeliveryPricingRulesUseCase } from './application/use-cases/manage-delivery-pricing-rules.use-case.js'
 import { COURIER_REPOSITORY_PROVIDER } from './infrastructure/repositories/courier.repository.js'
+import { COURIER_REPOSITORY } from './application/ports/courier.repository.port.js'
 import { DELIVERY_ZONE_REPOSITORY_PROVIDER } from './infrastructure/repositories/delivery-zone.repository.js'
 import { DELIVERY_PRICING_RULE_REPOSITORY_PROVIDER } from './infrastructure/repositories/delivery-pricing-rule.repository.js'
 import { DELIVERY_ASSIGNMENT_REPOSITORY_PROVIDER } from './infrastructure/repositories/delivery-assignment.repository.js'
@@ -95,7 +96,7 @@ import { DeliveryZonesController } from './presentation/delivery-zones.controlle
     ManageDeliveryPricingRulesUseCase,
     DeliveryFacade,
   ],
-  exports: [DeliveryFacade],
+  exports: [DeliveryFacade, COURIER_REPOSITORY], // DTJ-364: admin провижинит couriers напрямую
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS module marker class
 export class DeliveryModule {}

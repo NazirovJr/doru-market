@@ -55,6 +55,8 @@ export interface UsersListFilter {
   readonly role?: UserRole
   readonly phoneLike?: string
   readonly tenantId?: string
+  /** [DTJ-364] Изоляция `pharmacy_admin` по сети — `tenantId` не заменяет `chainId` (независимые поля, см. `create-staff-account.use-case.ts`). */
+  readonly chainId?: string
 }
 
 export interface UsersListCursor {

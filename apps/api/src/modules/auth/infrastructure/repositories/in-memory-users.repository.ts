@@ -126,6 +126,7 @@ export class InMemoryUsersRepository implements UsersRepository {
       .filter((user) => user.deletedAt === null)
       .filter((user) => query.filter.role === undefined || user.role === query.filter.role)
       .filter((user) => query.filter.tenantId === undefined || user.tenantId === query.filter.tenantId)
+      .filter((user) => query.filter.chainId === undefined || user.chainId === query.filter.chainId)
       .filter(
         (user) =>
           query.filter.phoneLike === undefined ||

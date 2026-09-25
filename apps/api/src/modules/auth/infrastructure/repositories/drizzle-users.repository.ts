@@ -213,6 +213,7 @@ function buildListConditions(query: UsersListQuery): SQL[] {
   const conditions: SQL[] = [isNull(users.deletedAt)]
   if (query.filter.role !== undefined) conditions.push(eq(users.role, query.filter.role))
   if (query.filter.tenantId !== undefined) conditions.push(eq(users.tenantId, query.filter.tenantId))
+  if (query.filter.chainId !== undefined) conditions.push(eq(users.chainId, query.filter.chainId))
   if (query.filter.phoneLike !== undefined) conditions.push(ilike(users.phoneNumber, `%${query.filter.phoneLike}%`))
   const cursorCondition = query.cursor != null ? keysetCondition(query.cursor) : undefined
   if (cursorCondition !== undefined) conditions.push(cursorCondition)
