@@ -46,7 +46,7 @@ const { privateKey: TEST_JWT_PRIVATE_KEY, publicKey: TEST_JWT_PUBLIC_KEY } = gen
 
 const TEST_ENV: Readonly<Record<string, string>> = {
   NODE_ENV: 'test',
-  PORT: '0',
+  // PORT не задаём: envSchema.PORT требует .positive(), '0' её проваливает — действует Zod-дефолт 3000.
   DATABASE_URL: TEST_DATABASE_URL,
   REDIS_URL: 'redis://localhost:6380/0',
   REQUEST_TIMEOUT_MS: '30000',
