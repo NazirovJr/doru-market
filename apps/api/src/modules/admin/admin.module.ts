@@ -84,7 +84,7 @@ import { FinanceLedgerController } from './presentation/finance-ledger.controlle
     DeactivateUserUseCase,
     ChangeStaffRoleUseCase,
     GrantPlatformRoleUseCase,
-    // DTJ-357 — см. импорт выше. PAYMENTS_FACADE_PORT уже забинжен (DTJ-350 useExisting).
+    // DTJ-357 — escrow-ledger/payout-schedule через PAYMENTS_FACADE_PORT; reconciliation-alerts — через AUDIT_LOG_QUERY_PORT (common/audit, @Global()).
     ListEscrowLedgerUseCase,
     ListPayoutScheduleUseCase,
     ListReconciliationAlertsUseCase,

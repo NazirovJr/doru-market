@@ -14,7 +14,7 @@
  */
 export const PAYMENTS_FACADE_PORT = Symbol.for('@dorutj/admin/payments-facade-port')
 
-// DTJ-357 — 3 read-метода, зеркало PaymentsFacade (modules/payments), Interface Segregation (см. JSDoc файла выше).
+// DTJ-357 — 2 read-метода, зеркало PaymentsFacade. Reconciliation-alerts НЕ здесь — тот use case читает AUDIT_LOG_QUERY_PORT (common/audit) напрямую.
 export interface FinanceCursor {
   readonly v: string
   readonly id: string
@@ -54,19 +54,11 @@ export interface PayoutScheduleEntryView {
   readonly paidAt: Date | null
 }
 
-export interface ReconciliationAlertView {
-  readonly orderId: string
-  readonly tenantId: string | null
-  readonly discrepancyDiram: number
-  readonly repeatDetectionCount: number
-  readonly detectedAt: Date
-}
-
 export interface PaymentsFacadePort {
-  findEscrowLedgerEntries(filter: { readonly orderId?: string | undefined }, pagination: FinancePagination): Promise<FinancePage<EscrowLedgerEntryView>>
+  /** Без пагинации — леджер одного заказа ограничен по размеру (DTJ-357 review). */
+  findEscrowLedgerEntries(orderId: string): Promise<readonly EscrowLedgerEntryView[]>
   findPayoutSchedule(
     filter: { readonly status?: string | undefined; readonly pharmacyId?: string | undefined },
     pagination: FinancePagination,
   ): Promise<FinancePage<PayoutScheduleEntryView>>
-  findReconciliationAlerts(pagination: FinancePagination): Promise<FinancePage<ReconciliationAlertView>>
 }

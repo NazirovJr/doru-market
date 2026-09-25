@@ -17,7 +17,7 @@ export const EscrowLedgerPage = (): ReactElement => {
   const { t } = useT(ADMIN_LOCALE)
   const [orderIdDraft, setOrderIdDraft] = useState('')
   const [orderId, setOrderId] = useState<string | undefined>(undefined)
-  const query = useEscrowLedger(orderId, null)
+  const query = useEscrowLedger(orderId)
 
   function handleSearch(event: SyntheticEvent<HTMLFormElement>): void {
     event.preventDefault()
@@ -38,7 +38,7 @@ export const EscrowLedgerPage = (): ReactElement => {
       {orderId === undefined ? <p>{t('admin.finance.escrow_ledger.search_hint')}</p> : null}
       {query.isLoading ? <p role="status">{t('admin.finance.loading')}</p> : null}
       {query.error !== null ? <p role="alert">{t('admin.finance.error')}</p> : null}
-      {orderId !== undefined ? <EscrowLedgerResults items={query.data?.items ?? []} isLoading={query.isLoading} /> : null}
+      {orderId !== undefined ? <EscrowLedgerResults items={query.data ?? []} isLoading={query.isLoading} /> : null}
     </section>
   )
 }
@@ -81,9 +81,8 @@ const EscrowLedgerRow = ({ entry }: { readonly entry: FinanceEscrowLedgerEntryDt
       <td>{t(`admin.finance.escrow_ledger.direction.${entry.direction}`)}</td>
       <td>{formatSomoni(entry.amountDiram)}</td>
       <td>{new Date(entry.createdAt).toLocaleString()}</td>
-      <td>
-        <a href={`/admin/orders/${entry.orderId}`}>{entry.orderId}</a>
-      </td>
+      {/* DTJ-355 добавит страницу заказа — до тех пор просто id, не ссылка в никуда. */}
+      <td>{entry.orderId}</td>
     </tr>
   )
 }

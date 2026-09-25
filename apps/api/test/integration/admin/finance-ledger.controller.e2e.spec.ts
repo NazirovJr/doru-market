@@ -8,7 +8,7 @@ import { Pool } from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { JWT_SIGNER, type JwtClaims, type JwtSignerPort } from '@/modules/auth/index.js'
 import { createTestApp, type TestApp } from './__tests__/finance-test-app.js'
-import { ALERTED_ORDER_ID } from './__tests__/fake-payments-facade-port.js'
+import { ALERTED_ORDER_ID } from './__tests__/fake-audit-log-query-port.js'
 
 const TEST_DATABASE_URL =
   process.env.ADMIN_TEST_DATABASE_URL ?? process.env.DATABASE_URL ?? 'postgres://test:test@localhost:5432/dorutj_test'

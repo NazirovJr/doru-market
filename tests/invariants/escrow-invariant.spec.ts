@@ -549,7 +549,7 @@ describe.skipIf(!postgresAvailable)('EscrowInvariantSpec — D-25 сквозно
     expect(row.rows[0]?.status).toBe('cancelled') // НЕ paid_escrow, реанимации не произошло (SRS-DOM-102).
 
     const ledgerEntries = await escrowLedgerRepository.findByOrderId(tenantId, orderC.id)
-    const entryTypes = ledgerEntries.map((entry) => entry.entryType).sort()
+    const entryTypes = ledgerEntries.map((record) => record.entry.entryType).sort()
     expect(entryTypes).toEqual(['hold_created', 'refunded_to_customer']) // ГРАНИЧНЫЙ случай: ledger непуст.
 
     // EscrowInvariantSpec НЕ считает это нарушением — обратная импликация ledger⟹paid_escrow не требуется.

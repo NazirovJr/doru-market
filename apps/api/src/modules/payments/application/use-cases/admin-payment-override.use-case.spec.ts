@@ -31,7 +31,7 @@ function buildHarness() {
   const append = vi.fn<EscrowLedgerRepository['append']>().mockResolvedValue(undefined)
   const ledgerRepository = { append } as unknown as EscrowLedgerRepository
   const appendPaymentOverride = vi.fn<AuditLogPort['appendPaymentOverride']>().mockResolvedValue(undefined)
-  const auditLog = { appendPaymentOverride, findLedgerAdjustmentAlerts: vi.fn() }
+  const auditLog = { appendPaymentOverride }
   const unitOfWork: PaymentsUnitOfWorkPort = { run: (cb) => cb(TX_MARKER) }
 
   const useCase = new AdminPaymentOverrideUseCase(ordersPort, ledgerRepository, auditLog, unitOfWork)

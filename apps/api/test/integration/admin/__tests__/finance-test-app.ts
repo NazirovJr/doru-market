@@ -1,5 +1,4 @@
-// Supertest-harness FinanceLedgerController, копия приёма users-test-app.ts. PAYMENTS_FACADE_PORT
-// замокан in-memory — проверяет presentation-контракт (маршруты/роли/АС3), не путь до БД.
+// Supertest-harness FinanceLedgerController (копия приёма users-test-app.ts) — порты замокан in-memory, проверяет presentation-контракт (маршруты/роли/АС3), не путь до БД.
 import { randomUUID } from 'node:crypto'
 import { generateKeyPairSync } from 'node:crypto'
 import { type Server } from 'node:http'
@@ -13,12 +12,12 @@ import { AllExceptionsFilter } from '@/common/filters/all-exceptions.filter.js'
 import { ResponseInterceptor } from '@/common/http/interceptors/response.interceptor.js'
 import { AuthModule } from '@/modules/auth/auth.module.js'
 import { JWT_SIGNER, type JwtSignerPort } from '@/modules/auth/index.js'
-import { AuditLogModule } from '@/common/audit/audit-log.module.js'
 import { FinanceLedgerController } from '@/modules/admin/presentation/finance-ledger.controller.js'
 import { PAYMENTS_FACADE_PORT, type PaymentsFacadePort } from '@/modules/admin/application/ports/payments-facade.port.js'
 import { ListEscrowLedgerUseCase } from '@/modules/admin/application/use-cases/list-escrow-ledger.use-case.js'
 import { ListPayoutScheduleUseCase } from '@/modules/admin/application/use-cases/list-payout-schedule.use-case.js'
 import { ListReconciliationAlertsUseCase } from '@/modules/admin/application/use-cases/list-reconciliation-alerts.use-case.js'
+import { AUDIT_LOG_QUERY_PORT, type AuditLogQueryPort } from '@/common/audit/audit-log-query.port.js'
 import { SharedKernelModule } from '@/shared-kernel/shared-kernel.module.js'
 import { LoggerModule } from '@/common/logging/logger.module.js'
 import { TenantContext } from '@/common/context/tenant-context.js'
@@ -26,6 +25,7 @@ import { RequestContext } from '@/common/context/request-context.js'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { REDIS_CLIENT } from '@/infrastructure/redis/redis.token.js'
 import { FAKE_PAYMENTS_FACADE_PORT } from './fake-payments-facade-port.js'
+import { FAKE_AUDIT_LOG_QUERY_PORT } from './fake-audit-log-query-port.js'
 
 const { privateKey: TEST_JWT_PRIVATE_KEY, publicKey: TEST_JWT_PUBLIC_KEY } = generateKeyPairSync('rsa', {
   modulusLength: 2048,
@@ -67,6 +67,7 @@ function applyTestEnv(): void {
   controllers: [FinanceLedgerController],
   providers: [
     { provide: PAYMENTS_FACADE_PORT, useValue: FAKE_PAYMENTS_FACADE_PORT satisfies PaymentsFacadePort },
+    { provide: AUDIT_LOG_QUERY_PORT, useValue: FAKE_AUDIT_LOG_QUERY_PORT satisfies AuditLogQueryPort },
     ListEscrowLedgerUseCase,
     ListPayoutScheduleUseCase,
     ListReconciliationAlertsUseCase,
@@ -86,7 +87,7 @@ const BEARER_PREFIX = 'Bearer '
 export async function createTestApp(): Promise<TestApp> {
   applyTestEnv()
   const moduleRef = await Test.createTestingModule({
-    imports: [SharedKernelModule, LoggerModule, AuthModule, AuditLogModule, FinanceLedgerTestModule],
+    imports: [SharedKernelModule, LoggerModule, AuthModule, FinanceLedgerTestModule],
   }).compile()
   const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter())
   const config = app.get(AppConfigService)

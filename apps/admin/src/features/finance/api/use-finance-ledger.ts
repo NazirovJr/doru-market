@@ -1,7 +1,7 @@
 // DTJ-357 — курсор локален странице (тот же приём, что use-audit-log.ts), фильтры — filter[...] (bracket, см. finance-ledger.controller.ts).
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import type { FinanceEscrowLedgerEntryDto, FinancePayoutScheduleEntryDto, FinanceReconciliationAlertDto } from '@dorutj/contracts'
-import { httpGetJsonWithMeta, type HttpError, type QueryParams } from '@/shared/api/http-client'
+import { httpGetJson, httpGetJsonWithMeta, type HttpError, type QueryParams } from '@/shared/api/http-client'
 
 const FINANCE_PATH = '/api/v1/finance'
 const DEFAULT_LIMIT = 50
@@ -25,14 +25,11 @@ async function fetchFinancePage<T>(input: FetchFinancePageInput): Promise<Financ
   return { items: result.data, nextCursor: pagination?.nextCursor ?? null, hasMore: pagination?.hasMore ?? false }
 }
 
-export function useEscrowLedger(
-  orderId: string | undefined,
-  cursor: string | null,
-  limit: number = DEFAULT_LIMIT,
-): UseQueryResult<FinancePageResult<FinanceEscrowLedgerEntryDto>, HttpError> {
-  return useQuery<FinancePageResult<FinanceEscrowLedgerEntryDto>, HttpError>({
-    queryKey: ['admin', 'finance', 'escrow-ledger', orderId, cursor] as const,
-    queryFn: () => fetchFinancePage({ path: `${FINANCE_PATH}/escrow-ledger`, params: { 'filter[orderId]': orderId }, cursor, limit }),
+/** Без пагинации — леджер одного заказа ограничен по размеру (DTJ-357 review). */
+export function useEscrowLedger(orderId: string | undefined): UseQueryResult<readonly FinanceEscrowLedgerEntryDto[], HttpError> {
+  return useQuery<readonly FinanceEscrowLedgerEntryDto[], HttpError>({
+    queryKey: ['admin', 'finance', 'escrow-ledger', orderId] as const,
+    queryFn: () => httpGetJson<readonly FinanceEscrowLedgerEntryDto[]>(`${FINANCE_PATH}/escrow-ledger`, { 'filter[orderId]': orderId }),
     enabled: orderId !== undefined && orderId.length > 0,
   })
 }

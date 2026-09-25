@@ -64,9 +64,8 @@ export const ReconciliationAlertsPage = (): ReactElement => {
         <tbody>
           {items.map((alert) => (
             <tr key={alert.orderId} data-testid="reconciliation-alert-row">
-              <td>
-                <a href={`/admin/orders/${alert.orderId}`}>{alert.orderId}</a>
-              </td>
+              {/* DTJ-355 добавит страницу заказа — до тех пор просто id, не ссылка в никуда. */}
+              <td>{alert.orderId}</td>
               <td>{formatSomoni(alert.discrepancyDiram)}</td>
               <td>{alert.repeatDetectionCount}</td>
               <td>{new Date(alert.detectedAt).toLocaleString()}</td>

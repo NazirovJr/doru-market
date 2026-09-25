@@ -34,22 +34,22 @@
  * результат/`0n`
  * (SRS-API-046: чужая финансовая запись не подтверждается как существующая).
  *
+ * `findByOrderId(null, orderId)` (DTJ-357) — платформенный, БЕЗ `EXISTS`-условия, только `admin`-путь, см. JSDoc порта.
+ *
  * НЕ забинжен ни к одному use case в этом тикете (нет вызывающего кода — DTJ-244/245/246 вне
  * периметра) — тот же приём, что `MockBankProvider`/`MockBankWebhookVerifierAdapter`
  * (DTJ-238): провайдер зарегистрирован в `payments.module.ts` заранее, DI-граф резолвится
  * СЕЙЧАС (`payments.module.full-boot.di.spec.ts`), реальный вызывающий код появится позже.
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { eq, and, asc, gt, or, sql } from 'drizzle-orm'
+import { eq, and, sql } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { escrowLedger } from '@/db/schema/payments.js'
 import { orders } from '@/db/schema/orders.js'
 import {
+  type EscrowLedgerEntryRecord,
   type EscrowLedgerRepository,
   type EscrowLedgerUnitOfWorkTx,
-  type EscrowLedgerReportRow,
-  type FindByOrderPagedInput,
-  type FindByOrderPagedResult,
 } from '@/modules/payments/application/ports/escrow-ledger-repository.port.js'
 import { EscrowLedgerEntry, type EscrowEntryType } from '@/modules/payments/domain/escrow-ledger-entry.value-object.js'
 import { Money } from '@/shared-kernel/domain/value-objects/money.vo.js'
@@ -75,13 +75,14 @@ export class DrizzleEscrowLedgerRepository implements EscrowLedgerRepository {
     })
   }
 
-  public async findByOrderId(tenantId: string, orderId: string): Promise<EscrowLedgerEntry[]> {
+  public async findByOrderId(tenantId: string | null, orderId: string): Promise<readonly EscrowLedgerEntryRecord[]> {
+    const scopeCondition = tenantId === null ? undefined : orderBelongsToTenant(tenantId, orderId)
     const rows = await this.db
       .select()
       .from(escrowLedger)
-      .where(and(eq(escrowLedger.orderId, orderId), orderBelongsToTenant(tenantId, orderId)))
+      .where(and(eq(escrowLedger.orderId, orderId), scopeCondition))
       .orderBy(escrowLedger.createdAt)
-    return rows.map(toDomainEntry)
+    return rows.map(toEntryRecord)
   }
 
   public async sumByType(tenantId: string, orderId: string, entryType: EscrowEntryType): Promise<bigint> {
@@ -97,45 +98,10 @@ export class DrizzleEscrowLedgerRepository implements EscrowLedgerRepository {
       )
     return rows.reduce((acc, row) => acc + row.amountDiram, ZERO_DIRAM)
   }
-
-  /** ДОБАВЛЕНО (DTJ-357) — см. JSDoc порта. `LIMIT +1` — `hasMore` без второй круговой поездки, тот же приём, что `DrizzlePayoutScheduleRepository.findByPharmacy`. */
-  public async findByOrderPaged(input: FindByOrderPagedInput): Promise<FindByOrderPagedResult> {
-    const conditions = [eq(escrowLedger.orderId, input.orderId)]
-    if (input.cursor !== null) {
-      const cursorCreatedAt = new Date(input.cursor.v)
-      const keysetCondition = or(gt(escrowLedger.createdAt, cursorCreatedAt), and(eq(escrowLedger.createdAt, cursorCreatedAt), gt(escrowLedger.id, input.cursor.id)))
-      if (keysetCondition !== undefined) {
-        conditions.push(keysetCondition)
-      }
-    }
-    const rows = await this.db
-      .select()
-      .from(escrowLedger)
-      .where(and(...conditions))
-      .orderBy(asc(escrowLedger.createdAt), asc(escrowLedger.id))
-      .limit(input.limit + 1)
-    const hasMore = rows.length > input.limit
-    const page = hasMore ? rows.slice(0, input.limit) : rows
-    const last = page[page.length - 1]
-    return {
-      items: page.map(toReportRow),
-      nextCursor: hasMore && last !== undefined ? { v: last.createdAt.toISOString(), id: last.id } : null,
-      hasMore,
-    }
-  }
 }
 
-function toReportRow(row: EscrowLedgerRow): EscrowLedgerReportRow {
-  return {
-    orderId: row.orderId,
-    entryType: row.entryType,
-    direction: row.direction,
-    amountDiram: row.amountDiram,
-    reason: row.reason,
-    actorUserId: row.actorUserId,
-    paymentTransactionRef: row.paymentTransactionRef,
-    createdAt: row.createdAt,
-  }
+function toEntryRecord(row: EscrowLedgerRow): EscrowLedgerEntryRecord {
+  return { entry: toDomainEntry(row), createdAt: row.createdAt }
 }
 
 function toDomainEntry(row: EscrowLedgerRow): EscrowLedgerEntry {

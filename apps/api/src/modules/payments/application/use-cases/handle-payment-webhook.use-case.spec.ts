@@ -63,10 +63,7 @@ function buildHarness() {
   const ordersPort = { getOrderById: vi.fn(), markPaidEscrow: vi.fn(), cancel: vi.fn() }
   const outbox = { append: vi.fn() }
   const unitOfWork: PaymentsUnitOfWorkPort = { run: (cb) => cb(TX_MARKER) }
-  const auditLog = {
-    appendPaymentOverride: vi.fn<AuditLogPort['appendPaymentOverride']>().mockResolvedValue(undefined),
-    findLedgerAdjustmentAlerts: vi.fn(),
-  }
+  const auditLog = { appendPaymentOverride: vi.fn<AuditLogPort['appendPaymentOverride']>().mockResolvedValue(undefined) }
   const latePaymentRefund = { handle: vi.fn().mockResolvedValue(undefined) }
   const logger = { warn: vi.fn() }
 

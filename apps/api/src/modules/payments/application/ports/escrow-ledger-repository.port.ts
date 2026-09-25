@@ -35,55 +35,22 @@ export const ESCROW_LEDGER_REPOSITORY = Symbol.for('@dorutj/payments/escrow-ledg
 /** Непрозрачный дескриптор активной транзакции (см. JSDoc файла). */
 export type EscrowLedgerUnitOfWorkTx = unknown
 
+// createdAt — за пределами EscrowLedgerEntry (VO намеренно без id/createdAt), нужен для отображения/сортировки.
+export interface EscrowLedgerEntryRecord {
+  readonly entry: EscrowLedgerEntry
+  readonly createdAt: Date
+}
+
 export interface EscrowLedgerRepository {
   /** Append-only вставка. Ни одного пути мутации существующей строки — см. JSDoc файла. */
   append(entry: EscrowLedgerEntry, tx?: EscrowLedgerUnitOfWorkTx): Promise<void>
 
-  /**
-   * Все записи заказа, упорядоченные по `created_at` — вход для `EscrowLedger.isBalanced()`.
-   * `tenantId` — ПЕРВЫЙ обязательный параметр (SRS-API-043/046, замечание CTO при приёмке
-   * DTJ-240): `escrow_ledger` своей колонки `tenant_id` не несёт (канонная схема Группы E,
-   * не упущение) — скоуп идёт ТОЛЬКО через `orders.tenant_id`, см. JSDoc реализации. Чужой
-   * `tenantId` ⇒ пустой массив (запись финансового журнала чужого тенанта не подтверждается
-   * как существующая, SRS-API-046).
-   */
-  findByOrderId(tenantId: string, orderId: string): Promise<EscrowLedgerEntry[]>
+  /** Все записи заказа, `created_at ASC`. `tenantId` — тенант-скоуп через `orders` (SRS-API-043/046, чужой ⇒ []); `null` — платформенный путь `admin` (DTJ-357, `super_admin`-only). */
+  findByOrderId(tenantId: string | null, orderId: string): Promise<readonly EscrowLedgerEntryRecord[]>
 
   /**
    * Сумма `amount_diram` по заказу и типу проводки (`0n`, если записей нет). `tenantId` —
    * первый обязательный параметр, тот же тенант-скоуп через `orders`, что `findByOrderId`.
    */
   sumByType(tenantId: string, orderId: string, entryType: EscrowEntryType): Promise<bigint>
-
-  /** DTJ-357 — курсорная страница по заказу для admin, `createdAt ASC`. БЕЗ `tenantId`: `super_admin`-only, платформенное расследование. */
-  findByOrderPaged(input: FindByOrderPagedInput): Promise<FindByOrderPagedResult>
-}
-
-export interface EscrowLedgerCursor {
-  readonly v: string
-  readonly id: string
-}
-
-export interface FindByOrderPagedInput {
-  readonly orderId: string
-  readonly limit: number
-  readonly cursor: EscrowLedgerCursor | null
-}
-
-/** Строка отчёта — `id`/`createdAt` нужны только для курсора/сортировки, не часть домена `EscrowLedgerEntry` (см. её JSDoc). */
-export interface EscrowLedgerReportRow {
-  readonly orderId: string
-  readonly entryType: EscrowEntryType
-  readonly direction: EscrowLedgerEntry['direction']
-  readonly amountDiram: bigint
-  readonly reason: string | null
-  readonly actorUserId: string | null
-  readonly paymentTransactionRef: string | null
-  readonly createdAt: Date
-}
-
-export interface FindByOrderPagedResult {
-  readonly items: readonly EscrowLedgerReportRow[]
-  readonly nextCursor: EscrowLedgerCursor | null
-  readonly hasMore: boolean
 }

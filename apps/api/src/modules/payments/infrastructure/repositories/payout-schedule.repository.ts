@@ -215,7 +215,6 @@ function toPayoutScheduleReportRow(row: PayoutReportSelectionRow & { pharmacyId:
   return { ...toPayoutReportRow(row), pharmacyId: row.pharmacyId }
 }
 
-/** `findSchedule` (DTJ-357) — оба фильтра опциональны, тот же keyset-приём, что `payoutReportConditions`. */
 function financeScheduleConditions(input: FindPayoutScheduleInput) {
   const conditions = []
   if (input.pharmacyId !== undefined) {

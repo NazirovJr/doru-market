@@ -1,42 +1,25 @@
-// DTJ-357 — 3 read-метода PaymentsFacade, вынесены из payments.module.ts отдельным файлом (C2, max-lines 300).
+// DTJ-357 — read-методы PaymentsFacade, вынесены из payments.module.ts отдельным файлом (C2, max-lines 300).
 import { ValidationError } from '@dorutj/contracts'
 import type { EscrowLedgerRepository } from '../ports/escrow-ledger-repository.port.js'
 import type { PayoutScheduleRepository } from '../ports/payout-schedule-repository.port.js'
-import type { AuditLogPort } from '../ports/audit-log.port.js'
-import type {
-  EscrowLedgerEntryDto,
-  FinancePage,
-  FinancePagination,
-  FindEscrowLedgerFilter,
-  FindPayoutScheduleFilter,
-  PayoutScheduleEntryDto,
-  ReconciliationAlertDto,
-} from '../ports/payments-facade.port.js'
+import type { EscrowLedgerEntryDto, FinancePage, FinancePagination, FindPayoutScheduleFilter, PayoutScheduleEntryDto } from '../ports/payments-facade.port.js'
 
-/** `filter.orderId` обязателен на практике — платформенный дамп ЦЕЛОГО ledger вне периметра тикета/AC. */
-export async function findEscrowLedgerEntries(
-  repo: EscrowLedgerRepository,
-  filter: FindEscrowLedgerFilter,
-  pagination: FinancePagination,
-): Promise<FinancePage<EscrowLedgerEntryDto>> {
-  if (filter.orderId === undefined) {
-    throw new ValidationError('findEscrowLedgerEntries requires filter.orderId')
+/** `orderId` обязателен — платформенный дамп ЦЕЛОГО ledger вне периметра тикета/AC. Без пагинации — леджер заказа ограничен по размеру. */
+export async function findEscrowLedgerEntries(repo: EscrowLedgerRepository, orderId: string | undefined): Promise<readonly EscrowLedgerEntryDto[]> {
+  if (orderId === undefined) {
+    throw new ValidationError('findEscrowLedgerEntries requires orderId')
   }
-  const page = await repo.findByOrderPaged({ orderId: filter.orderId, limit: pagination.limit, cursor: pagination.cursor })
-  return {
-    items: page.items.map((row) => ({
-      orderId: row.orderId,
-      entryType: row.entryType,
-      direction: row.direction,
-      amountDiram: Number(row.amountDiram),
-      reason: row.reason,
-      actorUserId: row.actorUserId,
-      paymentTransactionRef: row.paymentTransactionRef,
-      createdAt: row.createdAt,
-    })),
-    nextCursor: page.nextCursor,
-    hasMore: page.hasMore,
-  }
+  const records = await repo.findByOrderId(null, orderId)
+  return records.map((record) => ({
+    orderId: record.entry.orderId,
+    entryType: record.entry.entryType,
+    direction: record.entry.direction,
+    amountDiram: Number(record.entry.amountDiram.diram),
+    reason: record.entry.reason,
+    actorUserId: record.entry.actorUserId,
+    paymentTransactionRef: record.entry.paymentTransactionRef,
+    createdAt: record.createdAt,
+  }))
 }
 
 export async function findPayoutSchedule(
@@ -56,21 +39,6 @@ export async function findPayoutSchedule(
       status: row.status,
       dueAt: row.dueAt,
       paidAt: row.paidAt,
-    })),
-    nextCursor: page.nextCursor,
-    hasMore: page.hasMore,
-  }
-}
-
-export async function findReconciliationAlerts(port: AuditLogPort, pagination: FinancePagination): Promise<FinancePage<ReconciliationAlertDto>> {
-  const page = await port.findLedgerAdjustmentAlerts({ limit: pagination.limit, cursor: pagination.cursor })
-  return {
-    items: page.items.map((row) => ({
-      orderId: row.orderId,
-      tenantId: row.tenantId,
-      discrepancyDiram: Number(row.discrepancyDiram),
-      repeatDetectionCount: row.repeatDetectionCount,
-      detectedAt: row.detectedAt,
     })),
     nextCursor: page.nextCursor,
     hasMore: page.hasMore,

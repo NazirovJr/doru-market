@@ -40,7 +40,7 @@ export interface RecordLedgerAdjustmentCommand {
   readonly actorUserId: string
 }
 
-// DTJ-357 — 3 read-метода для admin (PAYMENTS_FACADE_PORT), @Roles('super_admin')-only.
+// DTJ-357 — 2 read-метода для admin (PAYMENTS_FACADE_PORT), @Roles('super_admin')-only.
 export interface FinanceCursor {
   readonly v: string
   readonly id: string
@@ -63,10 +63,6 @@ export interface EscrowLedgerEntryDto {
   readonly createdAt: Date
 }
 
-export interface FindEscrowLedgerFilter {
-  readonly orderId?: string | undefined
-}
-
 export interface PayoutScheduleEntryDto {
   readonly orderId: string
   readonly orderNumber: string
@@ -82,14 +78,6 @@ export interface PayoutScheduleEntryDto {
 export interface FindPayoutScheduleFilter {
   readonly status?: string | undefined
   readonly pharmacyId?: string | undefined
-}
-
-export interface ReconciliationAlertDto {
-  readonly orderId: string
-  readonly tenantId: string | null
-  readonly discrepancyDiram: number
-  readonly repeatDetectionCount: number
-  readonly detectedAt: Date
 }
 
 export interface FinancePagination {
@@ -111,10 +99,8 @@ export interface PaymentsFacade {
   /** Учётная корректировка ledger, `direction` всегда `'credit'` — тонкая обёртка над `AdjustLedgerUseCase`. */
   recordAdjustment(command: RecordLedgerAdjustmentCommand): Promise<void>
 
-  /** `filter.orderId` обязателен на практике — валидируется в `finance-facade.queries.ts`. */
-  findEscrowLedgerEntries(filter: FindEscrowLedgerFilter, pagination: FinancePagination): Promise<FinancePage<EscrowLedgerEntryDto>>
+  /** Леджер одного заказа ограничен по размеру (DTJ-357 review) — без пагинации, все записи разом. */
+  findEscrowLedgerEntries(orderId: string): Promise<readonly EscrowLedgerEntryDto[]>
 
   findPayoutSchedule(filter: FindPayoutScheduleFilter, pagination: FinancePagination): Promise<FinancePage<PayoutScheduleEntryDto>>
-
-  findReconciliationAlerts(pagination: FinancePagination): Promise<FinancePage<ReconciliationAlertDto>>
 }

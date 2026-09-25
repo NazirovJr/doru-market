@@ -25,7 +25,6 @@ function buildHarness() {
   const facade: PaymentsFacadePort = {
     findEscrowLedgerEntries: vi.fn(),
     findPayoutSchedule: findPayoutScheduleMock,
-    findReconciliationAlerts: vi.fn(),
   }
   const useCase = new ListPayoutScheduleUseCase(facade)
   return { useCase, findPayoutScheduleMock }
