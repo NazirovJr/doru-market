@@ -1,0 +1,14 @@
+/*
+ * DTJ-401 — радиусы (SRS-UX-017, обновлено [D-26]).
+ * Единственный брендовый токен — `--brand-radius` (allowlist `^\d{1,2}px$`). Остальные — производные.
+ * Конечный набор при дефолте: 8 / 12 / 16 / 999. Значения 10px/14px из демо-канваса в систему не входят.
+ */
+:root {
+  --brand-radius: 8px;
+
+  --radius-sm: var(--brand-radius);
+  --radius-md: calc(var(--brand-radius) * 1.5);
+  --radius-lg: calc(var(--brand-radius) * 2);
+  /* ВСЕГДА фиксировано и НЕ зависит от --brand-radius: аватары/OTP-ячейки круглые у любой сети */
+  --radius-full: 999px;
+}
