@@ -267,9 +267,16 @@ module.exports = {
         // dev-deps (например, `/// <reference types="vite/client" />`). Сами
         // `.d.ts` не компилируются в runtime-код, поэтому правило к ним
         // неприменимо (STATE-AND-RESUME-POINT.md §11.4 задача 5.1).
-        pathNot: '\\.(test|spec)\\.(ts|tsx)$|/__tests__/|\\.config\\.|\\.d\\.ts$',
+        // Тестовая обвязка (test-utils, contract-test, фикстуры, Storybook) — не продуктовый
+        // код, как и *.spec; она стала видна правилу после сужения options.exclude ниже.
+        pathNot:
+          '\\.(test|spec)\\.(ts|tsx)$|/__tests__/|\\.config\\.|\\.d\\.ts$|/test-utils\\.tsx?$|\\.contract-test\\.ts$|/__fixtures__/|/\\.storybook/',
       },
-      to: { dependencyTypes: ['npm-dev'] },
+      // Библиотечный пакет (packages/ui) объявляет react одновременно в peerDependencies
+      // (рантайм даёт хост-приложение) и devDependencies (для локальных тестов/Storybook) —
+      // стандартная схема. Такая зависимость в рантайме гарантирована, поэтому npm-peer
+      // исключается; чистые devDependencies по-прежнему запрещены.
+      to: { dependencyTypes: ['npm-dev'], dependencyTypesNot: ['npm-peer'] },
     },
     {
       name: 'no-non-package-json',
@@ -286,9 +293,13 @@ module.exports = {
       path: [
         '\\.(test|spec)\\.(ts|tsx)$',
         '/__tests__/',
-        '/dist/',
-        '/build/',
-        '/coverage/',
+        // Артефакты сборки — только СВОИ (apps/* и packages/*). Раньше здесь стояло
+        // голое '/dist/', которое отсекало и резолвленные пути npm-пакетов
+        // (node_modules/.pnpm/<pkg>/dist/...), из-за чего not-to-dev-dep и
+        // no-non-package-json молча не видели импорты почти любых внешних пакетов.
+        '^(apps|packages)/[^/]+/dist/',
+        '^(apps|packages)/[^/]+/build/',
+        '^(apps|packages)/[^/]+/coverage/',
         '/\\.turbo/',
         '/drizzle/',
         '\\.gen\\.ts$',
