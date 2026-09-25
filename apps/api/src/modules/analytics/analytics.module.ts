@@ -2,12 +2,18 @@
 import { Module } from '@nestjs/common'
 import { AuthModule } from '@/modules/auth/auth.module.js'
 import { CatalogModule } from '@/modules/catalog/catalog.module.js'
+import { OnboardingModule } from '@/modules/onboarding/onboarding.module.js'
+import { InventoryModule } from '@/modules/inventory/inventory.module.js'
+import { ORDERS_FACADE } from '@/modules/orders/index.js'
 import { PRODUCT_EVENTS_REPOSITORY_PROVIDER } from './infrastructure/repositories/product-events.repository.js'
 import { RecordProductEventUseCase } from './application/use-cases/record-product-event.use-case.js'
 import { RecordProductEventsBatchUseCase } from './application/use-cases/record-product-events-batch.use-case.js'
 import { RealizedSavingsCalculator } from './application/services/realized-savings-calculator.js'
 import { ANALOG_SAVINGS_PORT_PROVIDER } from './infrastructure/adapters/catalog-analog-savings.adapter.js'
 import { GetFunnelUseCase } from './application/use-cases/get-funnel.use-case.js'
+import { GetPlatformMetricsUseCase } from './application/use-cases/get-platform-metrics.use-case.js'
+import { ANALYTICS_ORDERS_FACADE_PORT } from './application/ports/orders-facade.port.js'
+import { INVENTORY_FACADE_PORT_PROVIDER } from './infrastructure/adapters/inventory-facade.adapter.js'
 import { AnalyticsFacade } from './analytics.facade.js'
 import { AnalyticsEventsController } from './presentation/analytics-events.controller.js'
 import { AnalyticsDashboardController } from './presentation/analytics-dashboard.controller.js'
@@ -17,7 +23,8 @@ import { AnalyticsEventsIdentityGuard } from './presentation/guards/analytics-ev
   // AuthModule — DTJ-379: AnalyticsEventsIdentityGuard инжектит JWT_SIGNER (экспортирован
   // auth.module.ts), тот же приём, что CartIdentityGuard/orders.module.ts.
   // CatalogModule — DTJ-385: ANALOG_SAVINGS_PORT_PROVIDER инжектит CATALOG_FACADE.
-  imports: [AuthModule, CatalogModule],
+  // OrdersModule НЕ импортирован — он `@Global()`, ORDERS_FACADE доступен без imports (иначе цикл).
+  imports: [AuthModule, CatalogModule, OnboardingModule, InventoryModule],
   controllers: [AnalyticsEventsController, AnalyticsDashboardController],
   providers: [
     PRODUCT_EVENTS_REPOSITORY_PROVIDER,
@@ -28,6 +35,9 @@ import { AnalyticsEventsIdentityGuard } from './presentation/guards/analytics-ev
     GetFunnelUseCase,
     AnalyticsEventsIdentityGuard,
     AnalyticsFacade,
+    { provide: ANALYTICS_ORDERS_FACADE_PORT, useExisting: ORDERS_FACADE },
+    INVENTORY_FACADE_PORT_PROVIDER,
+    GetPlatformMetricsUseCase,
   ],
   exports: [AnalyticsFacade],
 })

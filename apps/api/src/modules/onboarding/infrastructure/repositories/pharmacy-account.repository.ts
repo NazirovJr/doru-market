@@ -3,16 +3,20 @@
  * `pharmacy-chain.repository.ts` (DTJ-064) — те же `findById`/`save` + `chainFromRow`.
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { and, asc, count, eq, isNotNull, lte } from 'drizzle-orm'
+import { and, asc, count, eq, inArray, isNotNull, lte } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { pharmacies } from '@/db/schema/pharmacies.js'
+import { pharmacyChains } from '@/db/schema/pharmacy-chains.js'
 import { PharmacyAccount } from '@/modules/onboarding/domain/pharmacy-account.entity.js'
 import type {
   ListByStatusFilter,
   ListByStatusResult,
   PharmacyAccountRepositoryPort,
 } from '@/modules/onboarding/application/ports/pharmacy-account.repository.port.js'
-import { isOnboardingStatus } from '@/modules/onboarding/domain/value-objects/onboarding-status.vo.js'
+import {
+  CHAIN_STATUSES_ALLOWING_PHARMACY_ACTIVE,
+  isOnboardingStatus,
+} from '@/modules/onboarding/domain/value-objects/onboarding-status.vo.js'
 
 @Injectable()
 export class DrizzlePharmacyAccountRepository implements PharmacyAccountRepositoryPort {
@@ -77,6 +81,22 @@ export class DrizzlePharmacyAccountRepository implements PharmacyAccountReposito
       })),
       total,
     }
+  }
+
+  // JOIN на pharmacy_chains вместо N+1 isPharmacyActive per-аптека.
+  async listActiveIdsByTenant(tenantId: string): Promise<readonly string[]> {
+    const rows = await this.db
+      .select({ id: pharmacies.id })
+      .from(pharmacies)
+      .innerJoin(pharmacyChains, eq(pharmacyChains.id, pharmacies.chainId))
+      .where(
+        and(
+          eq(pharmacies.status, 'active'),
+          eq(pharmacyChains.tenantId, tenantId),
+          inArray(pharmacyChains.status, [...CHAIN_STATUSES_ALLOWING_PHARMACY_ACTIVE]),
+        ),
+      )
+    return rows.map((r) => r.id)
   }
 
   async save(account: PharmacyAccount): Promise<void> {

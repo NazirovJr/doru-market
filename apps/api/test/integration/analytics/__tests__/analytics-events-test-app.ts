@@ -18,6 +18,13 @@ import { RedisModule } from '@/infrastructure/redis/redis.module.js'
 import { AuthModule } from '@/modules/auth/auth.module.js'
 import { JWT_SIGNER, type JwtSignerPort } from '@/modules/auth/index.js'
 import { AnalyticsModule } from '@/modules/analytics/index.js'
+import { OrdersModule } from '@/modules/orders/orders.module.js'
+// OrdersModule и его транзитивные @Global()-зависимости (ORDERS_FACADE/PROCESSED_EVENTS_PORT/
+// AUDIT_LOG_PORT/IDEMPOTENCY_KEYS) не резолвятся здесь автоматически — Test.createTestingModule
+// строит граф с нуля, @Global() регистрирует провайдер только внутри уже собранного AppModule.
+import { DomainEventsModule } from '@/common/events/domain-events.module.js'
+import { AuditLogModule } from '@/common/audit/audit-log.module.js'
+import { IdempotencyModule } from '@/common/idempotency/idempotency.module.js'
 import { TenantContext } from '@/common/context/tenant-context.js'
 import { RequestContext } from '@/common/context/request-context.js'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
@@ -75,7 +82,19 @@ export interface TestApp {
 export async function createTestApp(databaseUrl: string, redisUrl: string): Promise<TestApp> {
   applyTestEnv(databaseUrl, redisUrl)
   const moduleRef = await Test.createTestingModule({
-    imports: [AppConfigModule, SharedKernelModule, LoggerModule, DatabaseModule, RedisModule, AuthModule, AnalyticsModule],
+    imports: [
+      AppConfigModule,
+      SharedKernelModule,
+      LoggerModule,
+      DatabaseModule,
+      RedisModule,
+      AuthModule,
+      DomainEventsModule,
+      AuditLogModule,
+      IdempotencyModule,
+      OrdersModule,
+      AnalyticsModule,
+    ],
   }).compile()
   const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter())
   const config = app.get(AppConfigService)

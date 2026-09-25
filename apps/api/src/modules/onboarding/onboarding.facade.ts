@@ -67,6 +67,10 @@ export class OnboardingFacade {
     return out
   }
 
+  async listActivePharmacyIds(tenantId: string): Promise<readonly string[]> {
+    return this.pharmacyAccountRepository.listActiveIdsByTenant(tenantId)
+  }
+
   /** Контракт для EP-02 DTJ-057 — провижининг тенанта с правами whitelabel. */
   async getChainEligibilityForWhitelabel(
     chainId: string,

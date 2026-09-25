@@ -473,5 +473,16 @@
   "admin.analytics_funnel.step.added_to_cart": "Добавление в корзину",
   "admin.analytics_funnel.step.order_placed": "Заказ",
   "admin.analytics_funnel.conversion_from_previous": "{percent} от предыдущего",
-  "admin.analytics_funnel.trend.title": "Тренд реализованной экономии"
+  "admin.analytics_funnel.trend.title": "Тренд реализованной экономии",
+  "admin.nav.platform_metrics": "Платформенные метрики",
+  "admin.platform_metrics.title": "Платформенные метрики",
+  "admin.platform_metrics.loading": "Загружаем метрики…",
+  "admin.platform_metrics.error": "Не удалось загрузить метрики",
+  "admin.platform_metrics.card.gmv.title": "GMV",
+  "admin.platform_metrics.card.gmv.average_check": "Средний чек: {amount} сомони",
+  "admin.platform_metrics.card.pickup_sla.title": "Соблюдение SLA сборки",
+  "admin.platform_metrics.card.delivery_sla.title": "Соблюдение SLA доставки",
+  "admin.platform_metrics.card.cancellation_rate.title": "Доля отмен",
+  "admin.platform_metrics.card.active_pharmacies.title": "Аптеки, присылающие данные",
+  "admin.platform_metrics.card.active_pharmacies.below_threshold": "Ниже порога пилота"
 }

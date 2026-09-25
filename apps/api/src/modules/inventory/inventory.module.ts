@@ -83,6 +83,7 @@ import { DrizzlePharmacyApiKeyVerificationAdapter } from './infrastructure/adapt
 import { XlsxExcelInventoryParserAdapter } from './infrastructure/adapters/xlsx-excel-inventory-parser.adapter.js'
 import { DrizzleCatalogMatchQueueReadAdapter } from './infrastructure/adapters/drizzle-catalog-match-queue-read.adapter.js'
 import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/in-memory-catalog-match-queue-read.adapter.js'
+import { InventoryFacade } from './inventory.facade.js'
 
 @Module({
   imports: [AuthModule, RedisModule],
@@ -132,6 +133,7 @@ import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/
     // провайдер, тот же приём, что `DrizzleInventorySyncErrorsRepository`.
     DrizzleInventorySyncReportRepository,
     ListPharmacyInventoryUseCase,
+    InventoryFacade,
   ],
   controllers: [
     InventoryBatchUpdateController,
@@ -154,6 +156,7 @@ import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/
     IngestInventoryBatchWithMatchingUseCase,
     CompositeInventoryMatcherService,
     DetectStuckFullSyncSessionsUseCase,
+    InventoryFacade,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.

@@ -473,5 +473,16 @@
   "admin.analytics_funnel.step.added_to_cart": "Added to cart",
   "admin.analytics_funnel.step.order_placed": "Order placed",
   "admin.analytics_funnel.conversion_from_previous": "{percent} of previous step",
-  "admin.analytics_funnel.trend.title": "Realized savings trend"
+  "admin.analytics_funnel.trend.title": "Realized savings trend",
+  "admin.nav.platform_metrics": "Platform metrics",
+  "admin.platform_metrics.title": "Platform metrics",
+  "admin.platform_metrics.loading": "Loading metrics…",
+  "admin.platform_metrics.error": "Failed to load metrics",
+  "admin.platform_metrics.card.gmv.title": "GMV",
+  "admin.platform_metrics.card.gmv.average_check": "Average check: {amount} somoni",
+  "admin.platform_metrics.card.pickup_sla.title": "Pickup SLA compliance",
+  "admin.platform_metrics.card.delivery_sla.title": "Delivery SLA compliance",
+  "admin.platform_metrics.card.cancellation_rate.title": "Cancellation rate",
+  "admin.platform_metrics.card.active_pharmacies.title": "Pharmacies sending data",
+  "admin.platform_metrics.card.active_pharmacies.below_threshold": "Below pilot threshold"
 }

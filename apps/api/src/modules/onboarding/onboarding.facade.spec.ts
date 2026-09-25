@@ -41,6 +41,7 @@ function fakeAccountRepository(): PharmacyAccountRepositoryPort {
     listByStatus: vi.fn(),
     listByChain: vi.fn(),
     save: vi.fn(),
+    listActiveIdsByTenant: vi.fn().mockResolvedValue([]),
   }
 }
 
@@ -94,5 +95,19 @@ describe('OnboardingFacade.suspendChainForUnpaidInvoice (DTJ-252)', () => {
 
     await expect(facade.suspendChainForUnpaidInvoice(chain.id, ACTOR)).rejects.toBeInstanceOf(InvalidOnboardingTransitionError)
     expect(save).not.toHaveBeenCalled()
+  })
+})
+
+describe('OnboardingFacade.listActivePharmacyIds (DTJ-382) — тонкая делегация к репозиторию', () => {
+  it('возвращает id, отданные PharmacyAccountRepositoryPort.listActiveIdsByTenant', async () => {
+    // Отдельная переменная — @typescript-eslint/unbound-method.
+    const listActiveIdsByTenant = vi.fn().mockResolvedValue(['pharmacy-1', 'pharmacy-2'])
+    const accountRepository = fakeAccountRepository()
+    accountRepository.listActiveIdsByTenant = listActiveIdsByTenant
+    const { repository: chainRepository } = fakeChainRepository(null)
+    const facade = new OnboardingFacade(accountRepository, chainRepository)
+
+    await expect(facade.listActivePharmacyIds('tenant-1')).resolves.toEqual(['pharmacy-1', 'pharmacy-2'])
+    expect(listActiveIdsByTenant).toHaveBeenCalledWith('tenant-1')
   })
 })

@@ -62,6 +62,11 @@ const FunnelPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>
   import('@/features/analytics/ui/funnel-page').then((m) => ({ default: m.FunnelPage })),
 )
 
+/** Та же схема совместимости без пропсов, что `FunnelPage` рядом. */
+const PlatformMetricsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/analytics/ui/platform-metrics-page').then((m) => ({ default: m.PlatformMetricsPage })),
+)
+
 /** DTJ-354 — та же схема совместимости без пропсов, что `AuditLogPage`. */
 const UsersPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
   import('@/features/users/ui/users-page').then((m) => ({ default: m.UsersPage })),
@@ -78,6 +83,7 @@ const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
   { path: 'audit-log', titleKey: 'admin.nav.audit_log', icon: 'audit-log', Component: AuditLogPage },
   { path: 'undelivered-notifications', titleKey: 'admin.nav.undelivered_notifications', icon: 'notifications', Component: UndeliveredNotificationsPage },
   { path: 'analytics/funnel', titleKey: 'admin.nav.analytics_funnel', icon: 'analytics', Component: FunnelPage },
+  { path: 'analytics/platform-metrics', titleKey: 'admin.nav.platform_metrics', icon: 'analytics', Component: PlatformMetricsPage },
   section('pharmacies', 'admin.nav.pharmacies', 'pharmacies'),
   { path: 'users', titleKey: 'admin.nav.users', icon: 'users', Component: UsersPage },
   section('orders', 'admin.nav.orders', 'orders'),
