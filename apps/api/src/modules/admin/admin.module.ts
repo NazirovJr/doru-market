@@ -44,17 +44,23 @@ import { PAYMENTS_FACADE_PORT } from './application/ports/payments-facade.port.j
 // использования дал бы неиспользуемый символ — оставлен только в своём файле-порте.
 import { FEATURE_FLAGS_REPOSITORY_PROVIDER } from './infrastructure/repositories/feature-flags.repository.js'
 import { TENANCY_FACADE_PORT_PROVIDER } from './infrastructure/adapters/tenancy-facade.adapter.js'
+import { IDENTITY_FACADE_PORT_PROVIDER } from './infrastructure/adapters/identity-facade.adapter.js'
 import { ListFeatureFlagsUseCase } from './application/use-cases/list-feature-flags.use-case.js'
 import { UpsertFeatureFlagUseCase } from './application/use-cases/upsert-feature-flag.use-case.js'
 import { ListTenantsUseCase } from './application/use-cases/list-tenants.use-case.js'
 import { GetTenantUseCase } from './application/use-cases/get-tenant.use-case.js'
 import { UpdateTenantSettingsUseCase } from './application/use-cases/update-tenant-settings.use-case.js'
+import { ListUsersUseCase } from './application/use-cases/list-users.use-case.js'
+import { DeactivateUserUseCase } from './application/use-cases/deactivate-user.use-case.js'
+import { ChangeStaffRoleUseCase } from './application/use-cases/change-staff-role.use-case.js'
+import { GrantPlatformRoleUseCase } from './application/use-cases/grant-platform-role.use-case.js'
 import { FeatureFlagsController } from './presentation/feature-flags.controller.js'
 import { TenantsController } from './presentation/tenants.controller.js'
+import { UsersAdminController } from './presentation/users-admin.controller.js'
 
 @Module({
   imports: [OnboardingModule, OrdersModule, PaymentsModule, AuthModule, TenancyModule],
-  controllers: [FeatureFlagsController, TenantsController],
+  controllers: [FeatureFlagsController, TenantsController, UsersAdminController],
   providers: [
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },
     { provide: ORDERS_FACADE_PORT, useExisting: ORDERS_FACADE },
@@ -67,6 +73,12 @@ import { TenantsController } from './presentation/tenants.controller.js'
     ListTenantsUseCase,
     GetTenantUseCase,
     UpdateTenantSettingsUseCase,
+    // DTJ-354 — users (IDENTITY_FACADE_PORT над USERS_REPOSITORY чужого модуля auth, тот же приём, что TENANCY_FACADE_PORT).
+    IDENTITY_FACADE_PORT_PROVIDER,
+    ListUsersUseCase,
+    DeactivateUserUseCase,
+    ChangeStaffRoleUseCase,
+    GrantPlatformRoleUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.

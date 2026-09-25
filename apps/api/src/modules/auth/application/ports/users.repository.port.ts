@@ -50,6 +50,30 @@ export interface UpdateUserPatch {
   readonly telegramChatId: bigint | null
 }
 
+// phoneLike — ILIKE '%value%', не точное совпадение.
+export interface UsersListFilter {
+  readonly role?: UserRole
+  readonly phoneLike?: string
+  readonly tenantId?: string
+}
+
+export interface UsersListCursor {
+  readonly v: string
+  readonly id: string
+}
+
+export interface UsersListQuery {
+  readonly filter: UsersListFilter
+  readonly limit: number
+  readonly cursor?: UsersListCursor | null
+}
+
+export interface UsersListPage {
+  readonly items: readonly User[]
+  readonly nextCursor: UsersListCursor | null
+  readonly hasMore: boolean
+}
+
 export interface UsersRepository {
   /**
    * `tx?` (волна 6, self-deadlock пула соединений — найдено при сдаче checkout,
@@ -79,4 +103,7 @@ export interface UsersRepository {
    */
   findActiveByPhone(phoneNumber: string, tx?: UnitOfWorkTx): Promise<User | null>
   update(id: string, patch: UpdateUserPatch): Promise<User>
+  list(query: UsersListQuery): Promise<UsersListPage>
+  setActive(id: string, isActive: boolean, tx?: UnitOfWorkTx): Promise<User | null>
+  setRole(id: string, role: UserRole, tx?: UnitOfWorkTx): Promise<User | null>
 }

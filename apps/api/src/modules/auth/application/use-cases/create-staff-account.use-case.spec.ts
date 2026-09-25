@@ -15,12 +15,14 @@
  * production-класс: application не импортирует infrastructure (§1.1).
  */
 import { randomUUID } from 'node:crypto'
-import { ErrorCode } from '@dorutj/contracts'
+import { ErrorCode, type UserRole } from '@dorutj/contracts'
 import { isErr, isOk } from '@dorutj/domain-kernel'
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   type CreateUserInput,
   type UpdateUserPatch,
+  type UsersListPage,
+  type UsersListQuery,
   type UsersRepository,
 } from '@/modules/auth/application/ports/users.repository.port.js'
 import { type User } from '@/modules/auth/domain/user.js'
@@ -74,6 +76,19 @@ class FakeUsersRepository implements UsersRepository {
   }
 
   update(_id: string, _patch: UpdateUserPatch): Promise<User> {
+    throw new Error('not used in DTJ-030 tests')
+  }
+
+  // [DTJ-354] Расширение порта — не используется этими тестами.
+  list(_query: UsersListQuery): Promise<UsersListPage> {
+    throw new Error('not used in DTJ-030 tests')
+  }
+
+  setActive(_id: string, _isActive: boolean): Promise<User | null> {
+    throw new Error('not used in DTJ-030 tests')
+  }
+
+  setRole(_id: string, _role: UserRole): Promise<User | null> {
     throw new Error('not used in DTJ-030 tests')
   }
 }
