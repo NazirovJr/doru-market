@@ -36,7 +36,11 @@ function baseCommand(overrides: Partial<RecordProductEventsBatchCommand> = {}): 
 function buildHarness() {
   const insertMock = vi.fn<ProductEventsRepositoryPort['insert']>().mockResolvedValue(undefined)
   const insertBatchMock = vi.fn<ProductEventsRepositoryPort['insertBatch']>().mockResolvedValue(undefined)
-  const repository: ProductEventsRepositoryPort = { insert: insertMock, insertBatch: insertBatchMock }
+  const repository: ProductEventsRepositoryPort = {
+    insert: insertMock,
+    insertBatch: insertBatchMock,
+    findMatchingSavingsEvents: vi.fn<ProductEventsRepositoryPort['findMatchingSavingsEvents']>().mockResolvedValue(new Map()),
+  }
   const logger = { warn: vi.fn() } as unknown as Logger
   const useCase = new RecordProductEventsBatchUseCase(repository, new FixedClock(), logger)
   return { useCase, insertBatchMock, logger }
