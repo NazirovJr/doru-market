@@ -19,6 +19,19 @@ export function isProductEventType(value: string): value is ProductEventType {
   return PRODUCT_EVENT_TYPE_SET.has(value)
 }
 
+// order_placed создаётся только серверными use case'ами (checkout, DTJ-380 через AnalyticsFacade) —
+// публичный батч-эндпоинт (DTJ-379) не должен принимать его от клиента: иначе бот пишет
+// произвольный savingsDiram под order_placed, минуя проверку orderId воронкой (DTJ-381).
+const SERVER_ONLY_PRODUCT_EVENT_TYPES: ReadonlySet<ProductEventType> = new Set(['order_placed'])
+
+export const CLIENT_PRODUCT_EVENT_TYPES: readonly ProductEventType[] = PRODUCT_EVENT_TYPES.filter(
+  (type) => !SERVER_ONLY_PRODUCT_EVENT_TYPES.has(type),
+)
+
+export function isClientProductEventType(value: string): value is ProductEventType {
+  return isProductEventType(value) && !SERVER_ONLY_PRODUCT_EVENT_TYPES.has(value)
+}
+
 export interface ProductEventCreateCommand {
   readonly tenantId: string
   readonly userId?: string | null
