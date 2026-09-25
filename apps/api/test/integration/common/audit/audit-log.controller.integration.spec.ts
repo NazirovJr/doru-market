@@ -15,6 +15,23 @@ const TEST_DATABASE_URL =
   process.env.ADMIN_TEST_DATABASE_URL ?? process.env.DATABASE_URL ?? 'postgres://test:test@localhost:5432/dorutj_test'
 const PROBE_TIMEOUT_MS = 1_500
 
+function withCredentials(url: string, username: string, password: string): string {
+  try {
+    const parsed = new URL(url)
+    parsed.username = username
+    parsed.password = password
+    return parsed.toString()
+  } catch {
+    return url
+  }
+}
+
+// audit_log — append-only, app_role не может UPDATE/DELETE (DTJ-374) — сдвиг created_at и уборка
+// после теста идут через dorutj_migrator, тот же приём, что audit-log-revoke.e2e.spec.ts.
+const MIGRATOR_DATABASE_URL =
+  process.env.APP_ROLE_MIGRATOR_DATABASE_URL ??
+  withCredentials(TEST_DATABASE_URL, 'dorutj_migrator', 'dorutj_dev_only_password')
+
 async function isPostgresReachable(url: string): Promise<boolean> {
   const pool = new Pool({ connectionString: url, connectionTimeoutMillis: PROBE_TIMEOUT_MS })
   try {
@@ -54,6 +71,7 @@ const NON_SUPER_ADMIN_ROLES: readonly UserRole[] = ['customer', 'pharmacist', 'p
 
 describe.skipIf(!postgresAvailable)('AuditLogController — Supertest integration (DTJ-376)', () => {
   let pool: Pool
+  let migratorPool: Pool
   let ctx: TestApp
   let app: INestApplication
   let httpServer: Server
@@ -87,6 +105,7 @@ describe.skipIf(!postgresAvailable)('AuditLogController — Supertest integratio
 
   beforeAll(async () => {
     pool = new Pool({ connectionString: TEST_DATABASE_URL })
+    migratorPool = new Pool({ connectionString: MIGRATOR_DATABASE_URL })
     await pool.query(`INSERT INTO tenants (id, slug, is_neutral) VALUES ($1, $2, false) ON CONFLICT (id) DO NOTHING`, [
       TENANT_ID,
       `test-audit-log-376-${TENANT_ID.slice(0, 8)}`,
@@ -108,13 +127,14 @@ describe.skipIf(!postgresAvailable)('AuditLogController — Supertest integratio
     try {
       await ctx.close()
     } finally {
-      await pool.query('DELETE FROM audit_log WHERE entity_id = ANY($1)', [createdEntityIds])
+      await migratorPool.query('DELETE FROM audit_log WHERE entity_id = ANY($1)', [createdEntityIds])
       if (createdUserIds.length > 0) {
         await pool.query('DELETE FROM users WHERE id = ANY($1)', [createdUserIds])
       }
       await pool.query('DELETE FROM tenant_settings WHERE tenant_id = $1', [TENANT_ID])
       await pool.query('DELETE FROM tenants WHERE id = $1', [TENANT_ID])
       await pool.end().catch(() => undefined)
+      await migratorPool.end().catch(() => undefined)
     }
   })
 
@@ -139,7 +159,7 @@ describe.skipIf(!postgresAvailable)('AuditLogController — Supertest integratio
       tenantId: TENANT_ID,
     })
     if (overrides.createdAt !== undefined) {
-      await pool.query(`UPDATE audit_log SET created_at = $1 WHERE entity_id = $2`, [overrides.createdAt, entityId])
+      await migratorPool.query(`UPDATE audit_log SET created_at = $1 WHERE entity_id = $2`, [overrides.createdAt, entityId])
     }
     return entityId
   }
