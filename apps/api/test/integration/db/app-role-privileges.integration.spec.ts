@@ -222,10 +222,42 @@ describe.skipIf(!appRoleAvailable)('app_role — модель привилеги
   })
 
   describe.skipIf(!migratorAvailable)('Идемпотентность миграции 0031 (правило 11 AGENTS.md)', () => {
+    /**
+     * ИСПРАВЛЕНО (гейт CI, воспроизведение реального прогона `test:integration` — файлы
+     * `test/integration/db/*.spec.ts` идут строго последовательно в ОДНОМ процессе,
+     * `fileParallelism: false`, `apps/api/vitest.integration.config.ts`). `GRANT SELECT,
+     * INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_role` (буквальная строка
+     * `0031_app_role_privileges.sql`) ЗАДЕВАЕТ ЛЮБУЮ таблицу `public`, СУЩЕСТВУЮЩУЮ на момент
+     * запуска — включая `audit_log` (заведена ПОЗЖЕ, миграцией `0034`, которая сразу после
+     * `CREATE TABLE` сужает её тем же приёмом, что и `escrow_ledger`, см. `0031` строки 24-29 и
+     * `0034_support_tickets_audit_log.sql`/`0046_audit_log_revoke_update_delete.sql`). Прежняя
+     * версия этого блока откатывала узкий грант ТОЛЬКО для `escrow_ledger` — `audit_log`
+     * оставалась с полным CRUD у `app_role` до конца прогона всего файла и ЛОМАЛА
+     * `test/integration/db/audit-log-revoke.e2e.spec.ts` (алфавитно следующий в том же
+     * каталоге, DTJ-374, SRS-ADM-064): `UPDATE`/`DELETE` под `app_role` там ожидаются
+     * `42501`, но проходили — REVOKE был отменён ЭТИМ блоком. Симметричный REVOKE
+     * (guarded `to_regclass`, тот же идиом, что сам `0031`, — на случай, если когда-нибудь
+     * этот тест-файл запустят ДО применения `0034`/`audit_log`) восстанавливает ТОЧНО ТУ ЖЕ
+     * итоговую матрицу прав, которую даёт полный реальный прогон миграций по порядку —
+     * тест обязан проверять состояние, к которому приводят реальные миграции, не оставлять
+     * общую БД в промежуточном/некорректном состоянии для соседних файлов.
+     */
     it('повторное применение GRANT/REVOKE/ALTER DEFAULT PRIVILEGES не бросает и не меняет итоговую матрицу прав', async () => {
       await migratorPool.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_role`)
       await migratorPool.query(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_role`)
       await migratorPool.query(`REVOKE UPDATE, DELETE ON public.escrow_ledger FROM app_role`)
+      // Симметрично `0034_support_tickets_audit_log.sql`/`0046_audit_log_revoke_update_delete.sql`
+      // (см. блок-комментарий выше) — без этого широкий GRANT строкой выше отменяет REVOKE,
+      // применённый реальными миграциями, и ломает `audit-log-revoke.e2e.spec.ts`.
+      await migratorPool.query(
+        `DO $$
+         BEGIN
+           IF to_regclass('public.audit_log') IS NOT NULL THEN
+             EXECUTE 'REVOKE UPDATE, DELETE ON public.audit_log FROM app_role';
+           END IF;
+         END
+         $$`,
+      )
       await expect(
         migratorPool.query(
           `ALTER DEFAULT PRIVILEGES FOR ROLE dorutj_migrator IN SCHEMA public
@@ -246,6 +278,16 @@ describe.skipIf(!appRoleAvailable)('app_role — модель привилеги
            has_table_privilege('app_role','escrow_ledger','DELETE') AS can_delete`,
       )
       expect(privileges.rows[0]).toEqual({ can_select: true, can_insert: true, can_update: false, can_delete: false })
+
+      const auditLogPrivileges = await migratorPool.query<{
+        can_update: boolean
+        can_delete: boolean
+      }>(
+        `SELECT
+           has_table_privilege('app_role','audit_log','UPDATE') AS can_update,
+           has_table_privilege('app_role','audit_log','DELETE') AS can_delete`,
+      )
+      expect(auditLogPrivileges.rows[0]).toEqual({ can_update: false, can_delete: false })
     })
   })
 })

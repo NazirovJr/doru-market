@@ -64,6 +64,11 @@ describe.skipIf(!postgresAvailable)('HoldPayoutUseCase — integration (DTJ-249)
 
   afterEach(async () => {
     for (const orderId of createdOrderIds.splice(0)) {
+      // `order_disputes.order_id` — `ON DELETE RESTRICT` (0039_returns_disputes_support.sql,
+      // «спор переживает заказ юридически») — обязана уйти ПЕРЕД `orders`, иначе DELETE orders
+      // падает RESTRICT-нарушением для тестов, заводящих спор через `seedDispute()`.
+      await pool.query('DELETE FROM order_disputes WHERE order_id = $1', [orderId]).catch(() => undefined)
+      await pool.query('DELETE FROM support_tickets WHERE order_id = $1', [orderId]).catch(() => undefined)
       await pool.query('DELETE FROM payout_schedule WHERE order_id = $1', [orderId]).catch(() => undefined)
       await pool.query('DELETE FROM orders WHERE id = $1', [orderId]).catch(() => undefined)
     }
@@ -99,9 +104,38 @@ describe.skipIf(!postgresAvailable)('HoldPayoutUseCase — integration (DTJ-249)
     return row
   }
 
+  /**
+   * ИСПРАВЛЕНО (гейт CI): `HoldPayoutUseCase.execute` НЕ создаёт `order_disputes` сам (см. JSDoc
+   * `hold-payout.use-case.ts` — единственная мутация это `holdIfPending`) — реальный вызывающий
+   * (`PaymentsFacade.holdPayout`) обязан передать `disputeId` УЖЕ существующего спора. До
+   * `0039_returns_disputes_support.sql` (EP-11/14, DTJ-270 — приземлилась ПОЗЖЕ этого файла,
+   * DTJ-249/EP-10) `payout_schedule.held_by_dispute_id` не имела FK на `order_disputes` — тест
+   * использовал произвольный `randomUUID()`, тогда безопасно. Сейчас `fk_payout_schedule_dispute`
+   * требует реально существующую строку — произвольный UUID падает `23503`. Фикстура ниже
+   * заводит МИНИМАЛЬНО необходимые `support_tickets`/`order_disputes` (те же enum-значения, что
+   * `i18n-overrides-catalog.seed.integration.spec.ts`/`support-ticket-sla-fields-migration...`
+   * для `support_tickets`), чтобы `disputeId` ссылался на реальную строку — ровно тот контракт,
+   * который соблюдает настоящий вызывающий код.
+   */
+  async function seedDispute(orderId: string): Promise<string> {
+    const supportTicketId = randomUUID()
+    await pool.query(
+      `INSERT INTO support_tickets (id, tenant_id, order_id, channel, category, status)
+       VALUES ($1, $2, $3, 'in_app', 'other', 'open')`,
+      [supportTicketId, tenantId, orderId],
+    )
+    const disputeId = randomUUID()
+    await pool.query(
+      `INSERT INTO order_disputes (id, order_id, support_ticket_id, status, resolution_due_at)
+       VALUES ($1, $2, $3, 'open', NOW() + INTERVAL '2 days')`,
+      [disputeId, orderId, supportTicketId],
+    )
+    return disputeId
+  }
+
   it('AC2: status=\'pending\' → disputed, held_by_dispute_id заполнен, alreadyPaid=false', async () => {
     const orderId = await seedOrderWithPayout('pending')
-    const disputeId = randomUUID()
+    const disputeId = await seedDispute(orderId)
 
     const result = await useCase.execute({ tenantId, orderId, disputeId })
 
@@ -113,7 +147,7 @@ describe.skipIf(!postgresAvailable)('HoldPayoutUseCase — integration (DTJ-249)
 
   it('AC2: status=\'due\' → disputed, held_by_dispute_id заполнен, alreadyPaid=false', async () => {
     const orderId = await seedOrderWithPayout('due')
-    const disputeId = randomUUID()
+    const disputeId = await seedDispute(orderId)
 
     const result = await useCase.execute({ tenantId, orderId, disputeId })
 
