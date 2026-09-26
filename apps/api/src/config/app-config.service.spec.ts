@@ -25,6 +25,7 @@ const BASE_ENV: EnvConfig = {
   CORS_STATIC_ORIGINS: 'https://dorutj.com, https://admin.dorutj.com ,',
   REQUEST_TIMEOUT_MS: 30_000,
   MOCK_SMS_EXPOSE_CODE_IN_RESPONSE: 'false',
+  DEV_FIXED_OTP: 'false',
   OTP_REQUEST_COOLDOWN_SECONDS: 60,
   OTP_REQUEST_MAX_PER_10MIN: 3,
   OTP_REQUEST_MAX_PER_DAY: 10,

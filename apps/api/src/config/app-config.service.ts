@@ -63,6 +63,10 @@ export class AppConfigService {
     return this.configService.get('MOCK_SMS_EXPOSE_CODE_IN_RESPONSE', { infer: true }) === 'true'
   }
 
+  get devFixedOtp(): boolean {
+    return !this.isProduction && this.configService.get('DEV_FIXED_OTP', { infer: true }) === 'true'
+  }
+
   // [DTJ-023] Окна rate-limit OTP-запросов (SRS-API-019).
   get otpRequestCooldownSeconds(): number {
     return this.configService.get('OTP_REQUEST_COOLDOWN_SECONDS', { infer: true })
