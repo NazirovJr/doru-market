@@ -586,5 +586,14 @@
   "admin.top_analogs.column.medicine": "Дору",
   "admin.top_analogs.column.avg_savings": "Сарфаи миёна",
   "admin.top_analogs.column.times_shown": "Шумораи нишондиҳиҳо",
-  "admin.top_analogs.column.conversion": "Конверсия ба фармоиш"
+  "admin.top_analogs.column.conversion": "Конверсия ба фармоиш",
+  "admin.nav.onboarding_funnel": "Қифи бақайдгирӣ",
+  "admin.onboarding_funnel.title": "Қифи бақайдгирии дорухонаҳо",
+  "admin.onboarding_funnel.loading": "Боргирии қифи бақайдгирӣ…",
+  "admin.onboarding_funnel.error": "Боргирии қифи бақайдгирӣ ноком шуд",
+  "admin.onboarding_funnel.empty": "Дар давра аризаи ҳалшуда набуд",
+  "admin.onboarding_funnel.decision.approved": "Тасдиқшуда",
+  "admin.onboarding_funnel.decision.rejected": "Рад карда шуд",
+  "admin.onboarding_funnel.hours": "{hours} соат",
+  "admin.onboarding_funnel.count": "{count} ариза"
 }

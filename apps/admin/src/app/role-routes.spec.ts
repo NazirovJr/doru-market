@@ -9,6 +9,7 @@ const SUPER_ADMIN_PATHS = [
   'analytics/funnel',
   'analytics/platform-metrics',
   'analytics/top-analogs',
+  'analytics/onboarding-funnel',
   'pharmacies',
   'users',
   'orders',
@@ -18,7 +19,7 @@ const SUPER_ADMIN_PATHS = [
 const PHARMACY_ADMIN_PATHS = ['my-pharmacies', 'my-orders', 'staff', 'integration-keys', 'reports', 'schedule']
 
 describe('getRoutesForRole', () => {
-  it('super_admin получает все 12 разделов админ-панели', () => {
+  it('super_admin получает все 13 разделов админ-панели', () => {
     const routes = getRoutesForRole('super_admin')
     expect(routes.map((r) => r.path)).toEqual(SUPER_ADMIN_PATHS)
   })

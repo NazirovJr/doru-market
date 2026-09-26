@@ -72,6 +72,11 @@ const TopAnalogsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPagePr
   import('@/features/analytics/ui/top-analogs-page').then((m) => ({ default: m.TopAnalogsPage })),
 )
 
+/** DTJ-384 — та же схема совместимости без пропсов, что `FunnelPage` рядом. */
+const OnboardingFunnelPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/analytics/ui/onboarding-funnel-page').then((m) => ({ default: m.OnboardingFunnelPage })),
+)
+
 /** DTJ-354 — та же схема совместимости без пропсов, что `AuditLogPage`. */
 const UsersPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
   import('@/features/users/ui/users-page').then((m) => ({ default: m.UsersPage })),
@@ -105,6 +110,7 @@ const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
   { path: 'analytics/funnel', titleKey: 'admin.nav.analytics_funnel', icon: 'analytics', Component: FunnelPage },
   { path: 'analytics/platform-metrics', titleKey: 'admin.nav.platform_metrics', icon: 'analytics', Component: PlatformMetricsPage },
   { path: 'analytics/top-analogs', titleKey: 'admin.nav.top_analogs', icon: 'analytics', Component: TopAnalogsPage },
+  { path: 'analytics/onboarding-funnel', titleKey: 'admin.nav.onboarding_funnel', icon: 'analytics', Component: OnboardingFunnelPage },
   { path: 'pharmacies', titleKey: 'admin.nav.pharmacies', icon: 'pharmacies', Component: PharmacyAccountsPage },
   { path: 'users', titleKey: 'admin.nav.users', icon: 'users', Component: UsersPage },
   section('orders', 'admin.nav.orders', 'orders'),

@@ -586,5 +586,14 @@
   "admin.top_analogs.column.medicine": "Препарат",
   "admin.top_analogs.column.avg_savings": "Средняя экономия",
   "admin.top_analogs.column.times_shown": "Показов",
-  "admin.top_analogs.column.conversion": "Конверсия в заказ"
+  "admin.top_analogs.column.conversion": "Конверсия в заказ",
+  "admin.nav.onboarding_funnel": "Воронка онбординга",
+  "admin.onboarding_funnel.title": "Воронка онбординга аптек",
+  "admin.onboarding_funnel.loading": "Загружаем воронку онбординга…",
+  "admin.onboarding_funnel.error": "Не удалось загрузить воронку онбординга",
+  "admin.onboarding_funnel.empty": "Нет решённых заявок за период",
+  "admin.onboarding_funnel.decision.approved": "Одобрено",
+  "admin.onboarding_funnel.decision.rejected": "Отклонено",
+  "admin.onboarding_funnel.hours": "{hours} ч",
+  "admin.onboarding_funnel.count": "{count} заявок"
 }

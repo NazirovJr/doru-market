@@ -1,8 +1,11 @@
-// DTJ-383 — построчные отчёты (в отличие от analytics-dashboard.controller.ts — платформенные агрегаты).
+// DTJ-383/384 — построчные отчёты (в отличие от analytics-dashboard.controller.ts — платформенные агрегаты).
 import { Controller, Get, Inject, Query, UseGuards } from '@nestjs/common'
 import {
+  FunnelQuerySchema,
   ok,
   TopAnalogsQuerySchema,
+  type FunnelQueryDto,
+  type OnboardingFunnelResponseDto,
   type SuccessEnvelope,
   type TopAnalogsQueryDto,
   type TopAnalogsResponseDto,
@@ -13,6 +16,10 @@ import {
   GetTopAnalogsReportUseCase,
   type GetTopAnalogsReportResult,
 } from '../application/use-cases/get-top-analogs-report.use-case.js'
+import {
+  GetOnboardingFunnelUseCase,
+  type GetOnboardingFunnelResult,
+} from '../application/use-cases/get-onboarding-funnel.use-case.js'
 
 @Controller({ version: '1' })
 @UseGuards(AuthGuard, RolesGuard)
@@ -20,6 +27,7 @@ import {
 export class AnalyticsReportsController {
   public constructor(
     @Inject(GetTopAnalogsReportUseCase) private readonly getTopAnalogsReport: GetTopAnalogsReportUseCase,
+    @Inject(GetOnboardingFunnelUseCase) private readonly getOnboardingFunnel: GetOnboardingFunnelUseCase,
   ) {}
 
   @Get('analytics/top-analogs')
@@ -33,6 +41,14 @@ export class AnalyticsReportsController {
     })
     return ok(toTopAnalogsResponseDto(result))
   }
+
+  @Get('analytics/onboarding-funnel')
+  public async onboardingFunnel(
+    @Query(new ZodValidationPipe(FunnelQuerySchema)) query: FunnelQueryDto,
+  ): Promise<SuccessEnvelope<OnboardingFunnelResponseDto>> {
+    const result = await this.getOnboardingFunnel.execute({ tenantId: query.tenantId, period: query.period })
+    return ok(toOnboardingFunnelResponseDto(result))
+  }
 }
 
 function toTopAnalogsResponseDto(result: GetTopAnalogsReportResult): TopAnalogsResponseDto {
@@ -42,5 +58,13 @@ function toTopAnalogsResponseDto(result: GetTopAnalogsReportResult): TopAnalogsR
     avgSavingsDiram: Number(item.avgSavingsDiram),
     timesShown: item.timesShown,
     conversionToOrder: item.conversionToOrder,
+  }))
+}
+
+function toOnboardingFunnelResponseDto(result: GetOnboardingFunnelResult): OnboardingFunnelResponseDto {
+  return result.map((item) => ({
+    decision: item.decision,
+    averageDurationHours: item.averageDurationHours,
+    count: item.count,
   }))
 }

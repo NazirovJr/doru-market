@@ -13,8 +13,10 @@ import { ANALOG_SAVINGS_PORT_PROVIDER } from './infrastructure/adapters/catalog-
 import { GetFunnelUseCase } from './application/use-cases/get-funnel.use-case.js'
 import { GetPlatformMetricsUseCase } from './application/use-cases/get-platform-metrics.use-case.js'
 import { GetTopAnalogsReportUseCase } from './application/use-cases/get-top-analogs-report.use-case.js'
+import { GetOnboardingFunnelUseCase } from './application/use-cases/get-onboarding-funnel.use-case.js'
 import { ANALYTICS_ORDERS_FACADE_PORT } from './application/ports/orders-facade.port.js'
 import { INVENTORY_FACADE_PORT_PROVIDER } from './infrastructure/adapters/inventory-facade.adapter.js'
+import { ONBOARDING_FACADE_PORT_PROVIDER } from './infrastructure/adapters/onboarding-facade.adapter.js'
 import { AnalyticsFacade } from './analytics.facade.js'
 import { AnalyticsEventsController } from './presentation/analytics-events.controller.js'
 import { AnalyticsDashboardController } from './presentation/analytics-dashboard.controller.js'
@@ -41,6 +43,8 @@ import { AnalyticsEventsIdentityGuard } from './presentation/guards/analytics-ev
     INVENTORY_FACADE_PORT_PROVIDER,
     GetPlatformMetricsUseCase,
     GetTopAnalogsReportUseCase,
+    ONBOARDING_FACADE_PORT_PROVIDER,
+    GetOnboardingFunnelUseCase,
   ],
   exports: [AnalyticsFacade],
 })

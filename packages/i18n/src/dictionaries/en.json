@@ -586,5 +586,14 @@
   "admin.top_analogs.column.medicine": "Medicine",
   "admin.top_analogs.column.avg_savings": "Avg. savings",
   "admin.top_analogs.column.times_shown": "Times shown",
-  "admin.top_analogs.column.conversion": "Conversion to order"
+  "admin.top_analogs.column.conversion": "Conversion to order",
+  "admin.nav.onboarding_funnel": "Onboarding funnel",
+  "admin.onboarding_funnel.title": "Pharmacy onboarding funnel",
+  "admin.onboarding_funnel.loading": "Loading onboarding funnel…",
+  "admin.onboarding_funnel.error": "Failed to load onboarding funnel",
+  "admin.onboarding_funnel.empty": "No resolved applications for this period",
+  "admin.onboarding_funnel.decision.approved": "Approved",
+  "admin.onboarding_funnel.decision.rejected": "Rejected",
+  "admin.onboarding_funnel.hours": "{hours} h",
+  "admin.onboarding_funnel.count": "{count} applications"
 }

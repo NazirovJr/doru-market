@@ -98,3 +98,12 @@ export interface TopAnalogReportItemDto {
 }
 
 export type TopAnalogsResponseDto = readonly TopAnalogReportItemDto[]
+
+// Контракт GET /api/v1/analytics/onboarding-funnel (DTJ-384). Query — переиспользует FunnelQuerySchema.
+export interface OnboardingReviewDurationStatDto {
+  readonly decision: 'approved' | 'rejected'
+  readonly averageDurationHours: number
+  readonly count: number
+}
+
+export type OnboardingFunnelResponseDto = readonly OnboardingReviewDurationStatDto[]

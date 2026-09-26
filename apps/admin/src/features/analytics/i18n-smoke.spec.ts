@@ -50,6 +50,18 @@ const ADMIN_TOP_ANALOGS_KEYS: readonly string[] = [
   'admin.top_analogs.column.conversion',
 ]
 
+const ADMIN_ONBOARDING_FUNNEL_KEYS: readonly string[] = [
+  'admin.nav.onboarding_funnel',
+  'admin.onboarding_funnel.title',
+  'admin.onboarding_funnel.loading',
+  'admin.onboarding_funnel.error',
+  'admin.onboarding_funnel.empty',
+  'admin.onboarding_funnel.decision.approved',
+  'admin.onboarding_funnel.decision.rejected',
+  'admin.onboarding_funnel.hours',
+  'admin.onboarding_funnel.count',
+]
+
 const MISSING_KEY_MARKER = '[[missing:'
 
 describe('admin/analytics (funnel) i18n — 3 локали, все ключи переведены', () => {
@@ -74,6 +86,15 @@ describe('admin/analytics (top analogs, DTJ-383) i18n — 3 локали, все
   it.each(LOCALES)('%s — все ключи admin.top_analogs.*/admin.nav.top_analogs без [[missing: ...]]', (locale) => {
     const { t } = useT(locale)
     for (const key of ADMIN_TOP_ANALOGS_KEYS) {
+      expect(t(key)).not.toContain(MISSING_KEY_MARKER)
+    }
+  })
+})
+
+describe('admin/analytics (onboarding funnel, DTJ-384) i18n — 3 локали, все ключи переведены', () => {
+  it.each(LOCALES)('%s — все ключи admin.onboarding_funnel.*/admin.nav.onboarding_funnel без [[missing: ...]]', (locale) => {
+    const { t } = useT(locale)
+    for (const key of ADMIN_ONBOARDING_FUNNEL_KEYS) {
       expect(t(key)).not.toContain(MISSING_KEY_MARKER)
     }
   })
