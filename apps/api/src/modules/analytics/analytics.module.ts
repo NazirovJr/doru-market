@@ -12,11 +12,15 @@ import { RealizedSavingsCalculator } from './application/services/realized-savin
 import { ANALOG_SAVINGS_PORT_PROVIDER } from './infrastructure/adapters/catalog-analog-savings.adapter.js'
 import { GetFunnelUseCase } from './application/use-cases/get-funnel.use-case.js'
 import { GetPlatformMetricsUseCase } from './application/use-cases/get-platform-metrics.use-case.js'
+import { GetTopAnalogsReportUseCase } from './application/use-cases/get-top-analogs-report.use-case.js'
+import { GetOnboardingFunnelUseCase } from './application/use-cases/get-onboarding-funnel.use-case.js'
 import { ANALYTICS_ORDERS_FACADE_PORT } from './application/ports/orders-facade.port.js'
 import { INVENTORY_FACADE_PORT_PROVIDER } from './infrastructure/adapters/inventory-facade.adapter.js'
+import { ONBOARDING_FACADE_PORT_PROVIDER } from './infrastructure/adapters/onboarding-facade.adapter.js'
 import { AnalyticsFacade } from './analytics.facade.js'
 import { AnalyticsEventsController } from './presentation/analytics-events.controller.js'
 import { AnalyticsDashboardController } from './presentation/analytics-dashboard.controller.js'
+import { AnalyticsReportsController } from './presentation/analytics-reports.controller.js'
 import { AnalyticsEventsIdentityGuard } from './presentation/guards/analytics-events-identity.guard.js'
 
 @Module({
@@ -25,7 +29,7 @@ import { AnalyticsEventsIdentityGuard } from './presentation/guards/analytics-ev
   // CatalogModule — DTJ-385: ANALOG_SAVINGS_PORT_PROVIDER инжектит CATALOG_FACADE.
   // OrdersModule НЕ импортирован — он `@Global()`, ORDERS_FACADE доступен без imports (иначе цикл).
   imports: [AuthModule, CatalogModule, OnboardingModule, InventoryModule],
-  controllers: [AnalyticsEventsController, AnalyticsDashboardController],
+  controllers: [AnalyticsEventsController, AnalyticsDashboardController, AnalyticsReportsController],
   providers: [
     PRODUCT_EVENTS_REPOSITORY_PROVIDER,
     RecordProductEventUseCase,
@@ -38,6 +42,9 @@ import { AnalyticsEventsIdentityGuard } from './presentation/guards/analytics-ev
     { provide: ANALYTICS_ORDERS_FACADE_PORT, useExisting: ORDERS_FACADE },
     INVENTORY_FACADE_PORT_PROVIDER,
     GetPlatformMetricsUseCase,
+    GetTopAnalogsReportUseCase,
+    ONBOARDING_FACADE_PORT_PROVIDER,
+    GetOnboardingFunnelUseCase,
   ],
   exports: [AnalyticsFacade],
 })

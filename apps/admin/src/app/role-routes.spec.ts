@@ -9,6 +9,8 @@ const SUPER_ADMIN_PATHS = [
   'undelivered-notifications',
   'analytics/funnel',
   'analytics/platform-metrics',
+  'analytics/top-analogs',
+  'analytics/onboarding-funnel',
   'pharmacies',
   'users',
   'orders',

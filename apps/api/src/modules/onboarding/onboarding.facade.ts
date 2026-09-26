@@ -8,6 +8,12 @@ import { Inject, Injectable } from '@nestjs/common'
 import { NotFoundError } from '@dorutj/contracts'
 import { PHARMACY_ACCOUNT_REPOSITORY, type PharmacyAccountRepositoryPort } from '@/modules/onboarding/application/ports/pharmacy-account.repository.port.js'
 import { PHARMACY_CHAIN_REPOSITORY, type PharmacyChainRepositoryPort } from '@/modules/onboarding/application/ports/pharmacy-chain.repository.port.js'
+import {
+  ONBOARDING_REVIEW_LOG_REPOSITORY,
+  type OnboardingReviewDurationStat,
+  type OnboardingReviewLogRepositoryPort,
+  type OnboardingReviewPeriodRange,
+} from '@/modules/onboarding/application/ports/onboarding-review-log.repository.port.js'
 import type { OnboardingStatus } from '@/modules/onboarding/domain/value-objects/onboarding-status.vo.js'
 import type { PharmacySuspensionReason } from '@/modules/onboarding/domain/pharmacy-account-entity.types.js'
 
@@ -23,6 +29,8 @@ export class OnboardingFacade {
     private readonly pharmacyAccountRepository: PharmacyAccountRepositoryPort,
     @Inject(PHARMACY_CHAIN_REPOSITORY)
     private readonly pharmacyChainRepository: PharmacyChainRepositoryPort,
+    @Inject(ONBOARDING_REVIEW_LOG_REPOSITORY)
+    private readonly reviewLogRepository: OnboardingReviewLogRepositoryPort,
   ) {}
 
   /** SRS-ADM-013: аптека доступна для чекаута только если `active` И сеть в `approved|active`. */
@@ -159,5 +167,13 @@ export class OnboardingFacade {
       return
     }
     await this.pharmacyChainRepository.save(chain.suspend(actor, 'unpaid_invoice'))
+  }
+
+  /** DTJ-384 (гостевое расширение из EP-17, `modules/analytics`) — тонкая делегация порту, без своей формулы. */
+  async getReviewDurationStats(
+    tenantId: string,
+    period: OnboardingReviewPeriodRange,
+  ): Promise<readonly OnboardingReviewDurationStat[]> {
+    return this.reviewLogRepository.getReviewDurationStats(tenantId, period)
   }
 }

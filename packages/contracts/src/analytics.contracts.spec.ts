@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FunnelQuerySchema, ProductEventInputSchema, ProductEventsBatchSchema } from './analytics.js'
+import { FunnelQuerySchema, ProductEventInputSchema, ProductEventsBatchSchema, TopAnalogsQuerySchema } from './analytics.js'
 
 const VALID_MEDICINE_ID = '11111111-1111-4111-8111-111111111111'
 
@@ -108,5 +108,23 @@ describe('FunnelQuerySchema (DTJ-381)', () => {
 
   it('tenantId не-UUID — отклоняется', () => {
     expect(FunnelQuerySchema.safeParse({ tenantId: 'not-a-uuid', period: '2026-08' }).success).toBe(false)
+  })
+})
+
+describe('TopAnalogsQuerySchema (DTJ-383)', () => {
+  const VALID_TENANT_ID = '11111111-1111-4111-8111-111111111111'
+
+  it('limit не передан → дефолт 10 (АС2 тикета)', () => {
+    const parsed = TopAnalogsQuerySchema.parse({ tenantId: VALID_TENANT_ID, period: '2026-08' })
+    expect(parsed.limit).toBe(10)
+  })
+
+  it('limit=100 (верхняя граница) принимается, 101 — отклоняется', () => {
+    expect(TopAnalogsQuerySchema.safeParse({ tenantId: VALID_TENANT_ID, period: '2026-08', limit: '100' }).success).toBe(true)
+    expect(TopAnalogsQuerySchema.safeParse({ tenantId: VALID_TENANT_ID, period: '2026-08', limit: '101' }).success).toBe(false)
+  })
+
+  it('limit=0 или отрицательный — отклоняется', () => {
+    expect(TopAnalogsQuerySchema.safeParse({ tenantId: VALID_TENANT_ID, period: '2026-08', limit: '0' }).success).toBe(false)
   })
 })

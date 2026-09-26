@@ -18,6 +18,7 @@ function buildHarness(counts: Readonly<Record<string, number>> = {}) {
     countByEventType: countByEventTypeMock,
     sumSavingsByEventType: sumSavingsByEventTypeMock,
     getWeeklyRealizedSavingsTrend: getWeeklyRealizedSavingsTrendMock,
+    getTopAnalogsBySavings: vi.fn(),
   }
   const useCase = new GetFunnelUseCase(repository)
   return { useCase, countByEventTypeMock, sumSavingsByEventTypeMock, getWeeklyRealizedSavingsTrendMock }

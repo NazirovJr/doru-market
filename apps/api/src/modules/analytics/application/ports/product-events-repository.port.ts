@@ -14,6 +14,14 @@ export interface WeeklyRealizedSavingsPoint {
   readonly realizedSavingsDiram: bigint
 }
 
+// DTJ-383 — топ аналогов по показанной экономии, одна строка на medicineId.
+export interface TopAnalogSavingsRow {
+  readonly medicineId: string
+  readonly avgSavingsDiram: bigint
+  readonly timesShown: number
+  readonly conversionToOrder: number
+}
+
 export interface ProductEventsRepositoryPort {
   insert(event: ProductEvent): Promise<void>
   // Для батчевого приёма клиентской телеметрии (следующий тикет эпика).
@@ -37,4 +45,10 @@ export interface ProductEventsRepositoryPort {
     tenantId: string,
     period: AnalyticsPeriodRange,
   ): Promise<readonly WeeklyRealizedSavingsPoint[]>
+  // DTJ-383 — GROUP BY medicine_id по analog_shown, отсортировано timesShown:desc, ограничено limit.
+  getTopAnalogsBySavings(
+    tenantId: string,
+    period: AnalyticsPeriodRange,
+    limit: number,
+  ): Promise<readonly TopAnalogSavingsRow[]>
 }
