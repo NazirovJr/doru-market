@@ -85,6 +85,28 @@ const TEST_DATABASE_URL =
   process.env.DATABASE_URL ??
   'postgres://test:test@localhost:5432/dorutj_test'
 
+/**
+ * ИСПРАВЛЕНО (гейт CI): DDL (реплей `0024_i18n_overrides_review_status.sql`) обязан идти под
+ * ролью-владельцем объектов `public` — `dorutj_migrator`, не под `test` (см. JSDoc
+ * `i18n-overrides-catalog.seed.integration.spec.ts`, раздел «ИСПРАВЛЕНО», тот же приём здесь).
+ * Когда реальные миграции уже применены `dorutj_migrator`, повторный `ALTER TABLE ... ADD
+ * COLUMN`/`ADD CONSTRAINT` под `test` падает «must be owner of table i18n_overrides» — DDL
+ * требует владения, не DML-привилегий из `ALTER DEFAULT PRIVILEGES`.
+ */
+const MIGRATOR_DATABASE_URL = process.env.CATALOG_MIGRATOR_DATABASE_URL ?? buildMigratorUrl(TEST_DATABASE_URL)
+
+function buildMigratorUrl(appUrl: string): string {
+  try {
+    const url = new URL(appUrl)
+    url.username = 'dorutj_migrator'
+    // Дев-дефолт, коммитится в открытом виде (правило 13 AGENTS.md), не секрет.
+    url.password = 'dorutj_dev_only_password'
+    return url.toString()
+  } catch {
+    return appUrl
+  }
+}
+
 const MIGRATIONS_URL = new URL('../../../migrations/', import.meta.url)
 const MIGRATION_0024_SQL = readFileSync(new URL('0024_i18n_overrides_review_status.sql', MIGRATIONS_URL), 'utf8')
 
@@ -174,6 +196,7 @@ async function isPostgresReachable(url: string): Promise<boolean> {
 }
 
 const postgresAvailable = await isPostgresReachable(TEST_DATABASE_URL)
+const migratorAvailable = postgresAvailable && (await isPostgresReachable(MIGRATOR_DATABASE_URL))
 
 /**
  * `AnalogsController` резолвит `TenantId` из `TenantContext` (`resolveTenantId()`, тот же
@@ -292,9 +315,10 @@ const PHARMACY_REF = '00000000-0000-4000-8000-0000000000c1'
 const PHARMACY_OTC = '00000000-0000-4000-8000-0000000000c2'
 const PHARMACY_RX = '00000000-0000-4000-8000-0000000000c3'
 
-describe.skipIf(!postgresAvailable)('AnalogsController — GET /api/v1/medicines/:id/analogs (integration, DTJ-102)', () => {
+describe.skipIf(!postgresAvailable || !migratorAvailable)('AnalogsController — GET /api/v1/medicines/:id/analogs (integration, DTJ-102)', () => {
   let pool: Pool
   let db: NodePgDatabase
+  let migratorPool: Pool
   let fakeOfferLookup: FakeAnalogOfferLookupAdapter
   let ctx: TestContext | undefined
   let categoryId: number
@@ -302,14 +326,19 @@ describe.skipIf(!postgresAvailable)('AnalogsController — GET /api/v1/medicines
   beforeAll(async () => {
     pool = new Pool({ connectionString: TEST_DATABASE_URL })
     db = drizzle(pool)
-    // Прямое исполнение SQL миграции (не бухгалтерский `migrate()`) — см. JSDoc файла.
-    await db.execute(MIGRATION_0024_SQL)
+    migratorPool = new Pool({ connectionString: MIGRATOR_DATABASE_URL })
+    // DDL — под ролью-владельцем объектов `public` (`dorutj_migrator`), не под `test`
+    // (см. блок «ИСПРАВЛЕНО» у объявления MIGRATOR_DATABASE_URL). Прямое исполнение SQL
+    // миграции (не бухгалтерский `migrate()`) — остальное обоснование см. JSDoc файла.
+    await migratorPool.query(MIGRATION_0024_SQL)
     // DTJ-103: контент дисклеймера — тот же путь, что боевой `pnpm db:seed` (см. его JSDoc).
+    // Сид — DML, остаётся под `test` (`db`), как и раньше.
     await seedI18nOverridesCatalog(db)
   })
 
   afterAll(async () => {
     await pool.end().catch(() => undefined)
+    await migratorPool.end().catch(() => undefined)
   })
 
   afterEach(async () => {

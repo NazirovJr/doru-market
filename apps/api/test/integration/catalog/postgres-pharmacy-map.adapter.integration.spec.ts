@@ -54,6 +54,25 @@ const TEST_DATABASE_URL =
   process.env.DATABASE_URL ??
   'postgres://test:test@localhost:5432/dorutj_test'
 
+/**
+ * ИСПРАВЛЕНО (гейт CI): `migrate()` под ролью `test` падает `permission denied for schema
+ * drizzle`, когда реальные миграции уже применены `dorutj_migrator` (см. JSDoc
+ * `postgres-search.adapter.integration.spec.ts`, тот же приём здесь) — DDL под ОТДЕЛЬНЫМ
+ * `migratorPool`, `db`/`pool` (`test`) остаются для самого теста.
+ */
+const MIGRATOR_DATABASE_URL = process.env.CATALOG_MIGRATOR_DATABASE_URL ?? buildMigratorUrl(TEST_DATABASE_URL)
+
+function buildMigratorUrl(appUrl: string): string {
+  try {
+    const url = new URL(appUrl)
+    url.username = 'dorutj_migrator'
+    url.password = 'dorutj_dev_only_password'
+    return url.toString()
+  } catch {
+    return appUrl
+  }
+}
+
 const MIGRATIONS_DIR = fileURLToPath(new URL('../../../migrations/', import.meta.url))
 const PROBE_TIMEOUT_MS = 1_500
 
@@ -89,6 +108,7 @@ async function isPostgresReachable(url: string): Promise<boolean> {
 }
 
 const postgresAvailable = await isPostgresReachable(TEST_DATABASE_URL)
+const migratorAvailable = postgresAvailable && (await isPostgresReachable(MIGRATOR_DATABASE_URL))
 
 const FIXED_CLOCK: Clock = { now: () => new Date('2026-01-01T00:00:00.000Z') }
 
@@ -103,19 +123,23 @@ function baseQuery(overrides: Partial<BboxQuery> = {}): BboxQuery {
   }
 }
 
-describe.skipIf(!postgresAvailable)('PostgresPharmacyMapAdapter.findPinsInBbox() — integration (DEFECT-FIX)', () => {
+describe.skipIf(!postgresAvailable || !migratorAvailable)('PostgresPharmacyMapAdapter.findPinsInBbox() — integration (DEFECT-FIX)', () => {
   let pool: Pool
   let db: NodePgDatabase
+  let migratorPool: Pool
   let adapter: PostgresPharmacyMapAdapter
 
   beforeAll(async () => {
     pool = new Pool({ connectionString: TEST_DATABASE_URL })
     db = drizzle(pool)
-    await migrate(db, { migrationsFolder: MIGRATIONS_DIR })
+    migratorPool = new Pool({ connectionString: MIGRATOR_DATABASE_URL })
+    // DDL — под ролью-владельцем `dorutj_migrator` (см. блок «ИСПРАВЛЕНО» в шапке файла).
+    await migrate(drizzle(migratorPool), { migrationsFolder: MIGRATIONS_DIR })
     adapter = new PostgresPharmacyMapAdapter(db, FIXED_CLOCK)
   })
 
   afterAll(async () => {
+    await migratorPool.end().catch(() => undefined)
     await pool.end().catch(() => undefined)
   })
 

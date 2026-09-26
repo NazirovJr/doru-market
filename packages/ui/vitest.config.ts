@@ -21,6 +21,10 @@ import { defineConfig } from 'vitest/config'
  * DTJ-406 расширяет `include` до `.ts` внутри `src/components` (`toast/use-toast.ts` — логика
  * без JSX) и добавляет `src/hooks/**` (`use-connection-status.ts`/`use-ui-circuit-breaker.ts`,
  * тикет DTJ-406 «Что сделать» п.7) — без этого их продуктовый код молча выпадал бы из порога 90%.
+ *
+ * DTJ-411 добавляет `src/twa/**` (слой темизации и хуков Telegram Mini App, тест-план тикета:
+ * «Порог покрытия — 90%») — без этого `is-twa-runtime.ts`/`use-telegram-theme.ts`/
+ * `use-main-button.ts`/`use-back-button.ts`/`telegram-webapp-types.ts` молча выпадали бы из порога.
  */
 const COVERAGE_THRESHOLD_PERCENT = 90
 
@@ -41,7 +45,13 @@ export default defineConfig({
       provider: 'v8',
       enabled: true,
       reporter: ['text', 'html'],
-      include: ['src/a11y/**/*.ts', 'src/components/**/*.tsx', 'src/components/**/*.ts', 'src/hooks/**/*.ts'],
+      include: [
+        'src/a11y/**/*.ts',
+        'src/components/**/*.tsx',
+        'src/components/**/*.ts',
+        'src/hooks/**/*.ts',
+        'src/twa/**/*.ts',
+      ],
       // `index.ts` — барабанный экспорт (D-27); фикстуры-нарушители — тестовые данные,
       // не продуктовая логика; `*.stories.tsx` — Storybook-демонстрация, не продуктовый код
       // (тикет DTJ-404: «90% для всех файлов .tsx (не генерируемых) в этом тикете»).

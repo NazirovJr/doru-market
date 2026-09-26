@@ -1,7 +1,19 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MedicineAutocomplete } from './MedicineAutocomplete'
+
+/**
+ * **Стабилизация под нагрузкой (см. отчёт задачи стабилизации тестов).** Раньше `wait(ms)` ждал
+ * РЕАЛЬНОЕ время через `setTimeout` в расчёте, что debounce SUT истечёт раньше фиксированного
+ * ожидания. Изолированно проходило, но под параллельным `turbo run test` (4 CPU, все пакеты
+ * монорепо разом) реальный таймер SUT срабатывал с задержкой от загрузки CPU — гейт падал
+ * нерегулярно. Фикс — `vi.useFakeTimers({ shouldAdvanceTime: true })` (тот же приём, что
+ * `apps/web` `search-bar.spec.tsx`/`use-search-suggestions.spec.tsx`, `ImportProgressBar.spec.tsx`
+ * DTJ-168): `wait(ms)` детерминированно продвигает виртуальные часы через
+ * `vi.advanceTimersByTimeAsync`, а `shouldAdvanceTime: true` оставляет `waitFor` рабочим для
+ * промисов `fetch`/TanStack Query, довешивающихся ПОСЛЕ срабатывания таймера debounce.
+ */
 
 type FetchImpl = (input: string) => Promise<Response>
 
@@ -26,10 +38,8 @@ function searchItem(tradeName: string): unknown {
   }
 }
 
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
+async function wait(ms: number): Promise<void> {
+  await vi.advanceTimersByTimeAsync(ms)
 }
 
 function renderAutocomplete(onChange = vi.fn()): void {
@@ -41,8 +51,13 @@ function renderAutocomplete(onChange = vi.fn()): void {
   )
 }
 
+beforeEach(() => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+})
+
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.useRealTimers()
 })
 
 /** DTJ-167 тест-план: «MedicineAutocomplete debounce не отправляет запрос на каждое нажатие клавиши». */
@@ -60,7 +75,9 @@ describe('<MedicineAutocomplete /> (DTJ-167)', () => {
 
     await wait(400)
 
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
     const [url] = fetchMock.mock.calls[0] as [string]
     expect(url).toContain(encodeURIComponent('цитра'))
   })

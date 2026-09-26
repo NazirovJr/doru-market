@@ -204,7 +204,6 @@
   "inventory.sync_row_error.duplicate_in_batch": "Duplicate row in the batch",
   "inventory.sync_row_error.ambiguous_date_format": "Ambiguous date format — use DD.MM.YYYY",
   "inventory.sync_row_error.missing_required_field": "A required field is missing",
-
   "support.category.order_not_received": "Order not received",
   "support.category.payment_issue": "Payment issue",
   "support.category.order_item_damaged_or_expired": "Item damaged or expired",
@@ -215,7 +214,6 @@
   "support.status.in_progress": "In progress",
   "support.status.resolved": "Resolved",
   "support.status.closed": "Closed",
-
   "admin.support.queue.title": "Support tickets",
   "admin.support.queue.loading": "Loading tickets…",
   "admin.support.queue.error": "Could not load tickets",
@@ -248,7 +246,6 @@
   "admin.support.author_role.pharmacist": "Pharmacist",
   "admin.support.author_role.pharmacy_admin": "Pharmacy admin",
   "admin.support.author_role.courier": "Courier",
-
   "customer.support.page_title": "My tickets",
   "customer.support.unauthenticated": "Log in to create a ticket or see your tickets.",
   "customer.support.contact_button": "Contact support",
@@ -260,7 +257,6 @@
   "customer.support.form.submit": "Send",
   "customer.support.form.submit_pending": "Sending…",
   "customer.support.form.success": "Your ticket has been sent. We'll respond soon.",
-
   "customer.returns.button.request_return": "Request a return",
   "customer.returns.form.reason_label": "Reason for return",
   "customer.returns.form.comment_label": "Comment (optional)",
@@ -474,7 +470,6 @@
   "admin.analytics_funnel.step.order_placed": "Order placed",
   "admin.analytics_funnel.conversion_from_previous": "{percent} of previous step",
   "admin.analytics_funnel.trend.title": "Realized savings trend",
-
   "ux.empty.search_no_results": "Nothing found. Check the spelling or widen the search radius.",
   "ux.empty.orders": "You don't have any orders yet.",
   "ux.empty.offers_pool": "No deliveries available right now.",
@@ -517,5 +512,22 @@
   "quantity.piece.other": "{count} pcs.",
   "ui.phone_input.incomplete_error": "Enter the full phone number",
   "ui.otp_input.group_label": "Confirmation code",
-  "ui.otp_input.cell_label": "Digit {index} of {total}"
+  "ui.otp_input.cell_label": "Digit {index} of {total}",
+  "ux.savings.badge_title": "Save {amount}",
+  "ux.savings.badge_explanation": "compared to the regular price",
+  "catalog.analogs.banner_message": "Same active ingredient — {substanceName} {dosage} — for {analogPrice} instead of {referencePrice} ({savingsPercent}% cheaper)",
+  "catalog.analogs.disclaimer": "This information is for reference only and does not replace advice from a doctor or pharmacist. Consult a specialist before switching medicines.",
+  "cart.add_item_cta": "Add to cart",
+  "ui.file_dropzone.placeholder_idle": "Drag a file here or tap \"Choose file\"",
+  "ui.file_dropzone.placeholder_dragging": "Drop the file here",
+  "ui.file_dropzone.select_button": "Choose file",
+  "ui.file_dropzone.selected_file": "Selected file: {name}",
+  "ui.file_dropzone.uploading_label": "Uploading file",
+  "ui.file_dropzone.preview_alt": "Preview of the uploaded file",
+  "ui.file_dropzone.error_invalid_type": "Invalid file type",
+  "ui.file_dropzone.error_too_large": "File is too large (maximum {maxSizeMb} MB)",
+  "ui.file_dropzone.quality_check_passed": "Passed",
+  "ui.file_dropzone.quality_check_failed": "Not passed",
+  "ui.audio_alert_player.default_label": "New event — attention required",
+  "ui.audio_alert_player.acknowledge_button": "Got it"
 }

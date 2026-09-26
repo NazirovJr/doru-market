@@ -105,7 +105,12 @@ describe.skipIf(!postgresAvailable)('AuditLogRepository (DTJ-374)', () => {
     const row = result.rows[0]
     if (row === undefined) throw new Error('audit_log row not found')
 
-    expect(row.category).toBe('role_grant')
+    // ИСПРАВЛЕНО (гейт CI): `baseInput()` выше вставляет `category: 'control_category_change'`
+    // (см. её собственный JSDoc-комментарий — намеренный выбор, 'role_grant' не был доступен
+    // в enum на момент написания теста) — ассерт ниже ошибочно сверял результат с ДРУГИМ
+    // значением ('role_grant'), которое этот тест никогда не писал. Тест обязан проверять
+    // round-trip ТОГО, что реально вставил (не значение из более позднего/другого сценария).
+    expect(row.category).toBe('control_category_change')
     expect(row.entity_type).toBe('user')
     expect(row.actor_user_id).toBe(actorUserId)
     expect(row.action).toBe('grant_platform_role')
