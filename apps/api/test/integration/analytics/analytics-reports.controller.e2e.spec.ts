@@ -52,6 +52,9 @@ interface OnboardingFunnelBody {
 const AUGUST_PERIOD = '2026-08'
 const AUGUST_START = new Date('2026-08-15T12:00:00.000Z')
 const MS_PER_HOUR = 3_600_000
+// АС2 в отдельном месяце: иначе среднее смешивается с заявками АС1 того же тенанта.
+const JULY_PERIOD = '2026-07'
+const JULY_START = new Date('2026-07-15T12:00:00.000Z')
 
 describe.skipIf(!postgresAvailable)('AnalyticsReportsController.topAnalogs — Supertest integration (DTJ-383)', () => {
   let pool: Pool
@@ -334,7 +337,7 @@ describe.skipIf(!postgresAvailable)('AnalyticsReportsController.onboardingFunnel
     const actorId = await seedUser('super_admin')
     const token = sign({ sub: superAdminId, role: 'super_admin', tenantId: operatorTenantId, pharmacyId: null, chainId: null })
     const id = randomUUID()
-    const submittedAt = AUGUST_START
+    const submittedAt = JULY_START
     const changesRequestedAt = new Date(submittedAt.getTime() + 20 * MS_PER_HOUR)
     const backToPendingAt = new Date(changesRequestedAt.getTime() + 15 * MS_PER_HOUR)
     const approvedAt = new Date(backToPendingAt.getTime() + 10 * MS_PER_HOUR)
@@ -354,7 +357,7 @@ describe.skipIf(!postgresAvailable)('AnalyticsReportsController.onboardingFunnel
     // формула считает паузу от changes_requested до СЛЕДУЮЩЕЙ записи лога, здесь это approve.
     void backToPendingAt
 
-    const res = await getOnboardingFunnel(token, tenantId, AUGUST_PERIOD)
+    const res = await getOnboardingFunnel(token, tenantId, JULY_PERIOD)
 
     expect(res.status).toBe(200)
     const body = (res.body as SuccessBody<readonly OnboardingFunnelBody[]>).data

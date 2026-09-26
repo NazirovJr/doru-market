@@ -89,10 +89,14 @@ describe.skipIf(!postgresAvailable)('AnalyticsModule — DI целиком + р�
       const { SharedKernelModule } = await import('@/shared-kernel/shared-kernel.module.js')
       const { DatabaseModule } = await import('@/infrastructure/database/database.module.js')
       const { RedisModule } = await import('@/infrastructure/redis/redis.module.js')
+      const { DomainEventsModule } = await import('@/common/events/domain-events.module.js')
+      const { AuditLogModule } = await import('@/common/audit/audit-log.module.js')
+      const { IdempotencyModule } = await import('@/common/idempotency/idempotency.module.js')
+      const { OrdersModule } = await import('@/modules/orders/orders.module.js')
       const { AnalyticsModule, AnalyticsFacade } = await import('@/modules/analytics/index.js')
 
       const moduleRef = await Test.createTestingModule({
-        imports: [AppConfigModule, LoggerModule, SharedKernelModule, DatabaseModule, RedisModule, AnalyticsModule],
+        imports: [AppConfigModule, LoggerModule, SharedKernelModule, DatabaseModule, RedisModule, DomainEventsModule, AuditLogModule, IdempotencyModule, OrdersModule, AnalyticsModule],
       }).compile()
 
       const facade = moduleRef.get(AnalyticsFacade)
@@ -134,10 +138,14 @@ describe.skipIf(!postgresAvailable)('AnalyticsModule — DI целиком + р�
     const { SharedKernelModule } = await import('@/shared-kernel/shared-kernel.module.js')
     const { DatabaseModule } = await import('@/infrastructure/database/database.module.js')
     const { RedisModule } = await import('@/infrastructure/redis/redis.module.js')
+    const { DomainEventsModule } = await import('@/common/events/domain-events.module.js')
+    const { AuditLogModule } = await import('@/common/audit/audit-log.module.js')
+    const { IdempotencyModule } = await import('@/common/idempotency/idempotency.module.js')
+    const { OrdersModule } = await import('@/modules/orders/orders.module.js')
     const { AnalyticsModule, AnalyticsFacade } = await import('@/modules/analytics/index.js')
 
     const moduleRef = await Test.createTestingModule({
-      imports: [AppConfigModule, LoggerModule, SharedKernelModule, DatabaseModule, RedisModule, AnalyticsModule],
+      imports: [AppConfigModule, LoggerModule, SharedKernelModule, DatabaseModule, RedisModule, DomainEventsModule, AuditLogModule, IdempotencyModule, OrdersModule, AnalyticsModule],
     }).compile()
     const facade = moduleRef.get(AnalyticsFacade)
 
