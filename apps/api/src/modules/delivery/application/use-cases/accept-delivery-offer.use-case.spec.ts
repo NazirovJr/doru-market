@@ -98,6 +98,7 @@ function makeUseCase(params: { offer?: DeliveryOffer | null; courier?: Courier |
   const assignments: DeliveryAssignmentRepositoryPort = {
     findById: vi.fn().mockResolvedValue(makeAssignment()),
     findActiveByOrderId: vi.fn().mockResolvedValue(null),
+    findByCourierAndStatuses: vi.fn().mockResolvedValue([]),
     findByOrderId: vi.fn().mockResolvedValue(null),
     hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(false),
     claimUnassigned: vi.fn().mockResolvedValue(true),
@@ -116,14 +117,20 @@ function makeUseCase(params: { offer?: DeliveryOffer | null; courier?: Courier |
     tenantId: 'tenant-1',
     pharmacyId: PHARMACY_ID,
     medicineIds: [],
+    customerId: 'customer-1',
     itemsCount: 1,
     paymentMethod: 'cash_courier',
     deliveryGeoPoint: null,
     deliveryFeeDiram: 1000n,
+    totalAmountDiram: 1000n,
+    deliveryAddress: 'Addr',
+    deliveryLandmark: null,
+    handoverOtpId: null,
   }
   const orders: DeliveryOrdersPort = {
     getOrderForRating: vi.fn().mockResolvedValue(null),
     getDeliveryContext: vi.fn().mockResolvedValue(orderContext),
+    markOrderDelivered: vi.fn(),
   }
   const geoPoint = GeoPoint.create(38.5598, 68.787)
   if (!geoPoint.ok) throw new Error('fixture error')

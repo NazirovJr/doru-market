@@ -79,6 +79,7 @@ function makeService(params: {
   const assignments: DeliveryAssignmentRepositoryPort = {
     findById: vi.fn().mockResolvedValue(params.assignment === undefined ? makeAssignment() : params.assignment),
     findActiveByOrderId: vi.fn().mockResolvedValue(null),
+    findByCourierAndStatuses: vi.fn().mockResolvedValue([]),
     findByOrderId: vi.fn().mockResolvedValue(null),
     hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(false),
     claimUnassigned: vi.fn().mockResolvedValue(true),
@@ -103,7 +104,21 @@ function makeService(params: {
   const geo = GeoPoint.create(38.5598, 68.787)
   if (!geo.ok) throw new Error('fixture error')
   const context: AssignmentContext = {
-    order: { orderId: ORDER_ID, tenantId: 'tenant-1', pharmacyId: 'pharmacy-1', medicineIds: [], itemsCount: 1, paymentMethod: 'cash_courier', deliveryGeoPoint: null, deliveryFeeDiram: 1000n },
+    order: {
+      orderId: ORDER_ID,
+      tenantId: 'tenant-1',
+      pharmacyId: 'pharmacy-1',
+      customerId: 'customer-1',
+      medicineIds: [],
+      itemsCount: 1,
+      paymentMethod: 'cash_courier',
+      deliveryGeoPoint: null,
+      deliveryFeeDiram: 1000n,
+      totalAmountDiram: 1000n,
+      deliveryAddress: 'Addr',
+      deliveryLandmark: null,
+      handoverOtpId: null,
+    },
     pharmacy: { id: 'pharmacy-1', name: 'Pharmacy', addressText: 'Addr', geoPoint: geo.value, chainId: null },
     requiresColdChain: false,
     candidateQuery: { tenantId: 'tenant-1', pharmacyChainId: null, pharmacyGeoPoint: geo.value, requiresColdChain: false },

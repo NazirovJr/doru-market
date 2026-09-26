@@ -115,6 +115,11 @@ export class DeliveryAssignment {
     return this._courierId
   }
 
+  // ДОБАВЛЕНО (DTJ-317) — DeliverUseCase верифицирует OTP по этому id (setHandoverOtp() в depart-to-customer).
+  get handoverOtpId(): string | null {
+    return this._handoverOtpId
+  }
+
   /** SRS-DOM-036 — `hasActiveNonTerminalAssignment` уже проверен вызывающим кодом через порт
    * (см. JSDoc команды); АС3 тикета: дубль отклоняется без обращения к БД в этом тесте. */
   static create(cmd: DeliveryAssignmentCreateCommand): Result<DeliveryAssignment, DomainError> {

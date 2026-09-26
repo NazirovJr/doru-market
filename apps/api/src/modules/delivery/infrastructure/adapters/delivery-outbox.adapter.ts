@@ -43,6 +43,10 @@ function toJsonSafePayload(event: DeliveryDomainEvent): Record<string, unknown> 
   return { ...event }
 }
 
+// Плоский диспетчер по discriminated union (10 вариантов -> 3 корзины), не вложенная логика;
+// exhaustiveness-check (assertUnreachable/never) НУЖЕН для безопасности при добавлении нового
+// варианта события — важнее развязки метрики complexity.
+// eslint-disable-next-line complexity -- см. комментарий выше
 function resolveAggregateRef(event: DeliveryDomainEvent): AggregateRef {
   switch (event.type) {
     case 'DeliveryOfferCreatedEvent':
@@ -52,6 +56,7 @@ function resolveAggregateRef(event: DeliveryDomainEvent): AggregateRef {
     case 'OrderRefusedAtDoorEvent':
     case 'CourierAssignedEvent':
     case 'SlaBreachedEvent':
+    case 'OrderDeliveredEvent':
       return { aggregateType: AGGREGATE_TYPE_DELIVERY_ASSIGNMENT, aggregateId: event.deliveryAssignmentId }
     case 'CashReconciliationDiscrepancyEvent':
       return { aggregateType: AGGREGATE_TYPE_COURIER_SHIFT, aggregateId: event.courierShiftId }

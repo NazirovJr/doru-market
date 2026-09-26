@@ -8,19 +8,30 @@ export interface OrderRatingContext {
   readonly status: string
 }
 
-/** DTJ-315 — см. `OrdersFacade.getDeliverySnapshot` (tenant-независимый, `orderId` — единственный вход). */
 export interface DeliveryOrderContext {
   readonly orderId: string
   readonly tenantId: string
   readonly pharmacyId: string
+  readonly customerId: string
   readonly medicineIds: readonly string[]
   readonly itemsCount: number
   readonly paymentMethod: string
   readonly deliveryGeoPoint: GeoPoint | null
   readonly deliveryFeeDiram: bigint
+  readonly totalAmountDiram: bigint
+  readonly deliveryAddress: string
+  readonly deliveryLandmark: string | null
+  readonly handoverOtpId: string | null
+}
+
+export interface MarkOrderDeliveredInput {
+  readonly orderId: string
+  readonly tenantId: string
+  readonly now: Date
 }
 
 export interface DeliveryOrdersPort {
   getOrderForRating(tenantId: string, orderId: string): Promise<OrderRatingContext | null>
   getDeliveryContext(orderId: string): Promise<DeliveryOrderContext | null>
+  markOrderDelivered(input: MarkOrderDeliveredInput): Promise<void>
 }

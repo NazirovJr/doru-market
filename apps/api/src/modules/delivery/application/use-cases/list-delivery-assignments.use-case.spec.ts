@@ -43,6 +43,7 @@ function makeUseCase(params: {
   const assignments: DeliveryAssignmentRepositoryPort = {
     findById: vi.fn().mockResolvedValue(null),
     findActiveByOrderId: vi.fn().mockResolvedValue(null),
+    findByCourierAndStatuses: vi.fn().mockResolvedValue([]),
     findByOrderId: vi.fn().mockResolvedValue(null),
     hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(false),
     save: vi.fn().mockResolvedValue(undefined),
@@ -56,9 +57,24 @@ function makeUseCase(params: {
     getDeliveryContext: vi.fn().mockImplementation((orderId: string) => {
       const chainId = params.pharmacyChainByOrder[orderId]
       if (chainId === undefined) return Promise.resolve(null)
-      const context: DeliveryOrderContext = { orderId, tenantId: 't', pharmacyId: `pharmacy-${orderId}`, medicineIds: [], itemsCount: 1, paymentMethod: 'cash_courier', deliveryGeoPoint: null, deliveryFeeDiram: 0n }
+      const context: DeliveryOrderContext = {
+        orderId,
+        tenantId: 't',
+        pharmacyId: `pharmacy-${orderId}`,
+        customerId: 'customer-1',
+        medicineIds: [],
+        itemsCount: 1,
+        paymentMethod: 'cash_courier',
+        deliveryGeoPoint: null,
+        deliveryFeeDiram: 0n,
+        totalAmountDiram: 0n,
+        deliveryAddress: 'Addr',
+        deliveryLandmark: null,
+        handoverOtpId: null,
+      }
       return Promise.resolve(context)
     }),
+    markOrderDelivered: vi.fn(),
   }
   const findByIds = vi.fn().mockImplementation((pharmacyIds: readonly string[]) => {
     const locations: PharmacyLocation[] = pharmacyIds.map((pharmacyId) => {

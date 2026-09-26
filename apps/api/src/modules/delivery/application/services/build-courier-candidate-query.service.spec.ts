@@ -17,7 +17,21 @@ function geo(): GeoPoint {
 }
 
 function makeOrderContext(medicineIds: readonly string[]): DeliveryOrderContext {
-  return { orderId: ORDER_ID, tenantId: 'tenant-1', pharmacyId: PHARMACY_ID, medicineIds, itemsCount: 1, paymentMethod: 'cash_courier', deliveryGeoPoint: null, deliveryFeeDiram: 1000n }
+  return {
+    orderId: ORDER_ID,
+    tenantId: 'tenant-1',
+    pharmacyId: PHARMACY_ID,
+    customerId: 'customer-1',
+    medicineIds,
+    itemsCount: 1,
+    paymentMethod: 'cash_courier',
+    deliveryGeoPoint: null,
+    deliveryFeeDiram: 1000n,
+    totalAmountDiram: 1000n,
+    deliveryAddress: 'Addr',
+    deliveryLandmark: null,
+    handoverOtpId: null,
+  }
 }
 
 function makeMedicineSnapshot(overrides: Partial<MedicineSnapshot> = {}): MedicineSnapshot {
@@ -42,6 +56,7 @@ function makeService(params: {
   const orders: DeliveryOrdersPort = {
     getOrderForRating: vi.fn().mockResolvedValue(null),
     getDeliveryContext: vi.fn().mockResolvedValue(params.order === undefined ? makeOrderContext(['med-1']) : params.order),
+    markOrderDelivered: vi.fn(),
   }
   const pharmacy: PharmacyLocation = { id: PHARMACY_ID, name: 'P', addressText: 'A', geoPoint: geo(), chainId: 'chain-1' }
   const pharmacies: PharmacyLookupPort = { findById: vi.fn().mockResolvedValue(params.pharmacy === undefined ? pharmacy : params.pharmacy), findByIds: vi.fn().mockResolvedValue([]) }

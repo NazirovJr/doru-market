@@ -84,10 +84,12 @@ function makeUseCase(params: {
   const orders: DeliveryOrdersPort = {
     getOrderForRating: vi.fn().mockResolvedValue(params.order),
     getDeliveryContext: vi.fn().mockResolvedValue(null),
+    markOrderDelivered: vi.fn(),
   }
   const assignments: DeliveryAssignmentRepositoryPort = {
     findById: vi.fn().mockResolvedValue(null),
     findActiveByOrderId: vi.fn().mockResolvedValue(null),
+    findByCourierAndStatuses: vi.fn().mockResolvedValue([]),
     findByOrderId: vi.fn().mockResolvedValue(params.assignment === undefined ? makeDeliveredAssignment() : params.assignment),
     hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(false),
     claimUnassigned: vi.fn().mockResolvedValue(true),

@@ -76,6 +76,7 @@ describe('GetPendingDeliveryOffersUseCase', () => {
     const assignments: DeliveryAssignmentRepositoryPort = {
       findById: vi.fn().mockResolvedValue(makeAssignment(true)),
       findActiveByOrderId: vi.fn().mockResolvedValue(null),
+    findByCourierAndStatuses: vi.fn().mockResolvedValue([]),
       findByOrderId: vi.fn().mockResolvedValue(null),
       hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(false),
       claimUnassigned: vi.fn(),
@@ -96,12 +97,17 @@ describe('GetPendingDeliveryOffersUseCase', () => {
       tenantId: 'tenant-1',
       pharmacyId: 'pharmacy-1',
       medicineIds: [],
+      customerId: 'customer-1',
       itemsCount: 3,
       paymentMethod: 'cash_courier',
       deliveryGeoPoint: null,
       deliveryFeeDiram: 1000n,
+      totalAmountDiram: 1000n,
+      deliveryAddress: 'Addr',
+      deliveryLandmark: null,
+      handoverOtpId: null,
     }
-    const orders: DeliveryOrdersPort = { getOrderForRating: vi.fn().mockResolvedValue(null), getDeliveryContext: vi.fn().mockResolvedValue(orderContext) }
+    const orders: DeliveryOrdersPort = { getOrderForRating: vi.fn().mockResolvedValue(null), getDeliveryContext: vi.fn().mockResolvedValue(orderContext), markOrderDelivered: vi.fn() }
     const pharmacyLocation: PharmacyLocation = { id: 'pharmacy-1', name: 'Pharmacy', addressText: 'Addr', geoPoint: geo(), chainId: null }
     const pharmacies: PharmacyLookupPort = { findById: vi.fn().mockResolvedValue(pharmacyLocation), findByIds: vi.fn().mockResolvedValue([]) }
     const useCase = new GetPendingDeliveryOffersUseCase(offers, assignments, couriers, orders, pharmacies)
@@ -128,6 +134,7 @@ describe('GetPendingDeliveryOffersUseCase', () => {
     const assignments: DeliveryAssignmentRepositoryPort = {
       findById: vi.fn(),
       findActiveByOrderId: vi.fn(),
+      findByCourierAndStatuses: vi.fn().mockResolvedValue([]),
       findByOrderId: vi.fn(),
       hasActiveAssignmentForCourier: vi.fn(),
       claimUnassigned: vi.fn(),
@@ -137,7 +144,7 @@ describe('GetPendingDeliveryOffersUseCase', () => {
       save: vi.fn(),
     }
     const couriers: CourierRepositoryPort = { findById: vi.fn(), findByUserId: vi.fn().mockResolvedValue(null), save: vi.fn() }
-    const orders: DeliveryOrdersPort = { getOrderForRating: vi.fn(), getDeliveryContext: vi.fn() }
+    const orders: DeliveryOrdersPort = { getOrderForRating: vi.fn(), getDeliveryContext: vi.fn(), markOrderDelivered: vi.fn() }
     const pharmacies: PharmacyLookupPort = { findById: vi.fn(), findByIds: vi.fn() }
     const useCase = new GetPendingDeliveryOffersUseCase(offers, assignments, couriers, orders, pharmacies)
 

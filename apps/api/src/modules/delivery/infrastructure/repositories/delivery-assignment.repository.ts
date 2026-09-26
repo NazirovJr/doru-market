@@ -11,6 +11,7 @@ import {
   TERMINAL_DELIVERY_ASSIGNMENT_STATUSES,
   type AssignUnassignedInput,
   type DeliveryAssignmentRepositoryPort,
+  type FindByCourierAndStatusesInput,
   type FindByStatusesInput,
 } from '@/modules/delivery/application/ports/delivery-assignment.repository.port.js'
 import type { DeliveryUnitOfWorkTx } from '@/modules/delivery/application/ports/delivery-unit-of-work.port.js'
@@ -104,6 +105,32 @@ export class DrizzleDeliveryAssignmentRepository implements DeliveryAssignmentRe
     const conditions = [inArray(deliveryAssignments.status, [...statuses])]
     if (cursor !== null) {
       // createdAt DESC, id DESC — устойчивый tie-break на одинаковый createdAt (тот же приём, что courier-earnings.repository.ts).
+      const keysetCondition = or(
+        lt(deliveryAssignments.createdAt, cursor.createdAt),
+        and(eq(deliveryAssignments.createdAt, cursor.createdAt), lt(deliveryAssignments.id, cursor.id)),
+      )
+      if (keysetCondition !== undefined) {
+        conditions.push(keysetCondition)
+      }
+    }
+    const rows = await client
+      .select()
+      .from(deliveryAssignments)
+      .where(and(...conditions))
+      .orderBy(desc(deliveryAssignments.createdAt), desc(deliveryAssignments.id))
+      .limit(limit)
+    return rows.map(toDomain)
+  }
+
+  // ДОБАВЛЕНО (DTJ-317) — 1:1 с findByStatuses, + courierId (GET /delivery-assignments/mine).
+  public async findByCourierAndStatuses(
+    input: FindByCourierAndStatusesInput,
+    tx?: DeliveryUnitOfWorkTx,
+  ): Promise<readonly DeliveryAssignment[]> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const { courierId, statuses, limit, cursor } = input
+    const conditions = [eq(deliveryAssignments.courierId, courierId), inArray(deliveryAssignments.status, [...statuses])]
+    if (cursor !== null) {
       const keysetCondition = or(
         lt(deliveryAssignments.createdAt, cursor.createdAt),
         and(eq(deliveryAssignments.createdAt, cursor.createdAt), lt(deliveryAssignments.id, cursor.id)),

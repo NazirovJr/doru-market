@@ -65,6 +65,7 @@ function makeUseCase(params: { courier?: Courier | null; assignment?: DeliveryAs
   const assignments: DeliveryAssignmentRepositoryPort = {
     findById: vi.fn().mockResolvedValue(params.assignment === undefined ? makeAssignment() : params.assignment),
     findActiveByOrderId: vi.fn().mockResolvedValue(null),
+    findByCourierAndStatuses: vi.fn().mockResolvedValue([]),
     findByOrderId: vi.fn().mockResolvedValue(null),
     hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(false),
     save: assignmentsSave,

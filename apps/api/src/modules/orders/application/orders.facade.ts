@@ -100,12 +100,17 @@ export interface DeliverySnapshot {
   readonly orderId: string
   readonly tenantId: string
   readonly pharmacyId: string
+  readonly customerId: string
   readonly medicineIds: readonly string[]
   readonly itemsCount: number
   readonly paymentMethod: OrderPaymentMethod
   readonly deliveryGeoPoint: GeoPoint | null
   // Стоимость доставки, зафиксированная на checkout (Order.deliveryFee — readonly, тариф после не пересчитывается).
   readonly deliveryFeeDiram: bigint
+  readonly totalAmountDiram: bigint
+  readonly deliveryAddress: string
+  readonly deliveryLandmark: string | null
+  readonly handoverOtpId: string | null
 }
 
 @Injectable()
@@ -140,11 +145,16 @@ export class OrdersFacade {
       orderId: order.id,
       tenantId: order.tenantId,
       pharmacyId: order.pharmacyId,
+      customerId: order.customerId,
       medicineIds: order.items.map((item) => item.medicineId),
       itemsCount: order.items.length,
       paymentMethod: order.paymentMethod,
       deliveryGeoPoint: order.deliveryGeoPoint,
       deliveryFeeDiram: order.deliveryFee.diram,
+      totalAmountDiram: order.totalAmount.diram,
+      deliveryAddress: order.deliveryAddress,
+      deliveryLandmark: order.deliveryLandmark,
+      handoverOtpId: order.toSnapshot().handoverOtpId,
     }
   }
 

@@ -66,7 +66,21 @@ function makePharmacy(id: string, lat: number, chainId: string | null = null): P
 }
 
 function makeOrderContext(orderId: string, pharmacyId: string): DeliveryOrderContext {
-  return { orderId, tenantId: 'tenant-1', pharmacyId, medicineIds: [], itemsCount: 1, paymentMethod: 'cash_courier', deliveryGeoPoint: null, deliveryFeeDiram: 1000n }
+  return {
+    orderId,
+    tenantId: 'tenant-1',
+    pharmacyId,
+    customerId: 'customer-1',
+    medicineIds: [],
+    itemsCount: 1,
+    paymentMethod: 'cash_courier',
+    deliveryGeoPoint: null,
+    deliveryFeeDiram: 1000n,
+    totalAmountDiram: 1000n,
+    deliveryAddress: 'Addr',
+    deliveryLandmark: null,
+    handoverOtpId: null,
+  }
 }
 
 interface SetupInput {
@@ -85,6 +99,7 @@ function makeUseCase(input: SetupInput = {}): GetAvailableDeliveryPoolUseCase {
   const assignments: DeliveryAssignmentRepositoryPort = {
     findById: vi.fn().mockResolvedValue(null),
     findActiveByOrderId: vi.fn().mockResolvedValue(null),
+    findByCourierAndStatuses: vi.fn().mockResolvedValue([]),
     findByOrderId: vi.fn().mockResolvedValue(null),
     hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(false),
     save: vi.fn().mockResolvedValue(undefined),
@@ -98,6 +113,7 @@ function makeUseCase(input: SetupInput = {}): GetAvailableDeliveryPoolUseCase {
   const orders: DeliveryOrdersPort = {
     getOrderForRating: vi.fn().mockResolvedValue(null),
     getDeliveryContext: vi.fn().mockImplementation((orderId: string) => Promise.resolve(orderContexts[orderId] ?? null)),
+    markOrderDelivered: vi.fn(),
   }
   const pharmacyLookup: PharmacyLookupPort = {
     findById: vi.fn().mockImplementation((pharmacyId: string) => Promise.resolve(pharmacies[pharmacyId] ?? null)),
