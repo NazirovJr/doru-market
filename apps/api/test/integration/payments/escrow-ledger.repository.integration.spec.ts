@@ -34,6 +34,21 @@ import { Money } from '@/shared-kernel/domain/value-objects/money.vo.js'
 const TEST_DATABASE_URL =
   process.env.PAYMENTS_TEST_DATABASE_URL ?? process.env.DATABASE_URL ?? 'postgres://test:test@localhost:5432/dorutj_test'
 
+function withCredentials(url: string, username: string, password: string): string {
+  try {
+    const parsed = new URL(url)
+    parsed.username = username
+    parsed.password = password
+    return parsed.toString()
+  } catch {
+    return url
+  }
+}
+
+// escrow_ledger append-only — test(→app_role) не может DELETE, уборка через dorutj_migrator (тот же приём, что audit-log.controller.integration.spec.ts).
+const MIGRATOR_DATABASE_URL =
+  process.env.APP_ROLE_MIGRATOR_DATABASE_URL ?? withCredentials(TEST_DATABASE_URL, 'dorutj_migrator', 'dorutj_dev_only_password')
+
 const PROBE_TIMEOUT_MS = 1_500
 
 async function isPostgresReachable(url: string): Promise<boolean> {
@@ -87,6 +102,7 @@ const appRoleAvailable = postgresAvailable && (await isAppRoleGrantedCorrectly(T
 
 describe.skipIf(!postgresAvailable)('EscrowLedgerRepository (DTJ-240)', () => {
   let pool: Pool
+  let migratorPool: Pool
   let repository: DrizzleEscrowLedgerRepository
   let tenantId: string
   let customerId: string
@@ -98,6 +114,7 @@ describe.skipIf(!postgresAvailable)('EscrowLedgerRepository (DTJ-240)', () => {
 
   beforeAll(async () => {
     pool = new Pool({ connectionString: TEST_DATABASE_URL })
+    migratorPool = new Pool({ connectionString: MIGRATOR_DATABASE_URL })
     const db = drizzle(pool)
     repository = new DrizzleEscrowLedgerRepository(db)
 
@@ -125,12 +142,14 @@ describe.skipIf(!postgresAvailable)('EscrowLedgerRepository (DTJ-240)', () => {
     await pool.query('DELETE FROM tenants WHERE id = $1', [tenantId])
     await pool.query('DELETE FROM tenants WHERE id = $1', [otherTenantId])
     await pool.end().catch(() => undefined)
+    await migratorPool.end().catch(() => undefined)
   })
 
   afterEach(async () => {
     // Правило 5 AGENTS.md: чистим DELETE по своим строкам, не TRUNCATE ... CASCADE.
+    // escrow_ledger — через migratorPool (см. её JSDoc выше), orders — обычная таблица, test-роли достаточно.
     for (const orderId of createdOrderIds.splice(0)) {
-      await pool.query('DELETE FROM escrow_ledger WHERE order_id = $1', [orderId])
+      await migratorPool.query('DELETE FROM escrow_ledger WHERE order_id = $1', [orderId])
       await pool.query('DELETE FROM orders WHERE id = $1', [orderId])
     }
   })
@@ -177,10 +196,11 @@ describe.skipIf(!postgresAvailable)('EscrowLedgerRepository (DTJ-240)', () => {
     const found = await repository.findByOrderId(tenantId, orderId)
 
     expect(found).toHaveLength(1)
-    expect(found[0]?.entryType).toBe('hold_created')
-    expect(found[0]?.direction).toBe('debit')
-    expect(found[0]?.amountDiram.diram).toBe(10_000n)
-    expect(found[0]?.paymentTransactionRef).toBe('bank-tx-1')
+    expect(found[0]?.entry.entryType).toBe('hold_created')
+    expect(found[0]?.entry.direction).toBe('debit')
+    expect(found[0]?.entry.amountDiram.diram).toBe(10_000n)
+    expect(found[0]?.entry.paymentTransactionRef).toBe('bank-tx-1')
+    expect(found[0]?.createdAt).toBeInstanceOf(Date)
   })
 
   it('sumByType — суммирует ТОЛЬКО совпадающий entryType этого заказа (bigint, целые дирамы)', async () => {
@@ -244,15 +264,15 @@ describe.skipIf(!postgresAvailable)('EscrowLedgerRepository (DTJ-240)', () => {
       )
     }
 
-    const entries = await repository.findByOrderId(tenantId, orderId)
-    expect(EscrowLedger.isBalanced(entries)).toBe(true)
+    const records = await repository.findByOrderId(tenantId, orderId)
+    expect(EscrowLedger.isBalanced(records.map((r) => r.entry))).toBe(true)
   })
 
   it('cash_courier заказ — findByOrderId возвращает пустой массив (§4.6, escrow_ledger никогда не заполняется для наличных)', async () => {
     const orderId = await seedOrder('cash_courier')
-    const entries = await repository.findByOrderId(tenantId, orderId)
-    expect(entries).toEqual([])
-    expect(EscrowLedger.isBalanced(entries)).toBe(true)
+    const records = await repository.findByOrderId(tenantId, orderId)
+    expect(records).toEqual([])
+    expect(EscrowLedger.isBalanced(records.map((r) => r.entry))).toBe(true)
   })
 
   it('ТЕНАНТ-ИЗОЛЯЦИЯ (замечание CTO, SRS-API-043/046): записи журнала заказа тенанта А не видны при запросе с tenantId тенанта Б', async () => {
@@ -280,6 +300,39 @@ describe.skipIf(!postgresAvailable)('EscrowLedgerRepository (DTJ-240)', () => {
     const foreignView = await repository.findByOrderId(otherTenantId, orderId)
     expect(foreignView).toEqual([])
     expect(await repository.sumByType(otherTenantId, orderId, 'hold_created')).toBe(0n)
+  })
+
+  it('DTJ-357 — findByOrderId(null, orderId) платформенный, БЕЗ тенант-скоупа (admin-расследование, createdAt ASC)', async () => {
+    const orderId = await seedOrder('alif_mobi')
+    await repository.append(
+      EscrowLedgerEntry.create({
+        orderId,
+        entryType: 'hold_created',
+        direction: 'debit',
+        amountDiram: Money.fromDiram(7_000n),
+        paymentTransactionRef: null,
+        reason: null,
+        actorUserId: null,
+      }),
+    )
+    await repository.append(
+      EscrowLedgerEntry.create({
+        orderId,
+        entryType: 'platform_fee_captured',
+        direction: 'credit',
+        amountDiram: Money.fromDiram(500n),
+        paymentTransactionRef: null,
+        reason: null,
+        actorUserId: null,
+      }),
+    )
+
+    const platformView = await repository.findByOrderId(null, orderId)
+
+    expect(platformView).toHaveLength(2)
+    expect(platformView[0]?.entry.entryType).toBe('hold_created')
+    expect(platformView[1]?.entry.entryType).toBe('platform_fee_captured')
+    expect(platformView[0]!.createdAt.getTime()).toBeLessThanOrEqual(platformView[1]!.createdAt.getTime())
   })
 
   describe('AC5 — привилегии роли БД (SRS-DB-024/030)', () => {

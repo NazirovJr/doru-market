@@ -129,6 +129,13 @@ class FakeInventorySyncBatchRepository implements InventorySyncBatchRepository {
   findBySourceUploadId(_sourceUploadId: string): ReturnType<InventorySyncBatchRepository['findBySourceUploadId']> {
     throw new Error('not used in detect-stuck tests')
   }
+
+  findPharmacyIdsWithActivitySince(
+    _pharmacyIds: readonly string[],
+    _sinceDate: Date,
+  ): ReturnType<InventorySyncBatchRepository['findPharmacyIdsWithActivitySince']> {
+    throw new Error('not used in detect-stuck tests')
+  }
 }
 
 class FakeInventoryOutbox implements InventoryOutboxPort {

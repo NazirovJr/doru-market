@@ -106,9 +106,8 @@ export class RegenerateHandoverOtpUseCase {
     const existingCount = await this.assertRateLimit(cmd, currentOtpId)
 
     const now = this.clock.now()
-    const newHandoverOtp = await this.issueNewHandoverOtp(order.id, cmd.actor.tenantId, now)
     const result = await this.unitOfWork.run((tx) =>
-      this.persist({ order, newHandoverOtp, regenerationsUsed: existingCount, tenantId: cmd.actor.tenantId, now, tx }),
+      this.persist({ order, currentOtpId, regenerationsUsed: existingCount, tenantId: cmd.actor.tenantId, now, tx }),
     )
 
     await this.auditLog.write({
@@ -125,17 +124,18 @@ export class RegenerateHandoverOtpUseCase {
     return result
   }
 
-  /** `order.switchHandoverOtp()` + событие + `save`/`outbox` — ОДНА транзакция, 1:1 приём
-   *  `CompletePickingUseCase.persist` (событие строится ЗДЕСЬ, не в `Order`, см. JSDoc файла). */
+  // DTJ-309 foundIssue: старая строка ДОЛЖНА консьюмиться ДО вставки новой в ТОЙ ЖЕ транзакции — иначе ux_otp_codes_uniq_active всегда падает.
   private async persist(input: {
     readonly order: Order
-    readonly newHandoverOtp: { readonly id: string; readonly code: string; readonly expiresAt: Date }
+    readonly currentOtpId: string
     readonly regenerationsUsed: number
     readonly tenantId: string
     readonly now: Date
     readonly tx: OrderUnitOfWorkTx
   }): Promise<RegenerateHandoverOtpResult> {
-    const { order, newHandoverOtp, regenerationsUsed, tenantId, now, tx } = input
+    const { order, currentOtpId, regenerationsUsed, tenantId, now, tx } = input
+    await this.otpCodesRepository.markConsumed(tx, currentOtpId, now)
+    const newHandoverOtp = await this.issueNewHandoverOtp({ orderId: order.id, tenantId, now, tx })
     order.switchHandoverOtp(newHandoverOtp.id, now)
     await this.orderRepository.save(order, tx)
     const event = {
@@ -187,26 +187,31 @@ export class RegenerateHandoverOtpUseCase {
     return existingCount
   }
 
-  /** Выпускает новую строку `otp_codes` (append-only) — 1:1 приём `CompletePickingUseCase.issueHandoverOtp`. */
-  private async issueNewHandoverOtp(
-    orderId: string,
-    tenantId: string,
-    now: Date,
-  ): Promise<{ readonly id: string; readonly code: string; readonly expiresAt: Date }> {
+  // Объект-параметр — C5 max-params (порог 3); теперь ВНУТРИ tx (см. persist выше).
+  private async issueNewHandoverOtp(input: {
+    readonly orderId: string
+    readonly tenantId: string
+    readonly now: Date
+    readonly tx: OrderUnitOfWorkTx
+  }): Promise<{ readonly id: string; readonly code: string; readonly expiresAt: Date }> {
+    const { orderId, tenantId, now, tx } = input
     const id = this.idGenerator.next()
     const { code } = this.otpGenerator.generate(HANDOVER_OTP_PURPOSE)
     const codeHash = hashOtpCode(code, id)
     const expiresAt = addSeconds(now, HANDOVER_OTP_TTL_SECONDS)
-    await this.otpCodesRepository.create({
-      id,
-      tenantId,
-      subjectRef: orderId,
-      purpose: HANDOVER_OTP_PURPOSE,
-      codeHash,
-      plainCode: code,
-      issuedAt: now,
-      expiresAt,
-    })
+    await this.otpCodesRepository.create(
+      {
+        id,
+        tenantId,
+        subjectRef: orderId,
+        purpose: HANDOVER_OTP_PURPOSE,
+        codeHash,
+        plainCode: code,
+        issuedAt: now,
+        expiresAt,
+      },
+      tx,
+    )
     return { id, code, expiresAt }
   }
 }

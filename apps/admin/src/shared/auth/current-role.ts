@@ -88,3 +88,20 @@ export function getCurrentTenantId(): string | null {
     return null
   }
 }
+
+// DTJ-364: chainId ≠ tenantId (независимые claim'ы), тот же приём decode, что tenantId выше.
+export function decodeChainIdFromAccessToken(token: string | null): string | null {
+  if (token === null || token.length === 0) {
+    return null
+  }
+  const chainId = decodeJwtPayload(token)?.chainId
+  return typeof chainId === 'string' && chainId.length > 0 ? chainId : null
+}
+
+export function getCurrentChainId(): string | null { // обёртка для staff-accounts-page.tsx (DTJ-364)
+  try {
+    return decodeChainIdFromAccessToken(localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY))
+  } catch {
+    return null
+  }
+}

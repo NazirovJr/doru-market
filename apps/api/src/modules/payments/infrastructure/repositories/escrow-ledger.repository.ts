@@ -34,6 +34,8 @@
  * результат/`0n`
  * (SRS-API-046: чужая финансовая запись не подтверждается как существующая).
  *
+ * `findByOrderId(null, orderId)` (DTJ-357) — платформенный, БЕЗ `EXISTS`-условия, только `admin`-путь, см. JSDoc порта.
+ *
  * НЕ забинжен ни к одному use case в этом тикете (нет вызывающего кода — DTJ-244/245/246 вне
  * периметра) — тот же приём, что `MockBankProvider`/`MockBankWebhookVerifierAdapter`
  * (DTJ-238): провайдер зарегистрирован в `payments.module.ts` заранее, DI-граф резолвится
@@ -45,6 +47,7 @@ import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.pr
 import { escrowLedger } from '@/db/schema/payments.js'
 import { orders } from '@/db/schema/orders.js'
 import {
+  type EscrowLedgerEntryRecord,
   type EscrowLedgerRepository,
   type EscrowLedgerUnitOfWorkTx,
 } from '@/modules/payments/application/ports/escrow-ledger-repository.port.js'
@@ -72,13 +75,14 @@ export class DrizzleEscrowLedgerRepository implements EscrowLedgerRepository {
     })
   }
 
-  public async findByOrderId(tenantId: string, orderId: string): Promise<EscrowLedgerEntry[]> {
+  public async findByOrderId(tenantId: string | null, orderId: string): Promise<readonly EscrowLedgerEntryRecord[]> {
+    const scopeCondition = tenantId === null ? undefined : orderBelongsToTenant(tenantId, orderId)
     const rows = await this.db
       .select()
       .from(escrowLedger)
-      .where(and(eq(escrowLedger.orderId, orderId), orderBelongsToTenant(tenantId, orderId)))
+      .where(and(eq(escrowLedger.orderId, orderId), scopeCondition))
       .orderBy(escrowLedger.createdAt)
-    return rows.map(toDomainEntry)
+    return rows.map(toEntryRecord)
   }
 
   public async sumByType(tenantId: string, orderId: string, entryType: EscrowEntryType): Promise<bigint> {
@@ -94,6 +98,10 @@ export class DrizzleEscrowLedgerRepository implements EscrowLedgerRepository {
       )
     return rows.reduce((acc, row) => acc + row.amountDiram, ZERO_DIRAM)
   }
+}
+
+function toEntryRecord(row: EscrowLedgerRow): EscrowLedgerEntryRecord {
+  return { entry: toDomainEntry(row), createdAt: row.createdAt }
 }
 
 function toDomainEntry(row: EscrowLedgerRow): EscrowLedgerEntry {

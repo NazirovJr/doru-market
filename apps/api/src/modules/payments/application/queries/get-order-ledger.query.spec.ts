@@ -54,10 +54,14 @@ function balancedEntries(): EscrowLedgerEntry[] {
   ]
 }
 
+const RECORD_CREATED_AT = new Date('2026-09-01T00:00:00.000Z')
+
 function fakeLedgerRepository(entries: EscrowLedgerEntry[]): EscrowLedgerRepository {
   return {
     append: vi.fn(),
-    findByOrderId: vi.fn<EscrowLedgerRepository['findByOrderId']>().mockResolvedValue(entries),
+    findByOrderId: vi
+      .fn<EscrowLedgerRepository['findByOrderId']>()
+      .mockResolvedValue(entries.map((entry) => ({ entry, createdAt: RECORD_CREATED_AT }))),
     sumByType: vi.fn(),
   }
 }

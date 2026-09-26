@@ -35,19 +35,18 @@ export const ESCROW_LEDGER_REPOSITORY = Symbol.for('@dorutj/payments/escrow-ledg
 /** Непрозрачный дескриптор активной транзакции (см. JSDoc файла). */
 export type EscrowLedgerUnitOfWorkTx = unknown
 
+// createdAt — за пределами EscrowLedgerEntry (VO намеренно без id/createdAt), нужен для отображения/сортировки.
+export interface EscrowLedgerEntryRecord {
+  readonly entry: EscrowLedgerEntry
+  readonly createdAt: Date
+}
+
 export interface EscrowLedgerRepository {
   /** Append-only вставка. Ни одного пути мутации существующей строки — см. JSDoc файла. */
   append(entry: EscrowLedgerEntry, tx?: EscrowLedgerUnitOfWorkTx): Promise<void>
 
-  /**
-   * Все записи заказа, упорядоченные по `created_at` — вход для `EscrowLedger.isBalanced()`.
-   * `tenantId` — ПЕРВЫЙ обязательный параметр (SRS-API-043/046, замечание CTO при приёмке
-   * DTJ-240): `escrow_ledger` своей колонки `tenant_id` не несёт (канонная схема Группы E,
-   * не упущение) — скоуп идёт ТОЛЬКО через `orders.tenant_id`, см. JSDoc реализации. Чужой
-   * `tenantId` ⇒ пустой массив (запись финансового журнала чужого тенанта не подтверждается
-   * как существующая, SRS-API-046).
-   */
-  findByOrderId(tenantId: string, orderId: string): Promise<EscrowLedgerEntry[]>
+  /** Все записи заказа, `created_at ASC`. `tenantId` — тенант-скоуп через `orders` (SRS-API-043/046, чужой ⇒ []); `null` — платформенный путь `admin` (DTJ-357, `super_admin`-only). */
+  findByOrderId(tenantId: string | null, orderId: string): Promise<readonly EscrowLedgerEntryRecord[]>
 
   /**
    * Сумма `amount_diram` по заказу и типу проводки (`0n`, если записей нет). `tenantId` —

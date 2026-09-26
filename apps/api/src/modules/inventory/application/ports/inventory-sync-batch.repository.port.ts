@@ -215,4 +215,7 @@ export interface InventorySyncBatchRepository {
    * ВКЛЮЧАЯ синтетический parser-errors контейнер DTJ-161/164, в отличие от `findManyForReport`).
    */
   findBySourceUploadId(sourceUploadId: string): Promise<readonly InventorySyncBatchSnapshot[]>
+
+  // Подмножество pharmacyIds с ≥1 строкой inventory_sync_batches при received_at >= sinceDate, любой channel.
+  findPharmacyIdsWithActivitySince(pharmacyIds: readonly string[], sinceDate: Date): Promise<readonly string[]>
 }

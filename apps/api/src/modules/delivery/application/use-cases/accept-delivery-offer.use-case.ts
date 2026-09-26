@@ -17,6 +17,11 @@ import {
   DELIVERY_OFFER_TIMEOUT_QUEUE,
   type DeliveryOfferTimeoutQueuePort,
 } from '../ports/delivery-offer-timeout-queue.port.js'
+import {
+  COURIER_DEPART_SLA_WATCHDOG_QUEUE,
+  type CourierDepartSlaWatchdogQueuePort,
+} from '../ports/courier-depart-sla-watchdog-queue.port.js'
+import { resolveCourierDepartSlaMinutes } from './courier-depart-sla-timing.util.js'
 
 export interface AcceptDeliveryOfferCommand {
   readonly offerId: string
@@ -29,7 +34,7 @@ export interface AcceptDeliveryOfferResult {
 
 @Injectable()
 export class AcceptDeliveryOfferUseCase {
-  // eslint-disable-next-line max-params -- 9 DI-инъекций, явные @Inject (DTJ-001)
+  // eslint-disable-next-line max-params -- 10 DI-инъекций, явные @Inject
   public constructor(
     @Inject(DELIVERY_OFFER_REPOSITORY) private readonly offers: DeliveryOfferRepositoryPort,
     @Inject(DELIVERY_ASSIGNMENT_REPOSITORY) private readonly assignments: DeliveryAssignmentRepositoryPort,
@@ -39,6 +44,7 @@ export class AcceptDeliveryOfferUseCase {
     @Inject(DELIVERY_OUTBOX) private readonly outbox: DeliveryOutboxPort,
     @Inject(DELIVERY_UNIT_OF_WORK) private readonly uow: DeliveryUnitOfWorkPort,
     @Inject(DELIVERY_OFFER_TIMEOUT_QUEUE) private readonly timeoutQueue: DeliveryOfferTimeoutQueuePort,
+    @Inject(COURIER_DEPART_SLA_WATCHDOG_QUEUE) private readonly departWatchdog: CourierDepartSlaWatchdogQueuePort,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -77,6 +83,7 @@ export class AcceptDeliveryOfferUseCase {
         assignedAt: now,
       }
       await this.outbox.append(event, null, tx)
+      await this.departWatchdog.schedule({ deliveryAssignmentId: assignment.id, delayMinutes: resolveCourierDepartSlaMinutes() })
       return { deliveryAssignmentId: assignment.id }
     })
   }

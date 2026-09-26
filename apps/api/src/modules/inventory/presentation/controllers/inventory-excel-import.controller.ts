@@ -61,6 +61,9 @@
 import { Controller, HttpCode, HttpException, HttpStatus, Inject, Post, Req, UseGuards } from '@nestjs/common'
 import { randomUUID } from 'node:crypto'
 import type { FastifyRequest } from 'fastify'
+// Side-effect type import: регистрирует module augmentation FastifyRequest.parts() из @fastify/multipart
+// (иначе апстрим только через main.ts — недостижимо из изолированных TS-программ вроде tests/invariants).
+import type {} from '@fastify/multipart'
 import {
   ErrorCode,
   fail,

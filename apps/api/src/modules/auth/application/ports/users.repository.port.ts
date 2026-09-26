@@ -53,8 +53,11 @@ export interface UpdateUserPatch {
 // phoneLike — ILIKE '%value%', не точное совпадение.
 export interface UsersListFilter {
   readonly role?: UserRole
+  /** [DTJ-364] Набор ролей (staff-accounts: pharmacist+courier) — SQL `IN (...)`, не постфильтрация в памяти. */
+  readonly roles?: readonly UserRole[]
   readonly phoneLike?: string
   readonly tenantId?: string
+  readonly chainId?: string // DTJ-364, pharmacy_admin scope=own — независимо от tenantId
 }
 
 export interface UsersListCursor {

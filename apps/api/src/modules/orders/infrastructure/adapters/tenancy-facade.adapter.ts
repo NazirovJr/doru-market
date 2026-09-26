@@ -66,6 +66,9 @@ const PICKUP_SLA_MINUTES_DEFAULT = 7
 /** DTJ-307 — 1:1 с DB-дефолтом `tenant_settings.pickickup_sla_buffer_minutes` (`DEFAULT_PICKUP_SLA_BUFFER_MINUTES`). */
 const PICKUP_SLA_BUFFER_MINUTES_DEFAULT = 5
 
+// 1:1 с DB-дефолтом tenant_settings.delivery_sla_city_minutes.
+const DELIVERY_SLA_CITY_MINUTES_DEFAULT = 240
+
 /** DTJ-304 — 1:1 с DB-дефолтом `tenant_settings.partial_fulfillment_confirmation_timeout_minutes`
  *  (`db/schema/tenants.ts` `DEFAULT_PARTIAL_FULFILLMENT_CONFIRMATION_TIMEOUT_MINUTES = 10`). */
 const PARTIAL_FULFILLMENT_CONFIRMATION_TIMEOUT_MINUTES_DEFAULT = 10
@@ -131,6 +134,11 @@ export class TenancyFacadeAdapter implements TenancyFacadePort {
   async getPickupSlaBufferMinutes(tenantId: string): Promise<number> {
     const settings = await this.tenantSettingsRepository.findByTenantId(TenantId.from(tenantId))
     return settings?.pickupSlaBufferMinutes ?? PICKUP_SLA_BUFFER_MINUTES_DEFAULT
+  }
+
+  async getDeliverySlaCityMinutes(tenantId: string): Promise<number> {
+    const settings = await this.tenantSettingsRepository.findByTenantId(TenantId.from(tenantId))
+    return settings?.deliverySlaCityMinutes ?? DELIVERY_SLA_CITY_MINUTES_DEFAULT
   }
 
   /**

@@ -6,6 +6,7 @@ import { DeliveryAssignment } from '../domain/delivery-assignment.entity.js'
 import type { CourierRepositoryPort } from './ports/courier.repository.port.js'
 import type { DeliveryAssignmentRepositoryPort } from './ports/delivery-assignment.repository.port.js'
 import type { CalculateDeliveryFeeUseCase } from './use-cases/calculate-delivery-fee.use-case.js'
+import type { CourierProvisionSnapshot, ProvisionCourierUseCase } from './use-cases/provision-courier.use-case.js'
 import { DeliveryFacade } from './delivery.facade.js'
 
 const NOW = new Date('2026-09-05T10:00:00.000Z')
@@ -30,8 +31,8 @@ function makeAssignment(): DeliveryAssignment {
   return result.value
 }
 
-function makeCourier(overrides: { chainId?: string | null } = {}): Courier {
-  return Courier.create({
+function makeCourier(overrides: { chainId?: string | null; status?: Courier['status'] } = {}): Courier {
+  const courier = Courier.create({
     id: COURIER_ID,
     userId: 'user-1',
     chainId: overrides.chainId ?? null,
@@ -39,6 +40,7 @@ function makeCourier(overrides: { chainId?: string | null } = {}): Courier {
     vehicleType: 'car',
     now: NOW,
   })
+  return Courier.restore({ ...courier.props, status: overrides.status ?? 'active' })
 }
 
 function makeFacade(params: { assignment?: DeliveryAssignment | null; courier?: Courier | null } = {}): {
@@ -46,6 +48,7 @@ function makeFacade(params: { assignment?: DeliveryAssignment | null; courier?: 
   assignmentsSave: ReturnType<typeof vi.fn>
   couriersSave: ReturnType<typeof vi.fn>
   calculateFeeExecute: ReturnType<typeof vi.fn>
+  provisionCourierExecute: ReturnType<typeof vi.fn>
 } {
   const assignment = params.assignment === undefined ? makeAssignment() : params.assignment
   const courier = params.courier === undefined ? makeCourier() : params.courier
@@ -56,6 +59,10 @@ function makeFacade(params: { assignment?: DeliveryAssignment | null; courier?: 
     findActiveByOrderId: vi.fn().mockResolvedValue(assignment),
     findByOrderId: vi.fn().mockResolvedValue(assignment),
     hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(false),
+    claimUnassigned: vi.fn().mockResolvedValue(true),
+    assignManual: vi.fn().mockResolvedValue(true),
+    findUnassignedPool: vi.fn().mockResolvedValue([]),
+    findByStatuses: vi.fn().mockResolvedValue([]),
     save: assignmentsSave,
   }
   const couriers: CourierRepositoryPort = {
@@ -65,8 +72,11 @@ function makeFacade(params: { assignment?: DeliveryAssignment | null; courier?: 
   }
   const calculateFeeExecute = vi.fn().mockResolvedValue(1234n)
   const calculateFee = { execute: calculateFeeExecute } as unknown as CalculateDeliveryFeeUseCase
-  const facade = new DeliveryFacade(assignments, couriers, makeClock(), calculateFee)
-  return { facade, assignmentsSave, couriersSave, calculateFeeExecute }
+  const provisionedSnapshot: CourierProvisionSnapshot = { id: COURIER_ID, userId: 'user-1', chainId: 'chain-1', vehicleType: 'foot', taxStatus: 'chain_employee' }
+  const provisionCourierExecute = vi.fn().mockResolvedValue(provisionedSnapshot)
+  const provisionCourierUseCase = { execute: provisionCourierExecute } as unknown as ProvisionCourierUseCase
+  const facade = new DeliveryFacade(assignments, couriers, makeClock(), calculateFee, provisionCourierUseCase)
+  return { facade, assignmentsSave, couriersSave, calculateFeeExecute, provisionCourierExecute }
 }
 
 describe('DeliveryFacade', () => {
@@ -109,6 +119,13 @@ describe('DeliveryFacade', () => {
     ).rejects.toThrow()
   })
 
+  it('reassign: новый курьер не найден -> NotFoundError', async () => {
+    const { facade } = makeFacade({ courier: null })
+    await expect(
+      facade.reassign({ assignmentId: ASSIGNMENT_ID, newCourierId: 'courier-2', reason: 'x', reassignedBy: 'dispatcher-1' }),
+    ).rejects.toBeInstanceOf(NotFoundError)
+  })
+
   it('hasActiveAssignment: true, когда репозиторий возвращает нетерминальное назначение', async () => {
     const { facade } = makeFacade()
     expect(await facade.hasActiveAssignment(ORDER_ID)).toBe(true)
@@ -143,5 +160,13 @@ describe('DeliveryFacade', () => {
   it('assignReturnCourier: заглушка возвращает null (DTJ-273/274 вне периметра)', async () => {
     const { facade } = makeFacade()
     expect(await facade.assignReturnCourier('tenant-1', 'return-1')).toBeNull()
+  })
+
+  it('provisionCourier: делегирует ProvisionCourierUseCase.execute() (DTJ-364)', async () => {
+    const { facade, provisionCourierExecute } = makeFacade()
+    const input = { userId: 'user-1', chainId: 'chain-1' }
+    const result = await facade.provisionCourier(input)
+    expect(result.id).toBe(COURIER_ID)
+    expect(provisionCourierExecute).toHaveBeenCalledWith(input)
   })
 })

@@ -1,20 +1,16 @@
-import { createBrowserRouter, Navigate, type RouteObject } from 'react-router'
+import { createBrowserRouter, type RouteObject } from 'react-router'
 import { AuthGuard } from '@/shared/auth/auth-guard'
 
 /**
  * `router.tsx` (DTJ-166) — react-router 7 конфигурация кабинета аптеки.
  *
  * `/login` — единственный публичный маршрут. Всё остальное — за `AuthGuard` (layout-route без
- * собственного `path`: react-router рендерит его для ЛЮБОГО совпадения `children`, стандартный
- * идиом `RequireAuth`-обёртки). `/` редиректит на `/inventory`; для неавторизованного
- * пользователя `AuthGuard` перехватит `/inventory` и уведёт на `/login` (критерий приёмки 1).
+ * собственного `path`, стандартный идиом `RequireAuth`-обёртки); неавторизованного уводит на `/login`.
  *
- * `/inventory` и `/inventory/sync-history` — заглушки `lazy()` (критерий «Что сделать» п.4):
- * пустые страницы-плейсхолдеры до DTJ-167/DTJ-169 (`pages/inventory/*.tsx`, DTJ-166 owns их
- * ПЕРВОЕ создание, следующие тикеты заполняют реальным экраном — см. JSDoc этих файлов).
- * `/order-queue` (упомянут в DTJ-166 «Технический контекст» как пример неймспейса) НЕ
- * регистрируется здесь — он вне scope DTJ-166 (EP-12, отдельная волна, см. DTJ-166 «Что сделать»
- * п.4: «для DTJ-167/168/169», не для EP-12).
+ * `/inventory` и `/inventory/sync-history` — заглушки `lazy()` до DTJ-167/DTJ-169.
+ *
+ * `index: true` — очередь заказов терминала (`OrderQueuePage`, DTJ-310), первый экран фармацевта;
+ * заменяет прежний редирект на `/inventory` (тот остаётся доступен по прямой ссылке).
  *
  * Маршруты БЕЗ ведущего `/` в `path` детей — идентично `apps/web/src/app/router.tsx` (DTJ-003):
  * относительно родителя без `path` они резолвятся в абсолютные `/inventory`, `/inventory/sync-history`.
@@ -32,7 +28,18 @@ const routes: RouteObject[] = [
     children: [
       {
         index: true,
-        element: <Navigate to="/inventory" replace />,
+        lazy: async () => {
+          const { default: Component } = await import('@/features/order-fulfillment/order-queue/ui/OrderQueuePage')
+          return { Component }
+        },
+      },
+      // Одна строка маршрута в общем каркасе — сам экран сборки живёт в своей папке фичи.
+      {
+        path: 'orders/:id',
+        lazy: async () => {
+          const { default: Component } = await import('@/features/order-fulfillment/picking/ui/PickingPage')
+          return { Component }
+        },
       },
       {
         path: 'inventory',

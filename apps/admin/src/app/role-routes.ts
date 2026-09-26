@@ -62,9 +62,50 @@ const FunnelPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>
   import('@/features/analytics/ui/funnel-page').then((m) => ({ default: m.FunnelPage })),
 )
 
+/** Та же схема совместимости без пропсов, что `FunnelPage` рядом. */
+const PlatformMetricsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/analytics/ui/platform-metrics-page').then((m) => ({ default: m.PlatformMetricsPage })),
+)
+
+/** DTJ-383 — та же схема совместимости без пропсов, что `FunnelPage` рядом. */
+const TopAnalogsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/analytics/ui/top-analogs-page').then((m) => ({ default: m.TopAnalogsPage })),
+)
+
+/** DTJ-384 — та же схема совместимости без пропсов, что `FunnelPage` рядом. */
+const OnboardingFunnelPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/analytics/ui/onboarding-funnel-page').then((m) => ({ default: m.OnboardingFunnelPage })),
+)
+
 /** DTJ-354 — та же схема совместимости без пропсов, что `AuditLogPage`. */
 const UsersPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
   import('@/features/users/ui/users-page').then((m) => ({ default: m.UsersPage })),
+)
+
+/** DTJ-353 — та же схема совместимости без пропсов, что `AuditLogPage`. */
+const PharmacyAccountsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/pharmacies-crud/ui/pharmacy-accounts-page').then((m) => ({ default: m.PharmacyAccountsPage })),
+)
+
+/** Та же схема совместимости без пропсов, что `AuditLogPage` выше. */
+const OwnPharmaciesPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/pharmacies-crud/ui/own-pharmacies-page').then((m) => ({ default: m.OwnPharmaciesPage })),
+)
+
+/** DTJ-364 — та же схема совместимости без пропсов, что `AuditLogPage`. */
+const StaffAccountsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/staff/ui/staff-accounts-page').then((m) => ({ default: m.StaffAccountsPage })),
+)
+
+/** DTJ-357 — та же схема совместимости без пропсов, что `AuditLogPage`; 3 записи вместо 1 placeholder `finance` (см. «Что сделать» тикета). */
+const EscrowLedgerPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/finance/ui/escrow-ledger-page').then((m) => ({ default: m.EscrowLedgerPage })),
+)
+const PayoutSchedulePage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/finance/ui/payout-schedule-page').then((m) => ({ default: m.PayoutSchedulePage })),
+)
+const ReconciliationAlertsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/finance/ui/reconciliation-alerts-page').then((m) => ({ default: m.ReconciliationAlertsPage })),
 )
 
 function section(path: string, titleKey: string, icon: string): RouteConfig {
@@ -78,18 +119,24 @@ const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
   { path: 'audit-log', titleKey: 'admin.nav.audit_log', icon: 'audit-log', Component: AuditLogPage },
   { path: 'undelivered-notifications', titleKey: 'admin.nav.undelivered_notifications', icon: 'notifications', Component: UndeliveredNotificationsPage },
   { path: 'analytics/funnel', titleKey: 'admin.nav.analytics_funnel', icon: 'analytics', Component: FunnelPage },
-  section('pharmacies', 'admin.nav.pharmacies', 'pharmacies'),
+  { path: 'analytics/platform-metrics', titleKey: 'admin.nav.platform_metrics', icon: 'analytics', Component: PlatformMetricsPage },
+  { path: 'analytics/top-analogs', titleKey: 'admin.nav.top_analogs', icon: 'analytics', Component: TopAnalogsPage },
+  { path: 'analytics/onboarding-funnel', titleKey: 'admin.nav.onboarding_funnel', icon: 'analytics', Component: OnboardingFunnelPage },
+  { path: 'pharmacies', titleKey: 'admin.nav.pharmacies', icon: 'pharmacies', Component: PharmacyAccountsPage },
   { path: 'users', titleKey: 'admin.nav.users', icon: 'users', Component: UsersPage },
   section('orders', 'admin.nav.orders', 'orders'),
-  section('finance', 'admin.nav.finance', 'finance'),
+  // DTJ-357 — заменяет placeholder `finance` тремя реальными READ-ONLY экранами (эскроу-леджер/выплаты/алерты сверки).
+  { path: 'finance/escrow-ledger', titleKey: 'admin.nav.finance_escrow_ledger', icon: 'finance', Component: EscrowLedgerPage },
+  { path: 'finance/payout-schedule', titleKey: 'admin.nav.finance_payout_schedule', icon: 'finance', Component: PayoutSchedulePage },
+  { path: 'finance/reconciliation-alerts', titleKey: 'admin.nav.finance_reconciliation_alerts', icon: 'finance', Component: ReconciliationAlertsPage },
   section('settings', 'admin.nav.settings', 'settings'),
 ]
 
 /** `pharmacy_admin`: Мои точки/Заказы/Сотрудники/Ключи 1С/Отчёты/Расписание. */
 const PHARMACY_ADMIN_ROUTES: readonly RouteConfig[] = [
-  section('my-pharmacies', 'admin.nav.my_pharmacies', 'pharmacies'),
+  { path: 'my-pharmacies', titleKey: 'admin.nav.my_pharmacies', icon: 'pharmacies', Component: OwnPharmaciesPage },
   section('my-orders', 'admin.nav.my_orders', 'orders'),
-  section('staff', 'admin.nav.staff', 'staff'),
+  { path: 'staff', titleKey: 'admin.nav.staff', icon: 'staff', Component: StaffAccountsPage },
   section('integration-keys', 'admin.nav.integration_keys', 'keys'),
   section('reports', 'admin.nav.reports', 'reports'),
   section('schedule', 'admin.nav.schedule', 'schedule'),

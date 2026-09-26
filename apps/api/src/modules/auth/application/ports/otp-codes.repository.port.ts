@@ -72,7 +72,11 @@ export interface CreateOtpCodeInput {
 }
 
 export interface OtpCodesRepository {
-  create(input: CreateOtpCodeInput): Promise<OtpCodeRecord>
+  // `tx` опционален (DTJ-309 foundIssue) — `RegenerateHandoverOtpUseCase` обязан консьюмить
+  // прежнюю `delivery_handover`-строку И создавать новую В ОДНОЙ транзакции (иначе гонка/частичный
+  // рефанд состояния); остальные вызывающие (`RequestOtpUseCase`/`CompletePickingUseCase`)
+  // по-прежнему пишут вне tx, опустив аргумент — обратная совместимость.
+  create(input: CreateOtpCodeInput, tx?: UnitOfWorkTx): Promise<OtpCodeRecord>
   findById(id: string): Promise<OtpCodeRecord | null>
   findByIdForUpdate(tx: UnitOfWorkTx, id: string): Promise<OtpCodeRecord | null>
   markConsumed(tx: UnitOfWorkTx, id: string, now: Date): Promise<void>

@@ -40,7 +40,7 @@
  * вызываются ЭТИМ use case'ом изнутри `uow.run`.
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { asc, eq, sql } from 'drizzle-orm'
+import { and, asc, eq, gte, inArray, sql } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { inventorySyncBatch, type InventorySyncBatchRow } from '@/db/schema/inventory-sync-batch.js'
 import { inventorySyncRawItems } from '@/db/schema/inventory-sync-raw-items.js'
@@ -316,6 +316,15 @@ export class DrizzleInventorySyncBatchRepository implements InventorySyncBatchRe
     }))
   }
 
+  // SELECT DISTINCT pharmacy_id, любой канал — см. JSDoc порта.
+  async findPharmacyIdsWithActivitySince(pharmacyIds: readonly string[], sinceDate: Date): Promise<readonly string[]> {
+    if (pharmacyIds.length === 0) return []
+    const rows = await this.db
+      .selectDistinct({ pharmacyId: inventorySyncBatch.pharmacyId })
+      .from(inventorySyncBatch)
+      .where(and(inArray(inventorySyncBatch.pharmacyId, [...pharmacyIds]), gte(inventorySyncBatch.receivedAt, sinceDate)))
+    return rows.map((r) => r.pharmacyId)
+  }
 }
 
 interface SessionRow {

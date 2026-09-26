@@ -81,6 +81,10 @@ function makeService(params: {
     findActiveByOrderId: vi.fn().mockResolvedValue(null),
     findByOrderId: vi.fn().mockResolvedValue(null),
     hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(false),
+    claimUnassigned: vi.fn().mockResolvedValue(true),
+    assignManual: vi.fn().mockResolvedValue(true),
+    findUnassignedPool: vi.fn().mockResolvedValue([]),
+    findByStatuses: vi.fn().mockResolvedValue([]),
     save: vi.fn(),
   }
   const offers: DeliveryOfferRepositoryPort = {

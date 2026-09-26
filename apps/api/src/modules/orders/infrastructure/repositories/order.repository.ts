@@ -27,8 +27,9 @@
  * подтверждается как существующая).
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { and, eq, gte, inArray, lt, sql } from 'drizzle-orm'
 import { type DrizzleDb, DRIZZLE_DB } from '@/infrastructure/database/drizzle.provider.js'
+import { Money } from '@/shared-kernel/domain/value-objects/money.vo.js'
 import { orders, orderItems, type OrderRow } from '@/db/schema/orders.js'
 // DTJ-301 (EP-12) — `pharmacies`/`users` importés ТОЛЬКО для очереди терминала (JOIN на имя
 // фармацевта + резолвинг сети `pharmacy_admin` через `pharmacies.chain_id`), тот же приём, что
@@ -40,9 +41,13 @@ import { users } from '@/db/schema/users.js'
 import {
   ORDER_REPOSITORY_PORT,
   type LockedOrderRow,
+  type OrderCancellationAggregate,
+  type OrderGmvAggregate,
+  type OrderMetricsPeriod,
   type OrderQueueQuery,
   type OrderQueueRow,
   type OrderRepositoryPort,
+  type OrderSlaAggregate,
   type OrderUnitOfWorkTx,
 } from '@/modules/orders/application/ports/order-repository.port.js'
 import { Order } from '@/modules/orders/domain/order.entity.js'
@@ -211,6 +216,56 @@ export class DrizzleOrderRepository implements OrderRepositoryPort {
       .where(inArray(orderItems.orderId, orderIds))
       .groupBy(orderItems.orderId)
     return new Map(rows.filter((r): r is { orderId: string; cnt: number } => r.orderId !== null).map((r) => [r.orderId, r.cnt]))
+  }
+
+  // GMV — по факту доставки (status='delivered' AND delivered_at ∈ period), не по created_at.
+  async getGmvAggregate(tenantId: string, period: OrderMetricsPeriod): Promise<OrderGmvAggregate> {
+    const rows = await this.db
+      .select({ orderCount: sql<number>`count(*)::int`, gmvTjs: sql<string>`COALESCE(SUM(${orders.totalAmountTjs}), 0)::text` })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.tenantId, tenantId),
+          eq(orders.status, 'delivered'),
+          gte(orders.deliveredAt, period.start),
+          lt(orders.deliveredAt, period.end),
+        ),
+      )
+    const row = rows[0]
+    return { gmvDiram: Money.fromDbDecimalTjs(row?.gmvTjs ?? '0').diram, orderCount: row?.orderCount ?? 0 }
+  }
+
+  // ASSUMPTION: домен несёт только один SLA-дедлайн (сборка); доставка мерится picked_up_at→delivered_at против deliverySlaMinutes, без зоны город/удалённая.
+  async getSlaAggregate(tenantId: string, period: OrderMetricsPeriod, deliverySlaMinutes: number): Promise<OrderSlaAggregate> {
+    const deliverySlaInterval = sql.raw(`interval '${String(deliverySlaMinutes)} minutes'`)
+    const rows = await this.db
+      .select({
+        pickupEligibleCount: sql<number>`count(*) FILTER (WHERE ${orders.pickedUpAt} >= ${period.start} AND ${orders.pickedUpAt} < ${period.end})::int`,
+        pickupMetCount: sql<number>`count(*) FILTER (WHERE ${orders.pickedUpAt} >= ${period.start} AND ${orders.pickedUpAt} < ${period.end} AND ${orders.pickedUpAt} <= ${orders.slaDeadlineAt})::int`,
+        deliveryEligibleCount: sql<number>`count(*) FILTER (WHERE ${orders.deliveredAt} >= ${period.start} AND ${orders.deliveredAt} < ${period.end} AND ${orders.pickedUpAt} IS NOT NULL)::int`,
+        deliveryMetCount: sql<number>`count(*) FILTER (WHERE ${orders.deliveredAt} >= ${period.start} AND ${orders.deliveredAt} < ${period.end} AND ${orders.pickedUpAt} IS NOT NULL AND (${orders.deliveredAt} - ${orders.pickedUpAt}) <= ${deliverySlaInterval})::int`,
+      })
+      .from(orders)
+      .where(eq(orders.tenantId, tenantId))
+    const row = rows[0]
+    return {
+      pickupEligibleCount: row?.pickupEligibleCount ?? 0,
+      pickupMetCount: row?.pickupMetCount ?? 0,
+      deliveryEligibleCount: row?.deliveryEligibleCount ?? 0,
+      deliveryMetCount: row?.deliveryMetCount ?? 0,
+    }
+  }
+
+  async getCancellationAggregate(tenantId: string, period: OrderMetricsPeriod): Promise<OrderCancellationAggregate> {
+    const rows = await this.db
+      .select({
+        totalCount: sql<number>`count(*)::int`,
+        cancelledCount: sql<number>`count(*) FILTER (WHERE ${orders.status} = 'cancelled')::int`,
+      })
+      .from(orders)
+      .where(and(eq(orders.tenantId, tenantId), gte(orders.createdAt, period.start), lt(orders.createdAt, period.end)))
+    const row = rows[0]
+    return { totalCount: row?.totalCount ?? 0, cancelledCount: row?.cancelledCount ?? 0 }
   }
 }
 

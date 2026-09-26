@@ -8,6 +8,12 @@ import { Inject, Injectable } from '@nestjs/common'
 import { NotFoundError } from '@dorutj/contracts'
 import { PHARMACY_ACCOUNT_REPOSITORY, type PharmacyAccountRepositoryPort } from '@/modules/onboarding/application/ports/pharmacy-account.repository.port.js'
 import { PHARMACY_CHAIN_REPOSITORY, type PharmacyChainRepositoryPort } from '@/modules/onboarding/application/ports/pharmacy-chain.repository.port.js'
+import {
+  ONBOARDING_REVIEW_LOG_REPOSITORY,
+  type OnboardingReviewDurationStat,
+  type OnboardingReviewLogRepositoryPort,
+  type OnboardingReviewPeriodRange,
+} from '@/modules/onboarding/application/ports/onboarding-review-log.repository.port.js'
 import type { OnboardingStatus } from '@/modules/onboarding/domain/value-objects/onboarding-status.vo.js'
 import type { PharmacySuspensionReason } from '@/modules/onboarding/domain/pharmacy-account-entity.types.js'
 
@@ -23,6 +29,8 @@ export class OnboardingFacade {
     private readonly pharmacyAccountRepository: PharmacyAccountRepositoryPort,
     @Inject(PHARMACY_CHAIN_REPOSITORY)
     private readonly pharmacyChainRepository: PharmacyChainRepositoryPort,
+    @Inject(ONBOARDING_REVIEW_LOG_REPOSITORY)
+    private readonly reviewLogRepository: OnboardingReviewLogRepositoryPort,
   ) {}
 
   /** SRS-ADM-013: аптека доступна для чекаута только если `active` И сеть в `approved|active`. */
@@ -44,6 +52,12 @@ export class OnboardingFacade {
     return account?.suspensionReason ?? null
   }
 
+  /** Для cross-tenant policy-проверок других модулей (несуществующая аптека — null, не throw). */
+  async getPharmacyChainId(pharmacyId: string): Promise<string | null> {
+    const account = await this.pharmacyAccountRepository.findById(pharmacyId)
+    return account?.chainId ?? null
+  }
+
   /**
    * РАСШИРЕНИЕ (DTJ-227, EP-09 checkout) — отображаемые имена аптек по батчу id
    * (`OnboardingFacadePort.getPharmacyNames`, DTJ-225). `PharmacyAccountRepositoryPort` не
@@ -62,6 +76,48 @@ export class OnboardingFacade {
     for (const account of accounts) {
       if (account !== null) {
         out.set(account.id, account.name)
+      }
+    }
+    return out
+  }
+
+  async listActivePharmacyIds(tenantId: string): Promise<readonly string[]> {
+    return this.pharmacyAccountRepository.listActiveIdsByTenant(tenantId)
+  }
+
+  // РАСШИРЕНИЕ (DTJ-353), тот же приём, что getPharmacyNames — имя сети догружается батчем по
+  // уникальным chainId страницы, не всей таблицы.
+  async findPharmacyAccountsAny(
+    filter: { readonly status?: string; readonly chainId?: string; readonly nameLike?: string },
+    pagination: { readonly limit: number; readonly cursor?: { readonly v: string; readonly id: string } | null },
+  ): Promise<{
+    readonly items: readonly {
+      readonly id: string
+      readonly chainId: string | null
+      readonly chainName: string | null
+      readonly name: string
+      readonly status: string
+      readonly licenseExpiryDate: Date | null
+    }[]
+    readonly nextCursor: { readonly v: string; readonly id: string } | null
+    readonly hasMore: boolean
+  }> {
+    const page = await this.pharmacyAccountRepository.listAny({ filter, limit: pagination.limit, cursor: pagination.cursor ?? null })
+    const chainNames = await this.resolveChainNames(page.items.map((item) => item.chainId))
+    return {
+      items: page.items.map((item) => ({ ...item, chainName: item.chainId === null ? null : (chainNames.get(item.chainId) ?? null) })),
+      nextCursor: page.nextCursor,
+      hasMore: page.hasMore,
+    }
+  }
+
+  private async resolveChainNames(chainIds: readonly (string | null)[]): Promise<ReadonlyMap<string, string>> {
+    const uniqueIds = [...new Set(chainIds.filter((id): id is string => id !== null))]
+    const chains = await Promise.all(uniqueIds.map((id) => this.pharmacyChainRepository.findById(id)))
+    const out = new Map<string, string>()
+    for (const chain of chains) {
+      if (chain !== null) {
+        out.set(chain.id, chain.name)
       }
     }
     return out
@@ -111,5 +167,13 @@ export class OnboardingFacade {
       return
     }
     await this.pharmacyChainRepository.save(chain.suspend(actor, 'unpaid_invoice'))
+  }
+
+  /** DTJ-384 (гостевое расширение из EP-17, `modules/analytics`) — тонкая делегация порту, без своей формулы. */
+  async getReviewDurationStats(
+    tenantId: string,
+    period: OnboardingReviewPeriodRange,
+  ): Promise<readonly OnboardingReviewDurationStat[]> {
+    return this.reviewLogRepository.getReviewDurationStats(tenantId, period)
   }
 }

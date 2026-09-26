@@ -66,6 +66,7 @@ import { InventorySyncBatchesReportController } from './presentation/controllers
 import { InventoryExcelErrorReportController } from './presentation/controllers/inventory-excel-error-report.controller.js'
 import { InventoryListController } from './presentation/controllers/inventory-list.controller.js'
 import { ListPharmacyInventoryUseCase } from './application/use-cases/list-pharmacy-inventory.use-case.js'
+import { InventoryFacade } from './inventory.facade.js'
 import { CompositeInventoryMatcherService } from './application/services/composite-inventory-matcher.service.js'
 import { InventorySyncReportQueryService } from './application/services/inventory-sync-report-query.service.js'
 import { PersistInventorySyncBatchService } from './application/services/persist-inventory-sync-batch.service.js'
@@ -132,6 +133,7 @@ import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/
     // провайдер, тот же приём, что `DrizzleInventorySyncErrorsRepository`.
     DrizzleInventorySyncReportRepository,
     ListPharmacyInventoryUseCase,
+    InventoryFacade,
   ],
   controllers: [
     InventoryBatchUpdateController,
@@ -154,6 +156,7 @@ import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/
     IngestInventoryBatchWithMatchingUseCase,
     CompositeInventoryMatcherService,
     DetectStuckFullSyncSessionsUseCase,
+    InventoryFacade,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.

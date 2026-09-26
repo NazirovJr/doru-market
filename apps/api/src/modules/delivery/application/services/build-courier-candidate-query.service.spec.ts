@@ -44,7 +44,7 @@ function makeService(params: {
     getDeliveryContext: vi.fn().mockResolvedValue(params.order === undefined ? makeOrderContext(['med-1']) : params.order),
   }
   const pharmacy: PharmacyLocation = { id: PHARMACY_ID, name: 'P', addressText: 'A', geoPoint: geo(), chainId: 'chain-1' }
-  const pharmacies: PharmacyLookupPort = { findById: vi.fn().mockResolvedValue(params.pharmacy === undefined ? pharmacy : params.pharmacy) }
+  const pharmacies: PharmacyLookupPort = { findById: vi.fn().mockResolvedValue(params.pharmacy === undefined ? pharmacy : params.pharmacy), findByIds: vi.fn().mockResolvedValue([]) }
   const catalog = {
     getMedicineSnapshot: vi.fn().mockResolvedValue(params.medicineSnapshots ?? new Map([['med-1', makeMedicineSnapshot()]])),
   } as unknown as CatalogFacade

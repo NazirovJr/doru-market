@@ -24,6 +24,7 @@ const TENANT_ID = 'tenant-1'
 const HOLD_AMOUNT_DIRAM = 10_000n
 const HOLD_PROVIDER_REF = 'mock_inv_original'
 const REFUND_PROVIDER_REF = 'mock_refund_x'
+const RECORD_CREATED_AT = new Date('2026-09-01T00:00:00.000Z')
 
 const SILENT_LOGGER = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as Logger
 
@@ -101,7 +102,9 @@ function makeHarness(overrides: HarnessOverrides = {}): Harness {
     if (entryType === 'hold_created') return Promise.resolve(overrides.holdDiram ?? HOLD_AMOUNT_DIRAM)
     return Promise.resolve(0n)
   })
-  const findByOrderId = vi.fn<EscrowLedgerRepository['findByOrderId']>().mockResolvedValue([...(overrides.holdEntries ?? [holdEntry()])])
+  const findByOrderId = vi
+    .fn<EscrowLedgerRepository['findByOrderId']>()
+    .mockResolvedValue((overrides.holdEntries ?? [holdEntry()]).map((entry) => ({ entry, createdAt: RECORD_CREATED_AT })))
   const append = vi.fn<EscrowLedgerRepository['append']>().mockResolvedValue(undefined)
   const escrowLedger: EscrowLedgerRepository = { append, findByOrderId, sumByType }
 
@@ -113,7 +116,14 @@ function makeHarness(overrides: HarnessOverrides = {}): Harness {
   const holdIfPending = vi.fn<PayoutScheduleRepository['holdIfPending']>().mockResolvedValue({ held: false })
   const findByPharmacy = vi.fn<PayoutScheduleRepository['findByPharmacy']>().mockResolvedValue({ items: [], nextCursor: null, hasMore: false })
   const findAllByPharmacy = vi.fn<PayoutScheduleRepository['findAllByPharmacy']>().mockResolvedValue([])
-  const payoutScheduleRepo: PayoutScheduleRepository = { reverseIfExists, insertPending, holdIfPending, findByPharmacy, findAllByPharmacy }
+  const payoutScheduleRepo: PayoutScheduleRepository = {
+    reverseIfExists,
+    insertPending,
+    holdIfPending,
+    findByPharmacy,
+    findAllByPharmacy,
+    findSchedule: vi.fn(),
+  }
 
   const useCase = new RefundOrderUseCase(ordersPort, paymentProvider, escrowLedger, payoutScheduleRepo, SILENT_LOGGER)
   return { useCase, getOrderById, refund, sumByType, findByOrderId, append, reverseIfExists }

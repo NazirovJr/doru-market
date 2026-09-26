@@ -251,3 +251,248 @@ describe.skipIf(!postgresAvailable)('AnalyticsDashboardController — Supertest 
     }
   })
 })
+
+interface PlatformMetricsBody {
+  readonly gmvDiram: number
+  readonly orderCount: number
+  readonly averageCheckDiram: number
+  readonly pickupSlaComplianceRate: number
+  readonly deliverySlaComplianceRate: number
+  readonly cancellationRate: number
+  readonly activePharmaciesSendingDataRate: number
+}
+
+describe.skipIf(!postgresAvailable)('AnalyticsDashboardController.platformMetrics — Supertest integration (DTJ-382)', () => {
+  let pool: Pool
+  let ctx: TestApp
+  let app: INestApplication
+  let httpServer: Server
+  let jwtSigner: JwtSignerPort
+  const operatorTenantId = randomUUID()
+  const tenantId = randomUUID()
+  const createdUserIds: string[] = []
+  const createdOrderIds: string[] = []
+  const createdPharmacyIds: string[] = []
+  const createdChainIds: string[] = []
+  const MS_PER_DAY = 86_400_000
+
+  function sign(claims: Omit<JwtClaims, 'sessionId'>): string {
+    return jwtSigner.sign({ ...claims, sessionId: randomUUID() })
+  }
+
+  async function seedUser(role: string): Promise<string> {
+    const id = randomUUID()
+    await pool.query(`INSERT INTO users (id, tenant_id, phone_number, role, is_active) VALUES ($1, $2, $3, $4, true)`, [
+      id,
+      operatorTenantId,
+      `+99293${String(Math.floor(1_000_000 + Math.random() * 8_999_999))}`,
+      role,
+    ])
+    createdUserIds.push(id)
+    return id
+  }
+
+  function getPlatformMetrics(token: string, forTenantId: string, period: string): request.Test {
+    return request(httpServer)
+      .get(`/api/v1/analytics/platform-metrics?tenantId=${forTenantId}&period=${period}`)
+      .set('Authorization', `Bearer ${token}`)
+  }
+
+  async function seedPharmacyChainForTenant(forTenantId: string, status: string): Promise<string> {
+    const id = randomUUID()
+    await pool.query(
+      `INSERT INTO pharmacy_chains (id, name, legal_entity_name, tin_inn, status, tenant_id)
+       VALUES ($1, 'Test Chain DTJ-382', 'Test Chain LLC', $2, $3, $4)`,
+      [id, `tin-${id.slice(0, 12)}`, status, forTenantId],
+    )
+    createdChainIds.push(id)
+    return id
+  }
+
+  async function seedPharmacyForChain(chainId: string, status: string): Promise<string> {
+    const id = randomUUID()
+    await pool.query(
+      `INSERT INTO pharmacies (id, chain_id, name, address_text, latitude, longitude, phone, status)
+       VALUES ($1, $2, 'Test Pharmacy DTJ-382', 'Dushanbe, test str. 1', 38.5598, 68.7870, '+992900000002', $3)`,
+      [id, chainId, status],
+    )
+    createdPharmacyIds.push(id)
+    return id
+  }
+
+  async function seedInventorySyncBatch(pharmacyId: string, receivedAt: Date): Promise<void> {
+    await pool.query(`INSERT INTO inventory_sync_batch (pharmacy_id, channel, received_at) VALUES ($1, 'rest', $2)`, [
+      pharmacyId,
+      receivedAt,
+    ])
+  }
+
+  interface SeedOrderInput {
+    readonly forTenantId: string
+    readonly pharmacyId: string
+    readonly status: string
+    readonly totalAmountTjs: string
+    readonly createdAt: Date
+    readonly slaDeadlineAt?: Date
+    readonly pickedUpAt?: Date
+    readonly deliveredAt?: Date
+  }
+
+  async function seedOrder(input: SeedOrderInput): Promise<string> {
+    const id = randomUUID()
+    const customerId = await seedUser('customer')
+    await pool.query(
+      `INSERT INTO orders
+         (id, order_number, customer_id, pharmacy_id, status, payment_method,
+          items_total_tjs, delivery_fee_tjs, total_amount_tjs, delivery_address,
+          tenant_id, checkout_attempt_id, created_at, sla_deadline_at, picked_up_at, delivered_at)
+       VALUES ($1, $2, $3, $4, $5, 'cash_courier', $6, 0.00, $6, 'Dushanbe, test str. 1', $7, $8, $9, $10, $11, $12)`,
+      [
+        id,
+        `TST-${id.slice(0, 8)}`,
+        customerId,
+        input.pharmacyId,
+        input.status,
+        input.totalAmountTjs,
+        input.forTenantId,
+        randomUUID(),
+        input.createdAt,
+        input.slaDeadlineAt ?? null,
+        input.pickedUpAt ?? null,
+        input.deliveredAt ?? null,
+      ],
+    )
+    createdOrderIds.push(id)
+    return id
+  }
+
+  beforeAll(async () => {
+    pool = new Pool({ connectionString: TEST_DATABASE_URL })
+    for (const id of [operatorTenantId, tenantId]) {
+      await pool.query(`INSERT INTO tenants (id, slug, is_neutral) VALUES ($1, $2, false) ON CONFLICT (id) DO NOTHING`, [
+        id,
+        `test-platform-metrics-${id.slice(0, 8)}`,
+      ])
+    }
+    ctx = await createTestApp(TEST_DATABASE_URL, TEST_REDIS_URL)
+    app = ctx.app
+    httpServer = ctx.httpServer
+    jwtSigner = app.get<JwtSignerPort>(JWT_SIGNER)
+  })
+
+  afterAll(async () => {
+    try {
+      await ctx.close()
+    } finally {
+      if (createdOrderIds.length > 0) {
+        await pool.query('DELETE FROM order_items WHERE order_id = ANY($1)', [createdOrderIds])
+        await pool.query('DELETE FROM orders WHERE id = ANY($1)', [createdOrderIds])
+      }
+      if (createdPharmacyIds.length > 0) {
+        await pool.query('DELETE FROM inventory_sync_batch WHERE pharmacy_id = ANY($1)', [createdPharmacyIds])
+        await pool.query('DELETE FROM pharmacies WHERE id = ANY($1)', [createdPharmacyIds])
+      }
+      if (createdChainIds.length > 0) {
+        await pool.query('DELETE FROM pharmacy_chains WHERE id = ANY($1)', [createdChainIds])
+      }
+      if (createdUserIds.length > 0) {
+        await pool.query('DELETE FROM users WHERE id = ANY($1)', [createdUserIds])
+      }
+      await pool.query('DELETE FROM tenants WHERE id = ANY($1)', [[operatorTenantId, tenantId]])
+      await pool.end().catch(() => undefined)
+    }
+  })
+
+  it('АС2 — GMV считается СТРОГО по status=delivered: cancelled/processing НЕ учитываются', async () => {
+    const superAdminId = await seedUser('super_admin')
+    const token = sign({ sub: superAdminId, role: 'super_admin', tenantId: operatorTenantId, pharmacyId: null, chainId: null })
+    const chainId = await seedPharmacyChainForTenant(tenantId, 'active')
+    const pharmacyId = await seedPharmacyForChain(chainId, 'active')
+    await seedOrder({
+      forTenantId: tenantId,
+      pharmacyId,
+      status: 'delivered',
+      totalAmountTjs: '100.00',
+      createdAt: AUGUST_START,
+      deliveredAt: AUGUST_START,
+    })
+    await seedOrder({ forTenantId: tenantId, pharmacyId, status: 'cancelled', totalAmountTjs: '50.00', createdAt: AUGUST_START })
+    await seedOrder({ forTenantId: tenantId, pharmacyId, status: 'processing', totalAmountTjs: '30.00', createdAt: AUGUST_START })
+
+    const res = await getPlatformMetrics(token, tenantId, AUGUST_PERIOD)
+
+    expect(res.status).toBe(200)
+    const body = (res.body as SuccessBody<PlatformMetricsBody>).data
+    expect(body.gmvDiram).toBe(10_000)
+    expect(body.orderCount).toBe(1)
+    expect(body.averageCheckDiram).toBe(10_000)
+  })
+
+  it('АС3 — период без заказов, по которым измерим SLA → pickupSlaComplianceRate=0, не NaN/исключение', async () => {
+    const superAdminId = await seedUser('super_admin')
+    const token = sign({ sub: superAdminId, role: 'super_admin', tenantId: operatorTenantId, pharmacyId: null, chainId: null })
+    const emptyTenantId = randomUUID()
+    await pool.query(`INSERT INTO tenants (id, slug, is_neutral) VALUES ($1, $2, false)`, [
+      emptyTenantId,
+      `test-platform-empty-${emptyTenantId.slice(0, 8)}`,
+    ])
+
+    const res = await getPlatformMetrics(token, emptyTenantId, '2020-01')
+
+    expect(res.status).toBe(200)
+    const body = (res.body as SuccessBody<PlatformMetricsBody>).data
+    expect(body.pickupSlaComplianceRate).toBe(0)
+    expect(body.deliverySlaComplianceRate).toBe(0)
+    expect(Number.isNaN(body.pickupSlaComplianceRate)).toBe(false)
+
+    await pool.query('DELETE FROM tenants WHERE id = $1', [emptyTenantId])
+  })
+
+  it('TC-ADM-030 — 3 из 8 активных пилотных аптек прислали данные за 7 дней → activePharmaciesSendingDataRate ≈ 0.375', async () => {
+    const superAdminId = await seedUser('super_admin')
+    const token = sign({ sub: superAdminId, role: 'super_admin', tenantId: operatorTenantId, pharmacyId: null, chainId: null })
+    // Отдельный тенант — иначе знаменатель «активных аптек» растёт чужой аптекой (найдено этим прогоном).
+    const pilotTenantId = randomUUID()
+    await pool.query(`INSERT INTO tenants (id, slug, is_neutral) VALUES ($1, $2, false)`, [
+      pilotTenantId,
+      `test-platform-pilot-${pilotTenantId.slice(0, 8)}`,
+    ])
+    const chainId = await seedPharmacyChainForTenant(pilotTenantId, 'active')
+    const pharmacyIds = await Promise.all(Array.from({ length: 8 }, () => seedPharmacyForChain(chainId, 'active')))
+    const recentlySent = pharmacyIds.slice(0, 3)
+    const staleOrSilent = pharmacyIds.slice(3)
+    for (const id of recentlySent) {
+      await seedInventorySyncBatch(id, new Date(Date.now() - MS_PER_DAY))
+    }
+    // Батч старше 7 дней НЕ должен засчитываться — та же аптека, что «молчит».
+    await seedInventorySyncBatch(staleOrSilent[0]!, new Date(Date.now() - 10 * MS_PER_DAY))
+
+    const res = await getPlatformMetrics(token, pilotTenantId, AUGUST_PERIOD)
+
+    expect(res.status).toBe(200)
+    const body = (res.body as SuccessBody<PlatformMetricsBody>).data
+    expect(body.activePharmaciesSendingDataRate).toBeCloseTo(0.375)
+
+    await pool.query('DELETE FROM tenants WHERE id = $1', [pilotTenantId])
+  })
+
+  it('АС4 — pharmacy_admin → 403 INSUFFICIENT_ROLE (экран исключительно платформенный)', async () => {
+    const pharmacyAdminId = await seedUser('pharmacy_admin')
+    const token = sign({ sub: pharmacyAdminId, role: 'pharmacy_admin', tenantId: operatorTenantId, pharmacyId: null, chainId: null })
+
+    const res = await getPlatformMetrics(token, tenantId, AUGUST_PERIOD)
+
+    expect(res.status).toBe(403)
+    expect((res.body as ErrorBody).error.code).toBe('INSUFFICIENT_ROLE')
+  })
+
+  it('невалидный формат period → 400 VALIDATION_ERROR', async () => {
+    const superAdminId = await seedUser('super_admin')
+    const token = sign({ sub: superAdminId, role: 'super_admin', tenantId: operatorTenantId, pharmacyId: null, chainId: null })
+
+    const res = await getPlatformMetrics(token, tenantId, 'август-2026')
+
+    expect(res.status).toBe(400)
+    expect((res.body as ErrorBody).error.code).toBe('VALIDATION_ERROR')
+  })
+})

@@ -106,6 +106,16 @@ export interface OrderItemDto {
   readonly itemIssueReason: ReportItemIssueReason | null
 }
 
+// `GET /orders/:id` (терминал фармацевта) — деталь заказа для экрана сборки. `medicineName` —
+// позиция сама по себе (`OrderItemDto`) имени не несёт, только `medicineId`.
+export interface PharmacyTerminalOrderItemDto extends OrderItemDto {
+  readonly medicineName: string
+}
+
+export interface PharmacyTerminalOrderDetailDto extends OrderDto {
+  readonly items: readonly PharmacyTerminalOrderItemDto[]
+}
+
 /**
  * `CartItemDto` (заготовка, DTJ-220) — позиция серверной корзины, привязана к конкретной
  * аптеке (цена/остаток различаются между аптеками, REQ-UX-4). Наполняется DTJ-223/225/226.

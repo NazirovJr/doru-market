@@ -64,6 +64,10 @@ function makeUseCase(params: {
     findActiveByOrderId: vi.fn().mockResolvedValue(null),
     findByOrderId: vi.fn().mockResolvedValue(null),
     hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(params.hasActiveAssignment),
+    claimUnassigned: vi.fn().mockResolvedValue(true),
+    assignManual: vi.fn().mockResolvedValue(true),
+    findUnassignedPool: vi.fn().mockResolvedValue([]),
+    findByStatuses: vi.fn().mockResolvedValue([]),
     save: vi.fn().mockResolvedValue(undefined),
   }
   const outbox: DeliveryOutboxPort = { append: outboxAppend }
@@ -142,6 +146,10 @@ describe('EndCourierShiftUseCase', () => {
       findActiveByOrderId: vi.fn().mockResolvedValue(null),
       findByOrderId: vi.fn().mockResolvedValue(null),
       hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(false),
+      claimUnassigned: vi.fn().mockResolvedValue(true),
+      assignManual: vi.fn().mockResolvedValue(true),
+      findUnassignedPool: vi.fn().mockResolvedValue([]),
+      findByStatuses: vi.fn().mockResolvedValue([]),
       save: vi.fn().mockResolvedValue(undefined),
     }
     const outbox: DeliveryOutboxPort = { append: vi.fn().mockResolvedValue(undefined) }

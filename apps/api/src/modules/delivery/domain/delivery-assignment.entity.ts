@@ -16,6 +16,7 @@ import {
   DuplicateActiveDeliveryAssignmentError,
   ForbiddenTransitionError,
   ValidationError,
+  type CourierStatus,
   type DeliveryAssignmentStatus,
   type DomainError,
 } from '@dorutj/contracts'
@@ -32,6 +33,7 @@ export interface CourierAssignmentEligibility {
   readonly courierId: string
   readonly courierChainId: string | null
   readonly coldChainCertified: boolean
+  readonly status: CourierStatus
 }
 
 /** `assign()` — сгруппировано в команду ради `max-params` (C5, ≤3). */
@@ -44,9 +46,16 @@ export interface AssignCourierCommand {
 /** `reassign()` — сгруппировано в команду ради `max-params` (C5, ≤3). */
 export interface ReassignCommand {
   readonly newCourierId: string
+  readonly courierStatus: CourierStatus
   readonly reason: string
   readonly reassignedBy: string
   readonly now: Date
+}
+
+function assertCourierActive(courierId: string, status: CourierStatus): void {
+  if (status !== 'active') {
+    throw new CourierNotEligibleError({ courierId, reason: 'not_active', status })
+  }
 }
 
 export class DeliveryAssignment {
@@ -150,6 +159,7 @@ export class DeliveryAssignment {
   assign(cmd: AssignCourierCommand): void {
     this.assertTransition('assigned')
     const { courier, orderPharmacyChainId } = cmd
+    assertCourierActive(courier.courierId, courier.status)
     if (courier.courierChainId !== null && courier.courierChainId !== orderPharmacyChainId) {
       throw new CourierTenantMismatchError({ courierId: courier.courierId, orderPharmacyChainId })
     }
@@ -239,6 +249,7 @@ export class DeliveryAssignment {
     if (cmd.reason.trim() === '') {
       throw new ValidationError('reason is required for reassignment', { field: 'reason' })
     }
+    assertCourierActive(cmd.newCourierId, cmd.courierStatus)
     this._status = 'assigned'
     this._courierId = cmd.newCourierId
     this._assignedAt = cmd.now

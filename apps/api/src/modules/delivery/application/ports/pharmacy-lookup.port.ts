@@ -13,4 +13,5 @@ export interface PharmacyLocation {
 // pharmacies не имеет фасада — прецедент DrizzlePharmacyChainLookupAdapter (payments, DTJ-252).
 export interface PharmacyLookupPort {
   findById(pharmacyId: string): Promise<PharmacyLocation | null>
+  findByIds(pharmacyIds: readonly string[]): Promise<readonly PharmacyLocation[]>
 }

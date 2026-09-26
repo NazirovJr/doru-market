@@ -65,3 +65,45 @@ export interface FunnelResponseDto {
   readonly totalSavingsRealizedDiram: number
   readonly weeklyTrend: readonly FunnelWeeklyTrendPointDto[]
 }
+
+// Query — переиспользует FunnelQuerySchema/FunnelQueryDto (та же форма tenantId+period).
+export interface PlatformMetricsResponseDto {
+  readonly gmvDiram: number
+  readonly orderCount: number
+  readonly averageCheckDiram: number
+  readonly pickupSlaComplianceRate: number
+  readonly deliverySlaComplianceRate: number
+  readonly cancellationRate: number
+  readonly activePharmaciesSendingDataRate: number
+}
+
+// Контракт GET /api/v1/analytics/top-analogs (DTJ-383). limit — строка из querystring, coerce + верхняя граница.
+const TOP_ANALOGS_DEFAULT_LIMIT = 10
+const TOP_ANALOGS_MAX_LIMIT = 100
+
+export const TopAnalogsQuerySchema = z.object({
+  tenantId: z.uuid(),
+  period: z.string().regex(FUNNEL_PERIOD_PATTERN, 'period must be YYYY-MM or YYYY-Www'),
+  limit: z.coerce.number().int().min(1).max(TOP_ANALOGS_MAX_LIMIT).default(TOP_ANALOGS_DEFAULT_LIMIT),
+})
+
+export type TopAnalogsQueryDto = z.infer<typeof TopAnalogsQuerySchema>
+
+export interface TopAnalogReportItemDto {
+  readonly medicineId: string
+  readonly medicineName: string
+  readonly avgSavingsDiram: number
+  readonly timesShown: number
+  readonly conversionToOrder: number
+}
+
+export type TopAnalogsResponseDto = readonly TopAnalogReportItemDto[]
+
+// Контракт GET /api/v1/analytics/onboarding-funnel (DTJ-384). Query — переиспользует FunnelQuerySchema.
+export interface OnboardingReviewDurationStatDto {
+  readonly decision: 'approved' | 'rejected'
+  readonly averageDurationHours: number
+  readonly count: number
+}
+
+export type OnboardingFunnelResponseDto = readonly OnboardingReviewDurationStatDto[]

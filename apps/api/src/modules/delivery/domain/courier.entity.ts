@@ -174,6 +174,7 @@ export class Courier {
       courierId: this.id,
       courierChainId: this.props.chainId,
       coldChainCertified: this.props.coldChainCertified,
+      status: this.props.status,
     }
   }
 }

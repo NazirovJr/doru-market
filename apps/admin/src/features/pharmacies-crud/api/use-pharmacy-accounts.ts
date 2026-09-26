@@ -1,0 +1,138 @@
+// Бэкенд ждёт bracket-ключи (filter[status]/filter[chainId]/filter[name][like]) — маппинг camelCase→bracket только здесь.
+import { useCallback, useMemo } from 'react'
+import { useSearchParams } from 'react-router'
+import { useQuery, type UseQueryResult } from '@tanstack/react-query'
+import type { InventorySummaryDto, PharmacyAccountAdminSummaryDto } from '@dorutj/contracts'
+import { httpGetJson, httpGetJsonWithMeta, type HttpError, type QueryParams } from '@/shared/api/http-client'
+
+const PHARMACY_ACCOUNTS_PATH = '/api/v1/pharmacy-accounts'
+const DEFAULT_LIMIT = 50
+
+export interface PharmacyAccountsFilters {
+  readonly status: string | undefined
+  readonly chainId: string | undefined
+  readonly name: string | undefined
+}
+
+const FILTER_KEYS: readonly (keyof PharmacyAccountsFilters)[] = ['status', 'chainId', 'name']
+
+function readFilters(searchParams: URLSearchParams): PharmacyAccountsFilters {
+  return {
+    status: searchParams.get('status') ?? undefined,
+    chainId: searchParams.get('chainId') ?? undefined,
+    name: searchParams.get('name') ?? undefined,
+  }
+}
+
+export interface PharmacyAccountsListOptions {
+  readonly cursor: string | null
+  readonly limit: number
+  readonly scope?: 'own'
+}
+
+function toQueryParams(filters: PharmacyAccountsFilters, options: PharmacyAccountsListOptions): QueryParams {
+  return {
+    scope: options.scope,
+    limit: String(options.limit),
+    cursor: options.cursor ?? undefined,
+    'filter[status]': filters.status,
+    'filter[chainId]': filters.chainId,
+    'filter[name][like]': filters.name,
+  }
+}
+
+export interface PharmacyAccountsPageResult {
+  readonly items: readonly PharmacyAccountAdminSummaryDto[]
+  readonly nextCursor: string | null
+  readonly hasMore: boolean
+}
+
+export async function fetchPharmacyAccountsPage(
+  filters: PharmacyAccountsFilters,
+  options: PharmacyAccountsListOptions,
+): Promise<PharmacyAccountsPageResult> {
+  const params = toQueryParams(filters, options)
+  const result = await httpGetJsonWithMeta<readonly PharmacyAccountAdminSummaryDto[]>(PHARMACY_ACCOUNTS_PATH, params)
+  const pagination = result.meta?.pagination as { nextCursor: string | null; hasMore: boolean } | undefined
+  return { items: result.data, nextCursor: pagination?.nextCursor ?? null, hasMore: pagination?.hasMore ?? false }
+}
+
+export function pharmacyAccountsQueryKey(filters: PharmacyAccountsFilters, cursor: string | null): readonly unknown[] {
+  return ['admin', 'pharmacy-accounts', 'list', filters, cursor] as const
+}
+
+export function usePharmacyAccounts(
+  filters: PharmacyAccountsFilters,
+  cursor: string | null,
+  limit: number = DEFAULT_LIMIT,
+): UseQueryResult<PharmacyAccountsPageResult, HttpError> {
+  return useQuery<PharmacyAccountsPageResult, HttpError>({
+    queryKey: pharmacyAccountsQueryKey(filters, cursor),
+    queryFn: () => fetchPharmacyAccountsPage(filters, { cursor, limit }),
+  })
+}
+
+const EMPTY_FILTERS: PharmacyAccountsFilters = { status: undefined, chainId: undefined, name: undefined }
+
+/** scope=own: chainId резолвится сервером из JWT актора, здесь фильтр по сети не передаётся вовсе. */
+export function ownPharmacyAccountsQueryKey(cursor: string | null): readonly unknown[] {
+  return ['admin', 'pharmacy-accounts', 'own', cursor] as const
+}
+
+export function useOwnPharmacyAccounts(
+  cursor: string | null,
+  limit: number = DEFAULT_LIMIT,
+): UseQueryResult<PharmacyAccountsPageResult, HttpError> {
+  return useQuery<PharmacyAccountsPageResult, HttpError>({
+    queryKey: ownPharmacyAccountsQueryKey(cursor),
+    queryFn: () => fetchPharmacyAccountsPage(EMPTY_FILTERS, { cursor, limit, scope: 'own' }),
+  })
+}
+
+export function inventorySummaryQueryKey(pharmacyId: string): readonly unknown[] {
+  return ['admin', 'pharmacy-accounts', 'inventory-summary', pharmacyId] as const
+}
+
+export function useInventorySummary(pharmacyId: string | null): UseQueryResult<InventorySummaryDto, HttpError> {
+  return useQuery<InventorySummaryDto, HttpError>({
+    queryKey: inventorySummaryQueryKey(pharmacyId ?? ''),
+    queryFn: () => httpGetJson<InventorySummaryDto>(`${PHARMACY_ACCOUNTS_PATH}/${pharmacyId ?? ''}/inventory-summary`),
+    enabled: pharmacyId !== null,
+  })
+}
+
+export interface UsePharmacyAccountsFiltersResult {
+  readonly filters: PharmacyAccountsFilters
+  readonly setFilter: (key: keyof PharmacyAccountsFilters, value: string | undefined) => void
+  readonly resetFilters: () => void
+}
+
+export function usePharmacyAccountsFilters(): UsePharmacyAccountsFiltersResult {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const filters = useMemo(() => readFilters(searchParams), [searchParams])
+
+  const setFilter = useCallback(
+    (key: keyof PharmacyAccountsFilters, value: string | undefined): void => {
+      const next = new URLSearchParams(searchParams)
+      if (value === undefined || value.length === 0) {
+        next.delete(key)
+      } else {
+        next.set(key, value)
+      }
+      setSearchParams(next)
+    },
+    [searchParams, setSearchParams],
+  )
+
+  const resetFilters = useCallback((): void => {
+    const next = new URLSearchParams(searchParams)
+    for (const key of FILTER_KEYS) {
+      next.delete(key)
+    }
+    setSearchParams(next)
+  }, [searchParams, setSearchParams])
+
+  return { filters, setFilter, resetFilters }
+}
+
+export type { HttpError }

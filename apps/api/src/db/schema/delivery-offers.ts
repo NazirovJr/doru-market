@@ -43,6 +43,9 @@ export const deliveryOffers = pgTable(
     index('ix_delivery_offers_courier_pending')
       .on(table.courierId)
       .where(sql`${table.status} = 'pending'`),
+    index('ix_delivery_offers_assignment_active')
+      .on(table.deliveryAssignmentId)
+      .where(sql`${table.status} IN ('pending', 'accepted')`),
   ],
 )
 

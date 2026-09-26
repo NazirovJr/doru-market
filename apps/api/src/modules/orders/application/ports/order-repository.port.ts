@@ -78,6 +78,28 @@ export interface OrderQueueRow {
   readonly createdAt: Date
 }
 
+export interface OrderMetricsPeriod {
+  readonly start: Date
+  readonly end: Date
+}
+
+export interface OrderGmvAggregate {
+  readonly gmvDiram: bigint
+  readonly orderCount: number
+}
+
+export interface OrderSlaAggregate {
+  readonly pickupEligibleCount: number
+  readonly pickupMetCount: number
+  readonly deliveryEligibleCount: number
+  readonly deliveryMetCount: number
+}
+
+export interface OrderCancellationAggregate {
+  readonly totalCount: number
+  readonly cancelledCount: number
+}
+
 export interface OrderRepositoryPort {
   findById(tenantId: string, orderId: string, tx?: OrderUnitOfWorkTx): Promise<Order | null>
   findByCheckoutAttemptId(tenantId: string, checkoutAttemptId: string, tx?: OrderUnitOfWorkTx): Promise<Order | null>
@@ -109,4 +131,9 @@ export interface OrderRepositoryPort {
   /** DTJ-301 (SRS-PHT-005a) — все `pharmacyId` сети `chainId` (см. JSDoc реализации — `chain_id`
    *  не требует отдельного тенант-фильтра здесь, `findQueueOrders` уже скоупит по `tenantId`). */
   findPharmacyIdsByChain(tenantId: string, chainId: string): Promise<readonly string[]>
+
+  getGmvAggregate(tenantId: string, period: OrderMetricsPeriod): Promise<OrderGmvAggregate>
+  // deliverySlaMinutes — ASSUMPTION: домен не несёт отдельного дедлайна доставки, порог передаёт вызывающий.
+  getSlaAggregate(tenantId: string, period: OrderMetricsPeriod, deliverySlaMinutes: number): Promise<OrderSlaAggregate>
+  getCancellationAggregate(tenantId: string, period: OrderMetricsPeriod): Promise<OrderCancellationAggregate>
 }

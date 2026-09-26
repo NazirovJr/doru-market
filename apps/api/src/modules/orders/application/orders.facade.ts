@@ -33,13 +33,34 @@ import { Inject, Injectable, Optional } from '@nestjs/common'
 import { NotFoundError, type OrderPaymentMethod } from '@dorutj/contracts'
 import {
   ORDER_REPOSITORY_PORT,
+  type OrderMetricsPeriod,
   type OrderRepositoryPort,
   type OrderUnitOfWorkTx,
 } from './ports/order-repository.port.js'
+import { TENANCY_FACADE_PORT, type TenancyFacadePort } from './ports/tenancy-facade.port.js'
 import { MergeGuestCartUseCase, type MergeGuestCartResult } from './cart/merge-guest-cart.use-case.js'
 import type { Order } from '@/modules/orders/domain/order.entity.js'
 import type { OrderCancelActor, OrderCancelReason } from '@/modules/orders/domain/order-domain-event.js'
 import type { GeoPoint } from '@/shared-kernel/domain/value-objects/geo-point.vo.js'
+
+// Фолбэк, если getDeliverySlaCityMinutes (опционален) не реализован — 1:1 с DB-дефолтом tenant_settings.
+const DELIVERY_SLA_CITY_MINUTES_DEFAULT = 240
+const ZERO_DIRAM = 0n
+
+export interface PlatformGmvAndAverageCheck {
+  readonly gmvDiram: bigint
+  readonly orderCount: number
+  readonly averageCheckDiram: bigint
+}
+
+export interface PlatformSlaComplianceRates {
+  readonly pickupSlaComplianceRate: number
+  readonly deliverySlaComplianceRate: number
+}
+
+function safeDivide(numerator: number, denominator: number): number {
+  return denominator === 0 ? 0 : numerator / denominator
+}
 
 export interface MarkPaidEscrowCommand {
   readonly tenantId: string
@@ -92,6 +113,8 @@ export class OrdersFacade {
   constructor(
     @Inject(ORDER_REPOSITORY_PORT) private readonly repository: OrderRepositoryPort,
     @Optional() @Inject(MergeGuestCartUseCase) private readonly mergeGuestCartUseCase?: MergeGuestCartUseCase,
+    // @Optional() тем же приёмом, что mergeGuestCartUseCase — не ломает однопараметровые вызовы в спеках.
+    @Optional() @Inject(TENANCY_FACADE_PORT) private readonly tenancyFacade?: TenancyFacadePort,
   ) {}
 
   /** См. JSDoc файла — делегация к `MergeGuestCartUseCase` (DTJ-226) для вызова из `auth`. */
@@ -156,6 +179,26 @@ export class OrdersFacade {
     const order = await this.findOrThrow(cmd.tenantId, orderId, tx)
     order.cancel(cmd.reason, cmd.actor, cmd.now)
     await this.repository.save(order, tx)
+  }
+
+  async getGmvAndAverageCheck(tenantId: string, period: OrderMetricsPeriod): Promise<PlatformGmvAndAverageCheck> {
+    const aggregate = await this.repository.getGmvAggregate(tenantId, period)
+    const averageCheckDiram = aggregate.orderCount === 0 ? ZERO_DIRAM : aggregate.gmvDiram / BigInt(aggregate.orderCount)
+    return { gmvDiram: aggregate.gmvDiram, orderCount: aggregate.orderCount, averageCheckDiram }
+  }
+
+  async getSlaComplianceRates(tenantId: string, period: OrderMetricsPeriod): Promise<PlatformSlaComplianceRates> {
+    const deliverySlaMinutes = (await this.tenancyFacade?.getDeliverySlaCityMinutes?.(tenantId)) ?? DELIVERY_SLA_CITY_MINUTES_DEFAULT
+    const aggregate = await this.repository.getSlaAggregate(tenantId, period, deliverySlaMinutes)
+    return {
+      pickupSlaComplianceRate: safeDivide(aggregate.pickupMetCount, aggregate.pickupEligibleCount),
+      deliverySlaComplianceRate: safeDivide(aggregate.deliveryMetCount, aggregate.deliveryEligibleCount),
+    }
+  }
+
+  async getCancellationRate(tenantId: string, period: OrderMetricsPeriod): Promise<number> {
+    const aggregate = await this.repository.getCancellationAggregate(tenantId, period)
+    return safeDivide(aggregate.cancelledCount, aggregate.totalCount)
   }
 
   private async findOrThrow(tenantId: string, orderId: string, tx?: OrderUnitOfWorkTx): Promise<Order> {
