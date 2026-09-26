@@ -91,6 +91,21 @@ export class InMemoryOtpCodesRepository implements OtpCodesRepository {
     return Promise.resolve(null)
   }
 
+  supersedeUnconsumed(input: {
+    readonly tenantId: string
+    readonly subjectRef: string
+    readonly purpose: 'login' | 'onboarding_contact'
+    readonly now: Date
+  }): Promise<void> {
+    for (const [id, row] of this.rows) {
+      const sameSubject = row.tenantId === input.tenantId && row.subjectRef === input.subjectRef && row.purpose === input.purpose
+      if (sameSubject && row.consumedAt === null) {
+        this.rows.set(id, { ...row, consumedAt: input.now })
+      }
+    }
+    return Promise.resolve()
+  }
+
   countBySubjectAndPurpose(tenantId: string, subjectRef: string, purpose: 'delivery_handover'): Promise<number> {
     let count = 0
     for (const row of this.rows.values()) {

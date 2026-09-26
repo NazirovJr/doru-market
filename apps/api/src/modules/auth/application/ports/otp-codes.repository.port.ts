@@ -87,6 +87,13 @@ export interface OtpCodesRepository {
     readonly purpose: 'login' | 'onboarding_contact'
     readonly now: Date
   }): Promise<OtpCodeRecord | null>
+  // Новый код отменяет прежние невведённые: иначе уникальный индекс активного кода блокирует повторный запрос навсегда.
+  supersedeUnconsumed(input: {
+    readonly tenantId: string
+    readonly subjectRef: string
+    readonly purpose: 'login' | 'onboarding_contact'
+    readonly now: Date
+  }): Promise<void>
   /** ДОБАВЛЕНО (DTJ-306, EP-12 §A.5) — сколько строк `otp_codes` когда-либо создано для
    *  `subjectRef+purpose` (включая самую первую) — `RegenerateHandoverOtpUseCase` считает
    *  `regenerationsUsed`/rate-limit по этому числу, не по отдельному денормализованному

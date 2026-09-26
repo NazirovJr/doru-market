@@ -112,6 +112,7 @@ function makeHarness(): Harness {
     incrementAttempts: vi.fn(),
     findActiveBySubject: vi.fn(),
     countBySubjectAndPurpose,
+    supersedeUnconsumed: vi.fn(),
   }
   const getMaxRegenerations = vi
     .fn<TenancyFacadePort['getHandoverOtpMaxRegenerationsPerOrder']>()

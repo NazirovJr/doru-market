@@ -101,6 +101,25 @@ export class DrizzleOtpCodesRepository implements OtpCodesRepository {
     return row === undefined ? null : rowToRecord(row)
   }
 
+  async supersedeUnconsumed(input: {
+    readonly tenantId: string
+    readonly subjectRef: string
+    readonly purpose: 'login' | 'onboarding_contact'
+    readonly now: Date
+  }): Promise<void> {
+    await this.db
+      .update(otpCodes)
+      .set({ consumedAt: input.now })
+      .where(
+        and(
+          eq(otpCodes.tenantId, input.tenantId),
+          eq(otpCodes.subjectRef, input.subjectRef),
+          eq(otpCodes.purpose, input.purpose),
+          isNull(otpCodes.consumedAt),
+        ),
+      )
+  }
+
   async countBySubjectAndPurpose(tenantId: string, subjectRef: string, purpose: 'delivery_handover'): Promise<number> {
     const rows = await this.db
       .select({ value: count() })
