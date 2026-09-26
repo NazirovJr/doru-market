@@ -53,6 +53,11 @@ describe('validateEnv', () => {
     expect(() => validateEnv(rest)).toThrow(/CORS_STATIC_ORIGINS/)
   })
 
+  it('DEV_FIXED_OTP=true в production — процесс не стартует, в development допустимо', () => {
+    expect(() => validateEnv({ ...VALID_ENV, NODE_ENV: 'production', DEV_FIXED_OTP: 'true' })).toThrow(/DEV_FIXED_OTP/)
+    expect(validateEnv({ ...VALID_ENV, NODE_ENV: 'development', DEV_FIXED_OTP: 'true' }).DEV_FIXED_OTP).toBe('true')
+  })
+
   it('бросает ошибку при недопустимом NODE_ENV', () => {
     expect(() => validateEnv({ ...VALID_ENV, NODE_ENV: 'staging' })).toThrow()
   })
