@@ -170,6 +170,7 @@ export class RequestOtpUseCase {
     // `id: otpRequestId` — ОБЯЗАТЕЛЬНО тот же id, которым уже посолен `codeHash`
     // выше (см. JSDoc порта `OtpCodesRepository.create`): иначе `VerifyOtpUseCase`
     // не найдёт строку по `otpRequestId`, и любой verify вернёт `OtpMismatchError`.
+    await this.deps.otpCodes.supersedeUnconsumed({ tenantId, subjectRef: phone.value, purpose: 'login', now: otpCode.issuedAt })
     await this.deps.otpCodes.create({
       id: otpRequestId,
       tenantId,

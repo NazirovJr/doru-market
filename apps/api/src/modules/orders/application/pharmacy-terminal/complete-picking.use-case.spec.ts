@@ -143,6 +143,7 @@ function makeHarness(): Harness {
     incrementAttempts: vi.fn(),
     findActiveBySubject: vi.fn(),
     countBySubjectAndPurpose: vi.fn(),
+    supersedeUnconsumed: vi.fn(),
   }
   const useCase = new CompletePickingUseCase(
     orderRepo,

@@ -66,6 +66,7 @@ function makeHarness(): Harness {
     incrementAttempts: vi.fn(),
     findActiveBySubject: vi.fn(),
     countBySubjectAndPurpose: vi.fn(),
+    supersedeUnconsumed: vi.fn(),
   }
   const auditWrite = vi.fn<AuditLogPort['write']>().mockResolvedValue(undefined)
   const auditLog: AuditLogPort = { write: auditWrite }
