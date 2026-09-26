@@ -1,0 +1,19 @@
+<!doctype html>
+<!--
+  DTJ-417 — фикстура-нарушитель для самопроверки `runAxeCheck` (критерий приёмки №4).
+  Иконка-кнопка БЕЗ `aria-label`/видимого текста — намеренное нарушение WCAG 4.1.2.
+  НЕ пример для копирования (аналог tests/arch/fixtures/**) — эта страница ДОЛЖНА проваливать
+  `runAxeCheck`, иначе хелпер молча пропускает реальные нарушения.
+-->
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>DTJ-417 a11y violation fixture</title>
+  </head>
+  <body>
+    <h1>Фикстура-нарушитель runAxeCheck</h1>
+    <button type="button" style="width: 24px; height: 24px">
+      <svg width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="6" /></svg>
+    </button>
+  </body>
+</html>

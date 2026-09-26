@@ -51,7 +51,22 @@ describe('AuditLogPage', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ data: [] })))
     renderPage()
 
-    await waitFor(() => { expect(screen.queryByRole('status')).not.toBeInTheDocument() })
+    // `waitFor(() => expect(...).not.toBeInTheDocument())` вместо `waitForElementToBeRemoved` —
+    // см. отчёт задачи стабилизации тестов. `waitForElementToBeRemoved` синхронно проверяет
+    // наличие элемента В МОМЕНТ ВЫЗОВА и бросает "element(s) already removed", если статус
+    // загрузки успел исчезнуть ДО этой строки (мокнутый `fetch` резолвится синхронной
+    // микрозадачей — под нагрузкой момент фактического исчезновения относительно этой строки
+    // непредсказуем в обе стороны). `waitFor(...not.toBeInTheDocument())` корректен независимо
+    // от того, застали мы элемент ещё видимым или он уже пропал. Таймаут поднят с дефолтных
+    // 1000мс: под полным `pnpm test` (turbo параллельно гоняет api/web/admin/pharmacy/worker на
+    // 4 ядрах) резолюция мокнутого fetch + Response.json() + react-query стейт-апдейт иногда не
+    // укладываются в 1с — не баг компонента, а нагрузка среды.
+    await waitFor(
+      () => {
+        expect(screen.queryByRole('status')).not.toBeInTheDocument()
+      },
+      { timeout: 5000 },
+    )
     expect(screen.queryAllByTestId('audit-log-row')).toHaveLength(0)
   })
 

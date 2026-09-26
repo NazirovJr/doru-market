@@ -1,0 +1,17 @@
+/*
+ * DTJ-404 — keyframes спиннера `Button.loading` (SRS-UX-019/020). Определения keyframes нельзя
+ * задать через inline `style` (React не поддерживает `@keyframes` в объекте стилей), поэтому это
+ * единственный внешний CSS-файл, который реально нужен компонентам данного тикета — сами цвета
+ * и размеры заданы inline через `var(--brand-*)`/именованные px-константы (см. `internal/motion.ts`
+ * и JSDoc `assert-hit-area.ts` про ограничения `jsdom`: computed `animation-name` не читается
+ * тестами, поэтому наличие/отсутствие анимации проверяется через inline `style.animation`,
+ * а не через этот файл — см. `skeleton.spec.tsx`/`button.spec.tsx`).
+ */
+@keyframes dorutj-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

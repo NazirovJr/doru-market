@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["../../apps/api/src/*"],
+      "@apitest/*": ["../../apps/api/test/*"],
+      "@dorutj/contracts": ["../../packages/contracts/src/index.ts"],
+      "@dorutj/contracts/*": ["../../packages/contracts/src/*"],
+      "@dorutj/domain-kernel": ["../../packages/domain-kernel/src/index.ts"],
+      "@dorutj/domain-kernel/*": ["../../packages/domain-kernel/src/*"],
+      "@dorutj/i18n": ["../../packages/i18n/src/index.ts"],
+      "@dorutj/i18n/*": ["../../packages/i18n/src/*"]
+    },
+    // 1:1 `tests/invariants/tsconfig.json` — этот пакет тоже тянет боевой граф apps/api
+    // (`createApp()`/`@Module`-декораторы) в одну tsc-программу.
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["*.spec.ts"],
+  "exclude": ["node_modules", "dist"]
+}

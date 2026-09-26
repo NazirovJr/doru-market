@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
@@ -9,11 +9,20 @@ import { MIN_SUGGEST_QUERY_LENGTH, SUGGEST_DEBOUNCE_MS, useSearchSuggestions } f
 /**
  * `use-search-suggestions.spec.tsx` (DTJ-192).
  *
- * Мокает `fetch` напрямую (тот же приём, что `use-pharmacy-map-pins.spec.tsx`) — реальный таймер
- * (не `vi.useFakeTimers`), т.к. тест одновременно завязан на debounce (`setTimeout`) и на реальные
- * промисы `fetch`/TanStack Query; смешивание fake timers с ожиданием промисов через `waitFor`
- * ненадёжно (fake timers не продвигают внутренние ретраи/микротаски библиотеки). Задержки в
- * тестах — реальные миллисекунды, но небольшие (сотни мс), тест-сьют остаётся быстрым.
+ * Мокает `fetch` напрямую (тот же приём, что `use-pharmacy-map-pins.spec.tsx`).
+ *
+ * **Стабилизация под нагрузкой (см. отчёт задачи стабилизации тестов).** Раньше файл ждал debounce
+ * реальными миллисекундами (`setTimeout` + `await`) — изолированно проходило, но под параллельным
+ * `turbo run test` (4 CPU, все пакеты монорепо разом) реальный `setTimeout` внутри SUT регулярно
+ * срабатывал позже, чем тест успевал прождать фиксированный `AFTER_DEBOUNCE_MS`, и тест либо не
+ * видел вызов `fetch`, либо ловил гонку раньше времени — гейт падал нерегулярно, хотя код SUT не
+ * менялся. Фикс — `vi.useFakeTimers({ shouldAdvanceTime: true })` (тот же приём, что
+ * `ImportProgressBar.spec.tsx`, DTJ-168): виртуальные часы продвигаются явным
+ * `vi.advanceTimersByTimeAsync(ms)` вместо ожидания реального времени, поэтому таймер debounce
+ * срабатывает детерминированно независимо от загрузки CPU; `shouldAdvanceTime: true` при этом
+ * оставляет часы тикающими и в реальном времени — `waitFor` (который опрашивает через реальные
+ * интервалы) продолжает работать для промисов `fetch`/TanStack Query, довешивающихся ПОСЛЕ
+ * срабатывания таймера.
  */
 
 const suggestUrl = `${getClientEnv().apiBaseUrl}/api/v1/medicines/suggest`
@@ -36,10 +45,16 @@ function suggestionItem(tradeName: string): { medicineId: string; tradeName: str
   return { medicineId: `id-${tradeName}`, tradeName, innName: tradeName, matchedVia: 'prefix' }
 }
 
-function wait(ms: number): Promise<void> {
+/** Симулирует сетевую задержку ВНУТРИ `fetch`-мока — таймер тоже фейковый, продвигается через `advance()`/реальный тик `shouldAdvanceTime`. */
+function networkDelay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
   })
+}
+
+/** Детерминированно продвигает виртуальные часы теста (debounce SUT) вместо ожидания реального времени. */
+async function advance(ms: number): Promise<void> {
+  await vi.advanceTimersByTimeAsync(ms)
 }
 
 function wrapper({ children }: { readonly children: ReactNode }): ReactNode {
@@ -54,8 +69,13 @@ function renderSuggestions(initialQuery: string, enabled = true) {
   })
 }
 
+beforeEach(() => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+})
+
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.useRealTimers()
   window.localStorage.clear()
 })
 
@@ -71,9 +91,11 @@ describe('useSearchSuggestions (DTJ-192)', () => {
     rerender({ rawQuery: 'пар', isEnabled: true })
     rerender({ rawQuery: 'параце', isEnabled: true })
 
-    await wait(AFTER_DEBOUNCE_MS)
+    await advance(AFTER_DEBOUNCE_MS)
 
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
     const [url] = fetchMock.mock.calls[0] ?? []
     expect(url).toBe(`${suggestUrl}?q=${encodeURIComponent('параце')}&limit=10`)
   })
@@ -83,15 +105,17 @@ describe('useSearchSuggestions (DTJ-192)', () => {
       const isStaleQuery = input.includes('q=%D0%BF%D0%BE&')
       const delayMs = isStaleQuery ? AFTER_DEBOUNCE_MS * 2 : DEBOUNCE_BUFFER_MS
       const tradeName = isStaleQuery ? 'Устаревшее' : 'Свежее'
-      return wait(delayMs).then(() => jsonResponse({ data: [suggestionItem(tradeName)] }))
+      return networkDelay(delayMs).then(() => jsonResponse({ data: [suggestionItem(tradeName)] }))
     })
 
     const { result, rerender } = renderSuggestions('по')
-    await wait(AFTER_DEBOUNCE_MS)
-    expect(fetchMock).toHaveBeenCalledTimes(1) // устаревший запрос уже запущен, ждёт медленного resolve
+    await advance(AFTER_DEBOUNCE_MS)
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1) // устаревший запрос уже запущен, ждёт медленного resolve
+    })
 
     rerender({ rawQuery: 'пар', isEnabled: true })
-    await wait(AFTER_DEBOUNCE_MS)
+    await advance(AFTER_DEBOUNCE_MS)
 
     await waitFor(() => {
       expect(result.current.suggestions.map((item) => item.tradeName)).toEqual(['Свежее'])
@@ -99,7 +123,7 @@ describe('useSearchSuggestions (DTJ-192)', () => {
 
     // Ждём дольше, чем нужно устаревшему запросу на "по", чтобы убедиться: даже когда он ДОЙДЁТ,
     // отображаемый результат не откатится назад к "Устаревшее".
-    await wait(AFTER_DEBOUNCE_MS * 2)
+    await advance(AFTER_DEBOUNCE_MS * 2)
     expect(result.current.suggestions.map((item) => item.tradeName)).toEqual(['Свежее'])
   })
 
@@ -107,7 +131,7 @@ describe('useSearchSuggestions (DTJ-192)', () => {
     const fetchMock = stubFetch(() => Promise.resolve(jsonResponse({ data: [] })))
 
     const { result } = renderSuggestions('а')
-    await wait(AFTER_DEBOUNCE_MS)
+    await advance(AFTER_DEBOUNCE_MS)
 
     expect(fetchMock).not.toHaveBeenCalled()
     expect(result.current.belowMinLength).toBe(true)
@@ -118,7 +142,7 @@ describe('useSearchSuggestions (DTJ-192)', () => {
     const fetchMock = stubFetch(() => Promise.resolve(jsonResponse({ data: [suggestionItem('Аспирин')] })))
 
     const { result } = renderSuggestions('ас')
-    await wait(AFTER_DEBOUNCE_MS)
+    await advance(AFTER_DEBOUNCE_MS)
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -146,7 +170,7 @@ describe('useSearchSuggestions (DTJ-192)', () => {
 
     const { result } = renderSuggestions('')
 
-    await wait(AFTER_DEBOUNCE_MS)
+    await advance(AFTER_DEBOUNCE_MS)
 
     expect(fetchMock).not.toHaveBeenCalled()
     expect(result.current.source).toBe('history')
@@ -157,7 +181,7 @@ describe('useSearchSuggestions (DTJ-192)', () => {
     const fetchMock = stubFetch(() => Promise.resolve(jsonResponse({ data: [suggestionItem('X')] })))
 
     renderSuggestions('парацетамол', false)
-    await wait(AFTER_DEBOUNCE_MS)
+    await advance(AFTER_DEBOUNCE_MS)
 
     expect(fetchMock).not.toHaveBeenCalled()
   })

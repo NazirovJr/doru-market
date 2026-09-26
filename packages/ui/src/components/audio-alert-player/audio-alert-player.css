@@ -1,0 +1,17 @@
+/*
+ * DTJ-410 — keyframes пульсации визуального баннера `AudioAlertPlayer` (`SRS-UX-007`/`SRS-UX-020`).
+ * `@keyframes` нельзя задать через inline `style` (React не поддерживает их в объекте стилей) —
+ * тот же приём, что `internal/spinner.css` (DTJ-404). Наличие/отсутствие анимации проверяется
+ * тестами через inline `style.animation` компонента, не через этот файл (см. JSDoc `spinner.css`).
+ */
+@keyframes dorutj-audio-alert-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(1.015);
+  }
+}

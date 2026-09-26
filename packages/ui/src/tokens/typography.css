@@ -1,0 +1,26 @@
+/*
+ * DTJ-401 — типографика (SRS-UX-014, обновлено [D-26]).
+ * Типографика НЕ брендируется, кроме `--brand-font-family` (allowlist, SRS-UX-015 / SRS-TEN-014).
+ */
+:root {
+  --brand-font-family: 'Inter', system-ui, sans-serif;
+
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-md: 18px;
+  --font-size-lg: 20px;
+  --font-size-h2: 22px; /* [D-26] H2 22/30/700 принятого дизайна */
+  --font-size-xl: 24px;
+  --font-size-h1: 28px; /* [D-26] H1 28/36/700 принятого дизайна */
+  --font-size-2xl: 30px;
+  --font-size-3xl: 36px;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600; /* [D-26] body-strong */
+  --font-weight-bold: 700;
+}
