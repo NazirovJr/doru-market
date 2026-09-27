@@ -24,6 +24,7 @@
  *   - `execute()` ≤30 LOC, делегирует один helper.
  *   - 2 DI-инъекции.
  */
+import { CLOCK, type Clock } from '@/shared-kernel/index.js'
 import { Inject, Injectable } from '@nestjs/common'
 import { ForbiddenError } from '@dorutj/contracts'
 import { type Result, err, ok } from '@dorutj/domain-kernel'
@@ -48,6 +49,7 @@ export class RevokeSessionUseCase {
   constructor(
     @Inject(AUTH_SESSIONS_REPOSITORY) private readonly authSessions: AuthSessionsRepository,
     @Inject(UNIT_OF_WORK) private readonly uow: UnitOfWorkPort,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   async execute(input: RevokeSessionInput): Promise<RevokeSessionResult> {
@@ -57,7 +59,7 @@ export class RevokeSessionUseCase {
     if (session?.userId !== input.actorUserId) {
       return err(new ForbiddenError('Session does not belong to current user'))
     }
-    const now = new Date()
+    const now = this.clock.now()
     await this.uow.run(async (tx) => {
       await this.authSessions.revokeOneById({ tx, sessionId: session.id, reason: 'user_logout', now })
     })

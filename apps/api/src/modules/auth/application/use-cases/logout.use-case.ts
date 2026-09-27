@@ -20,6 +20,7 @@
  *     `Clock`/`refreshGen` НЕ нужны — sha256 считается локально).
  *   - sha256 через `node:crypto.createHash` (как в `RefreshTokenUseCase`).
  */
+import { CLOCK, type Clock } from '@/shared-kernel/index.js'
 import { createHash } from 'node:crypto'
 import { Inject, Injectable } from '@nestjs/common'
 import { type Result, ok } from '@dorutj/domain-kernel'
@@ -47,6 +48,7 @@ export class LogoutUseCase {
   constructor(
     @Inject(AUTH_SESSIONS_REPOSITORY) private readonly authSessions: AuthSessionsRepository,
     @Inject(UNIT_OF_WORK) private readonly uow: UnitOfWorkPort,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   async execute(input: LogoutInput): Promise<LogoutResult> {
@@ -67,7 +69,7 @@ export class LogoutUseCase {
       // идемпотентный сценарий, НЕ вызываем `revokeOneById` повторно.
       return ok(undefined)
     }
-    const now = new Date()
+    const now = this.clock.now()
     await this.uow.run(async (tx) => {
       await this.authSessions.revokeOneById({ tx, sessionId: session.id, reason: 'user_logout', now })
     })

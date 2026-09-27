@@ -18,6 +18,7 @@
  *   - `execute()` ≤15 LOC.
  *   - 2 DI-инъекции.
  */
+import { CLOCK, type Clock } from '@/shared-kernel/index.js'
 import { Inject, Injectable } from '@nestjs/common'
 import {
   AUTH_SESSIONS_REPOSITORY,
@@ -38,10 +39,11 @@ export class LogoutAllUseCase {
   constructor(
     @Inject(AUTH_SESSIONS_REPOSITORY) private readonly authSessions: AuthSessionsRepository,
     @Inject(UNIT_OF_WORK) private readonly uow: UnitOfWorkPort,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   async execute(input: LogoutAllInput): Promise<void> {
-    const now = new Date()
+    const now = this.clock.now()
     await this.uow.run(async (tx) => {
       await this.authSessions.revokeAllByUserId({ tx, userId: input.userId, reason: 'user_logout_all', now })
     })

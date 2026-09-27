@@ -41,6 +41,7 @@
  *     `userId` + `familyId` (это `uuid`, не персональные данные; DoD п.4
  *     «только хеши/идентификаторы в логах»).
  */
+import { CLOCK, type Clock } from '@/shared-kernel/index.js'
 import { createHash, randomUUID } from 'node:crypto'
 import { Inject, Injectable } from '@nestjs/common'
 import { type Logger } from 'pino'
@@ -106,6 +107,7 @@ export class RefreshTokenUseCase {
     @Inject(REFRESH_TOKEN_GENERATOR) private readonly refreshGen: RefreshTokenGeneratorPort,
     @Inject(UNIT_OF_WORK) private readonly uow: UnitOfWorkPort,
     @Inject(PINO_LOGGER) private readonly logger: Logger,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   async execute(
@@ -127,7 +129,7 @@ export class RefreshTokenUseCase {
       return err(new RefreshTokenInvalidError())
     }
 
-    const now = new Date()
+    const now = this.clock.now()
     if (now.getTime() > session.absoluteExpiresAt.getTime()) {
       // DTJ-025 §2.5: ПРОВЕРЯЕТСЯ ДО `rotated_at`, чтобы не спутать
       // «штатное истечение» с «переиспользован». Если поменять порядок —
