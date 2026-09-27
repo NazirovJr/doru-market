@@ -152,6 +152,9 @@ const EXPECTED: readonly (readonly [ErrorCode, number])[] = [
   [ErrorCode.MISSING_TEMPLATE_VARIABLE, 500],
   [ErrorCode.INVALID_TEMPLATE_SUBJECT_CHANNEL, 400],
   [ErrorCode.CRITICAL_CATEGORY_CANNOT_BE_DISABLED, 422],
+
+  // ---- Доменные: EP-05 inventory, канал CommerceML 1С (DTJ-165) ----
+  [ErrorCode.COMMERCE_ML_MALFORMED_XML, 400],
 ]
 
 describe('ErrorCode / ERROR_HTTP_STATUS — сверка с источниками', () => {

@@ -32,3 +32,10 @@ export class ExcelImportRowLimitExceededError extends ValidationError {
     super('Excel/CSV import file exceeds the maximum allowed row count', details, ErrorCode.EXCEL_IMPORT_ROW_LIMIT_EXCEEDED)
   }
 }
+
+/** DTJ-165: XML без корневого тега `<КоммерческаяИнформация>` — не CommerceML. */
+export class CommerceMlMalformedXmlError extends ValidationError {
+  constructor(details?: Record<string, unknown>) {
+    super('CommerceML file is malformed: missing root element', details, ErrorCode.COMMERCE_ML_MALFORMED_XML)
+  }
+}

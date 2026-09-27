@@ -171,6 +171,8 @@ export const envSchema = z.object({
   RATE_LIMIT_ANON_PER_MIN: z.coerce.number().int().positive().default(DEFAULT_RATE_LIMIT_ANON_PER_MIN),
   RATE_LIMIT_USER_PER_MIN: z.coerce.number().int().positive().default(DEFAULT_RATE_LIMIT_USER_PER_MIN),
   RATE_LIMIT_1C_BATCH_PER_MIN: z.coerce.number().int().positive().default(DEFAULT_RATE_LIMIT_1C_BATCH_PER_MIN),
+  // [DTJ-165] `real` — валиден здесь, но не реализован: фабрика в inventory.module.ts бросает на старте.
+  COMMERCE_ML_PARSER_DRIVER: z.enum(['mock', 'real']).default('mock'),
 })
 
 /** [DTJ-023] Секунды в N минутах/часах/дне — для use case расчёта rate-limit окон. */
