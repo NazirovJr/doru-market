@@ -211,4 +211,97 @@ describe('<PickingPage /> (DTJ-311)', () => {
     await waitFor(() => { expect(screen.queryByTestId('report-issue-modal')).not.toBeInTheDocument() })
     expect(screen.getByTestId('picking-item-badge')).toHaveTextContent('Дар мавҷудӣ нест')
   })
+
+  it('нет unavailable-позиций — «Пакет опечатан» + «Завершить сборку» переводит на экран OTP (DTJ-312)', async () => {
+    const items = [makeItem({ id: 'a', medicineName: 'Парацетамол 500мг', fulfillmentStatus: 'scanned_ok' })]
+    stubFetch((url) => {
+      if (url.includes('/complete-picking')) {
+        return Promise.resolve(
+          jsonResponse({ data: { orderId: 'order-1', status: 'picked_up', handoverOtp: { code: '4821', expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(), purpose: 'delivery_handover' } } }),
+        )
+      }
+      return Promise.resolve(jsonResponse({ data: makeOrder({ items }) }))
+    })
+    renderPage()
+
+    await waitFor(() => { expect(screen.getByTestId('complete-picking-section')).toBeInTheDocument() })
+    expect(screen.getByTestId('complete-picking-cta')).toHaveAttribute('aria-disabled', 'true')
+
+    fireEvent.click(screen.getByLabelText('Бастабандӣ мӯҳр карда шудааст'))
+    expect(screen.getByTestId('complete-picking-cta')).not.toHaveAttribute('aria-disabled')
+    fireEvent.click(screen.getByTestId('complete-picking-cta'))
+
+    await waitFor(() => { expect(screen.getByTestId('handover-otp-screen')).toBeInTheDocument() })
+    expect(screen.getByTestId('handover-otp-code')).toHaveTextContent('4821')
+  })
+
+  it('есть unavailable-позиция — баннер предложения, после успеха — баннер ожидания, «Завершить сборку» остаётся недоступной (DTJ-312)', async () => {
+    const items = [
+      makeItem({ id: 'a', medicineName: 'Парацетамол 500мг', fulfillmentStatus: 'scanned_ok' }),
+      makeItem({ id: 'b', medicineName: 'Ибупрофен 200мг', fulfillmentStatus: 'unavailable', itemIssueReason: 'out_of_stock' }),
+    ]
+    stubFetch((url) => {
+      if (url.includes('/propose-partial-fulfillment')) {
+        return Promise.resolve(
+          jsonResponse(
+            {
+              data: {
+                id: 'request-1',
+                orderId: 'order-1',
+                status: 'awaiting_customer',
+                itemsSnapshot: [],
+                itemsTotalBeforeDiram: 2000,
+                itemsTotalAfterDiram: 1000,
+                refundAmountDiram: 1000,
+                expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(),
+              },
+            },
+            201,
+          ),
+        )
+      }
+      return Promise.resolve(jsonResponse({ data: makeOrder({ items }) }))
+    })
+    renderPage()
+
+    await waitFor(() => { expect(screen.getByTestId('partial-fulfillment-propose-cta')).toBeInTheDocument() })
+    fireEvent.click(screen.getByLabelText('Бастабандӣ мӯҳр карда шудааст'))
+    fireEvent.click(screen.getByTestId('partial-fulfillment-propose-cta'))
+
+    await waitFor(() => { expect(screen.getByTestId('partial-fulfillment-awaiting-banner')).toBeInTheDocument() })
+    expect(screen.queryByTestId('partial-fulfillment-propose-cta')).not.toBeInTheDocument()
+    expect(screen.getByTestId('complete-picking-cta')).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('409 PARTIAL_FULFILLMENT_PENDING на complete-picking — баннер ожидания вместо сырой ошибки (гонка, DTJ-312)', async () => {
+    const items = [makeItem({ id: 'a', medicineName: 'Парацетамол 500мг', fulfillmentStatus: 'scanned_ok' })]
+    stubFetch((url) => {
+      if (url.includes('/complete-picking')) {
+        return Promise.resolve(jsonResponse({ error: { code: 'PARTIAL_FULFILLMENT_PENDING' } }, 409))
+      }
+      return Promise.resolve(jsonResponse({ data: makeOrder({ items }) }))
+    })
+    renderPage()
+
+    await waitFor(() => { expect(screen.getByTestId('complete-picking-section')).toBeInTheDocument() })
+    fireEvent.click(screen.getByLabelText('Бастабандӣ мӯҳр карда шудааст'))
+    fireEvent.click(screen.getByTestId('complete-picking-cta'))
+
+    await waitFor(() => { expect(screen.getByTestId('partial-fulfillment-awaiting-banner')).toBeInTheDocument() })
+    expect(screen.queryByTestId('complete-picking-error')).not.toBeInTheDocument()
+  })
+
+  it('заказ уже picked_up (возврат из очереди) — сразу экран OTP, код подтягивается через GET (DTJ-312)', async () => {
+    const items = [makeItem({ id: 'a', medicineName: 'Парацетамол 500мг', fulfillmentStatus: 'scanned_ok' })]
+    stubFetch((url) => {
+      if (url.includes('/handover-otp')) {
+        return Promise.resolve(jsonResponse({ data: { code: '7777', expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(), purpose: 'delivery_handover' } }))
+      }
+      return Promise.resolve(jsonResponse({ data: makeOrder({ items, status: 'picked_up' }) }))
+    })
+    renderPage()
+
+    await waitFor(() => { expect(screen.getByTestId('handover-otp-screen')).toBeInTheDocument() })
+    expect(screen.getByTestId('handover-otp-code')).toHaveTextContent('7777')
+  })
 })

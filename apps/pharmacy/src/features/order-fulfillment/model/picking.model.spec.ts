@@ -2,13 +2,12 @@ import { describe, expect, it } from 'vitest'
 import type { OrderDto, OrderItemDto, PharmacyTerminalOrderItemDto } from '@dorutj/contracts'
 import {
   areAllItemsResolved,
-  computeRemainingSeconds,
   findNextPendingItemId,
-  formatRemainingClock,
+  hasUnavailableItem,
   isItemActionable,
   isOrderCancelled,
-  isSlaNearingBreach,
   mergeUpdatedItem,
+  resolveCompletePickingErrorMessageKey,
   resolveScanErrorMessageKey,
   resolveWrongBarcodeMessage,
 } from './picking.model'
@@ -141,24 +140,24 @@ describe('picking.model — resolveScanErrorMessageKey', () => {
   })
 })
 
-describe('picking.model — SLA countdown', () => {
-  it('computeRemainingSeconds — null deadline -> null', () => {
-    expect(computeRemainingSeconds(null, Date.now())).toBeNull()
+describe('picking.model — resolveCompletePickingErrorMessageKey', () => {
+  it.each([
+    ['SEAL_CONFIRMATION_REQUIRED', 'pharmacy.picking.complete.error.seal_required'],
+    ['EXPIRED_STOCK', 'pharmacy.picking.complete.error.expired_stock'],
+    ['SOME_OTHER_CODE', 'pharmacy.picking.complete.error.generic'],
+  ])('%s -> %s', (code, expectedKey) => {
+    expect(resolveCompletePickingErrorMessageKey(code)).toBe(expectedKey)
+  })
+})
+
+describe('picking.model — hasUnavailableItem', () => {
+  it('нет unavailable-позиций — false', () => {
+    expect(hasUnavailableItem([makeItem({ id: 'a', fulfillmentStatus: 'scanned_ok' })])).toBe(false)
   })
 
-  it('computeRemainingSeconds — не уходит в отрицательные значения после дедлайна', () => {
-    const past = new Date(Date.now() - 60_000).toISOString()
-    expect(computeRemainingSeconds(past, Date.now())).toBe(0)
-  })
-
-  it('isSlaNearingBreach — true при <=120с, false при большем остатке', () => {
-    expect(isSlaNearingBreach(60)).toBe(true)
-    expect(isSlaNearingBreach(121)).toBe(false)
-    expect(isSlaNearingBreach(null)).toBe(false)
-  })
-
-  it('formatRemainingClock — mm:ss с ведущим нулём секунд', () => {
-    expect(formatRemainingClock(65)).toBe('1:05')
-    expect(formatRemainingClock(0)).toBe('0:00')
+  it('есть хотя бы одна unavailable-позиция — true', () => {
+    expect(
+      hasUnavailableItem([makeItem({ id: 'a', fulfillmentStatus: 'scanned_ok' }), makeItem({ id: 'b', fulfillmentStatus: 'unavailable' })]),
+    ).toBe(true)
   })
 })

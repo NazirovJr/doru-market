@@ -35,6 +35,11 @@ const PICKING_KEYS: readonly string[] = [
   'pharmacy.picking.report_issue.submit_pending',
   'pharmacy.picking.report_issue.cancel',
   'pharmacy.picking.report_issue.error',
+  'pharmacy.picking.complete.seal_checkbox_label',
+  'pharmacy.picking.complete.cta',
+  'pharmacy.picking.complete.error.seal_required',
+  'pharmacy.picking.complete.error.expired_stock',
+  'pharmacy.picking.complete.error.generic',
 ]
 
 const MISSING_KEY_MARKER = '[[missing:'
