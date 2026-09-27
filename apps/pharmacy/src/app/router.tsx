@@ -27,7 +27,6 @@ const routes: RouteObject[] = [
   {
     element: <AuthGuard />,
     children: [
-      // AppLayout — общий предок всех защищённых экранов, вложенные пути не меняет.
       {
         element: <AppLayout />,
         children: [

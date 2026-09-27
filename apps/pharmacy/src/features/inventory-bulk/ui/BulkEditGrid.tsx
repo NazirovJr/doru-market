@@ -1,7 +1,9 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
-import { Button, EmptyState, Input } from '@dorutj/ui'
+import { Button, EmptyState } from '@dorutj/ui'
 import { useLocale } from '@/shared/config/locale-provider'
+import { useAuthStore } from '@/shared/api/auth-store'
+import { canSaveInventory } from '@/shared/auth/inventory-permissions'
 import {
   BULK_GRID_PAGE_SIZE,
   flattenInventoryPages,
@@ -18,9 +20,9 @@ import {
   useInventoryList,
   type BulkGridRow,
 } from '@/features/inventory-bulk/api/use-bulk-grid'
-import { useMedicineSuggest, type MedicineSuggestionItem } from '@/shared/api/use-medicine-search'
+import type { MedicineSuggestionItem } from '@/shared/api/use-medicine-search'
+import { MedicinePicker } from './MedicinePicker'
 
-const MEDICINE_SEARCH_DEBOUNCE_MS = 200
 const RANDOM_ID_RADIX = 36
 
 function todayIsoDate(): string {
@@ -31,74 +33,17 @@ function makeRowId(): string {
   return `bulk-row-${Math.random().toString(RANDOM_ID_RADIX).slice(2)}-${String(Date.now())}`
 }
 
-function useDebouncedText(rawQuery: string): string {
-  const [debounced, setDebounced] = useState(rawQuery)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => { setDebounced(rawQuery.trim()) }, MEDICINE_SEARCH_DEBOUNCE_MS)
-    return () => { clearTimeout(timeoutId) }
-  }, [rawQuery])
-  return debounced
-}
-
-const MedicinePicker = ({
-  onSelect,
-  onCancel,
-}: {
-  readonly onSelect: (item: MedicineSuggestionItem) => void
-  readonly onCancel: () => void
-}): ReactElement => {
-  const { locale } = useLocale()
-  const { t } = useT(locale)
-  const [rawQuery, setRawQuery] = useState('')
-  const debouncedQuery = useDebouncedText(rawQuery)
-  const suggestQuery = useMedicineSuggest(debouncedQuery, true)
-  const items = suggestQuery.data ?? []
-
-  return (
-    <div className="flex flex-col gap-2 rounded-md border border-line p-3" data-testid="bulk-grid-medicine-picker">
-      <Input
-        type="text"
-        autoFocus
-        label={t('pharmacy.inventory.point_edit.medicine_label')}
-        value={rawQuery}
-        placeholder={t('pharmacy.inventory.autocomplete.placeholder')}
-        data-testid="bulk-grid-medicine-picker-input"
-        onChange={(event) => { setRawQuery(event.target.value) }}
-      />
-      <ul data-testid="bulk-grid-medicine-picker-list" className="flex max-h-48 flex-col overflow-auto">
-        {suggestQuery.isLoading ? <li className="text-sm text-ink-muted">{t('pharmacy.inventory.autocomplete.loading')}</li> : null}
-        {!suggestQuery.isLoading && items.length === 0 ? (
-          <li className="text-sm text-ink-muted">{t('pharmacy.inventory.autocomplete.empty')}</li>
-        ) : null}
-        {items.map((item) => (
-          <li key={item.medicineId}>
-            <button
-              type="button"
-              data-testid="bulk-grid-medicine-picker-option"
-              onClick={() => { onSelect(item) }}
-              className="w-full px-2 py-1 text-left text-sm hover:bg-line"
-            >
-              {formatMedicineLabel(item)}
-            </button>
-          </li>
-        ))}
-      </ul>
-      <Button type="button" variant="ghost" onClick={onCancel} data-testid="bulk-grid-medicine-picker-cancel">
-        {t('pharmacy.inventory.bulk_edit.grid_cancel_new_row')}
-      </Button>
-    </div>
-  )
-}
-
 // Ячейки — сырые <input>: Input (packages/ui) обязан показать видимый label, задвоив подпись колонки.
 const GridRow = ({
   row,
   today,
+  readOnly,
   onChange,
   onRemove,
 }: {
   readonly row: BulkGridRow
   readonly today: string
+  readonly readOnly: boolean
   readonly onChange: (rowId: string, patch: Partial<BulkGridRow>) => void
   readonly onRemove: (rowId: string) => void
 }): ReactElement => {
@@ -119,7 +64,8 @@ const GridRow = ({
           data-testid="bulk-grid-price-input"
           aria-invalid={priceInvalid}
           aria-label={t('pharmacy.inventory.bulk_edit.grid_price_column')}
-          className="w-24 rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink"
+          disabled={readOnly}
+          className="w-24 rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink disabled:opacity-50"
           onChange={(event) => { onChange(row.rowId, { priceTjs: event.target.value }) }}
         />
       </td>
@@ -131,7 +77,8 @@ const GridRow = ({
           data-testid="bulk-grid-quantity-input"
           aria-invalid={quantityInvalid}
           aria-label={t('pharmacy.inventory.bulk_edit.grid_quantity_column')}
-          className="w-20 rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink"
+          disabled={readOnly}
+          className="w-20 rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink disabled:opacity-50"
           onChange={(event) => { onChange(row.rowId, { quantity: event.target.value }) }}
         />
       </td>
@@ -142,7 +89,8 @@ const GridRow = ({
           data-testid="bulk-grid-expiry-input"
           aria-invalid={expiryInvalid}
           aria-label={t('pharmacy.inventory.bulk_edit.grid_expiry_column')}
-          className="rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink"
+          disabled={readOnly}
+          className="rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink disabled:opacity-50"
           onChange={(event) => { onChange(row.rowId, { expiryDate: event.target.value }) }}
         />
       </td>
@@ -152,16 +100,37 @@ const GridRow = ({
           value={row.batchNumber}
           data-testid="bulk-grid-batch-input"
           aria-label={t('pharmacy.inventory.bulk_edit.grid_batch_column')}
-          className="w-24 rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink"
+          disabled={readOnly}
+          className="w-24 rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink disabled:opacity-50"
           onChange={(event) => { onChange(row.rowId, { batchNumber: event.target.value }) }}
         />
       </td>
       <td className="px-2 py-1">
-        <Button type="button" variant="ghost" onClick={() => { onRemove(row.rowId) }} data-testid="bulk-grid-remove-row">
-          {t('pharmacy.inventory.bulk_edit.grid_remove_row')}
-        </Button>
+        {readOnly ? null : (
+          <Button type="button" variant="ghost" onClick={() => { onRemove(row.rowId) }} data-testid="bulk-grid-remove-row">
+            {t('pharmacy.inventory.bulk_edit.grid_remove_row')}
+          </Button>
+        )}
       </td>
     </tr>
+  )
+}
+
+// Вынесено из BulkEditGrid — снижает цикломатическую сложность основного компонента (C1, порог 10).
+const AddRowControl = ({ canEdit, onClick }: { readonly canEdit: boolean; readonly onClick: () => void }): ReactElement => {
+  const { locale } = useLocale()
+  const { t } = useT(locale)
+  if (!canEdit) {
+    return (
+      <p role="status" data-testid="bulk-grid-readonly-hint" className="text-sm text-ink-muted">
+        {t('pharmacy.inventory.point_edit.error_insufficient_role')}
+      </p>
+    )
+  }
+  return (
+    <Button type="button" variant="secondary" onClick={onClick} data-testid="bulk-grid-add-row-button">
+      {t('pharmacy.inventory.bulk_edit.grid_add_row')}
+    </Button>
   )
 }
 
@@ -175,6 +144,7 @@ export const BulkEditGrid = (): ReactElement => {
   const bulkSave = useBulkSave()
   const inventoryList = useInventoryList()
   const today = todayIsoDate()
+  const hasEditPermission = canSaveInventory(useAuthStore((state) => state.user?.role))
 
   // Серверные строки — источник истины, локально добавленные/изменённые сохраняются поверх,
   // пока не сохранены (mergeServerAndLocalRows). Следующая серверная страница грузится ПО
@@ -188,7 +158,7 @@ export const BulkEditGrid = (): ReactElement => {
   const totalPages = totalPageCount(rows.length, BULK_GRID_PAGE_SIZE)
   const visibleRows = paginateRows(rows, page, BULK_GRID_PAGE_SIZE)
   const dirtyRows = selectDirtyRows(rows)
-  const canSave = dirtyRows.length > 0 && dirtyRows.every((row) => isRowValid(row, today)) && !bulkSave.isPending
+  const canSave = hasEditPermission && dirtyRows.length > 0 && dirtyRows.every((row) => isRowValid(row, today)) && !bulkSave.isPending
 
   function handleAddMedicine(item: MedicineSuggestionItem): void {
     const newRow: BulkGridRow = {
@@ -241,9 +211,7 @@ export const BulkEditGrid = (): ReactElement => {
     <div className="flex flex-col gap-3" data-testid="bulk-edit-grid">
       <p className="text-sm font-medium text-ink">{t('pharmacy.inventory.bulk_edit.grid_title')}</p>
 
-      <Button type="button" variant="secondary" onClick={() => { setIsPickerOpen(true) }} data-testid="bulk-grid-add-row-button">
-        {t('pharmacy.inventory.bulk_edit.grid_add_row')}
-      </Button>
+      <AddRowControl canEdit={hasEditPermission} onClick={() => { setIsPickerOpen(true) }} />
 
       {isPickerOpen ? <MedicinePicker onSelect={handleAddMedicine} onCancel={() => { setIsPickerOpen(false) }} /> : null}
 
@@ -267,7 +235,7 @@ export const BulkEditGrid = (): ReactElement => {
               </thead>
               <tbody>
                 {visibleRows.map((row) => (
-                  <GridRow key={row.rowId} row={row} today={today} onChange={handleRowChange} onRemove={handleRemoveRow} />
+                  <GridRow key={row.rowId} row={row} today={today} readOnly={!hasEditPermission} onChange={handleRowChange} onRemove={handleRemoveRow} />
                 ))}
               </tbody>
             </table>
@@ -293,15 +261,17 @@ export const BulkEditGrid = (): ReactElement => {
         </>
       )}
 
-      <Button
-        type="button"
-        disabled={!canSave}
-        loading={bulkSave.isPending}
-        onClick={handleSave}
-        data-testid="bulk-grid-save-button"
-      >
-        {t('pharmacy.inventory.bulk_edit.grid_save')}
-      </Button>
+      {hasEditPermission && (
+        <Button
+          type="button"
+          disabled={!canSave}
+          loading={bulkSave.isPending}
+          onClick={handleSave}
+          data-testid="bulk-grid-save-button"
+        >
+          {t('pharmacy.inventory.bulk_edit.grid_save')}
+        </Button>
+      )}
 
       {saveState === 'success' ? (
         <p role="status" data-testid="bulk-grid-save-success" className="text-sm text-ink">

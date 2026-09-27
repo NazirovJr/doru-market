@@ -1,8 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from '@dorutj/ui'
 import { LocaleProvider } from '@/shared/config/locale-provider'
+import { useAuthStore } from '@/shared/api/auth-store'
 import InventoryPage from './InventoryPage'
 
 function stubFetch(): void {
@@ -22,8 +23,13 @@ function renderPage(): void {
   )
 }
 
+beforeEach(() => {
+  useAuthStore.setState({ accessToken: 'tok', refreshToken: 'ref', user: { id: 'u1', role: 'pharmacy_admin', tenantId: 't1', phoneNumber: null, fullName: null } })
+})
+
 afterEach(() => {
   vi.unstubAllGlobals()
+  useAuthStore.setState({ accessToken: null, refreshToken: null, user: null })
 })
 
 /** DTJ-167 «Что сделать» п.5: переключатель вкладок «Точечное редактирование» / «Массовое редактирование». */

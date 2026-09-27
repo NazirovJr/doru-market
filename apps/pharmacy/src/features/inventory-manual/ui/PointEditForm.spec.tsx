@@ -1,8 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from '@dorutj/ui'
 import { LocaleProvider } from '@/shared/config/locale-provider'
+import { useAuthStore } from '@/shared/api/auth-store'
 import { PointEditForm } from './PointEditForm'
 
 type FetchImpl = (input: string, init?: RequestInit) => Promise<Response>
@@ -71,16 +72,21 @@ function fillValidRow(): void {
   fireEvent.change(screen.getByTestId('point-edit-expiry'), { target: { value: '2030-01-01' } })
 }
 
+beforeEach(() => {
+  // Сценарии этого файла — про валидацию формы, не про ролевой доступ (см. отдельный describe ниже) — pharmacy_admin имеет право сохранять (DTJ-433).
+  useAuthStore.setState({ accessToken: 'tok', refreshToken: 'ref', user: { id: 'u1', role: 'pharmacy_admin', tenantId: 't1', phoneNumber: null, fullName: null } })
+})
+
 afterEach(() => {
   vi.unstubAllGlobals()
+  useAuthStore.setState({ accessToken: null, refreshToken: null, user: null })
 })
 
 /** DTJ-167 тест-план: «PointEditForm блокирует отправку при невалидной форме» (критерий приёмки 3). */
 describe('<PointEditForm /> (DTJ-167)', () => {
   it('кнопка «Сохранить» неактивна, пока медикамент не выбран', () => {
     renderForm()
-    // `Button` (packages/ui) — персистентный disabled помечается `aria-disabled`, БЕЗ нативного
-    // `disabled` (остаётся в tab-order по дизайну компонента).
+    // Button (packages/ui) — персистентный disabled это aria-disabled, без нативного disabled.
     expect(screen.getByTestId('point-edit-submit')).toHaveAttribute('aria-disabled', 'true')
   })
 
@@ -141,5 +147,17 @@ describe('<PointEditForm /> (DTJ-167)', () => {
     renderForm()
     fireEvent.click(screen.getByTestId('missing-medicine-link'))
     expect(screen.getByTestId('missing-medicine-stub')).toBeInTheDocument()
+  })
+})
+
+/** DTJ-433 foundIssue: API (inventory-manual-entry.controller.ts) разрешает сохранение только pharmacy_admin/super_admin — pharmacist получал бы 403. */
+describe('<PointEditForm /> — сохранение недоступно роли pharmacist (DTJ-433)', () => {
+  it('pharmacist: кнопка «Сохранить» скрыта, показана подсказка, поля недоступны для ввода', () => {
+    useAuthStore.setState({ accessToken: 'tok', refreshToken: 'ref', user: { id: 'u2', role: 'pharmacist', tenantId: 't1', phoneNumber: null, fullName: null } })
+    renderForm()
+
+    expect(screen.queryByTestId('point-edit-submit')).not.toBeInTheDocument()
+    expect(screen.getByTestId('point-edit-readonly-hint')).toBeInTheDocument()
+    expect(screen.getByTestId('point-edit-price')).toBeDisabled()
   })
 })

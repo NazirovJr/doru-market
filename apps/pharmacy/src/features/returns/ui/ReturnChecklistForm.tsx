@@ -10,16 +10,7 @@ import {
   resolvePackagingToggleState,
 } from './ReturnChecklistForm.model'
 
-/**
- * `ReturnChecklistForm` (DTJ-277, EP-11, SRS-DOM-053/054, DTJ-433) — чек-лист приёмки возврата
- * фармацевтом: `packagingIntact` — `packages/ui` `Switch` (DTJ-405), `checklistNotes` —
- * `packages/ui` `Textarea` (DTJ-404). НЕ включает кнопку «Отклонить» — отдельный CTA вне этой
- * формы, см. `IncomingReturnsList.tsx` (DTJ-277 «Что сделать» п.3).
- *
- * После успешного подтверждения показывает `disposition` РОВНО так, как его вернул сервер — не
- * пересчитывает на клиенте (DTJ-277 «Что сделать» п.4, `SRS-DOM-053/054` — домен уже применил
- * правила восстановления/уничтожения на бэкенде).
- */
+// Чек-лист приёмки возврата: disposition показывается ровно так, как вернул сервер — не пересчитывается на клиенте.
 
 export interface ReturnChecklistFormProps {
   readonly returnId: string

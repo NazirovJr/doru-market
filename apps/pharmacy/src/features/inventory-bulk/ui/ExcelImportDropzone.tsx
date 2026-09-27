@@ -2,6 +2,8 @@ import { useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
 import { Button, FileDropzone, RadioGroup } from '@dorutj/ui'
 import { useLocale } from '@/shared/config/locale-provider'
+import { useAuthStore } from '@/shared/api/auth-store'
+import { canSaveInventory } from '@/shared/auth/inventory-permissions'
 import type { InventoryExcelImportMode } from '@dorutj/contracts'
 import { downloadInventoryImportTemplate, useExcelImport } from '@/features/inventory-bulk/api/use-excel-import'
 import { ImportProgressBar } from './ImportProgressBar'
@@ -27,8 +29,17 @@ export const ExcelImportDropzone = (): ReactElement => {
   const [mode, setMode] = useState<InventoryExcelImportMode | null>(null)
   const [templateError, setTemplateError] = useState(false)
   const excelImport = useExcelImport()
+  const hasEditPermission = canSaveInventory(useAuthStore((state) => state.user?.role))
 
   const canUpload = file !== null && mode !== null && !excelImport.isPending
+
+  if (!hasEditPermission) {
+    return (
+      <p role="status" data-testid="excel-import-readonly-hint" className="text-sm text-ink-muted">
+        {t('pharmacy.inventory.point_edit.error_insufficient_role')}
+      </p>
+    )
+  }
 
   function handleFileAccepted(nextFile: File): void {
     setFile(nextFile)

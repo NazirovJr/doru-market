@@ -44,8 +44,7 @@ describe('<SyncBatchesTable /> (DTJ-169)', () => {
       batch('failed_validation', { rejectedRows: 10, acceptedRows: 0 }),
     ])
 
-    // `Badge` (packages/ui) окрашивает через `tone` (CSS-переменные), не через утилитарный класс —
-    // цвет по статусу проверяем через `data-tone` обёртки, назначенный из той же карты `STATUS_TONE`.
+    // Badge (packages/ui) красит через tone, не класс — проверяем data-tone обёртки.
     expect(screen.getByTestId('sync-batch-status-b-completed_full_success')).toHaveAttribute('data-tone', 'success')
     expect(screen.getByTestId('sync-batch-status-b-completed_partial_success')).toHaveAttribute('data-tone', 'warning')
     expect(screen.getByTestId('sync-batch-status-b-failed_validation')).toHaveAttribute('data-tone', 'danger')

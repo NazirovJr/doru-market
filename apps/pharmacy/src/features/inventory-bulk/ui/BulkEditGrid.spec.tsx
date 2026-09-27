@@ -1,8 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BULK_GRID_PAGE_SIZE } from '@/features/inventory-bulk/api/use-bulk-grid'
 import { LocaleProvider } from '@/shared/config/locale-provider'
+import { useAuthStore } from '@/shared/api/auth-store'
 import { BulkEditGrid } from './BulkEditGrid'
 
 const DEFAULT_MEDICINE_SEARCH_ITEM = { medicineId: 'med-1', tradeName: 'Aspirin', dosageForm: 'tablet', dosageStrength: '500mg' }
@@ -122,8 +123,13 @@ function findSaveCall(fetchMock: ReturnType<typeof vi.fn>): [string, RequestInit
   return saveCall!
 }
 
+beforeEach(() => {
+  useAuthStore.setState({ accessToken: 'tok', refreshToken: 'ref', user: { id: 'u1', role: 'pharmacy_admin', tenantId: 't1', phoneNumber: null, fullName: null } })
+})
+
 afterEach(() => {
   vi.unstubAllGlobals()
+  useAuthStore.setState({ accessToken: null, refreshToken: null, user: null })
 })
 
 describe('<BulkEditGrid /> (DTJ-168)', () => {
@@ -222,5 +228,22 @@ describe('<BulkEditGrid /> (DTJ-168)', () => {
     fireEvent.click(screen.getByTestId('bulk-grid-next-page'))
 
     await waitFor(() => { expect(countInventoryListCalls(fetchMock)).toBe(2) })
+  })
+})
+
+/** DTJ-433 foundIssue: inventory-excel-import/inventory-manual-entry разрешают сохранение только pharmacy_admin/super_admin. */
+describe('<BulkEditGrid /> — сохранение недоступно роли pharmacist (DTJ-433)', () => {
+  it('строки видны (просмотр), но добавление/сохранение/удаление скрыты, ячейки недоступны для ввода', async () => {
+    useAuthStore.setState({ accessToken: 'tok', refreshToken: 'ref', user: { id: 'u2', role: 'pharmacist', tenantId: 't1', phoneNumber: null, fullName: null } })
+    stubApi({ inventoryItems: [INVENTORY_ITEM_1] })
+    renderGrid()
+
+    await waitFor(() => { expect(screen.getByTestId('bulk-grid-row')).toBeInTheDocument() })
+    expect(screen.getByText('Aspirin (tablet, 500mg)')).toBeInTheDocument()
+    expect(screen.queryByTestId('bulk-grid-add-row-button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('bulk-grid-save-button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('bulk-grid-remove-row')).not.toBeInTheDocument()
+    expect(screen.getByTestId('bulk-grid-readonly-hint')).toBeInTheDocument()
+    expect(screen.getByTestId('bulk-grid-price-input')).toBeDisabled()
   })
 })
