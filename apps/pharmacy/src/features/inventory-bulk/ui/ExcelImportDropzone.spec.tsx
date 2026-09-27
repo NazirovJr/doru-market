@@ -56,7 +56,6 @@ describe('<ExcelImportDropzone /> (DTJ-168)', () => {
     vi.stubGlobal('fetch', fetchMock)
     renderDropzone()
     selectFile()
-    // Локаль по умолчанию — tj (LocaleProvider): подпись радио-опции — tj-перевод mode_append_update.
     fireEvent.click(screen.getByRole('radio', { name: 'Илова кардан/навсозӣ' }))
 
     expect(screen.getByTestId('excel-import-upload-button')).not.toHaveAttribute('aria-disabled')

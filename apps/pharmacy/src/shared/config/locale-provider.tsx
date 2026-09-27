@@ -9,8 +9,7 @@ import {
 } from 'react'
 import type { Locale } from '@dorutj/i18n'
 
-// Портировано из apps/web/shared/config/locale-provider.tsx; свой ключ localStorage —
-// тот же приём разделения неймспейсов, что shared/api/auth-store.ts.
+// Портировано из apps/web/shared/config/locale-provider.tsx; свой ключ localStorage.
 const DEFAULT_LOCALE: Locale = 'tj'
 const LOCALE_STORAGE_KEY = 'dorutj.pharmacy.locale'
 const SUPPORTED_LOCALES: readonly Locale[] = ['tj', 'ru', 'en']
@@ -40,7 +39,7 @@ function persistLocale(locale: Locale): void {
   try {
     window.localStorage.setItem(LOCALE_STORAGE_KEY, locale)
   } catch {
-    // см. readStoredLocale — персистентность best-effort.
+    // best-effort
   }
 }
 

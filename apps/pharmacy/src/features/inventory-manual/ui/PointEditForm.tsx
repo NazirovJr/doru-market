@@ -56,14 +56,12 @@ export const PointEditForm = (): ReactElement => {
     }
     manualEntry.mutate(buildManualEntryRow(form), {
       onSuccess: (): void => {
-        // `DEFAULT_TOAST_DURATION_MS` (4с, packages/ui) совпадает с прежним локальным авто-закрытием.
         toast.success(t('pharmacy.inventory.point_edit.toast_success'))
         setMedicine(null)
         setForm(INITIAL_POINT_EDIT_STATE)
         setFormKey((key) => key + 1)
       },
       onError: (error): void => {
-        // `persistent` — как прежний локальный Toast: ошибка не закрывается сама, только явным действием.
         toast.error(t(resolveManualEntryErrorKey(error.code)), { persistent: true })
       },
     })
