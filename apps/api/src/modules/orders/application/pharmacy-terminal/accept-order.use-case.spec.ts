@@ -72,6 +72,7 @@ function makeHarness(pickupSlaMinutes = 7): Harness {
     reserveStock: vi.fn(),
     releaseStock: vi.fn(),
     hasExpiredReservedBatch,
+    findExpiredReservedItemIds: vi.fn(),
     getStockQuantity: vi.fn(),
     reserveForOrder: vi.fn(),
     reconcileZeroStock: vi.fn(),

@@ -7,7 +7,7 @@
 import { randomUUID } from 'node:crypto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { isOk } from '@dorutj/domain-kernel'
-import { BusinessRuleViolationError, ForbiddenError, NotFoundError } from '@dorutj/contracts'
+import { BusinessRuleViolationError, ForbiddenError, NotFoundError, PendingCustomerConfirmationError } from '@dorutj/contracts'
 import type { Clock } from '@/shared-kernel/application/ports/clock.port.js'
 import type { IdGenerator } from '@/shared-kernel/application/ports/id-generator.port.js'
 import { InMemoryOrderRepository } from '@/modules/orders/testing/fixtures/in-memory-order-repository.fixture.js'
@@ -97,6 +97,7 @@ interface Harness {
   readonly schedule: ReturnType<typeof vi.fn<PartialFulfillmentTimeoutQueuePort['schedule']>>
   readonly createRequest: ReturnType<typeof vi.fn<PartialFulfillmentRequestRepositoryPort['create']>>
   readonly getTimeoutMinutes: ReturnType<typeof vi.fn<TenancyFacadePort['getPartialFulfillmentConfirmationTimeoutMinutes']>>
+  readonly findLatestByOrderId: ReturnType<typeof vi.fn<PartialFulfillmentRequestRepositoryPort['findLatestByOrderId']>>
 }
 
 function toRecord(input: CreatePartialFulfillmentRequestInput): PartialFulfillmentRequestRecord {
@@ -128,10 +129,11 @@ function makeHarness(): Harness {
   const createRequest = vi.fn<PartialFulfillmentRequestRepositoryPort['create']>().mockImplementation((input) =>
     Promise.resolve(toRecord(input)),
   )
+  const findLatestByOrderId = vi.fn<PartialFulfillmentRequestRepositoryPort['findLatestByOrderId']>().mockResolvedValue(null)
   const requestRepository: PartialFulfillmentRequestRepositoryPort = {
     create: createRequest,
     findById: vi.fn(),
-    findLatestByOrderId: vi.fn(),
+    findLatestByOrderId,
     transitionStatus: vi.fn(),
   }
   const schedule = vi.fn<PartialFulfillmentTimeoutQueuePort['schedule']>().mockResolvedValue(undefined)
@@ -147,7 +149,7 @@ function makeHarness(): Harness {
     new FixedClock(),
     new SequentialIdGenerator(),
   )
-  return { useCase, repo, appendAll, schedule, createRequest, getTimeoutMinutes }
+  return { useCase, repo, appendAll, schedule, createRequest, getTimeoutMinutes, findLatestByOrderId }
 }
 
 beforeEach(() => {
@@ -267,6 +269,60 @@ describe('ProposePartialFulfillmentUseCase — precondition (TC-PHT-010)', () =>
       useCase.execute({ orderId: order.id, idempotencyKey: IDEMPOTENCY_KEY, actor: PHARMACIST_OWN }),
     ).rejects.toBeInstanceOf(BusinessRuleViolationError)
     expect(createRequest).not.toHaveBeenCalled()
+  })
+})
+
+describe('ProposePartialFulfillmentUseCase — гейт против дубля (foundIssue DTJ-312)', () => {
+  it('уже есть awaiting_customer-запрос → 409 PARTIAL_FULFILLMENT_PENDING, второй propose НЕ создаёт вторую строку', async () => {
+    const { useCase, repo, createRequest, findLatestByOrderId } = makeHarness()
+    const order = withItemStatuses(makeTwoItemOrder(), ['scanned_ok', 'unavailable'])
+    repo.seed(order)
+    findLatestByOrderId.mockResolvedValue({
+      id: 'existing-request-1',
+      orderId: order.id,
+      proposedBy: 'pharmacist-1',
+      itemsSnapshot: [],
+      itemsTotalBeforeDiram: 40_000n,
+      itemsTotalAfterDiram: 20_000n,
+      refundAmountDiram: 20_000n,
+      status: 'awaiting_customer',
+      idempotencyKey: 'previous-key',
+      requestedAt: NOW,
+      expiresAt: NOW,
+      respondedAt: null,
+    })
+
+    const error = await useCase
+      .execute({ orderId: order.id, idempotencyKey: IDEMPOTENCY_KEY, actor: PHARMACIST_OWN })
+      .catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(PendingCustomerConfirmationError)
+    expect(createRequest).not.toHaveBeenCalled()
+  })
+
+  it('латест-запрос уже confirmed (прошлый цикл частичной сборки) — НЕ блокирует новый propose', async () => {
+    const { useCase, repo, createRequest, findLatestByOrderId } = makeHarness()
+    const order = withItemStatuses(makeTwoItemOrder(), ['scanned_ok', 'unavailable'])
+    repo.seed(order)
+    findLatestByOrderId.mockResolvedValue({
+      id: 'existing-request-1',
+      orderId: order.id,
+      proposedBy: 'pharmacist-1',
+      itemsSnapshot: [],
+      itemsTotalBeforeDiram: 40_000n,
+      itemsTotalAfterDiram: 20_000n,
+      refundAmountDiram: 20_000n,
+      status: 'confirmed',
+      idempotencyKey: 'previous-key',
+      requestedAt: NOW,
+      expiresAt: NOW,
+      respondedAt: NOW,
+    })
+
+    const result = await useCase.execute({ orderId: order.id, idempotencyKey: IDEMPOTENCY_KEY, actor: PHARMACIST_OWN })
+
+    expect(result.status).toBe('awaiting_customer')
+    expect(createRequest).toHaveBeenCalledOnce()
   })
 })
 

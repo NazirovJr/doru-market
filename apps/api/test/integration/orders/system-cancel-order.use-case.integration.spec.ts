@@ -170,6 +170,7 @@ describe.skipIf(!postgresAvailable)('SystemCancelOrderUseCase — integration (D
       reserveStock: vi.fn(),
       releaseStock,
       hasExpiredReservedBatch: vi.fn(),
+      findExpiredReservedItemIds: vi.fn(),
       getStockQuantity: vi.fn(),
       reserveForOrder: vi.fn(),
       reconcileZeroStock: vi.fn(),

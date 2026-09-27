@@ -299,6 +299,13 @@ export class UnimplementedInventoryFacadeAdapter implements InventoryFacadePort 
     )
   }
 
+  /** ДОБАВЛЕНО (DTJ-312 доработка) — тот же класс решения, что `hasExpiredReservedBatch` выше: пустой массив означало бы «ничего не просрочено», обходя REQ-REG-6. */
+  findExpiredReservedItemIds(_orderId: string): Promise<readonly string[]> {
+    return Promise.reject(
+      new Error('InventoryFacadePort.findExpiredReservedItemIds() has no implementation yet — TODO(DTJ-227): bind a real adapter.'),
+    )
+  }
+
   getStockQuantity(_pharmacyId: string, _medicineId: string): Promise<number> {
     return Promise.resolve(0)
   }

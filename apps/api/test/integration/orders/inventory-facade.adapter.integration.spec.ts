@@ -128,8 +128,14 @@ describe.skipIf(!postgresAvailable)('InventoryFacadeAdapter — integration (DTJ
 
   let orderNumberSeq = 0
   async function seedOrderReferencingBatch(batchId: string): Promise<string> {
+    return (await seedOrderItemReferencingBatch(batchId)).orderId
+  }
+
+  /** ДОБАВЛЕНО (DTJ-312 доработка) — 1:1 `seedOrderReferencingBatch`, но возвращает и `itemId` (нужен `findExpiredReservedItemIds`). */
+  async function seedOrderItemReferencingBatch(batchId: string): Promise<{ readonly orderId: string; readonly itemId: string }> {
     orderNumberSeq += 1
     const orderId = randomUUID()
+    const itemId = randomUUID()
     await pool.query(
       `INSERT INTO orders
          (id, order_number, customer_id, pharmacy_id, status, payment_method,
@@ -139,11 +145,11 @@ describe.skipIf(!postgresAvailable)('InventoryFacadeAdapter — integration (DTJ
     )
     await pool.query(
       `INSERT INTO order_items (id, order_id, medicine_id, unit_price_tjs, quantity, total_price_tjs, commission_bps, platform_fee_diram, inventory_batch_id)
-       VALUES (gen_random_uuid(), $1, $2, 10.00, 2, 20.00, 0, 0, $3)`,
-      [orderId, medicineId, batchId],
+       VALUES ($1, $2, $3, 10.00, 2, 20.00, 0, 0, $4)`,
+      [itemId, orderId, medicineId, batchId],
     )
     createdOrderIds.push(orderId)
-    return orderId
+    return { orderId, itemId }
   }
 
   beforeEach(async () => {
@@ -222,6 +228,21 @@ describe.skipIf(!postgresAvailable)('InventoryFacadeAdapter — integration (DTJ
     const orderId = await seedOrderReferencingBatch(batchId)
 
     expect(await adapter.hasExpiredReservedBatch(orderId)).toBe(false)
+  })
+
+  // DTJ-312 доработка — `findExpiredReservedItemIds` (1:1 запрос `hasExpiredReservedBatch`, но с `order_items.id` в проекции, см. JSDoc порта).
+  it('findExpiredReservedItemIds — возвращает id позиции, чей резервированный лот истёк', async () => {
+    const batchId = await seedBatch(-1, 10)
+    const { orderId, itemId } = await seedOrderItemReferencingBatch(batchId)
+
+    expect(await adapter.findExpiredReservedItemIds(orderId)).toEqual([itemId])
+  })
+
+  it('findExpiredReservedItemIds — пустой массив для непросроченного лота', async () => {
+    const batchId = await seedBatch(30, 10)
+    const orderId = await seedOrderReferencingBatch(batchId)
+
+    expect(await adapter.findExpiredReservedItemIds(orderId)).toEqual([])
   })
 
   it('getStockQuantity — сумма непросроченных лотов, просроченные не учитываются', async () => {

@@ -25,6 +25,7 @@ function setUp(stockQuantity: number) {
     reserveStock: vi.fn(),
     releaseStock: vi.fn(),
     hasExpiredReservedBatch: vi.fn(),
+    findExpiredReservedItemIds: vi.fn(),
     getStockQuantity: getStockQuantityMock,
     reserveForOrder: vi.fn(),
     reconcileZeroStock: vi.fn(),
