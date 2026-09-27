@@ -172,6 +172,18 @@ export class DrizzlePayoutScheduleRepository implements PayoutScheduleRepository
       hasMore,
     }
   }
+
+  // orderId UNIQUE — LIMIT 1 без keyset.
+  public async findByOrderId(orderId: string): Promise<PayoutScheduleReportRow | null> {
+    const rows = (await this.db
+      .select({ ...PAYOUT_REPORT_SELECTION, pharmacyId: payoutSchedule.pharmacyId })
+      .from(payoutSchedule)
+      .innerJoin(orders, eq(orders.id, payoutSchedule.orderId))
+      .where(eq(payoutSchedule.orderId, orderId))
+      .limit(1)) as (PayoutReportSelectionRow & { pharmacyId: string })[]
+    const row = rows[0]
+    return row === undefined ? null : toPayoutScheduleReportRow(row)
+  }
 }
 
 /** Общие `WHERE`-условия `findByPharmacy`/`findAllByPharmacy` (DTJ-252) — не дублировать между методами. */

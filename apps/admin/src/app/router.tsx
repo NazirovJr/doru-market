@@ -5,6 +5,7 @@ import { OnboardingQueuePage } from '@/features/onboarding-verification/onboardi
 import { OnboardingApplicationDetailPage } from '@/features/onboarding-verification/onboarding-application-detail.page'
 import { SupportTicketsQueuePage } from '@/features/support/support-tickets-queue.page'
 import { SupportTicketDetailPage } from '@/features/support/support-ticket-detail.page'
+import { OrderDetailPage } from '@/features/orders/ui/order-detail-page'
 import { getRoutesForRole, type RouteConfig } from '@/app/role-routes'
 import { getCurrentRole } from '@/shared/auth/current-role'
 import { ForbiddenPage } from '@/shared/ui/forbidden.page'
@@ -76,6 +77,11 @@ const routes: RouteObject[] = [
       {
         path: 'admin/support-tickets/:id',
         element: <SupportTicketDetailPage />,
+      },
+      // Скоуп (своя сеть/любой тенант) проверяется бэкендом, не ролевой развилкой маршрута.
+      {
+        path: 'admin/orders/:id',
+        element: <OrderDetailPage />,
       },
       ...roleRoutes,
       ...tenantDetailRoutes,

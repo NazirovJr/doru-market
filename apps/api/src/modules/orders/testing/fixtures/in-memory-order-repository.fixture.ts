@@ -13,9 +13,13 @@ import type { OrderStatus } from '@dorutj/contracts'
 import type { Order, OrderSnapshot } from '@/modules/orders/domain/order.entity.js'
 import type {
   LockedOrderRow,
+  OrderAdminSummaryRow,
   OrderCancellationAggregate,
   OrderGmvAggregate,
   OrderMetricsPeriod,
+  OrdersAnySearchFilter,
+  OrdersAnySearchPage,
+  OrdersAnySearchPagination,
   OrderQueueQuery,
   OrderQueueRow,
   OrderRepositoryPort,
@@ -169,6 +173,59 @@ export class InMemoryOrderRepository implements OrderRepositoryPort {
     )
     const cancelledCount = inTenantAndPeriod.filter((o) => o.status === 'cancelled').length
     return Promise.resolve({ totalCount: inTenantAndPeriod.length, cancelledCount })
+  }
+
+  // Плоский фильтр в памяти, без курсора — тот же уровень упрощения, что findQueueOrders выше.
+  findOrdersAny(filter: OrdersAnySearchFilter, pagination: OrdersAnySearchPagination): Promise<OrdersAnySearchPage> {
+    const items = [...this.orders.values()]
+      .filter((order) => this.matchesOrdersAnyFilter(order, filter))
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, pagination.limit)
+      .map((order): OrderAdminSummaryRow => ({
+        id: order.id,
+        orderNumber: order.orderNumber.value,
+        status: order.status,
+        tenantId: order.tenantId,
+        pharmacyId: order.pharmacyId,
+        customerId: order.customerId,
+        paymentMethod: order.paymentMethod,
+        totalAmountDiram: Number(order.totalAmount.diram),
+        slaBreached: this.isSlaBreached(order),
+        createdAt: order.createdAt,
+      }))
+    return Promise.resolve({ items, nextCursor: null, hasMore: false })
+  }
+
+  private isSlaBreached(order: Order): boolean {
+    const slaDeadlineAt = order.toSnapshot().slaDeadlineAt
+    return order.status === 'processing' && slaDeadlineAt !== null && slaDeadlineAt.getTime() < Date.now()
+  }
+
+  private matchesOrdersAnyFilter(order: Order, filter: OrdersAnySearchFilter): boolean {
+    return (
+      this.matchesOrdersAnyIdentity(order, filter) && this.matchesOrdersAnyScope(order, filter) && this.matchesOrdersAnyRange(order, filter)
+    )
+  }
+
+  private matchesOrdersAnyIdentity(order: Order, filter: OrdersAnySearchFilter): boolean {
+    if (filter.orderNumberLike !== undefined && !order.orderNumber.value.includes(filter.orderNumberLike)) return false
+    if (filter.status !== undefined && order.status !== filter.status) return false
+    if (filter.customerId !== undefined && order.customerId !== filter.customerId) return false
+    return true
+  }
+
+  private matchesOrdersAnyScope(order: Order, filter: OrdersAnySearchFilter): boolean {
+    if (filter.tenantId !== undefined && order.tenantId !== filter.tenantId) return false
+    if (filter.pharmacyId !== undefined && order.pharmacyId !== filter.pharmacyId) return false
+    if (filter.chainId !== undefined && this.pharmacyChains.get(order.pharmacyId) !== filter.chainId) return false
+    return true
+  }
+
+  private matchesOrdersAnyRange(order: Order, filter: OrdersAnySearchFilter): boolean {
+    if (filter.createdAtFrom !== undefined && order.createdAt < filter.createdAtFrom) return false
+    if (filter.createdAtTo !== undefined && order.createdAt >= filter.createdAtTo) return false
+    if (filter.slaBreached === true && !this.isSlaBreached(order)) return false
+    return true
   }
 
   private toQueueRow(order: Order): OrderQueueRow {

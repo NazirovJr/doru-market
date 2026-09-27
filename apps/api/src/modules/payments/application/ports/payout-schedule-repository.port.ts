@@ -86,6 +86,9 @@ export interface PayoutScheduleRepository {
 
   /** DTJ-357 — платформенная очередь для admin, БЕЗ обязательного `pharmacyId` (в отличие от `findByPharmacy`), `super_admin`-only. */
   findSchedule(input: FindPayoutScheduleInput): Promise<FindPayoutScheduleResult>
+
+  // orderId UNIQUE в payout_schedule — одна строка на заказ, null если нет (cash_courier).
+  findByOrderId(orderId: string): Promise<PayoutScheduleReportRow | null>
 }
 
 export interface FindPayoutScheduleInput {
