@@ -371,6 +371,7 @@ domain/application/infrastructure/presentation конкретного модул
 | DTJ-428 | Подготовить автоматизацию релиза (rolling-деплой, откат) и чек-лист готовности к продакшену | EP-19 | infra | M | DTJ-412 | scripts/deploy/rolling-deploy.sh; scripts/deploy/rollback.sh; scripts/deploy/backup-restore-drill.sh; +1 файлов |
 | DTJ-432 | Глобальный rate-limit (@fastify/rate-limit + Redis, SRS-API-012) | EP-19 | infrastructure | M | — | apps/api/src/main.ts; apps/api/src/common/http/rate-limit/rate-limit.config.ts; apps/api/src/common/http/rate-limit/rate-limit.decorator.ts; +2 файлов |
 | DTJ-433 | apps/pharmacy: переход на packages/ui, оболочка кабинета и переключение языка | EP-18 | frontend | M | DTJ-404, DTJ-405, DTJ-406, DTJ-408, DTJ-410 | apps/pharmacy/src/app/**; apps/pharmacy/src/shared/**; apps/pharmacy/src/pages/**; +2 файлов |
+| DTJ-434 | apps/admin: вход по OTP, Bearer-токен в запросах, оболочка с меню по роли | EP-15 | frontend | M | DTJ-350, DTJ-433 | apps/admin/src/app/**; apps/admin/src/shared/api/http-client.ts; apps/admin/src/shared/auth/**; +3 файлов |
 
 ¹ `0008_i18n_overrides_review_status.sql` (DTJ-103) ещё не реализован, но это имя уже занято
 двумя другими миграциями (`0008_onboarding_foundation.sql`, `0008_user_telegram_identities.sql`) —
