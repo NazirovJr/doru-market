@@ -25,7 +25,7 @@ import { ValidationError } from '@dorutj/contracts'
 import { type OnboardingStatus, assertTransitionAllowed } from './value-objects/onboarding-status.vo.js'
 import { ParentChainNotActiveError } from './errors/parent-chain-not-active.error.js'
 import { AutomaticReactivationForbiddenError } from './errors/automatic-reactivation-forbidden.error.js'
-import { CHAIN_STATUSES_ALLOWING_PHARMACY_ACTIVE } from './pharmacy-account-entity.types.js'
+import { CHAIN_STATUSES_ALLOWING_PHARMACY_ACTIVE, DEFAULT_MAX_DELIVERY_RADIUS_KM } from './pharmacy-account-entity.types.js'
 import {
   PHARMACY_SUSPENSION_REASONS,
   type PharmacyAccountCreateCommand,
@@ -37,8 +37,10 @@ import {
   ADDRESS_MAX_LENGTH,
   LICENSE_NUMBER_MAX_LENGTH,
   NAME_MAX_LENGTH,
+  assertScheduleConsistency,
   assertUpdatableStatus,
   validateCoordinates,
+  validateDeliveryRadiusKm,
   validateLength,
 } from './value-objects/pharmacy-account-vo.js'
 import { mergeAccountUpdate } from './value-objects/pharmacy-account-update.js'
@@ -88,6 +90,10 @@ export class PharmacyAccount {
   }
   get closingTime(): string | null {
     return this.props.closingTime
+  }
+  /** DTJ-367 (SRS-ADM-050): радиус круговой зоны доставки, км. */
+  get maxDeliveryRadiusKm(): number {
+    return this.props.maxDeliveryRadiusKm
   }
   get licenseNumber(): string {
     return this.props.licenseNumber
@@ -155,6 +161,7 @@ export class PharmacyAccount {
       is24_7: false,
       openingTime: null,
       closingTime: null,
+      maxDeliveryRadiusKm: DEFAULT_MAX_DELIVERY_RADIUS_KM,
       licenseNumber: cmd.licenseNumber,
       licenseIssuingAuthority: null,
       licenseIssueDate: null,
@@ -299,5 +306,26 @@ export class PharmacyAccount {
       // submittedAt НЕ сбрасывается, чтобы новая карточка в очереди
       // оператора ссылалась на момент последней подачи (SLA-учёт).
     })
+  }
+
+  /** DTJ-367 (SRS-ADM-049): расписание работы; `status` не меняется (в отличие от `updateAddress`) — «открыто сейчас» должно отражаться немедленно. */
+  updateSchedule(update: {
+    readonly isOpen247: boolean
+    readonly openingTime: string | null
+    readonly closingTime: string | null
+  }): PharmacyAccount {
+    assertScheduleConsistency(update)
+    return new PharmacyAccount({
+      ...this.props,
+      is24_7: update.isOpen247,
+      openingTime: update.isOpen247 ? null : update.openingTime,
+      closingTime: update.isOpen247 ? null : update.closingTime,
+    })
+  }
+
+  /** DTJ-367 (SRS-ADM-050): круговая зона доставки. `status` не меняется, та же причина, что `updateSchedule`. */
+  updateDeliveryZone(update: { readonly maxDeliveryRadiusKm: number }): PharmacyAccount {
+    validateDeliveryRadiusKm(update.maxDeliveryRadiusKm)
+    return new PharmacyAccount({ ...this.props, maxDeliveryRadiusKm: update.maxDeliveryRadiusKm })
   }
 }

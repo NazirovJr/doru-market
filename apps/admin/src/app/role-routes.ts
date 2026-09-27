@@ -97,6 +97,11 @@ const StaffAccountsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPag
   import('@/features/staff/ui/staff-accounts-page').then((m) => ({ default: m.StaffAccountsPage })),
 )
 
+/** DTJ-367 — та же схема совместимости без пропсов, что `AuditLogPage`. */
+const PharmacySchedulePage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/schedule/ui/pharmacy-schedule-page').then((m) => ({ default: m.PharmacySchedulePage })),
+)
+
 /** DTJ-357 — та же схема совместимости без пропсов, что `AuditLogPage`; 3 записи вместо 1 placeholder `finance` (см. «Что сделать» тикета). */
 const EscrowLedgerPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
   import('@/features/finance/ui/escrow-ledger-page').then((m) => ({ default: m.EscrowLedgerPage })),
@@ -139,7 +144,7 @@ const PHARMACY_ADMIN_ROUTES: readonly RouteConfig[] = [
   { path: 'staff', titleKey: 'admin.nav.staff', icon: 'staff', Component: StaffAccountsPage },
   section('integration-keys', 'admin.nav.integration_keys', 'keys'),
   section('reports', 'admin.nav.reports', 'reports'),
-  section('schedule', 'admin.nav.schedule', 'schedule'),
+  { path: 'schedule', titleKey: 'admin.nav.schedule', icon: 'schedule', Component: PharmacySchedulePage },
 ]
 
 const EMPTY_ROUTES: readonly RouteConfig[] = []
