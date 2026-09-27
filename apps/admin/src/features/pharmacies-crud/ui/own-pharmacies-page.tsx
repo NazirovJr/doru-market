@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
 import type { PharmacyAccountAdminSummaryDto } from '@dorutj/contracts'
-import { ADMIN_LOCALE } from '@/shared/config/locale'
+import { useLocale } from '@/shared/config/locale-provider'
 import { useInventorySummary, useOwnPharmacyAccounts } from '../api/use-pharmacy-accounts'
 
 const STATUS_BADGE_STATE: Readonly<Record<string, 'success' | 'warning' | 'danger' | 'neutral'>> = {
@@ -35,7 +35,8 @@ const MS_PER_DAY = HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PE
 const INVENTORY_SUMMARY_COLSPAN = 3
 
 export const OwnPharmaciesPage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [cursor, setCursor] = useState<string | null>(null)
   const [items, setItems] = useState<readonly PharmacyAccountAdminSummaryDto[]>([])
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -102,7 +103,8 @@ interface OwnPharmacyRowProps {
 }
 
 const OwnPharmacyRow = ({ account, expanded, onToggle }: OwnPharmacyRowProps): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const state = STATUS_BADGE_STATE[account.status] ?? 'neutral'
   const tokens = BADGE_TOKENS[state]
   const expiringSoon = isLicenseExpiringSoon(account.licenseExpiryDate)
@@ -142,7 +144,8 @@ const OwnPharmacyRow = ({ account, expanded, onToggle }: OwnPharmacyRowProps): R
 }
 
 const InventorySummaryRow = ({ pharmacyId }: { readonly pharmacyId: string }): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const query = useInventorySummary(pharmacyId)
 
   return (

@@ -3,7 +3,7 @@
 import { useEffect, useState, type ChangeEvent, type ReactElement, type SyntheticEvent } from 'react'
 import { useT, type TranslateFunction } from '@dorutj/i18n'
 import { AUDIT_LOG_CATEGORY_VALUES, type AuditLogCategory, type AuditLogEntryDto } from '@dorutj/contracts'
-import { ADMIN_LOCALE } from '@/shared/config/locale'
+import { useLocale } from '@/shared/config/locale-provider'
 import { useAuditLog, useAuditLogFilters } from '../api/use-audit-log'
 
 interface DraftFilters {
@@ -16,7 +16,8 @@ interface DraftFilters {
 const EMPTY_DRAFT: DraftFilters = { category: '', entityId: '', createdAtFrom: '', createdAtTo: '' }
 
 export const AuditLogPage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const { filters, setFilter, resetFilters } = useAuditLogFilters()
   const [draft, setDraft] = useState<DraftFilters>(EMPTY_DRAFT)
   const [cursor, setCursor] = useState<string | null>(null)

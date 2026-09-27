@@ -1,6 +1,7 @@
 // DTJ-381, дизайн-референс `32-design-reference.md` §«Аналитика». `packages/ui` пуст (тот же приём, что `audit-log-page.tsx`) — нативная разметка, цвета из существующих CSS-переменных `apps/admin/index.html`.
 import { type ReactElement } from 'react'
 import { useT, toIntlLocale, type TranslateFunction } from '@dorutj/i18n'
+import { useLocale } from '@/shared/config/locale-provider'
 import { ADMIN_LOCALE } from '@/shared/config/locale'
 import { getCurrentTenantId } from '@/shared/auth/current-role'
 import {
@@ -42,7 +43,8 @@ function safeDivide(numerator: number, denominator: number): number {
 }
 
 export const FunnelPage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const tenantId = getCurrentTenantId()
   const { mode, period, setMode } = useFunnelPeriod()
   const query = useFunnel(tenantId, period)

@@ -4,12 +4,14 @@ import { Link } from 'react-router'
 import { formatMoney, useT } from '@dorutj/i18n'
 import { Badge, CursorTable, type CursorTableColumn, type BadgeTone } from '@dorutj/ui'
 import type { OrderAdminSummaryDto } from '@dorutj/contracts'
+import { useLocale } from '@/shared/config/locale-provider'
 import { ADMIN_LOCALE } from '@/shared/config/locale'
 import { useOrdersAdmin, useOrdersAdminFilters, type OrdersAdminFilters } from '../api/use-orders-admin'
 import { ORDER_STATUS_BADGE_TONE, ORDER_STATUS_VALUES } from './order-status.constants'
 
 export const OrdersListPage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const { filters, setFilter, resetFilters } = useOrdersAdminFilters()
   const [orderNumberDraft, setOrderNumberDraft] = useState(filters.orderNumber ?? '')
   const [cursor, setCursor] = useState<string | null>(null)
@@ -86,7 +88,8 @@ interface OrdersFiltersFormProps {
 }
 
 const OrdersFiltersForm = ({ filters, orderNumberDraft, onOrderNumberDraftChange, onSetFilter, onReset }: OrdersFiltersFormProps): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   return (
     <form
       data-testid="orders-admin-filters"

@@ -2,11 +2,12 @@
 // packages/ui пуст — native table, тот же приём, что features/audit-log/ui/audit-log-page.tsx.
 import { useEffect, useState, type ReactElement } from 'react'
 import { useT, type TranslateFunction } from '@dorutj/i18n'
-import { ADMIN_LOCALE } from '@/shared/config/locale'
+import { useLocale } from '@/shared/config/locale-provider'
 import { useUndeliveredNotifications, type UndeliveredNotificationDto } from '../api/use-undelivered-notifications'
 
 export const UndeliveredNotificationsPage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [cursor, setCursor] = useState<string | null>(null)
   const [items, setItems] = useState<readonly UndeliveredNotificationDto[]>([])
 

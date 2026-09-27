@@ -3,7 +3,7 @@ import { useEffect, useState, type ChangeEvent, type ReactElement } from 'react'
 import { Link } from 'react-router'
 import { useT } from '@dorutj/i18n'
 import type { PharmacyAccountAdminSummaryDto } from '@dorutj/contracts'
-import { ADMIN_LOCALE } from '@/shared/config/locale'
+import { useLocale } from '@/shared/config/locale-provider'
 import { usePharmacyAccounts, usePharmacyAccountsFilters, type PharmacyAccountsFilters } from '../api/use-pharmacy-accounts'
 
 const STATUS_VALUES = ['draft', 'pending_review', 'changes_requested', 'approved', 'active', 'rejected', 'suspended', 'terminated'] as const
@@ -30,7 +30,8 @@ const BADGE_PADDING = '2px 8px'
 const BADGE_BORDER_RADIUS = '4px'
 
 export const PharmacyAccountsPage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const { filters, setFilter, resetFilters } = usePharmacyAccountsFilters()
   const [nameDraft, setNameDraft] = useState(filters.name ?? '')
   const [cursor, setCursor] = useState<string | null>(null)
@@ -111,7 +112,8 @@ const PharmacyAccountsFiltersForm = ({
   onSetFilter,
   onReset,
 }: PharmacyAccountsFiltersFormProps): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   return (
     <form
       data-testid="pharmacy-accounts-filters"
@@ -154,7 +156,8 @@ const PharmacyAccountsFiltersForm = ({
 }
 
 const PharmacyAccountRow = ({ account }: { readonly account: PharmacyAccountAdminSummaryDto }): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const state = isKnownStatus(account.status) ? STATUS_BADGE_STATE[account.status] : 'neutral'
   const tokens = BADGE_TOKENS[state]
   return (

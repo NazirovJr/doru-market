@@ -1,10 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { router } from '@/app/router'
-import { RouterProvider } from 'react-router'
-
-const queryClient = new QueryClient()
+import { AppProviders } from '@/app/providers'
+import { AppRouter } from '@/app/router'
+import '@dorutj/ui/tokens'
+import '@/app/styles.css'
 
 const rootEl = document.getElementById('root')
 if (rootEl === null) {
@@ -13,8 +12,8 @@ if (rootEl === null) {
 
 createRoot(rootEl).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
+    <AppProviders>
+      <AppRouter />
+    </AppProviders>
   </StrictMode>,
 )

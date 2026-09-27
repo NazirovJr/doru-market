@@ -3,7 +3,7 @@ import { useEffect, useState, type ChangeEvent, type ReactElement } from 'react'
 import { Button, Input, Select, Switch, type SelectOption } from '@dorutj/ui'
 import { useT } from '@dorutj/i18n'
 import type { PharmacyScheduleAndZoneDto } from '@dorutj/contracts'
-import { ADMIN_LOCALE } from '@/shared/config/locale'
+import { useLocale } from '@/shared/config/locale-provider'
 import {
   useOwnPharmacyOptions,
   usePharmacySchedule,
@@ -15,7 +15,8 @@ const TIME_HH_MM_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/u
 const MAX_DELIVERY_RADIUS_KM = 50
 
 export const PharmacySchedulePage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const optionsQuery = useOwnPharmacyOptions()
   const [pharmacyId, setPharmacyId] = useState<string | null>(null)
 
@@ -46,7 +47,8 @@ export const PharmacySchedulePage = (): ReactElement => {
 }
 
 const PharmacyScheduleForm = ({ pharmacyId }: { readonly pharmacyId: string }): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const query = usePharmacySchedule(pharmacyId)
 
   if (query.isLoading) return <p role="status">{t('admin.pharmacy_schedule.loading')}</p>
@@ -67,7 +69,8 @@ interface SectionProps {
 }
 
 const ScheduleSection = ({ pharmacyId, current }: SectionProps): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const mutation = useUpdatePharmacySchedule()
   const [isOpen247, setIsOpen247] = useState(current.isOpen247)
   const [openingTime, setOpeningTime] = useState(current.openingTime ?? '')
@@ -112,7 +115,8 @@ const ScheduleSection = ({ pharmacyId, current }: SectionProps): ReactElement =>
 }
 
 const DeliveryZoneSection = ({ pharmacyId, current }: SectionProps): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const mutation = useUpdateDeliveryZone()
   const [radiusKm, setRadiusKm] = useState(String(current.maxDeliveryRadiusKm))
   const radiusValue = Number(radiusKm)

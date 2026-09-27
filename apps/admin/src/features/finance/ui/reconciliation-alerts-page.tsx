@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactElement } from 'react'
 import { Link } from 'react-router'
 import { useT, toIntlLocale } from '@dorutj/i18n'
 import type { FinanceReconciliationAlertDto } from '@dorutj/contracts'
+import { useLocale } from '@/shared/config/locale-provider'
 import { ADMIN_LOCALE } from '@/shared/config/locale'
 import { useReconciliationAlerts } from '../api/use-finance-ledger'
 
@@ -16,7 +17,8 @@ function formatSomoni(diram: number): string {
 }
 
 export const ReconciliationAlertsPage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [cursor, setCursor] = useState<string | null>(null)
   const [items, setItems] = useState<readonly FinanceReconciliationAlertDto[]>([])
   const query = useReconciliationAlerts(cursor)

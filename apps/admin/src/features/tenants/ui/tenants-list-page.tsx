@@ -2,11 +2,12 @@
 import { type ReactElement } from 'react'
 import { Link } from 'react-router'
 import { useT } from '@dorutj/i18n'
-import { ADMIN_LOCALE } from '@/shared/config/locale'
+import { useLocale } from '@/shared/config/locale-provider'
 import { useTenantsList } from '../api/use-tenants'
 
 export const TenantsListPage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const query = useTenantsList()
 
   return (

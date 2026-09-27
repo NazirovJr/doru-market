@@ -19,7 +19,7 @@ import { useState, type ChangeEvent, type ReactElement, type SyntheticEvent } fr
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useT, type TranslateFunction } from '@dorutj/i18n'
 import { FEATURE_FLAG_SCOPE_VALUES, type FeatureFlagDto, type FeatureFlagScope, type UpsertFeatureFlagDto } from '@dorutj/contracts'
-import { ADMIN_LOCALE } from '@/shared/config/locale'
+import { useLocale } from '@/shared/config/locale-provider'
 import { adminRequest } from '@/shared/api/admin-client'
 
 const FEATURE_FLAGS_PATH = '/feature-flags'
@@ -59,7 +59,8 @@ function toUpsertBody(fields: UpsertFields): UpsertFeatureFlagDto {
 }
 
 export const FeatureFlagsPage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const queryClient = useQueryClient()
   const [isAdding, setIsAdding] = useState(false)
 
