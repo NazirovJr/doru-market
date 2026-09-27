@@ -48,6 +48,7 @@ import { INVENTORY_SYNC_QUEUE } from './application/ports/inventory-sync-queue.p
 import { EXCEL_INVENTORY_PARSER } from './application/ports/excel-inventory-parser.port.js'
 import { CATALOG_MATCH_QUEUE_READ } from './application/ports/catalog-match-queue-read.port.js'
 import { PHARMACY_API_KEY_VERIFICATION } from './application/ports/pharmacy-api-key-verification.port.js'
+import { PHARMACY_API_KEYS_REPOSITORY } from './application/ports/pharmacy-api-keys.repository.port.js'
 import { InMemoryPharmacyApiKeyVerificationAdapter } from './infrastructure/adapters/in-memory-pharmacy-api-key-verification.adapter.js'
 import { PharmacyApiKeyGuard } from './presentation/guards/pharmacy-api-key.guard.js'
 import { InMemoryPharmacyInventoryRepository } from './infrastructure/adapters/in-memory-pharmacy-inventory.repository.js'
@@ -81,6 +82,10 @@ import { DrizzleInventoryOutboxAdapter } from './infrastructure/adapters/drizzle
 import { DrizzleInventorySyncBatchRepository } from './infrastructure/adapters/drizzle-inventory-sync-batch.repository.js'
 import { DrizzleInventorySyncReportRepository } from './infrastructure/adapters/drizzle-inventory-sync-report.repository.js'
 import { DrizzlePharmacyApiKeyVerificationAdapter } from './infrastructure/adapters/drizzle-pharmacy-api-key-verification.adapter.js'
+import { DrizzlePharmacyApiKeysRepository } from './infrastructure/adapters/drizzle-pharmacy-api-keys.repository.js'
+import { CreatePharmacyApiKeyUseCase } from './application/use-cases/create-pharmacy-api-key.use-case.js'
+import { ListPharmacyApiKeysUseCase } from './application/use-cases/list-pharmacy-api-keys.use-case.js'
+import { RevokePharmacyApiKeyUseCase } from './application/use-cases/revoke-pharmacy-api-key.use-case.js'
 import { XlsxExcelInventoryParserAdapter } from './infrastructure/adapters/xlsx-excel-inventory-parser.adapter.js'
 import { DrizzleCatalogMatchQueueReadAdapter } from './infrastructure/adapters/drizzle-catalog-match-queue-read.adapter.js'
 import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/in-memory-catalog-match-queue-read.adapter.js'
@@ -98,6 +103,11 @@ import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/
     { provide: FULL_SYNC_COMPLETION, useClass: DrizzleFullSyncCompletionAdapter },
     { provide: INVENTORY_SYNC_QUEUE, useClass: BullmqInventorySyncQueueAdapter },
     { provide: PHARMACY_API_KEY_VERIFICATION, useClass: DrizzlePharmacyApiKeyVerificationAdapter },
+    // DTJ-365: write-порт CRUD ключей 1С (create/list/revoke) — отдельный от VERIFICATION (read-only).
+    { provide: PHARMACY_API_KEYS_REPOSITORY, useClass: DrizzlePharmacyApiKeysRepository },
+    CreatePharmacyApiKeyUseCase,
+    ListPharmacyApiKeysUseCase,
+    RevokePharmacyApiKeyUseCase,
     // DTJ-160: единственная реализация — `exceljs`, тот же пакет, что генератор шаблона DTJ-159.
     { provide: EXCEL_INVENTORY_PARSER, useClass: XlsxExcelInventoryParserAdapter },
     // DTJ-163: узкий read-порт к catalog_match_queue (чужая таблица, см. JSDoc порта).
