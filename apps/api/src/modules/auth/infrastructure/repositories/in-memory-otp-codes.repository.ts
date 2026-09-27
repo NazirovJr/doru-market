@@ -21,7 +21,8 @@ import { type UnitOfWorkTx } from '@/modules/auth/application/ports/unit-of-work
 export class InMemoryOtpCodesRepository implements OtpCodesRepository {
   private readonly rows = new Map<string, OtpCodeRecord>()
 
-  async create(input: CreateOtpCodeInput): Promise<OtpCodeRecord> {
+  // `tx` игнорируется — см. JSDoc файла (Map-операции атомарны без реальной транзакции).
+  async create(input: CreateOtpCodeInput, _tx?: UnitOfWorkTx): Promise<OtpCodeRecord> {
     // `input.id` — обязан прийти от вызывающего (см. JSDoc порта): используется
     // КАК СОЛЬ хеша ДО вызова create, генерировать свой id здесь — дефект
     // (verify перестаёт находить строку по `otpRequestId`).
@@ -88,6 +89,21 @@ export class InMemoryOtpCodesRepository implements OtpCodesRepository {
       }
     }
     return Promise.resolve(null)
+  }
+
+  supersedeUnconsumed(input: {
+    readonly tenantId: string
+    readonly subjectRef: string
+    readonly purpose: 'login' | 'onboarding_contact'
+    readonly now: Date
+  }): Promise<void> {
+    for (const [id, row] of this.rows) {
+      const sameSubject = row.tenantId === input.tenantId && row.subjectRef === input.subjectRef && row.purpose === input.purpose
+      if (sameSubject && row.consumedAt === null) {
+        this.rows.set(id, { ...row, consumedAt: input.now })
+      }
+    }
+    return Promise.resolve()
   }
 
   countBySubjectAndPurpose(tenantId: string, subjectRef: string, purpose: 'delivery_handover'): Promise<number> {

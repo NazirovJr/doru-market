@@ -15,7 +15,8 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "outputs": ["coverage/**"]
+      "outputs": ["coverage/**"],
+      "env": ["PLAYWRIGHT_BROWSERS_PATH"]
     },
     "test:watch": {
       "cache": false,

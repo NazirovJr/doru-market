@@ -17,6 +17,19 @@
  * (`CREATE TABLE IF NOT EXISTS`/`ADD COLUMN IF NOT EXISTS`/guarded `ADD CONSTRAINT`,
  * см. сам файл миграции), без бухгалтерии `drizzle`-схемы.
  *
+ * **ИСПРАВЛЕНО (гейт CI, воспроизведение последовательности `postgres-init/01-test-database.sql`
+ * → `pnpm db:migrate` под `dorutj_migrator` → `test:integration` под `test`).** Когда реальные
+ * миграции уже применены `dorutj_migrator` (владелец объектов `public` в этом сценарии — НЕ
+ * `test`, см. `infra/docker/postgres-init/01-test-database.sql`: `test` получает только
+ * `SELECT/INSERT/UPDATE/DELETE/TRUNCATE` через `ALTER DEFAULT PRIVILEGES`, не владение),
+ * повторное исполнение `ALTER TABLE ... ADD COLUMN`/`ADD CONSTRAINT` этой миграции ПОД `test`
+ * падает `must be owner of table i18n_overrides` (42501/эквивалент) — DDL требует владения,
+ * не DML-привилегий. Миграция теперь реплеится под ОТДЕЛЬНЫМ `migratorPool`
+ * (`MIGRATOR_DATABASE_URL`, тот же приём, что `payments-migration.integration.spec.ts`/
+ * `support-ticket-sla-fields-migration.integration.spec.ts`), `db`/`pool` (роль `test`)
+ * остаются только для DML (сид, чтение) — ровно то разделение ролей, которое уже действует
+ * в реальном CI/докере.
+ *
  * Тест-план DTJ-103 буквально:
  *   - миграция применяется, колонка `review_status` существует с дефолтом
  *     `'pending_legal_review'`;
@@ -64,6 +77,27 @@ const TEST_DATABASE_URL =
   process.env.DATABASE_URL ??
   'postgres://test:test@localhost:5432/dorutj_test'
 
+/**
+ * DDL (реплей миграции) обязан идти под ролью-владельцем объектов `public` —
+ * `dorutj_migrator` (см. JSDoc файла, раздел «ИСПРАВЛЕНО»). Тот же приём, что
+ * `payments-migration.integration.spec.ts`/`support-ticket-sla-fields-migration.integration.spec.ts`.
+ */
+const MIGRATOR_DATABASE_URL = process.env.CATALOG_MIGRATOR_DATABASE_URL ?? buildMigratorUrl(TEST_DATABASE_URL)
+
+function buildMigratorUrl(appUrl: string): string {
+  try {
+    const url = new URL(appUrl)
+    url.username = 'dorutj_migrator'
+    // Дев-дефолт, коммитится в открытом виде (`infra/docker/docker-compose.yml`,
+    // `infra/docker/postgres-init/01-test-database.sql`) — заведомо непроизводственный
+    // (правило 13 AGENTS.md), не секрет.
+    url.password = 'dorutj_dev_only_password'
+    return url.toString()
+  } catch {
+    return appUrl
+  }
+}
+
 const MIGRATIONS_URL = new URL('../../../migrations/', import.meta.url)
 const MIGRATION_0024_SQL = readFileSync(new URL('0024_i18n_overrides_review_status.sql', MIGRATIONS_URL), 'utf8')
 const PROBE_TIMEOUT_MS = 1_500
@@ -82,6 +116,7 @@ async function isPostgresReachable(url: string): Promise<boolean> {
 }
 
 const postgresAvailable = await isPostgresReachable(TEST_DATABASE_URL)
+const migratorAvailable = postgresAvailable && (await isPostgresReachable(MIGRATOR_DATABASE_URL))
 
 /**
  * Эталон SRS-CAT-039 — НЕЗАВИСИМАЯ транскрипция (см. JSDoc файла, зачем не импорт
@@ -104,19 +139,24 @@ const DISCLAIMER_GOLDEN: Readonly<Record<'ru' | 'tj' | 'en', string>> = {
     'pharmacist or doctor before switching medication.',
 }
 
-describe.skipIf(!postgresAvailable)('seedI18nOverridesCatalog — integration (DTJ-103)', () => {
+describe.skipIf(!postgresAvailable || !migratorAvailable)('seedI18nOverridesCatalog — integration (DTJ-103)', () => {
   let pool: Pool
   let db: NodePgDatabase
+  let migratorPool: Pool
 
   beforeAll(async () => {
     pool = new Pool({ connectionString: TEST_DATABASE_URL })
     db = drizzle(pool)
-    // Прямое исполнение SQL миграции (не бухгалтерский `migrate()`) — см. JSDoc файла.
-    await db.execute(MIGRATION_0024_SQL)
+    migratorPool = new Pool({ connectionString: MIGRATOR_DATABASE_URL })
+    // DDL — под ролью-владельцем объектов `public` (`dorutj_migrator`), не под `test`
+    // (см. JSDoc файла, раздел «ИСПРАВЛЕНО»). Прямое исполнение SQL миграции
+    // (не бухгалтерский `migrate()`) — остальное обоснование см. там же.
+    await migratorPool.query(MIGRATION_0024_SQL)
   })
 
   afterAll(async () => {
     await pool.end().catch(() => undefined)
+    await migratorPool.end().catch(() => undefined)
   })
 
   beforeEach(async () => {

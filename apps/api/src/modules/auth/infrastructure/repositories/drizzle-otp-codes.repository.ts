@@ -8,8 +8,10 @@
  * а не дефолтный пул `this.db`, иначе `SELECT ... FOR UPDATE` не держит
  * блокировку строки внутри транзакции verify (SRS-API-071).
  *
- * `create(input)` — вызывается из `RequestOtpUseCase` ВНЕ `uow.run` (порт не
- * принимает `tx`, см. JSDoc `OtpCodesRepository.create`), всегда на `this.db`.
+ * `create(input, tx?)` — большинство вызывающих (`RequestOtpUseCase`/`CompletePickingUseCase`)
+ * опускают `tx`, пишут вне `uow.run`, всегда на `this.db`; `RegenerateHandoverOtpUseCase`
+ * (DTJ-309 foundIssue) передаёт СВОЙ `OrderUnitOfWorkTx` — тот же общий `DRIZZLE_DB`, см.
+ * `resolveDrizzleClient`.
  */
 import { Inject, Injectable } from '@nestjs/common'
 import { and, count, eq, gt, isNull, sql } from 'drizzle-orm'
@@ -28,8 +30,9 @@ import { resolveDrizzleClient } from './drizzle-tx.util.js'
 export class DrizzleOtpCodesRepository implements OtpCodesRepository {
   constructor(@Inject(DRIZZLE_DB) private readonly db: DrizzleDb) {}
 
-  async create(input: CreateOtpCodeInput): Promise<OtpCodeRecord> {
-    const rows = await this.db
+  async create(input: CreateOtpCodeInput, tx?: UnitOfWorkTx): Promise<OtpCodeRecord> {
+    const client = tx === undefined ? this.db : resolveDrizzleClient(this.db, tx)
+    const rows = await client
       .insert(otpCodes)
       .values({
         id: input.id,
@@ -96,6 +99,25 @@ export class DrizzleOtpCodesRepository implements OtpCodesRepository {
       .limit(1)
     const row = rows[0]
     return row === undefined ? null : rowToRecord(row)
+  }
+
+  async supersedeUnconsumed(input: {
+    readonly tenantId: string
+    readonly subjectRef: string
+    readonly purpose: 'login' | 'onboarding_contact'
+    readonly now: Date
+  }): Promise<void> {
+    await this.db
+      .update(otpCodes)
+      .set({ consumedAt: input.now })
+      .where(
+        and(
+          eq(otpCodes.tenantId, input.tenantId),
+          eq(otpCodes.subjectRef, input.subjectRef),
+          eq(otpCodes.purpose, input.purpose),
+          isNull(otpCodes.consumedAt),
+        ),
+      )
   }
 
   async countBySubjectAndPurpose(tenantId: string, subjectRef: string, purpose: 'delivery_handover'): Promise<number> {

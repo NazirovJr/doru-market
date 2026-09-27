@@ -118,6 +118,12 @@ class StubOtpCodesRepository implements OtpCodesRepository {
   countBySubjectAndPurpose(): Promise<number> {
     return Promise.resolve(0)
   }
+
+  public superseded: { subjectRef: string; createdBefore: number }[] = []
+  supersedeUnconsumed(input: { readonly subjectRef: string }): Promise<void> {
+    this.superseded.push({ subjectRef: input.subjectRef, createdBefore: this.created.length })
+    return Promise.resolve()
+  }
 }
 
 interface FakeRateLimitState {
@@ -208,6 +214,12 @@ describe('RequestOtpUseCase (DTJ-023, SRS-API-018/019/020/021)', () => {
     // codeHash в репозитории НЕ равен сырому коду (SRS-API-021)
     const stored = otpCodes.created[0]
     expect(stored?.codeHash).not.toBe(sms.lastCode)
+  })
+
+  it('1a. прежние невведённые коды номера отменяются ДО выдачи нового (иначе повторный запрос падает на уникальном индексе)', async () => {
+    const { useCase, otpCodes } = buildUseCase({ rateLimiter })
+    await useCase.execute({ phone: PHONE, ipAddress: IP, tenantId: TENANT })
+    expect(otpCodes.superseded).toEqual([{ subjectRef: PHONE, createdBefore: 0 }])
   })
 
   it('2. невалидный формат: InvalidPhoneNumberFormatError, rate-limit НЕ инкрементирован', async () => {

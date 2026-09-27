@@ -45,6 +45,7 @@ function buildHarness(analogSavingsResults: ReadonlyMap<string, bigint | null> =
     countByEventType: vi.fn<ProductEventsRepositoryPort['countByEventType']>().mockResolvedValue({}),
     sumSavingsByEventType: vi.fn<ProductEventsRepositoryPort['sumSavingsByEventType']>().mockResolvedValue(0n),
     getWeeklyRealizedSavingsTrend: vi.fn<ProductEventsRepositoryPort['getWeeklyRealizedSavingsTrend']>().mockResolvedValue([]),
+    getTopAnalogsBySavings: vi.fn<ProductEventsRepositoryPort['getTopAnalogsBySavings']>().mockResolvedValue([]),
   }
   const logger = { warn: vi.fn() } as unknown as Logger
   const computeMock = vi.fn<AnalogSavingsPort['compute']>().mockImplementation((input: AnalogSavingsComputeInput) =>

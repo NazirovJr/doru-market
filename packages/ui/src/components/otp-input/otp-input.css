@@ -1,0 +1,22 @@
+/*
+ * DTJ-405 — keyframes тряски ячейки `OtpInput` в состоянии `error` (`SRS-UX-020`: ≤200мс).
+ * Определения `@keyframes` нельзя задать через inline `style` (см. `internal/spinner.css`,
+ * DTJ-404) — единственный внешний CSS-файл этого тикета.
+ */
+@keyframes dorutj-otp-shake {
+  0% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+  75% {
+    transform: translateX(-2px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}

@@ -361,6 +361,12 @@
       "when": 1700000610000,
       "tag": "0057_delivery_offers_assignment_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "when": 1700000620000,
+      "tag": "0058_audit_action_category_pharmacy_terminal",
+      "breakpoints": true
     }
   ]
 }

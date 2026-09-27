@@ -41,6 +41,25 @@ const MIGRATIONS_DIR = new URL('../../../migrations/', import.meta.url)
 const EXTENSIONS_SQL = readFileSync(new URL('0001_extensions.sql', MIGRATIONS_DIR), 'utf8')
 const CATALOG_CORE_SQL = readFileSync(new URL('0006_catalog_core.sql', MIGRATIONS_DIR), 'utf8')
 
+/**
+ * ИСПРАВЛЕНО (гейт CI): `EXTENSIONS_SQL`/`CATALOG_CORE_SQL` реплеились под ролью `test` — при
+ * уже применённых реальных миграциях `CREATE OR REPLACE FUNCTION immutable_unaccent` падает
+ * `must be owner of function immutable_unaccent`. DDL теперь идёт под ОТДЕЛЬНЫМ `migratorPool`
+ * (тот же приём, что `i18n-overrides-catalog.seed.integration.spec.ts`).
+ */
+const MIGRATOR_DATABASE_URL = process.env.CATALOG_MIGRATOR_DATABASE_URL ?? buildMigratorUrl(TEST_DATABASE_URL)
+
+function buildMigratorUrl(appUrl: string): string {
+  try {
+    const url = new URL(appUrl)
+    url.username = 'dorutj_migrator'
+    url.password = 'dorutj_dev_only_password'
+    return url.toString()
+  } catch {
+    return appUrl
+  }
+}
+
 const CATEGORY_ACTIVE_TRUE = 1
 const SUBSTANCE_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const SUBSTANCE_B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
@@ -63,15 +82,18 @@ async function isPostgresReachable(url: string): Promise<boolean> {
 }
 
 const postgresAvailable = await isPostgresReachable(TEST_DATABASE_URL)
+const migratorAvailable = postgresAvailable && (await isPostgresReachable(MIGRATOR_DATABASE_URL))
 
-describe.skipIf(!postgresAvailable)('CatalogRepositoryAdapter — integration (DTJ-092, SRS-CAT-005)', () => {
+describe.skipIf(!postgresAvailable || !migratorAvailable)('CatalogRepositoryAdapter — integration (DTJ-092, SRS-CAT-005)', () => {
   let pool: Pool
   let db: NodePgDatabase
+  let migratorPool: Pool
   let repo: CatalogRepository
   let queryCount: number
 
   beforeAll(async () => {
     pool = new Pool({ connectionString: TEST_DATABASE_URL })
+    migratorPool = new Pool({ connectionString: MIGRATOR_DATABASE_URL })
     // Счётчик SQL-обращений через штатный Drizzle-логгер — страховка от N+1
     // (SRS-CAT-005): каждый исполненный запрос инкрементирует queryCount, без
     // monkey-patch пула.
@@ -83,17 +105,22 @@ describe.skipIf(!postgresAvailable)('CatalogRepositoryAdapter — integration (D
         },
       },
     })
-    await db.execute(EXTENSIONS_SQL)
-    await db.execute(CATALOG_CORE_SQL)
+    // DDL — под ролью-владельцем `dorutj_migrator` (см. блок «ИСПРАВЛЕНО» у объявления
+    // MIGRATOR_DATABASE_URL).
+    await migratorPool.query(EXTENSIONS_SQL)
+    await migratorPool.query(CATALOG_CORE_SQL)
     repo = new CatalogRepositoryAdapter(db)
   })
 
   afterAll(async () => {
+    await migratorPool.end().catch(() => undefined)
     await pool.end().catch(() => undefined)
   })
 
   async function truncateCatalog(): Promise<void> {
-    await db.execute(
+    // `RESTART IDENTITY` требует владения sequence — `test` им не владеет (см. блок
+    // «ИСПРАВЛЕНО» у объявления MIGRATOR_DATABASE_URL) — под `migratorPool`.
+    await migratorPool.query(
       'TRUNCATE medicine_substances, medicines, categories, substances RESTART IDENTITY CASCADE',
     )
   }
@@ -219,8 +246,11 @@ describe.skipIf(!postgresAvailable)('CatalogRepositoryAdapter — integration (D
          (4, NULL, 'hidden', 'H-tj', 'H-ru', 'H-en', 'otc', 0, $2)`,
       [CATEGORY_ACTIVE_TRUE, 0],
     )
-    // Восстановить sequence после явных id, чтобы сериал не конфликтовал с pk.
-    await db.execute("SELECT setval(pg_get_serial_sequence('categories', 'id'), 4, true)")
+    // Восстановить sequence после явных id, чтобы сериал не конфликтовал с pk. `setval()`
+    // требует UPDATE-привилегию на sequence — `test` намеренно её не имеет (`ALTER DEFAULT
+    // PRIVILEGES ... GRANT USAGE, SELECT ON SEQUENCES`, `infra/docker/postgres-init/
+    // 01-test-database.sql`) — под `migratorPool` (владелец), как и остальной DDL этого файла.
+    await migratorPool.query("SELECT setval(pg_get_serial_sequence('categories', 'id'), 4, true)")
 
     const tree = await repo.findCategoryTree()
     expect(tree).toHaveLength(1)

@@ -81,6 +81,8 @@ export const envSchema = z.object({
   MOCK_SMS_EXPOSE_CODE_IN_RESPONSE: z
     .union([z.literal('true'), z.literal('false')])
     .default('false'),
+  // Пока нет реального SMS-провайдера: OTP в dev всегда из нулей. В production запрещён (validateEnv).
+  DEV_FIXED_OTP: z.union([z.literal('true'), z.literal('false')]).default('false'),
   // [DTJ-023] Rate-limit окна OTP-запросов (SRS-API-019). Дефолты — из спеки.
   OTP_REQUEST_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(DEFAULT_OTP_COOLDOWN_SECONDS),
   OTP_REQUEST_MAX_PER_10MIN: z.coerce.number().int().positive().default(DEFAULT_OTP_MAX_PER_10MIN),
@@ -193,6 +195,9 @@ export function validateEnv(rawConfig: Record<string, unknown>): EnvConfig {
   const result = envSchema.safeParse(rawConfig)
   if (!result.success) {
     throw new Error(`Некорректная конфигурация окружения apps/api:\n${formatIssues(result.error.issues)}`)
+  }
+  if (result.data.NODE_ENV === 'production' && result.data.DEV_FIXED_OTP === 'true') {
+    throw new Error('Некорректная конфигурация окружения apps/api:\n  - DEV_FIXED_OTP: запрещён в production')
   }
   return result.data
 }

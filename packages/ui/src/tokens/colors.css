@@ -1,0 +1,40 @@
+/*
+ * DTJ-401 — цветовые токены дизайн-системы `packages/ui` (SRS-UX-011, SRS-UX-012, SRS-TEN-013).
+ *
+ * Единственное место в пакете, где HEX-литералы разрешены. Компоненты используют ТОЛЬКО
+ * `var(--brand-*)`. Значения ниже — нейтральный серый fallback (SRS-TEN-015), а не бренд:
+ * тенант перекрашивает палитру на рантайме через `document.documentElement.style.setProperty`
+ * после валидации `validateBrandingPayload()` (branding-allowlist.ts).
+ */
+:root {
+  /* --- Редактируемые тенантом (allowlist HEX, SRS-TEN-014) --- */
+  --brand-primary: #64748b;
+  --brand-primary-hover: #475569;
+  --brand-secondary: #94a3b8;
+  --brand-accent: #0ea5e9;
+  --brand-bg: #f8fafc;
+  --brand-surface: #ffffff;
+  --brand-text: #0f172a;
+  --brand-text-muted: #64748b;
+  --brand-border: #e2e8f0;
+
+  /* --- Семантические: НЕ редактируются тенантом (SRS-UX-012, BRAND_SEMANTIC_TOKEN_LOCKED) --- */
+  --brand-success: #16a34a;
+  --brand-success-bg: #f0fdf4;
+  --brand-success-border: #bbf7d0;
+  --brand-success-text: #166534;
+
+  --brand-danger: #dc2626;
+  --brand-danger-bg: #fef2f2;
+  --brand-danger-border: #fecaca;
+  --brand-danger-text: #991b1b;
+
+  --brand-warning: #d97706;
+  --brand-warning-bg: #fffbeb;
+  --brand-warning-border: #fde68a;
+  /* [D-26] производные оттенки предупреждения объявлены токенами, а не хардкодом в компонентах */
+  --brand-warning-fg: #b45309;
+  --brand-warning-strong: #92400e;
+  /* 32-design-reference.md не задаёт отдельный warning-text: текст предупреждения = warning-strong */
+  --brand-warning-text: var(--brand-warning-strong);
+}

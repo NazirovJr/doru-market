@@ -57,13 +57,16 @@ export type OrderDomainEvent =
     }
   /** SRS-PHT-020 — создан `order_partial_fulfillment_requests(status='awaiting_customer')`:
    *  ≥1 позиция `unavailable`, решение принято по всем позициям заказа. `itemsSnapshot` — 1:1
-   *  с `order_partial_fulfillment_requests.items_snapshot` (JSONB), см. `PartialFulfillmentSnapshotItem`. */
+   *  с `order_partial_fulfillment_requests.items_snapshot` (JSONB), см. `PartialFulfillmentSnapshotItem`.
+   *  `refundAmountDiram` — `string`, не `bigint` (DTJ-309 foundIssue): 1:1 приём `OrderPaidEvent.
+   *  holdAmountDiram` (`payments/domain/payment-domain-event.ts`) — `outbox.payload` это `jsonb`,
+   *  `JSON.stringify` не сериализует `bigint`. */
   | {
       readonly type: 'PartialFulfillmentProposedEvent'
       readonly orderId: string
       readonly requestId: string
       readonly itemsSnapshot: readonly PartialFulfillmentSnapshotItem[]
-      readonly refundAmountDiram: bigint
+      readonly refundAmountDiram: string
       readonly expiresAt: Date
       readonly at: Date
     }
@@ -117,7 +120,8 @@ export type OrderDomainEvent =
       readonly type: 'PartialFulfillmentRefundRetryRequestedEvent'
       readonly orderId: string
       readonly requestId: string
-      readonly refundAmountDiram: bigint
+      /** `string`, не `bigint` — тот же foundIssue, см. `PartialFulfillmentProposedEvent`. */
+      readonly refundAmountDiram: string
       readonly at: Date
     }
   /** SRS-PHT-029 — новый `otp_codes`-ряд заменил предыдущий действующий код вручения (append-only,

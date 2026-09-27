@@ -1,0 +1,77 @@
+# DoruTJ — эфемерный оверлей для integration/e2e прогонов (DTJ-413, SRS-NFR-048, SRS-NFR-030 п.5).
+# BARREL-файл (D-27, tickets/00-EPICS.md §«Порядок владения файлами») — правится ТОЛЬКО
+# добавлением строк/сервисов, перечитать перед правкой, слияние конфликтов — за архитектором
+# EP-19. Создан этим тикетом (первое касание файла), поэтому начальное наполнение — не
+# «добавление строки» к существующему файлу.
+#
+# ПОДКЛЮЧАЕТСЯ поверх базового docker-compose.yml (DTJ-412), НЕ самостоятельный стек —
+# образы/сети переиспользуются, оверлей меняет только postgres/redis/minio (tmpfs-данные,
+# эфемерные хост-порты) и снимает nginx с автозапуска (см. ниже) — никакой TLS-терминации не
+# нужно тестам, они идут напрямую к api/worker по внутреннему Docker-порту.
+#
+# Команда подъёма/сноса (используется буквально в CI DTJ-414 и локально разработчиком):
+#   docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.test.yml up -d
+#   docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.test.yml down -v
+# Для параллельных прогонов (два CI-джоба/два разработчика одновременно) — РАЗНЫЕ project-имена
+# Docker Compose (флаг `-p`, TC-NFR-066), например:
+#   docker compose -p test-run-1 -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.test.yml up -d
+# Хост-порты ниже — ЭФЕМЕРНЫЕ (короткая форма `ports: ["5432"]` без публикации на фиксированный
+# хост-порт — Docker сам выбирает свободный), поэтому параллельные project'ы не конфликтуют
+# портами даже без `-p` (но `-p` всё равно обязателен — иначе имена контейнеров/сеть/volume
+# пересекутся между параллельными прогонами).
+#
+# `nginx`/`certbot`/`seed` (профиль `dev`) НЕ должны стартовать при `up -d` без явного списка
+# сервисов (критерий приёмки DTJ-413 №1). `certbot` и `seed` уже отфильтрованы своими профилями
+# в базовом файле (`profiles: ["prod"]` / `["dev", "e2e"]` — ни один из этих профилей не активен
+# по умолчанию). `nginx` в базовом файле профиля не имеет (нужен ВСЕГДА в dev/prod), поэтому
+# именно ЗДЕСЬ, в тестовом оверлее, ему добавляется собственный профиль `edge-only-non-test`,
+# под которым он никогда не запросится, — единственный способ снять сервис с автозапуска через
+# override, не трогая и не переписывая сам базовый docker-compose.yml (D-27).
+
+services:
+  postgres:
+    # tmpfs вместо именованного volume — данные физически не пишутся на диск хоста, максимальная
+    # скорость, обнуляются при `down`/пересоздании контейнера (критерий приёмки DTJ-413 №2).
+    # `volumes: !override` заменяет ПОЛНОСТЬЮ унаследованный список (Compose Spec merge tags) —
+    # именованный volume `pgdata:/var/lib/postgresql/data` из базового файла убирается (иначе
+    # два монтирования на один target конфликтовали бы с tmpfs ниже), init-скрипт тестовой БД
+    # (`postgres-init/01-test-database.sql`, создаёт роль/БД `dorutj_test`) остаётся — он нужен
+    # именно тестовому прогону.
+    tmpfs:
+      - /var/lib/postgresql/data
+    volumes: !override
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    ports: !override
+      - '5432' # эфемерный хост-порт (без фиксированного 5432:5432 dev-профиля)
+    healthcheck:
+      interval: 2s # ускорено относительно dev-профиля (5s) — CI не должен ждать дольше нужного
+      timeout: 2s
+      retries: 15
+
+  redis:
+    tmpfs:
+      - /data
+    volumes: !override []
+    ports: !override
+      - '6379' # эфемерный хост-порт
+    healthcheck:
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  minio:
+    tmpfs:
+      - /data
+    volumes: !override []
+    ports: !override
+      - '9000' # эфемерный хост-порт (S3 API)
+      - '9001' # эфемерный хост-порт (консоль)
+    healthcheck:
+      interval: 2s
+      timeout: 3s
+      retries: 10
+
+  # Снимает nginx с автозапуска в тестовом стеке — см. пояснение в шапке файла. Профиль
+  # заведомо никогда не активируется тестовым/CI-прогоном.
+  nginx:
+    profiles: ['edge-only-non-test']

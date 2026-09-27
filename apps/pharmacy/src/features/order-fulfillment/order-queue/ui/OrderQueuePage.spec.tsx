@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router'
 import type { PharmacyTerminalQueueItemDto } from '@dorutj/contracts'
 import { useAuthStore } from '@/shared/api/auth-store'
 import { OrderQueuePage } from './OrderQueuePage'
@@ -21,7 +22,9 @@ function renderPage(): QueryClient {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   render(
     <QueryClientProvider client={queryClient}>
-      <OrderQueuePage />
+      <MemoryRouter>
+        <OrderQueuePage />
+      </MemoryRouter>
     </QueryClientProvider>,
   )
   return queryClient

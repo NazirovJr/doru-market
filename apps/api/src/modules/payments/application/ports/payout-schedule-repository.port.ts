@@ -83,6 +83,26 @@ export interface PayoutScheduleRepository {
    * (C11, explicit over implicit): вызывающий код читает из сигнатуры, что здесь НЕТ страницы.
    */
   findAllByPharmacy(pharmacyId: string, statuses?: readonly string[]): Promise<readonly PayoutReportRow[]>
+
+  /** DTJ-357 — платформенная очередь для admin, БЕЗ обязательного `pharmacyId` (в отличие от `findByPharmacy`), `super_admin`-only. */
+  findSchedule(input: FindPayoutScheduleInput): Promise<FindPayoutScheduleResult>
+}
+
+export interface FindPayoutScheduleInput {
+  readonly status?: string | undefined
+  readonly pharmacyId?: string | undefined
+  readonly limit: number
+  readonly cursor: PayoutCursor | null
+}
+
+export interface PayoutScheduleReportRow extends PayoutReportRow {
+  readonly pharmacyId: string
+}
+
+export interface FindPayoutScheduleResult {
+  readonly items: readonly PayoutScheduleReportRow[]
+  readonly nextCursor: PayoutCursor | null
+  readonly hasMore: boolean
 }
 
 /** Вход `holdIfPending` (см. её JSDoc про C5). */

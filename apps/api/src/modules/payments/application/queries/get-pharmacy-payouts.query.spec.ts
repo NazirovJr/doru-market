@@ -30,6 +30,7 @@ function fakePayoutRepository(): { repository: PayoutScheduleRepository; findByP
     holdIfPending: vi.fn(),
     findByPharmacy,
     findAllByPharmacy: vi.fn(),
+    findSchedule: vi.fn(),
   }
   return { repository, findByPharmacy }
 }

@@ -2,15 +2,27 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": "./src",
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["*"]
+      "@/*": ["src/*"]
     },
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
     "types": ["node"],
+    // "DOM" — helpers/axe-check.ts's page.evaluate-колбэк выполняется В БРАУЗЕРЕ (Playwright
+    // сериализует его в строку), нужны типы document/HTMLElement/HTMLImageElement на этапе
+    // компиляции самого этого файла (не только в рантайме браузера).
+    "lib": ["ES2023", "DOM"],
     "noEmit": true
   },
-  "include": ["src/**/*.ts"],
+  "include": [
+    "src/**/*.ts",
+    "helpers/**/*.ts",
+    "self-check/**/*.ts",
+    "smoke/**/*.ts",
+    "playwright.config.ts",
+    "vitest.config.ts",
+    "global-setup.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }

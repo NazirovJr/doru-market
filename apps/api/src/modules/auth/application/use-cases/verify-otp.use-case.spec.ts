@@ -131,6 +131,10 @@ class StubOtpCodesRepository implements OtpCodesRepository {
     return Promise.resolve(0)
   }
 
+  supersedeUnconsumed(): Promise<void> {
+    return Promise.resolve()
+  }
+
   seed(input: SeedOtpInput): void {
     const codeHash = createHash('sha256')
       .update(`${input.codeRaw}:${input.id}`)

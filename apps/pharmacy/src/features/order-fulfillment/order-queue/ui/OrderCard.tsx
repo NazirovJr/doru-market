@@ -1,4 +1,5 @@
 import { useState, type ReactElement } from 'react'
+import { Link } from 'react-router'
 import { useT } from '@dorutj/i18n'
 import type { PharmacyTerminalQueueItemDto } from '@dorutj/contracts'
 import { ReclaimMenu } from './ReclaimMenu'
@@ -66,12 +67,23 @@ interface ProcessingFooterProps {
 const ProcessingFooter = ({ item, currentUserId, isAssignedToSomeoneElse, reclaimOpen, onToggleReclaim }: ProcessingFooterProps): ReactElement => {
   const { t } = useT('tj')
   if (!isAssignedToSomeoneElse) {
+    const isMine = currentUserId === item.assignedPharmacistId
     return (
-      <span className="rounded-full bg-line px-2 py-1 text-xs font-medium text-ink" data-testid="order-card-own-badge">
-        {currentUserId === item.assignedPharmacistId
-          ? t('pharmacy.order_queue.card.assigned_to_me_badge')
-          : t('pharmacy.order_queue.card.assigned_unknown_badge')}
-      </span>
+      <div className="flex items-center justify-between gap-2">
+        <span className="rounded-full bg-line px-2 py-1 text-xs font-medium text-ink" data-testid="order-card-own-badge">
+          {isMine ? t('pharmacy.order_queue.card.assigned_to_me_badge') : t('pharmacy.order_queue.card.assigned_unknown_badge')}
+        </span>
+        {/* Переход в экран сборки доступен только владельцу — коллега должен сначала перехватить заказ. */}
+        {isMine ? (
+          <Link
+            to={`/orders/${item.id}`}
+            data-testid="order-card-go-to-picking"
+            className="flex min-h-[48px] items-center rounded-md bg-brand-primary px-3 text-sm font-semibold text-white"
+          >
+            {t('pharmacy.order_queue.card.go_to_picking_cta')}
+          </Link>
+        ) : null}
+      </div>
     )
   }
   return (

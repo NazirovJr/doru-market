@@ -85,6 +85,27 @@ const MIGRATIONS_DIR = new URL('../../../migrations/', import.meta.url)
 const EXTENSIONS_SQL = readFileSync(new URL('0001_extensions.sql', MIGRATIONS_DIR), 'utf8')
 const CATALOG_CORE_SQL = readFileSync(new URL('0006_catalog_core.sql', MIGRATIONS_DIR), 'utf8')
 
+/**
+ * ИСПРАВЛЕНО (гейт CI): `EXTENSIONS_SQL`/`CATALOG_CORE_SQL` реплеились под ролью `test` — когда
+ * реальные миграции уже применены `dorutj_migrator`, `CREATE OR REPLACE FUNCTION
+ * immutable_unaccent` (часть `0001_extensions.sql`) падает `must be owner of function
+ * immutable_unaccent` (DDL требует владения, не DML-привилегий из `ALTER DEFAULT PRIVILEGES`).
+ * DDL теперь идёт под ОТДЕЛЬНЫМ `migratorPool`, `db`/`pool` (`test`) остаются для DML —
+ * тот же приём, что `i18n-overrides-catalog.seed.integration.spec.ts`.
+ */
+const MIGRATOR_DATABASE_URL = process.env.CATALOG_MIGRATOR_DATABASE_URL ?? buildMigratorUrl(TEST_DATABASE_URL)
+
+function buildMigratorUrl(appUrl: string): string {
+  try {
+    const url = new URL(appUrl)
+    url.username = 'dorutj_migrator'
+    url.password = 'dorutj_dev_only_password'
+    return url.toString()
+  } catch {
+    return appUrl
+  }
+}
+
 // Тестовая пара RS256 — ИДЕНТИЧНА паре в `categories-controller.integration.spec.ts`/
 // `auth/test-app.ts` (сгенерирована локально, НЕ секрет, НЕ используется нигде вне vitest).
 // Дублируется здесь по той же причине files_owned-изоляции, что и в этих файлах: этот тест
@@ -174,6 +195,7 @@ async function isPostgresReachable(url: string): Promise<boolean> {
 }
 
 const postgresAvailable = await isPostgresReachable(TEST_DATABASE_URL)
+const migratorAvailable = postgresAvailable && (await isPostgresReachable(MIGRATOR_DATABASE_URL))
 
 interface TestContext {
   readonly app: INestApplication
@@ -208,25 +230,32 @@ async function createRealCatalogApp(): Promise<TestContext> {
   }
 }
 
-describe.skipIf(!postgresAvailable)(
+describe.skipIf(!postgresAvailable || !migratorAvailable)(
   'MEDICINE_READ_REPOSITORY / CATEGORIES_READ_REPOSITORY — real Postgres (DEFECT-FIX, Волна 5 блок B)',
   () => {
     let pool: Pool
     let db: NodePgDatabase
+    let migratorPool: Pool
 
     beforeAll(async () => {
       pool = new Pool({ connectionString: TEST_DATABASE_URL })
       db = drizzle(pool)
-      await db.execute(EXTENSIONS_SQL)
-      await db.execute(CATALOG_CORE_SQL)
+      migratorPool = new Pool({ connectionString: MIGRATOR_DATABASE_URL })
+      // DDL — под ролью-владельцем `dorutj_migrator` (см. блок «ИСПРАВЛЕНО» у объявления
+      // MIGRATOR_DATABASE_URL).
+      await migratorPool.query(EXTENSIONS_SQL)
+      await migratorPool.query(CATALOG_CORE_SQL)
     })
 
     afterAll(async () => {
+      await migratorPool.end().catch(() => undefined)
       await pool.end().catch(() => undefined)
     })
 
     beforeEach(async () => {
-      await db.execute('TRUNCATE medicine_substances, medicines, categories, substances RESTART IDENTITY CASCADE')
+      // `RESTART IDENTITY` требует владения sequence — `test` им не владеет (см. блок
+      // «ИСПРАВЛЕНО» у объявления MIGRATOR_DATABASE_URL) — под `migratorPool`.
+      await migratorPool.query('TRUNCATE medicine_substances, medicines, categories, substances RESTART IDENTITY CASCADE')
     })
 
     async function seedCategory(overrides: { slug: string; isActive?: boolean }): Promise<number> {

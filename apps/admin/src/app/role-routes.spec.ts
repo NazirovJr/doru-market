@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { getRoutesForRole } from './role-routes'
 
+// DTJ-357 — 'finance' заменён тремя реальными подразделами (см. role-routes.ts).
 const SUPER_ADMIN_PATHS = [
   'tenants',
   'feature-flags',
@@ -8,16 +9,20 @@ const SUPER_ADMIN_PATHS = [
   'undelivered-notifications',
   'analytics/funnel',
   'analytics/platform-metrics',
+  'analytics/top-analogs',
+  'analytics/onboarding-funnel',
   'pharmacies',
   'users',
   'orders',
-  'finance',
+  'finance/escrow-ledger',
+  'finance/payout-schedule',
+  'finance/reconciliation-alerts',
   'settings',
 ]
 const PHARMACY_ADMIN_PATHS = ['my-pharmacies', 'my-orders', 'staff', 'integration-keys', 'reports', 'schedule']
 
 describe('getRoutesForRole', () => {
-  it('super_admin получает все 11 разделов админ-панели', () => {
+  it('super_admin получает все 13 разделов админ-панели', () => {
     const routes = getRoutesForRole('super_admin')
     expect(routes.map((r) => r.path)).toEqual(SUPER_ADMIN_PATHS)
   })

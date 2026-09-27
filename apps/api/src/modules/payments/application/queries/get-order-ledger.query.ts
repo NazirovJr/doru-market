@@ -83,7 +83,8 @@ export class GetOrderLedgerQuery {
     if (order === null) {
       throw new NotFoundError({ orderId: input.orderId })
     }
-    const entries = await this.ledgerRepository.findByOrderId(input.tenantId, input.orderId)
+    const records = await this.ledgerRepository.findByOrderId(input.tenantId, input.orderId)
+    const entries = records.map((record) => record.entry)
     const isBalanced = EscrowLedger.isBalanced(entries)
     const visibleEntries = selectVisibleEntries(input, order, entries)
     return {

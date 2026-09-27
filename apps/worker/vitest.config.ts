@@ -18,18 +18,46 @@ import { defineConfig } from 'vitest/config'
  * файлов (тот же компромисс, что у `apps/api`: тесты ВНУТРИ одного файла всё равно
  * распараллеливаются векторно, каждый создаёт свой независимый `pg.Pool`/сервер) убирает гонку
  * без переписывания seed-хелперов каждого файла.
+ *
+ * **`projects` — `unit`/`full-boot-di` (см. отчёт задачи стабилизации тестов, тот же класс
+ * проблемы, что `apps/api/vitest.config.ts`, см. её JSDoc).** `*.module.spec.ts`
+ * (`mock-bank-auto-pay`/`partial-fulfillment-timeout`/`picking-sla-watchdog`) поднимают
+ * РЕАЛЬНЫЙ Nest-контейнер через `Test.createTestingModule(...).compile()` поверх каскада
+ * `await import(...)` (`ConfigModule` + сам искомый модуль). Изолированно компилируется
+ * быстро (~0.9–1.1с, см. отчёт задачи), но под параллельным `turbo run test` (все 9 пакетов
+ * монорепо разом, песочница 4 CPU) esbuild/rollup-трансформ этого графа зависимостей конкурирует
+ * за CPU с остальными пакетами и регулярно не укладывается в дефолтный `testTimeout` Vitest
+ * (5000мс) — падает нерегулярно, хотя сам код SUT не менялся (инфраструктурный, а не логический
+ * дефект, тот же диагноз, что у `apps/api`).
+ *
+ * Фикс — отдельный project `full-boot-di` с собственным `testTimeout: 30_000` (запас с кратным
+ * резервом от измеренного изолированного времени, тот же порядок обоснования, что у `apps/api`,
+ * без раздувания до её 60_000: здесь всего 3 лёгких файла, а не 6 тяжёлых full-boot графов с
+ * контроллерами/интеграциями). `unit` project — все остальные специки `apps/worker` (включая
+ * `*.job.integration.spec.ts`), поведение (включая `pool`/`fileParallelism` ниже) не меняется.
+ * Оба project'а всё равно наследуют `pool: 'forks'` + `fileParallelism: false` (через
+ * `extends: true`) — сериализация файлов ВНУТРИ каждого project'а сохраняется (защита от гонки
+ * Postgres в `unit` не ослаблена), но `unit` и `full-boot-di` — это ДВА РАЗНЫХ форка, поэтому
+ * DI-специки (сетевых/БД-соединений не открывают, см. их собственный JSDoc) больше не стоят в
+ * очереди ПОЗАДИ всех остальных специк `apps/worker` внутри одного общего форка.
  */
 
 const COVERAGE_THRESHOLD_PERCENT = 70
 
+// Общие исключения — переиспользуются и `unit`, и `full-boot-di` project'ами ниже.
+const COMMON_EXCLUDE = [
+  '**/node_modules/**',
+  // `dist/**` может содержать скомпилированные `*.spec.js` (см. tsconfig.json `files`),
+  // их не нужно запускать повторно как отдельный набор тестов поверх `src/**/*.spec.ts`.
+  'dist/**',
+]
+
+// Паттерн DI-специк, которые поднимают РЕАЛЬНЫЙ Nest-контейнер целиком (см. JSDoc файла).
+const FULL_BOOT_DI_INCLUDE = ['src/**/*.module.spec.ts']
+
 export default defineConfig({
   test: {
     environment: 'node',
-    // `dist/**` может содержать скомпилированные `*.spec.js` (см. tsconfig.json `files`),
-    // их не нужно запускать повторно как отдельный набор тестов поверх `src/**/*.spec.ts`.
-    exclude: ['**/node_modules/**', 'dist/**'],
-    pool: 'forks',
-    fileParallelism: false,
     coverage: {
       provider: 'v8',
       enabled: true,
@@ -48,5 +76,27 @@ export default defineConfig({
         functions: COVERAGE_THRESHOLD_PERCENT,
       },
     },
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          exclude: [...COMMON_EXCLUDE, ...FULL_BOOT_DI_INCLUDE],
+          pool: 'forks',
+          fileParallelism: false,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'full-boot-di',
+          include: FULL_BOOT_DI_INCLUDE,
+          exclude: COMMON_EXCLUDE,
+          pool: 'forks',
+          fileParallelism: false,
+          testTimeout: 30_000,
+        },
+      },
+    ],
   },
 })

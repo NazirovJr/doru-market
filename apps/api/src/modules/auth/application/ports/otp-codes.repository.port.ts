@@ -72,7 +72,11 @@ export interface CreateOtpCodeInput {
 }
 
 export interface OtpCodesRepository {
-  create(input: CreateOtpCodeInput): Promise<OtpCodeRecord>
+  // `tx` опционален (DTJ-309 foundIssue) — `RegenerateHandoverOtpUseCase` обязан консьюмить
+  // прежнюю `delivery_handover`-строку И создавать новую В ОДНОЙ транзакции (иначе гонка/частичный
+  // рефанд состояния); остальные вызывающие (`RequestOtpUseCase`/`CompletePickingUseCase`)
+  // по-прежнему пишут вне tx, опустив аргумент — обратная совместимость.
+  create(input: CreateOtpCodeInput, tx?: UnitOfWorkTx): Promise<OtpCodeRecord>
   findById(id: string): Promise<OtpCodeRecord | null>
   findByIdForUpdate(tx: UnitOfWorkTx, id: string): Promise<OtpCodeRecord | null>
   markConsumed(tx: UnitOfWorkTx, id: string, now: Date): Promise<void>
@@ -83,6 +87,13 @@ export interface OtpCodesRepository {
     readonly purpose: 'login' | 'onboarding_contact'
     readonly now: Date
   }): Promise<OtpCodeRecord | null>
+  // Новый код отменяет прежние невведённые: иначе уникальный индекс активного кода блокирует повторный запрос навсегда.
+  supersedeUnconsumed(input: {
+    readonly tenantId: string
+    readonly subjectRef: string
+    readonly purpose: 'login' | 'onboarding_contact'
+    readonly now: Date
+  }): Promise<void>
   /** ДОБАВЛЕНО (DTJ-306, EP-12 §A.5) — сколько строк `otp_codes` когда-либо создано для
    *  `subjectRef+purpose` (включая самую первую) — `RegenerateHandoverOtpUseCase` считает
    *  `regenerationsUsed`/rate-limit по этому числу, не по отдельному денормализованному

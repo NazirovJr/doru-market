@@ -1,5 +1,5 @@
 import { act, type ReactElement } from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
@@ -13,8 +13,18 @@ import { SearchBar } from './search-bar'
  * Сеть мокается через `vi.stubGlobal('fetch', ...)` — тот же приём, что `map-page.spec.tsx`/
  * `use-search-suggestions.spec.tsx`. `fireEvent` (не `@testing-library/user-event` — пакет НЕ
  * заведён в `apps/web/package.json`, ставить новые зависимости запрещено тикетом DTJ-192).
- * Реальное время (не fake timers) — debounce (250мс) должен реально истечь, чтобы TanStack Query
- * выполнила запрос; таймаут `waitFor` увеличен под это.
+ *
+ * **Стабилизация под нагрузкой (см. отчёт задачи стабилизации тестов).** Раньше `wait(ms)` ждал
+ * РЕАЛЬНОЕ время через `setTimeout`, рассчитывая, что debounce (250мс) внутри SUT истечёт
+ * раньше, чем истечёт `WAIT_TIMEOUT_MS` теста. Изолированно проходило, но под параллельным
+ * `turbo run test` (4 CPU, все пакеты монорепо разом) реальный таймер SUT срабатывал с задержкой
+ * от загрузки CPU, и тест либо не успевал зафиксировать сетевой вызов, либо гонка происходила
+ * раньше расчётного момента — гейт падал нерегулярно. Фикс — `vi.useFakeTimers({ shouldAdvanceTime:
+ * true })` (тот же приём, что `ImportProgressBar.spec.tsx`, DTJ-168 и
+ * `use-search-suggestions.spec.tsx`): `wait(ms)` теперь детерминированно продвигает виртуальные
+ * часы через `vi.advanceTimersByTimeAsync`, а `shouldAdvanceTime: true` оставляет `waitFor`
+ * (реальные интервалы опроса) рабочим для промисов `fetch`/TanStack Query, довешивающихся ПОСЛЕ
+ * срабатывания таймера debounce.
  *
  * Локаторы — `data-testid`/`role`, НЕ переведённый текст (дефолтная локаль проекта не русская —
  * см. инструкции тикета).
@@ -69,17 +79,20 @@ function locationProbeText(): string {
   return screen.getByTestId('search-page-stub').textContent
 }
 
-/** Реальная задержка, обёрнутая `act` — debounce/fetch резолвятся асинхронно ВНЕ обработчика события, без обёртки React ругается "not wrapped in act". */
+/** Детерминированно продвигает виртуальные часы (debounce/fetch резолвятся асинхронно ВНЕ обработчика события, без `act` React ругается "not wrapped in act"). */
 async function wait(ms: number): Promise<void> {
   await act(async () => {
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, ms)
-    })
+    await vi.advanceTimersByTimeAsync(ms)
   })
 }
 
+beforeEach(() => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+})
+
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.useRealTimers()
   window.localStorage.clear()
 })
 

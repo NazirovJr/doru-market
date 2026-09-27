@@ -7,8 +7,9 @@
  * `'delivery_handover'`. Хеш — `sha256(code + ':' + subjectRef)` через `node:crypto`
  * (SRS-API-021, subjectRef передаётся генератору; для login — это `phone.value`).
  */
-import { Injectable } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 import { createHash, randomInt } from 'node:crypto'
+import { AppConfigService } from '@/config/app-config.service.js'
 // Внутренние импорты — ПРЯМО из файла (D-27: barrel — только для межмодульного).
 import { HANDOVER_OTP_CODE_LENGTH, OTP_CODE_LENGTH } from '@/modules/auth/domain/value-objects/otp-code.vo.js'
 import { OTP_GENERATOR, type OtpGeneratorPort, type OtpPurpose } from '@/modules/auth/application/ports/otp-generator.port.js'
@@ -18,9 +19,11 @@ const SHA256_HEX_LENGTH = 64
 
 @Injectable()
 export class CryptoOtpGeneratorAdapter implements OtpGeneratorPort {
+  constructor(@Inject(AppConfigService) private readonly config: AppConfigService) {}
+
   generate(purpose: OtpPurpose): { readonly code: string; readonly codeHash: string } {
     const length = purpose === 'delivery_handover' ? HANDOVER_OTP_CODE_LENGTH : OTP_CODE_LENGTH
-    const code = generateDigitCode(length)
+    const code = this.config.devFixedOtp ? '0'.repeat(length) : generateDigitCode(length)
     // subjectRef на этом этапе не нужен: `codeHash` для логина
     // (`purpose='login'`) вычисляется в `RequestOtpUseCase` как
     // `sha256(code + otpRequestId)` — `otpRequestId` (UUID) выступает
