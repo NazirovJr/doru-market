@@ -24,6 +24,9 @@ export const CHAIN_STATUSES_ALLOWING_PHARMACY_ACTIVE: ReadonlySet<OnboardingStat
   'active',
 ])
 
+/** DTJ-367 (SRS-ADM-050): дефолт совпадает с DEFAULT колонки `migrations/0059`. */
+export const DEFAULT_MAX_DELIVERY_RADIUS_KM = 10.0
+
 export interface PharmacyAccountCreateCommand {
   readonly id: string
   readonly chainId: string
@@ -48,6 +51,7 @@ export interface PharmacyAccountProps {
   readonly is24_7: boolean
   readonly openingTime: string | null
   readonly closingTime: string | null
+  readonly maxDeliveryRadiusKm: number
   readonly licenseNumber: string
   readonly licenseIssuingAuthority: string | null
   readonly licenseIssueDate: Date | null

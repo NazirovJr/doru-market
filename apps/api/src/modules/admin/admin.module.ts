@@ -63,16 +63,28 @@ import { ProvisionCourierForChainUseCase } from './application/use-cases/provisi
 import { ListEscrowLedgerUseCase } from './application/use-cases/list-escrow-ledger.use-case.js'
 import { ListPayoutScheduleUseCase } from './application/use-cases/list-payout-schedule.use-case.js'
 import { ListReconciliationAlertsUseCase } from './application/use-cases/list-reconciliation-alerts.use-case.js'
+import { GetPharmacyScheduleUseCase } from './application/use-cases/get-pharmacy-schedule.use-case.js'
+import { UpdatePharmacyScheduleUseCase } from './application/use-cases/update-pharmacy-schedule.use-case.js'
+import { UpdateDeliveryZoneUseCase } from './application/use-cases/update-delivery-zone.use-case.js'
 import { FeatureFlagsController } from './presentation/feature-flags.controller.js'
 import { TenantsController } from './presentation/tenants.controller.js'
 import { UsersAdminController } from './presentation/users-admin.controller.js'
 import { PharmacyAccountsOverviewController } from './presentation/pharmacy-accounts-overview.controller.js'
 import { StaffAccountsController } from './presentation/staff-accounts.controller.js'
 import { FinanceLedgerController } from './presentation/finance-ledger.controller.js'
+import { PharmacyScheduleController } from './presentation/pharmacy-schedule.controller.js'
 
 @Module({
   imports: [OnboardingModule, OrdersModule, PaymentsModule, AuthModule, TenancyModule, InventoryModule, DeliveryModule],
-  controllers: [FeatureFlagsController, TenantsController, UsersAdminController, PharmacyAccountsOverviewController, StaffAccountsController, FinanceLedgerController],
+  controllers: [
+    FeatureFlagsController,
+    TenantsController,
+    UsersAdminController,
+    PharmacyAccountsOverviewController,
+    StaffAccountsController,
+    FinanceLedgerController,
+    PharmacyScheduleController,
+  ],
   providers: [
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },
     { provide: ORDERS_FACADE_PORT, useExisting: ORDERS_FACADE },
@@ -106,6 +118,10 @@ import { FinanceLedgerController } from './presentation/finance-ledger.controlle
     ListEscrowLedgerUseCase,
     ListPayoutScheduleUseCase,
     ListReconciliationAlertsUseCase,
+    // DTJ-367 — расписание/зона доставки, тот же ONBOARDING_FACADE_PORT (updateSchedule/updateDeliveryZone).
+    GetPharmacyScheduleUseCase,
+    UpdatePharmacyScheduleUseCase,
+    UpdateDeliveryZoneUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.

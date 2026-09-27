@@ -169,6 +169,61 @@ export class OnboardingFacade {
     await this.pharmacyChainRepository.save(chain.suspend(actor, 'unpaid_invoice'))
   }
 
+  /** DTJ-367 — текущие значения формы `admin`-кабинета ДО первого PATCH. Несуществующая аптека — null. */
+  async getScheduleAndZone(
+    pharmacyId: string,
+  ): Promise<{
+    readonly id: string
+    readonly isOpen247: boolean
+    readonly openingTime: string | null
+    readonly closingTime: string | null
+    readonly maxDeliveryRadiusKm: number
+  } | null> {
+    const account = await this.pharmacyAccountRepository.findById(pharmacyId)
+    if (account === null) {
+      return null
+    }
+    return {
+      id: account.id,
+      isOpen247: account.isOpen24x7,
+      openingTime: account.openingTime,
+      closingTime: account.closingTime,
+      maxDeliveryRadiusKm: account.maxDeliveryRadiusKm,
+    }
+  }
+
+  /** DTJ-367 (SRS-ADM-049) — `admin`-расширение: расписание работы точки, `status` не меняется. */
+  async updateSchedule(
+    pharmacyId: string,
+    update: { readonly isOpen247: boolean; readonly openingTime: string | null; readonly closingTime: string | null },
+    actor: { readonly id: string },
+  ): Promise<{ readonly id: string; readonly isOpen247: boolean; readonly openingTime: string | null; readonly closingTime: string | null }> {
+    void actor
+    const account = await this.pharmacyAccountRepository.findById(pharmacyId)
+    if (account === null) {
+      throw new NotFoundError({ pharmacyId })
+    }
+    const updated = account.updateSchedule(update)
+    await this.pharmacyAccountRepository.save(updated)
+    return { id: updated.id, isOpen247: updated.isOpen24x7, openingTime: updated.openingTime, closingTime: updated.closingTime }
+  }
+
+  /** DTJ-367 (SRS-ADM-050) — `admin`-расширение: круговая зона доставки, `status` не меняется. */
+  async updateDeliveryZone(
+    pharmacyId: string,
+    update: { readonly maxDeliveryRadiusKm: number },
+    actor: { readonly id: string },
+  ): Promise<{ readonly id: string; readonly maxDeliveryRadiusKm: number }> {
+    void actor
+    const account = await this.pharmacyAccountRepository.findById(pharmacyId)
+    if (account === null) {
+      throw new NotFoundError({ pharmacyId })
+    }
+    const updated = account.updateDeliveryZone(update)
+    await this.pharmacyAccountRepository.save(updated)
+    return { id: updated.id, maxDeliveryRadiusKm: updated.maxDeliveryRadiusKm }
+  }
+
   /** DTJ-384 (гостевое расширение из EP-17, `modules/analytics`) — тонкая делегация порту, без своей формулы. */
   async getReviewDurationStats(
     tenantId: string,

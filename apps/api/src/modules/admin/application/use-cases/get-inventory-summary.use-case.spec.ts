@@ -19,7 +19,13 @@ function fakeFacades(
   const getPharmacyChainId = vi.fn().mockResolvedValue(chainId)
   const getInventorySummary = vi.fn().mockResolvedValue(SUMMARY)
   return {
-    onboardingFacade: { findPharmacyAccountsAny: vi.fn(), getPharmacyChainId },
+    onboardingFacade: {
+      findPharmacyAccountsAny: vi.fn(),
+      getPharmacyChainId,
+      getScheduleAndZone: vi.fn(),
+      updateSchedule: vi.fn(),
+      updateDeliveryZone: vi.fn(),
+    },
     inventoryFacade: { getInventorySummary },
     getPharmacyChainId,
     getInventorySummary,
