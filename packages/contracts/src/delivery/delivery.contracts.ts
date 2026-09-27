@@ -105,8 +105,7 @@ export const recordCashRequestSchema = z.object({
 })
 export type RecordCashRequest = z.infer<typeof recordCashRequestSchema>
 
-/** `POST /api/v1/delivery-assignments/:id/deliver` — SRS-DELIV-022/024. `otpCode` — 4 цифры
- * (`delivery_handover`, SRS-DOM-080). `proofPhotoUrl` — ДОПОЛНИТЕЛЬНОЕ доказательство, не замена OTP. */
+// proofPhotoUrl теперь персистится (delivery_assignments.proof_photo_url, миграция 0062, DTJ-317 review).
 export const deliverRequestSchema = z.object({
   otpCode: z.string().regex(new RegExp(`^\\d{${String(OTP_HANDOVER_CODE_LENGTH)}}$`)),
   proofPhotoUrl: z.url().optional(),

@@ -88,3 +88,11 @@ export type DeliveryDomainEvent =
       readonly breachedAt: Date
       readonly slaMinutes: number
     }
+  | {
+      // Публикуется use case'ом (не entity-методом) — тот же приём, что CourierAssignedEvent.
+      readonly type: 'OrderDeliveredEvent'
+      readonly deliveryAssignmentId: string
+      readonly orderId: string
+      readonly courierId: string
+      readonly deliveredAt: Date
+    }

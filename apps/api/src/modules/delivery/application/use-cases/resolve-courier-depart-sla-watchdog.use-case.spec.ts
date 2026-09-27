@@ -34,6 +34,7 @@ function makeAssignment(status: DeliveryAssignmentSnapshot['status']): DeliveryA
     contactAttemptsCount: 0,
     lastContactAttemptAt: null,
     distanceMeters: null,
+    proofPhotoUrl: null,
   }
   return DeliveryAssignment.restore(snapshot)
 }
@@ -43,6 +44,7 @@ function makeUseCase(assignment: DeliveryAssignment | null): { useCase: ResolveC
   const assignments: DeliveryAssignmentRepositoryPort = {
     findById: vi.fn().mockResolvedValue(assignment),
     findActiveByOrderId: vi.fn().mockResolvedValue(null),
+    findByCourierAndStatuses: vi.fn().mockResolvedValue([]),
     findByOrderId: vi.fn().mockResolvedValue(null),
     hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(false),
     save: vi.fn().mockResolvedValue(undefined),

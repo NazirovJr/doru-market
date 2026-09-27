@@ -25,7 +25,7 @@ function makeUseCase(params: { readonly courier: Courier | null }): {
   findPage: ReturnType<typeof vi.fn>
 } {
   const findPage = vi.fn().mockResolvedValue({ items: [], nextCursor: null, hasMore: false })
-  const earnings: CourierEarningsRepositoryPort = { findPage }
+  const earnings: CourierEarningsRepositoryPort = { findPage, create: vi.fn() }
   const couriers: CourierRepositoryPort = {
     findById: vi.fn().mockResolvedValue(params.courier),
     findByUserId: vi.fn().mockResolvedValue(params.courier),

@@ -379,6 +379,12 @@
       "when": 1700000640000,
       "tag": "0060_audit_action_category_pharmacy_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "when": 1700000660000,
+      "tag": "0062_delivery_assignment_proof_photo",
+      "breakpoints": true
     }
   ]
 }

@@ -127,15 +127,25 @@ describe.skipIf(!postgresAvailable)('AcceptDeliveryOfferUseCase — TC-DELIV-071
       orderId: 'irrelevant',
       tenantId: 'irrelevant',
       pharmacyId: 'pharmacy',
+      customerId: 'customer-1',
       medicineIds: [],
       itemsCount: 1,
       paymentMethod: 'cash_courier',
       deliveryGeoPoint: null,
       deliveryFeeDiram: 1000n,
+      totalAmountDiram: 1000n,
+      deliveryAddress: 'Addr',
+      deliveryLandmark: null,
+      handoverOtpId: null,
     }
     const orders: DeliveryOrdersPort = {
       getOrderForRating: () => Promise.resolve(null),
       getDeliveryContext: () => Promise.resolve(orderContext),
+      markOrderDelivered: () => Promise.resolve(),
+
+      verifyHandoverOtp: () => Promise.resolve(),
+
+      reissueHandoverOtp: () => Promise.resolve({ code: '0000', expiresAt: new Date(), handoverOtpId: 'otp-reissued' }),
     }
     const pharmacies: PharmacyLookupPort = { findById: () => Promise.resolve(pharmacyLocation), findByIds: () => Promise.resolve([]) }
     const outbox: DeliveryOutboxPort = { append: () => Promise.resolve() }

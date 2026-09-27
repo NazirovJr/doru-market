@@ -42,6 +42,12 @@ import {
 } from './ports/order-repository.port.js'
 import { TENANCY_FACADE_PORT, type TenancyFacadePort } from './ports/tenancy-facade.port.js'
 import { MergeGuestCartUseCase, type MergeGuestCartResult } from './cart/merge-guest-cart.use-case.js'
+import { VerifyHandoverOtpUseCase, type VerifyHandoverOtpCommand } from './pharmacy-terminal/verify-handover-otp.use-case.js'
+import {
+  RegenerateHandoverOtpUseCase,
+  type RegenerateHandoverOtpActor,
+  type RegenerateHandoverOtpResult,
+} from './pharmacy-terminal/regenerate-handover-otp.use-case.js'
 import type { Order } from '@/modules/orders/domain/order.entity.js'
 import type { OrderCancelActor, OrderCancelReason } from '@/modules/orders/domain/order-domain-event.js'
 import type { GeoPoint } from '@/shared-kernel/domain/value-objects/geo-point.vo.js'
@@ -126,21 +132,29 @@ export interface DeliverySnapshot {
   readonly orderId: string
   readonly tenantId: string
   readonly pharmacyId: string
+  readonly customerId: string
   readonly medicineIds: readonly string[]
   readonly itemsCount: number
   readonly paymentMethod: OrderPaymentMethod
   readonly deliveryGeoPoint: GeoPoint | null
   // Стоимость доставки, зафиксированная на checkout (Order.deliveryFee — readonly, тариф после не пересчитывается).
   readonly deliveryFeeDiram: bigint
+  readonly totalAmountDiram: bigint
+  readonly deliveryAddress: string
+  readonly deliveryLandmark: string | null
+  readonly handoverOtpId: string | null
 }
 
 @Injectable()
 export class OrdersFacade {
+  // eslint-disable-next-line max-params -- DI-инъекции, все кроме первой @Optional() (тот же приём, что mergeGuestCartUseCase)
   constructor(
     @Inject(ORDER_REPOSITORY_PORT) private readonly repository: OrderRepositoryPort,
     @Optional() @Inject(MergeGuestCartUseCase) private readonly mergeGuestCartUseCase?: MergeGuestCartUseCase,
     // @Optional() тем же приёмом, что mergeGuestCartUseCase — не ломает однопараметровые вызовы в спеках.
     @Optional() @Inject(TENANCY_FACADE_PORT) private readonly tenancyFacade?: TenancyFacadePort,
+    @Optional() @Inject(VerifyHandoverOtpUseCase) private readonly verifyHandoverOtpUseCase?: VerifyHandoverOtpUseCase,
+    @Optional() @Inject(RegenerateHandoverOtpUseCase) private readonly regenerateHandoverOtpUseCase?: RegenerateHandoverOtpUseCase,
   ) {}
 
   /** См. JSDoc файла — делегация к `MergeGuestCartUseCase` (DTJ-226) для вызова из `auth`. */
@@ -149,6 +163,20 @@ export class OrdersFacade {
       throw new Error('OrdersFacade.mergeGuestCart: MergeGuestCartUseCase provider is not wired (DI misconfiguration)')
     }
     return this.mergeGuestCartUseCase.execute(tenantId, sessionToken, customerId)
+  }
+
+  async verifyHandoverOtp(cmd: VerifyHandoverOtpCommand): Promise<void> {
+    if (this.verifyHandoverOtpUseCase === undefined) {
+      throw new Error('OrdersFacade.verifyHandoverOtp: VerifyHandoverOtpUseCase provider is not wired (DI misconfiguration)')
+    }
+    return this.verifyHandoverOtpUseCase.execute(cmd)
+  }
+
+  async reissueHandoverOtp(orderId: string, actor: RegenerateHandoverOtpActor): Promise<RegenerateHandoverOtpResult> {
+    if (this.regenerateHandoverOtpUseCase === undefined) {
+      throw new Error('OrdersFacade.reissueHandoverOtp: RegenerateHandoverOtpUseCase provider is not wired (DI misconfiguration)')
+    }
+    return this.regenerateHandoverOtpUseCase.execute({ orderId, actor })
   }
 
   async getOrderForCheckoutAttempt(tenantId: string, checkoutAttemptId: string): Promise<Order | null> {
@@ -166,11 +194,16 @@ export class OrdersFacade {
       orderId: order.id,
       tenantId: order.tenantId,
       pharmacyId: order.pharmacyId,
+      customerId: order.customerId,
       medicineIds: order.items.map((item) => item.medicineId),
       itemsCount: order.items.length,
       paymentMethod: order.paymentMethod,
       deliveryGeoPoint: order.deliveryGeoPoint,
       deliveryFeeDiram: order.deliveryFee.diram,
+      totalAmountDiram: order.totalAmount.diram,
+      deliveryAddress: order.deliveryAddress,
+      deliveryLandmark: order.deliveryLandmark,
+      handoverOtpId: order.toSnapshot().handoverOtpId,
     }
   }
 

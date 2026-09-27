@@ -29,4 +29,5 @@ export interface DeliveryAssignmentSnapshot {
   readonly contactAttemptsCount: number
   readonly lastContactAttemptAt: Date | null
   readonly distanceMeters: number | null
+  readonly proofPhotoUrl: string | null
 }

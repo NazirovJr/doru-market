@@ -244,6 +244,7 @@ import { CompletePickingController } from './presentation/pharmacy-terminal/comp
 // — из уже импортированного `AuthModule`, тот же приём, что `CompletePickingUseCase` выше.
 import { GetHandoverOtpUseCase } from './application/pharmacy-terminal/get-handover-otp.use-case.js'
 import { RegenerateHandoverOtpUseCase } from './application/pharmacy-terminal/regenerate-handover-otp.use-case.js'
+import { VerifyHandoverOtpUseCase } from './application/pharmacy-terminal/verify-handover-otp.use-case.js'
 import { HandoverOtpController } from './presentation/pharmacy-terminal/handover-otp.controller.js'
 
 // DTJ-307 (EP-12, SLA сборки) — мягкое нарушение SLA: internal-эндпоинт для apps/worker.
@@ -535,6 +536,7 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     // DTJ-306 (EP-12, терминал фармацевта §A.5, см. JSDoc импортов выше).
     GetHandoverOtpUseCase,
     RegenerateHandoverOtpUseCase,
+    VerifyHandoverOtpUseCase,
     // DTJ-307 (EP-12, SLA сборки, см. JSDoc импортов выше).
     ReportPickingSlaBreachUseCase,
     SLA_WATCHDOG_QUEUE_PROVIDER,
