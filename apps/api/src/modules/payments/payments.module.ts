@@ -206,7 +206,10 @@ import { AdminPaymentOverrideController } from './presentation/admin-payment-ove
 import { HoldPayoutUseCase } from './application/use-cases/hold-payout.use-case.js'
 import { PAYMENTS_FACADE, type PaymentsFacade } from './index.js'
 // DTJ-357 — read-методы PaymentsFacade вынесены отдельным файлом (C2, max-lines 300).
-import { findEscrowLedgerEntries, findPayoutSchedule, findPayoutScheduleByOrder } from './application/queries/finance-facade.queries.js'
+import { findEscrowLedgerEntries, findPayoutSchedule, findPayoutScheduleByOrder, listCommissionRates, upsertCommissionRate } from './application/queries/finance-facade.queries.js'
+// DTJ-358 — commission-rates CRUD (platform_fee, уже существующая таблица EP-10).
+import { COMMISSION_RATE_REPOSITORY, type CommissionRateRepository } from './application/ports/commission-rate-repository.port.js'
+import { COMMISSION_RATE_REPOSITORY_PROVIDER } from './infrastructure/repositories/commission-rate.repository.js'
 // DTJ-251 — PlatformBillingInvoiceRepository, задел для DTJ-252 (см. JSDoc блока providers выше).
 import { PLATFORM_BILLING_INVOICE_REPOSITORY_PROVIDER } from './infrastructure/repositories/platform-billing-invoice.repository.js'
 // DTJ-252 — авто-блокировка сети за неоплаченный B2B-инвойс + отчёты аптеке (см. JSDoc блока providers выше).
@@ -272,6 +275,16 @@ class PaymentsFacadeCommandPorts {
     @Inject(HoldPayoutUseCase) public readonly holdPayout: HoldPayoutUseCase,
     @Inject(RefundOrderUseCase) public readonly refundOrder: RefundOrderUseCase,
     @Inject(AdjustLedgerUseCase) public readonly adjustLedger: AdjustLedgerUseCase,
+  ) {}
+}
+
+// DTJ-358 — 3-й репозиторий четвёртым позиционным параметром useFactory нарушил бы max-params ≤3 (C5), тот же приём, что PaymentsFacadeCommandPorts.
+@Injectable()
+class PaymentsFacadeQueryPorts {
+  public constructor(
+    @Inject(ESCROW_LEDGER_REPOSITORY) public readonly escrowLedger: EscrowLedgerRepository,
+    @Inject(PAYOUT_SCHEDULE_REPOSITORY) public readonly payoutSchedule: PayoutScheduleRepository,
+    @Inject(COMMISSION_RATE_REPOSITORY) public readonly commissionRate: CommissionRateRepository,
   ) {}
 }
 
@@ -391,9 +404,11 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
     // DTJ-249 — заморозка выплаты по спору, первый провайдер PAYMENTS_FACADE (см. JSDoc блока providers выше).
     HoldPayoutUseCase,
     PaymentsFacadeCommandPorts,
+    COMMISSION_RATE_REPOSITORY_PROVIDER,
+    PaymentsFacadeQueryPorts,
     {
       provide: PAYMENTS_FACADE,
-      useFactory: (commands: PaymentsFacadeCommandPorts, escrowLedgerRepo: EscrowLedgerRepository, payoutScheduleRepo: PayoutScheduleRepository): PaymentsFacade => ({
+      useFactory: (commands: PaymentsFacadeCommandPorts, queries: PaymentsFacadeQueryPorts): PaymentsFacade => ({
         holdPayout: (tenantId, orderId, disputeId) => commands.holdPayout.execute({ tenantId, orderId, disputeId }),
         refundFull: (tenantId, command) =>
           commands.refundOrder.execute({ tenantId, orderId: command.orderId, reason: command.reason }),
@@ -405,11 +420,13 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
             reason: command.reason,
             actorUserId: command.actorUserId,
           }),
-        findEscrowLedgerEntries: (orderId) => findEscrowLedgerEntries(escrowLedgerRepo, orderId),
-        findPayoutSchedule: (filter, pagination) => findPayoutSchedule(payoutScheduleRepo, filter, pagination),
-        findPayoutScheduleByOrder: (orderId) => findPayoutScheduleByOrder(payoutScheduleRepo, orderId),
+        findEscrowLedgerEntries: (orderId) => findEscrowLedgerEntries(queries.escrowLedger, orderId),
+        findPayoutSchedule: (filter, pagination) => findPayoutSchedule(queries.payoutSchedule, filter, pagination),
+        findPayoutScheduleByOrder: (orderId) => findPayoutScheduleByOrder(queries.payoutSchedule, orderId),
+        listCommissionRates: (filter, pagination) => listCommissionRates(queries.commissionRate, filter, pagination),
+        upsertCommissionRate: (command) => upsertCommissionRate(queries.commissionRate, command),
       }),
-      inject: [PaymentsFacadeCommandPorts, ESCROW_LEDGER_REPOSITORY, PAYOUT_SCHEDULE_REPOSITORY],
+      inject: [PaymentsFacadeCommandPorts, PaymentsFacadeQueryPorts],
     },
     // DTJ-251 — см. JSDoc блока providers выше (нет вызывающего use case в ЭТОМ тикете, задел для DTJ-252).
     PLATFORM_BILLING_INVOICE_REPOSITORY_PROVIDER,

@@ -55,6 +55,8 @@ function fakes(order: OrderAdminDetailView | null, timeline: OrderTimelineView |
       findEscrowLedgerEntries,
       findPayoutSchedule: vi.fn(),
       findPayoutScheduleByOrder,
+      listCommissionRates: vi.fn(),
+      upsertCommissionRate: vi.fn(),
     },
     prescriptionsFacade: { getPrescriptionMetaByOrder },
     onboardingFacade: {

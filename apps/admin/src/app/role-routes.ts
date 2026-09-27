@@ -125,6 +125,10 @@ const PayoutSchedulePage: LazyExoticComponent<ComponentType<SectionPlaceholderPa
 const ReconciliationAlertsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
   import('@/features/finance/ui/reconciliation-alerts-page').then((m) => ({ default: m.ReconciliationAlertsPage })),
 )
+/** DTJ-358 — та же схема совместимости без пропсов, что `EscrowLedgerPage` рядом. */
+const CommissionRatesPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/finance/ui/commission-rates-page').then((m) => ({ default: m.CommissionRatesPage })),
+)
 
 function section(path: string, titleKey: string, icon: string): RouteConfig {
   return { path, titleKey, icon, Component: SectionPlaceholder }
@@ -147,6 +151,8 @@ const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
   { path: 'finance/escrow-ledger', titleKey: 'admin.nav.finance_escrow_ledger', icon: 'finance', Component: EscrowLedgerPage },
   { path: 'finance/payout-schedule', titleKey: 'admin.nav.finance_payout_schedule', icon: 'finance', Component: PayoutSchedulePage },
   { path: 'finance/reconciliation-alerts', titleKey: 'admin.nav.finance_reconciliation_alerts', icon: 'finance', Component: ReconciliationAlertsPage },
+  // DTJ-358 — управление ставками комиссии (platform_fee CRUD), тот же раздел «Финансы».
+  { path: 'finance/commission-rates', titleKey: 'admin.nav.finance_commission_rates', icon: 'finance', Component: CommissionRatesPage },
   section('settings', 'admin.nav.settings', 'settings'),
 ]
 
