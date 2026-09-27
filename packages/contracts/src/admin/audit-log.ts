@@ -16,6 +16,7 @@ export const AUDIT_LOG_CATEGORY_VALUES = [
   'role_grant',
   'delivery_pricing_change',
   'pharmacy_terminal',
+  'pharmacy_settings_change',
 ] as const
 
 export type AuditLogCategory = (typeof AUDIT_LOG_CATEGORY_VALUES)[number]

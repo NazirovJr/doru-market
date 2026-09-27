@@ -233,6 +233,12 @@ function parseDate(value: string | null): Date | null {
   return new Date(value)
 }
 
+// Postgres `time` возвращает "HH:MM:SS" — агрегат (DTJ-367 updateSchedule) и внешний контракт работают в "HH:MM".
+const HH_MM_LENGTH = 5
+function truncateToHhMm(value: string | null): string | null {
+  return value === null ? null : value.slice(0, HH_MM_LENGTH)
+}
+
 function accountFromRow(row: typeof pharmacies.$inferSelect): PharmacyAccount | null {
   if (!isOnboardingStatus(row.status)) {
     return null
@@ -247,8 +253,8 @@ function accountFromRow(row: typeof pharmacies.$inferSelect): PharmacyAccount | 
     longitude: Number(row.longitude),
     phone: row.phone,
     is24_7: row.is24_7 ?? false,
-    openingTime: row.openingTime,
-    closingTime: row.closingTime,
+    openingTime: truncateToHhMm(row.openingTime),
+    closingTime: truncateToHhMm(row.closingTime),
     maxDeliveryRadiusKm: Number(row.maxDeliveryRadiusKm),
     licenseNumber: row.licenseNumber ?? '',
     licenseIssuingAuthority: row.licenseIssuingAuthority,

@@ -54,10 +54,20 @@ describe.skipIf(!postgresAvailable)('PharmacyScheduleController — Supertest in
   let superAdminToken: string
   const createdPharmacyIds: string[] = []
   const createdChainIds: string[] = []
+  const createdUserIds: string[] = []
 
-  function sign(role: string, extra?: Partial<JwtClaims>): string {
+  // audit_log.actor_user_id — FK на users(id): актор PATCH-запроса обязан существовать как строка.
+  async function sign(role: string, extra?: Partial<JwtClaims>): Promise<string> {
+    const userId = randomUUID()
+    await pool.query(`INSERT INTO users (id, tenant_id, phone_number, role, is_active) VALUES ($1, $2, $3, $4, true)`, [
+      userId,
+      TEST_TENANT_ID,
+      `+99290${userId.replace(/\D/g, '').slice(0, 7).padEnd(7, '0')}`,
+      role,
+    ])
+    createdUserIds.push(userId)
     return jwtSigner.sign({
-      sub: randomUUID(),
+      sub: userId,
       role: role as JwtClaims['role'],
       tenantId: TEST_TENANT_ID,
       pharmacyId: null,
@@ -106,11 +116,16 @@ describe.skipIf(!postgresAvailable)('PharmacyScheduleController — Supertest in
 
   beforeAll(async () => {
     pool = new Pool({ connectionString: TEST_DATABASE_URL })
+    // audit_log.tenant_id — FK на tenants(id): актор пишет audit_log со своим tenantId.
+    await pool.query(`INSERT INTO tenants (id, slug, is_neutral) VALUES ($1, $2, false) ON CONFLICT (id) DO NOTHING`, [
+      TEST_TENANT_ID,
+      `dtj367-${TEST_TENANT_ID.slice(0, 8)}`,
+    ])
     ctx = await createTestApp()
     app = ctx.app
     httpServer = ctx.httpServer
     jwtSigner = app.get<JwtSignerPort>(JWT_SIGNER)
-    superAdminToken = sign('super_admin')
+    superAdminToken = await sign('super_admin')
   })
 
   afterAll(async () => {
@@ -123,6 +138,10 @@ describe.skipIf(!postgresAvailable)('PharmacyScheduleController — Supertest in
       if (createdChainIds.length > 0) {
         await pool.query('DELETE FROM pharmacy_chains WHERE id = ANY($1)', [createdChainIds])
       }
+      if (createdUserIds.length > 0) {
+        await pool.query('DELETE FROM users WHERE id = ANY($1)', [createdUserIds])
+      }
+      await pool.query('DELETE FROM tenants WHERE id = $1', [TEST_TENANT_ID])
       await pool.end().catch(() => undefined)
     }
   })
@@ -131,7 +150,7 @@ describe.skipIf(!postgresAvailable)('PharmacyScheduleController — Supertest in
     const suffix = randomUUID().slice(0, 8)
     const chainId = await seedChain(`Schedule Chain Read ${suffix}`)
     const pharmacyId = await seedPharmacy(`Read pharmacy schedule ${suffix}`, chainId)
-    const ownAdminToken = sign('pharmacy_admin', { chainId })
+    const ownAdminToken = await sign('pharmacy_admin', { chainId })
 
     const res = await getSchedule(ownAdminToken, pharmacyId)
 
@@ -144,7 +163,7 @@ describe.skipIf(!postgresAvailable)('PharmacyScheduleController — Supertest in
     const suffix = randomUUID().slice(0, 8)
     const chainId = await seedChain(`Schedule Chain Own ${suffix}`)
     const pharmacyId = await seedPharmacy(`Own pharmacy schedule ${suffix}`, chainId)
-    const ownAdminToken = sign('pharmacy_admin', { chainId })
+    const ownAdminToken = await sign('pharmacy_admin', { chainId })
 
     const res = await patchSchedule(ownAdminToken, pharmacyId, { isOpen247: true })
 
@@ -163,7 +182,7 @@ describe.skipIf(!postgresAvailable)('PharmacyScheduleController — Supertest in
     const suffix = randomUUID().slice(0, 8)
     const chainId = await seedChain(`Zone Chain Invalid ${suffix}`)
     const pharmacyId = await seedPharmacy(`Zone pharmacy invalid ${suffix}`, chainId)
-    const ownAdminToken = sign('pharmacy_admin', { chainId })
+    const ownAdminToken = await sign('pharmacy_admin', { chainId })
 
     const res = await patchDeliveryZone(ownAdminToken, pharmacyId, { maxDeliveryRadiusKm: -5 })
 
@@ -175,7 +194,7 @@ describe.skipIf(!postgresAvailable)('PharmacyScheduleController — Supertest in
     const suffix = randomUUID().slice(0, 8)
     const chainId = await seedChain(`Zone Chain Save ${suffix}`)
     const pharmacyId = await seedPharmacy(`Zone pharmacy save ${suffix}`, chainId)
-    const ownAdminToken = sign('pharmacy_admin', { chainId })
+    const ownAdminToken = await sign('pharmacy_admin', { chainId })
 
     const res = await patchDeliveryZone(ownAdminToken, pharmacyId, { maxDeliveryRadiusKm: 5 })
 
@@ -191,7 +210,7 @@ describe.skipIf(!postgresAvailable)('PharmacyScheduleController — Supertest in
     const chainAId = await seedChain(`Schedule Chain A ${suffix}`)
     const chainBId = await seedChain(`Schedule Chain B ${suffix}`)
     const foreignPharmacyId = await seedPharmacy(`Foreign pharmacy schedule ${suffix}`, chainBId)
-    const ownAdminToken = sign('pharmacy_admin', { chainId: chainAId })
+    const ownAdminToken = await sign('pharmacy_admin', { chainId: chainAId })
 
     const res = await patchSchedule(ownAdminToken, foreignPharmacyId, { isOpen247: true })
 
@@ -214,7 +233,7 @@ describe.skipIf(!postgresAvailable)('PharmacyScheduleController — Supertest in
     const chainId = await seedChain(`Schedule Chain Customer ${suffix}`)
     const pharmacyId = await seedPharmacy(`Customer pharmacy schedule ${suffix}`, chainId)
 
-    const res = await patchSchedule(sign('customer'), pharmacyId, { isOpen247: true })
+    const res = await patchSchedule(await sign('customer'), pharmacyId, { isOpen247: true })
 
     expect(res.status).toBe(403)
     expect((res.body as ErrorBody).error.code).toBe('INSUFFICIENT_ROLE')

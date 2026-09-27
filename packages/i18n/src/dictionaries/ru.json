@@ -421,6 +421,7 @@
   "admin.audit_log.category.role_grant": "Выдача платформенной роли",
   "admin.audit_log.category.delivery_pricing_change": "Изменение тарифа доставки",
   "admin.audit_log.category.pharmacy_terminal": "Терминал фармацевта",
+  "admin.audit_log.category.pharmacy_settings_change": "Изменение настроек аптеки",
   "admin.users.title": "Пользователи",
   "admin.users.loading": "Загружаем пользователей…",
   "admin.users.error": "Не удалось загрузить пользователей",

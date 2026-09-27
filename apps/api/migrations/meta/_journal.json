@@ -373,6 +373,12 @@
       "when": 1700000630000,
       "tag": "0059_pharmacies_max_delivery_radius_km",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "when": 1700000640000,
+      "tag": "0060_audit_action_category_pharmacy_settings",
+      "breakpoints": true
     }
   ]
 }

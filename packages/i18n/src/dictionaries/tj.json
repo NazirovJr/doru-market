@@ -421,6 +421,7 @@
   "admin.audit_log.category.role_grant": "Додани нақши платформа",
   "admin.audit_log.category.delivery_pricing_change": "Тағйири тарифи расонидан",
   "admin.audit_log.category.pharmacy_terminal": "Терминали дорусоз",
+  "admin.audit_log.category.pharmacy_settings_change": "Тағйири танзимоти дорухона",
   "admin.users.title": "Корбарон",
   "admin.users.loading": "Боркунии корбарон…",
   "admin.users.error": "Корбарон бор нашуданд",

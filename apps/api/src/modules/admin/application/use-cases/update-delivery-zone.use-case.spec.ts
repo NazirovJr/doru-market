@@ -38,7 +38,7 @@ describe('UpdateDeliveryZoneUseCase (DTJ-367)', () => {
 
     expect(result).toEqual(VIEW)
     expect(updateDeliveryZone).toHaveBeenCalledWith('pharmacy-1', { maxDeliveryRadiusKm: 5 }, { id: 'user-1' })
-    expect(write).toHaveBeenCalledWith(expect.objectContaining({ category: 'onboarding_decision', entityId: 'pharmacy-1' }))
+    expect(write).toHaveBeenCalledWith(expect.objectContaining({ category: 'pharmacy_settings_change', entityId: 'pharmacy-1' }))
   })
 
   it('maxDeliveryRadiusKm = -5 — ValidationError (400 VALIDATION_ERROR), facade НЕ вызывается (AC2)', async () => {

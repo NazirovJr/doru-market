@@ -421,6 +421,7 @@
   "admin.audit_log.category.role_grant": "Platform role grant",
   "admin.audit_log.category.delivery_pricing_change": "Delivery pricing change",
   "admin.audit_log.category.pharmacy_terminal": "Pharmacist terminal",
+  "admin.audit_log.category.pharmacy_settings_change": "Pharmacy settings change",
   "admin.users.title": "Users",
   "admin.users.loading": "Loading users…",
   "admin.users.error": "Failed to load users",

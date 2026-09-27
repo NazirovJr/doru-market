@@ -42,7 +42,7 @@ describe('UpdatePharmacyScheduleUseCase (DTJ-367)', () => {
       { isOpen247: false, openingTime: '09:00', closingTime: '18:00' },
       { id: 'user-1' },
     )
-    expect(write).toHaveBeenCalledWith(expect.objectContaining({ category: 'onboarding_decision', entityId: 'pharmacy-1' }))
+    expect(write).toHaveBeenCalledWith(expect.objectContaining({ category: 'pharmacy_settings_change', entityId: 'pharmacy-1' }))
   })
 
   it('isOpen247=false без openingTime/closingTime — ValidationError, facade НЕ вызывается', async () => {

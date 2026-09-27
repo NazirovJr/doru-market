@@ -4,9 +4,8 @@ import { CrossTenantAccessDeniedError, UpdatePharmacyScheduleBodySchema, Validat
 import { AUDIT_LOG_PORT, type AuditLogPort } from '@/common/audit/audit-log.port.js'
 import { ONBOARDING_FACADE_PORT, type OnboardingFacadePort, type PharmacyScheduleView } from '../ports/onboarding-facade.port.js'
 
-// ASSUMPTION: нет отдельной категории под "изменение полей аптеки" (только *_decision/*_change для
-// других модулей) — переиспользуем ближайшую существующую вместо новой миграции enum (см. отчёт).
-const AUDIT_CATEGORY = 'onboarding_decision'
+// migrations/0060 — отдельная категория (onboarding_decision не подходит для рутинного апдейта полей).
+const AUDIT_CATEGORY = 'pharmacy_settings_change'
 const AUDIT_ENTITY_TYPE = 'pharmacy_account'
 const AUDIT_ACTION = 'pharmacy_schedule_update'
 

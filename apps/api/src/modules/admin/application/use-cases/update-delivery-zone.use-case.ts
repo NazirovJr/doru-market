@@ -4,8 +4,8 @@ import { CrossTenantAccessDeniedError, UpdateDeliveryZoneBodySchema, ValidationE
 import { AUDIT_LOG_PORT, type AuditLogPort } from '@/common/audit/audit-log.port.js'
 import { ONBOARDING_FACADE_PORT, type OnboardingFacadePort, type PharmacyDeliveryZoneView } from '../ports/onboarding-facade.port.js'
 
-// ASSUMPTION: та же переиспользуемая категория, что UpdatePharmacyScheduleUseCase, не новая.
-const AUDIT_CATEGORY = 'onboarding_decision'
+// migrations/0060 — та же категория, что UpdatePharmacyScheduleUseCase.
+const AUDIT_CATEGORY = 'pharmacy_settings_change'
 const AUDIT_ENTITY_TYPE = 'pharmacy_account'
 const AUDIT_ACTION = 'pharmacy_delivery_zone_update'
 
