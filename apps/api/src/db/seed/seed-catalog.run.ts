@@ -296,6 +296,29 @@ async function seedNotificationTemplatesViaCli(dbUrl: string): Promise<number> {
   }
 }
 
+// DTJ-435 — тенант/сети/аптеки/пользователи/остатки/заказы контракта testing-kit. Порядок вызова важен (FK-цепочка).
+async function seedFullDatasetViaCli(dbUrl: string): Promise<void> {
+  const { drizzle } = await import('drizzle-orm/node-postgres')
+  const { Pool } = await import('pg')
+  const { seedWhiteLabelTenantAndChains } = await import('./tenants/white-label.seed.js')
+  const { seedPharmacyNetwork } = await import('./pharmacies/pharmacy-network.seed.js')
+  const { seedContractUsers } = await import('./users/contract-users.seed.js')
+  const { seedContractInventory } = await import('./inventory/contract-inventory.seed.js')
+  const { seedOrdersAllStatuses } = await import('./orders/all-statuses.seed.js')
+
+  const pool = new Pool({ connectionString: dbUrl })
+  try {
+    const db = drizzle(pool)
+    await seedWhiteLabelTenantAndChains(db)
+    await seedPharmacyNetwork(db)
+    await seedContractUsers(db)
+    await seedContractInventory(db)
+    await seedOrdersAllStatuses(db)
+  } finally {
+    await pool.end().catch(() => undefined)
+  }
+}
+
 async function main(): Promise<void> {
   // Защита от двойного запуска при импорте из тестов.
   if (process.env.DORUTJ_SEED_SKIP_MAIN === '1') return
@@ -329,6 +352,9 @@ async function main(): Promise<void> {
     const notificationTemplatesUpserted = await seedNotificationTemplatesViaCli(dbUrl)
     // eslint-disable-next-line no-console -- CLI-скрипт.
     console.log(`[db:seed] OK — upserted ${String(notificationTemplatesUpserted)} notification_templates rows (DTJ-369)`)
+    await seedFullDatasetViaCli(dbUrl)
+    // eslint-disable-next-line no-console -- CLI-скрипт.
+    console.log('[db:seed] OK — seeded full wave9 dataset: white-label tenant, chains, pharmacies, users, inventory, orders (DTJ-435)')
     process.exitCode = 0
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
