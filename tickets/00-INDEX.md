@@ -373,6 +373,9 @@ domain/application/infrastructure/presentation конкретного модул
 | DTJ-433 | apps/pharmacy: переход на packages/ui, оболочка кабинета и переключение языка | EP-18 | frontend | M | DTJ-404, DTJ-405, DTJ-406, DTJ-408, DTJ-410 | apps/pharmacy/src/app/**; apps/pharmacy/src/shared/**; apps/pharmacy/src/pages/**; +2 файлов |
 | DTJ-434 | apps/admin: вход по OTP, Bearer-токен в запросах, оболочка с меню по роли | EP-15 | frontend | M | DTJ-350, DTJ-433 | apps/admin/src/app/**; apps/admin/src/shared/api/http-client.ts; apps/admin/src/shared/auth/**; +3 файлов |
 | DTJ-435 | pnpm db:seed по SRS-NFR-031: тенанты, сети, аптеки, остатки, пользователи всех ролей, заказы во всех статусах | EP-19 | infrastructure | M | DTJ-416 | apps/api/src/db/seed/**; packages/testing-kit/src/seed-contract.ts |
+| DTJ-436 | apps/web: бренд и язык из packages/ui/i18n, форма заявки аптеки на i18n, плюрализация количеств | EP-18 | frontend | S | DTJ-402, DTJ-408 | apps/web/src/app/layout.tsx; apps/web/src/features/onboarding-application/** |
+| DTJ-437 | GET /api/v1/i18n/:locale — раздача словарей packages/i18n (SRS-API-058) | EP-18 | presentation | S | DTJ-402 | apps/api/src/modules/i18n/**; packages/contracts/src/i18n.ts |
+| DTJ-438 | Telegram-уведомления тестируемы на стенде: базовый URL Bot API из конфига, telegramChatId в сиде, повтор публикации | EP-16 | infrastructure | S | DTJ-435 | telegram-notify.provider.ts; worker-telegram-sender.ts; seed |
 
 ¹ `0008_i18n_overrides_review_status.sql` (DTJ-103) ещё не реализован, но это имя уже занято
 двумя другими миграциями (`0008_onboarding_foundation.sql`, `0008_user_telegram_identities.sql`) —
