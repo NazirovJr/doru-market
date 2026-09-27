@@ -1,3 +1,5 @@
+import type { DeliveryUnitOfWorkTx } from './delivery-unit-of-work.port.js'
+
 export const COURIER_EARNINGS_REPOSITORY = Symbol.for('@dorutj/delivery/courier-earnings-repository')
 
 export interface CourierEarningsCursor {
@@ -25,6 +27,16 @@ export interface FindCourierEarningsResult {
   readonly hasMore: boolean
 }
 
+export interface CreateCourierEarningInput {
+  readonly id: string
+  readonly courierId: string
+  readonly deliveryAssignmentId: string
+  readonly amountDiram: bigint
+  // Натуральный ключ идемпотентности — assignmentId уникален, 1 строка earnings на 1 доставку.
+  readonly idempotencyKey: string
+}
+
 export interface CourierEarningsRepositoryPort {
   findPage(input: FindCourierEarningsInput): Promise<FindCourierEarningsResult>
+  create(input: CreateCourierEarningInput, tx?: DeliveryUnitOfWorkTx): Promise<void>
 }

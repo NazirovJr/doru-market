@@ -1,5 +1,6 @@
 // SRS-ADM-034 — единственный экран платформы, помеченный «требует немедленного расследования» в самом UI. Badge danger — CSS-переменные, тот же приём, что SlaBadge.
 import { useEffect, useState, type ReactElement } from 'react'
+import { Link } from 'react-router'
 import { useT, toIntlLocale } from '@dorutj/i18n'
 import type { FinanceReconciliationAlertDto } from '@dorutj/contracts'
 import { ADMIN_LOCALE } from '@/shared/config/locale'
@@ -63,8 +64,9 @@ export const ReconciliationAlertsPage = (): ReactElement => {
         <tbody>
           {items.map((alert) => (
             <tr key={alert.orderId} data-testid="reconciliation-alert-row">
-              {/* DTJ-355 добавит страницу заказа — до тех пор просто id, не ссылка в никуда. */}
-              <td>{alert.orderId}</td>
+              <td>
+                <Link to={`/admin/orders/${alert.orderId}`}>{alert.orderId}</Link>
+              </td>
               <td>{formatSomoni(alert.discrepancyDiram)}</td>
               <td>{alert.repeatDetectionCount}</td>
               <td>{new Date(alert.detectedAt).toLocaleString()}</td>

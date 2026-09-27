@@ -8,6 +8,7 @@
  * целей дубликат-проверки) — форма 1:1 с `OrderReturnRequestCommand.existingNonTerminalReturnIds`
  * (`domain/order-return.entity.ts`), чтобы use case не делал лишний маппинг.
  */
+import type { ReturnStatus } from '@dorutj/contracts'
 import type { OrderReturn } from '../../domain/index.js'
 import type { ReturnsUnitOfWorkTx } from './orders-facade.port.js'
 
@@ -18,8 +19,23 @@ export type { OrderReturn }
 
 export const RETURNS_REPOSITORY = Symbol.for('@dorutj/returns/repository')
 
+export interface FindIncomingScope {
+  readonly tenantId: string
+  readonly pharmacyId: string | null
+  readonly chainId: string | null
+  readonly statuses: readonly ReturnStatus[]
+  readonly cursor: { readonly v: string; readonly id: string } | null
+  readonly limit: number
+}
+
+export interface FindIncomingResult {
+  readonly items: readonly OrderReturn[]
+  readonly hasMore: boolean
+}
+
 export interface ReturnsRepositoryPort {
   findById(id: string, tx?: ReturnsUnitOfWorkTx): Promise<OrderReturn | null>
   findActiveByOrderId(orderId: string, tx?: ReturnsUnitOfWorkTx): Promise<readonly string[]>
   save(orderReturn: OrderReturn, tx?: ReturnsUnitOfWorkTx): Promise<void>
+  findIncoming(scope: FindIncomingScope): Promise<FindIncomingResult>
 }

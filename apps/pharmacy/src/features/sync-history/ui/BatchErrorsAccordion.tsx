@@ -1,5 +1,7 @@
 import { useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
+import { Button } from '@dorutj/ui'
+import { useLocale } from '@/shared/config/locale-provider'
 import type { InventorySyncBatchListItemDto, InventorySyncRowErrorResponseDto } from '@dorutj/contracts'
 import { downloadSyncErrorReport, useBatchRowErrors } from '@/features/sync-history/api/use-sync-batches'
 
@@ -16,7 +18,8 @@ interface ErrorsListProps {
 }
 
 const ErrorsList = ({ isPending, isError, rows }: ErrorsListProps): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   if (isPending) {
     return <p className="text-sm text-ink-muted">{t('pharmacy.inventory.sync_history.errors.loading')}</p>
   }
@@ -44,7 +47,8 @@ interface DownloadReportButtonProps {
 }
 
 const DownloadReportButton = ({ batchId, sourceUploadId }: DownloadReportButtonProps): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [downloadError, setDownloadError] = useState(false)
 
   function handleDownload(): void {
@@ -54,14 +58,9 @@ const DownloadReportButton = ({ batchId, sourceUploadId }: DownloadReportButtonP
 
   return (
     <div>
-      <button
-        type="button"
-        onClick={handleDownload}
-        data-testid={`batch-download-error-report-${batchId}`}
-        className="text-sm text-brand-primary underline"
-      >
+      <Button type="button" variant="ghost" onClick={handleDownload} data-testid={`batch-download-error-report-${batchId}`}>
         {t('pharmacy.inventory.sync_history.errors.download_report')}
-      </button>
+      </Button>
       {downloadError ? (
         <p role="alert" className="text-xs text-brand-danger">
           {t('pharmacy.inventory.sync_history.errors.download_report_error')}
@@ -73,20 +72,16 @@ const DownloadReportButton = ({ batchId, sourceUploadId }: DownloadReportButtonP
 
 // useBatchRowErrors грузит /errors только при isOpen=true — не N+1 запросов на список.
 export const BatchErrorsAccordion = ({ batch, isOpen, onToggle }: BatchErrorsAccordionProps): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const errorsQuery = useBatchRowErrors(batch.batchId, isOpen)
   const canDownloadReport = batch.sourceUploadId !== null && batch.rejectedRows > 0
 
   return (
     <div className="flex flex-col gap-2" data-testid={`batch-errors-accordion-${batch.batchId}`}>
-      <button
-        type="button"
-        onClick={onToggle}
-        data-testid={`batch-errors-toggle-${batch.batchId}`}
-        className="text-left text-sm text-brand-primary underline"
-      >
+      <Button type="button" variant="ghost" onClick={onToggle} data-testid={`batch-errors-toggle-${batch.batchId}`}>
         {t(isOpen ? 'pharmacy.inventory.sync_history.errors.toggle_collapse' : 'pharmacy.inventory.sync_history.errors.toggle_expand')}
-      </button>
+      </Button>
 
       {isOpen ? (
         <div className="flex flex-col gap-2 rounded-md border border-line p-3" data-testid={`batch-errors-panel-${batch.batchId}`}>

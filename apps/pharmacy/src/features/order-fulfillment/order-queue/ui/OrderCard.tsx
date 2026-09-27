@@ -1,6 +1,7 @@
 import { useState, type ReactElement } from 'react'
 import { Link } from 'react-router'
 import { useT } from '@dorutj/i18n'
+import { useLocale } from '@/shared/config/locale-provider'
 import type { PharmacyTerminalQueueItemDto } from '@dorutj/contracts'
 import { ReclaimMenu } from './ReclaimMenu'
 
@@ -12,7 +13,8 @@ export interface OrderCardProps {
 }
 
 export const OrderCard = ({ item, currentUserId, onAccept, isAccepting }: OrderCardProps): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [reclaimOpen, setReclaimOpen] = useState(false)
   const isAssignedToSomeoneElse = item.assignedPharmacistId !== null && item.assignedPharmacistId !== currentUserId
 
@@ -65,7 +67,8 @@ interface ProcessingFooterProps {
 
 // Отдельная секция «В сборке» — своя разметка, чтобы не раздувать основной OrderCard условной вложенностью.
 const ProcessingFooter = ({ item, currentUserId, isAssignedToSomeoneElse, reclaimOpen, onToggleReclaim }: ProcessingFooterProps): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   if (!isAssignedToSomeoneElse) {
     const isMine = currentUserId === item.assignedPharmacistId
     return (

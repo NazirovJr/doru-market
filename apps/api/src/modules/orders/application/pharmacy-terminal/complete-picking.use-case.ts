@@ -13,9 +13,7 @@
  * 'auto_confirmed_timeout'}` для ЭТОГО заказа (`PartialFulfillmentRequestRepositoryPort.
  * findLatestByOrderId`, ДОБАВЛЕНО этим тикетом — см. её JSDoc) — иначе `409
  * PARTIAL_FULFILLMENT_PENDING` (TC-PHT-014); (в) ни одна партия, зарезервированная под заказом,
- * не просрочена НА МОМЕНТ вызова — переиспользует `InventoryFacadePort.hasExpiredReservedBatch`
- * (ТОТ ЖЕ метод, что `AcceptOrderUseCase.execute`, SRS-DOM-006) — защита от гонки «партия
- * истекла за минуты ожидания подтверждения клиента» (TC-PHT-016 «интеграционные»).
+ * не просрочена НА МОМЕНТ вызова — `InventoryFacadePort.findExpiredReservedItemIds` (её JSDoc, ДОБАВЛЕНО DTJ-312-доработкой ради `itemIds` в details) — защита от гонки «партия истекла за минуты ожидания подтверждения клиента» (TC-PHT-016 «интеграционные»).
  *
  * **OTP вручения (SRS-DOM-080/081) — ИСКЛЮЧИТЕЛЬНО через `OtpGeneratorPort`/
  * `OtpCodesRepository` (`modules/auth`, межмодульное переиспользование через её публичный
@@ -188,11 +186,11 @@ export class CompletePickingUseCase {
     }
   }
 
-  /** SRS-PHT-026 п.3 — переиспользует `InventoryFacadePort.hasExpiredReservedBatch`, ТОТ ЖЕ метод, что `AcceptOrderUseCase`. */
+  /** SRS-PHT-026 п.3 — `findExpiredReservedItemIds` (ДОБАВЛЕНО DTJ-312-доработкой) вместо `hasExpiredReservedBatch`: фронт обязан подсветить ИМЕННО просроченную позицию, булевого «просрочено ли что-то» недостаточно. */
   private async assertNoExpiredBatch(order: Order): Promise<void> {
-    const hasExpired = await this.inventoryFacade.hasExpiredReservedBatch(order.id)
-    if (hasExpired) {
-      throw new ExpiredStockError({ orderId: order.id })
+    const expiredItemIds = await this.inventoryFacade.findExpiredReservedItemIds(order.id)
+    if (expiredItemIds.length > 0) {
+      throw new ExpiredStockError({ orderId: order.id, itemIds: expiredItemIds })
     }
   }
 

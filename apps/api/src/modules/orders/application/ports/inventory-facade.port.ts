@@ -118,6 +118,9 @@ export interface InventoryFacadePort {
    */
   hasExpiredReservedBatch(orderId: string): Promise<boolean>
 
+  /** ДОБАВЛЕНО (DTJ-312 доработка, foundIssue приёмки — аддитивная правка, `hasExpiredReservedBatch` не тронут): `422 EXPIRED_STOCK` без `itemIds` не давал фронту подсветить конкретную позицию. Пустой массив = ничего не просрочено. */
+  findExpiredReservedItemIds(orderId: string): Promise<readonly string[]>
+
   /**
    * ДТЖ-224 (SRS-ORD-005..009): текущий физический остаток пары (аптека, медикамент) — сумма
    * `pharmacy_inventory.quantity` по непросроченным партиям. НЕ путать с `getMedicineSnapshot`

@@ -109,6 +109,8 @@ export const OrderPolicy = {
    * «своя ли аптека», чтобы не путать 403 (чужая аптека) с 404 (код недоступен по статусу).
    */
   canViewHandoverOtp(order: Order, actor: OrderPolicyActor): boolean {
+    // support_agent/super_admin — courier-side reissue идёт через OrdersFacade, не HTTP-контроллер терминала.
+    if (actor.role === 'support_agent' || actor.role === 'super_admin') return true
     return isTerminalStaff(actor.role) && actor.pharmacyId === order.pharmacyId
   },
 }

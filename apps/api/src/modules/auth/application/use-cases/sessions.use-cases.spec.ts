@@ -191,6 +191,7 @@ class NoopUnitOfWork implements UnitOfWorkPort {
 // ==================== Fixtures ====================
 
 const NOW = new Date('2026-08-28T10:00:00.000Z')
+const FIXED_CLOCK = { now: (): Date => NOW }
 const ABSOLUTE_EXPIRES_AT = new Date('2026-09-27T10:00:00.000Z')
 
 // `AuthSession.restore(...)` (не object-literal + `as unknown as`): use case'ы
@@ -236,7 +237,7 @@ describe('LogoutUseCase (DTJ-026, SRS-API-029)', () => {
   beforeEach(() => {
     sessions = new StubAuthSessionsRepository()
     uow = new NoopUnitOfWork()
-    useCase = new LogoutUseCase(sessions, uow)
+    useCase = new LogoutUseCase(sessions, uow, FIXED_CLOCK)
   })
 
   it('1.1 успех: refresh принадлежит текущему пользователю → revokeOneById(user_logout)', async () => {
@@ -292,7 +293,7 @@ describe('LogoutAllUseCase (DTJ-026, SRS-API-029)', () => {
   beforeEach(() => {
     sessions = new StubAuthSessionsRepository()
     uow = new NoopUnitOfWork()
-    useCase = new LogoutAllUseCase(sessions, uow)
+    useCase = new LogoutAllUseCase(sessions, uow, FIXED_CLOCK)
   })
 
   it('2.1 успех: revoke ВСЕХ сессий пользователя', async () => {
@@ -328,7 +329,7 @@ describe('ListSessionsUseCase (DTJ-026, SRS-API-030/149)', () => {
 
   beforeEach(() => {
     sessions = new StubAuthSessionsRepository()
-    useCase = new ListSessionsUseCase(sessions)
+    useCase = new ListSessionsUseCase(sessions, FIXED_CLOCK)
   })
 
   it('3.1 успех: список активных сессий с маскированным IP + isCurrent', async () => {
@@ -423,7 +424,7 @@ describe('RevokeSessionUseCase (DTJ-026, SRS-API-030)', () => {
   beforeEach(() => {
     sessions = new StubAuthSessionsRepository()
     uow = new NoopUnitOfWork()
-    useCase = new RevokeSessionUseCase(sessions, uow)
+    useCase = new RevokeSessionUseCase(sessions, uow, FIXED_CLOCK)
   })
 
   it('4.1 успех: своя сессия → revokeOneById(user_logout)', async () => {

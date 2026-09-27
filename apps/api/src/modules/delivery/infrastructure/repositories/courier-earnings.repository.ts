@@ -7,9 +7,12 @@ import {
   type CourierEarningRow,
   type CourierEarningsCursor,
   type CourierEarningsRepositoryPort,
+  type CreateCourierEarningInput,
   type FindCourierEarningsInput,
   type FindCourierEarningsResult,
 } from '@/modules/delivery/application/ports/courier-earnings.repository.port.js'
+import type { DeliveryUnitOfWorkTx } from '@/modules/delivery/application/ports/delivery-unit-of-work.port.js'
+import { resolveDrizzleClient } from '../drizzle-tx.util.js'
 
 const EARNINGS_SELECTION = {
   id: courierEarnings.id,
@@ -46,6 +49,22 @@ export class DrizzleCourierEarningsRepository implements CourierEarningsReposito
       nextCursor: hasMore && last !== undefined ? { v: last.recognizedAt.toISOString(), id: last.id } : null,
       hasMore,
     }
+  }
+
+  // ДОБАВЛЕНО (DTJ-317) — idempotencyKey уникален (chk БД) — повторный вызов с тем же ключом должен молчать, не 500.
+  public async create(input: CreateCourierEarningInput, tx?: DeliveryUnitOfWorkTx): Promise<void> {
+    const client = resolveDrizzleClient(this.db, tx)
+    await client
+      .insert(courierEarnings)
+      .values({
+        id: input.id,
+        courierId: input.courierId,
+        deliveryAssignmentId: input.deliveryAssignmentId,
+        amountDiram: input.amountDiram,
+        idempotencyKey: input.idempotencyKey,
+        isReturnFee: false,
+      })
+      .onConflictDoNothing({ target: courierEarnings.idempotencyKey })
   }
 }
 

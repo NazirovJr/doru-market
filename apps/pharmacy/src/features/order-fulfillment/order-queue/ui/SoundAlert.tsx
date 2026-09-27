@@ -1,5 +1,6 @@
 import { forwardRef, useImperativeHandle, useRef, useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
+import { useLocale } from '@/shared/config/locale-provider'
 import alertSoundUrl from '../assets/new-order-alert.wav'
 
 const SOUND_UNLOCKED_STORAGE_KEY = 'dorutj.pharmacy.order-queue.sound-unlocked'
@@ -26,7 +27,8 @@ function persistUnlockedFlag(): void {
 
 // Жест-триггер разблокировки автовоспроизведения — кнопка «Начать смену», один раз за сессию (sessionStorage).
 export const SoundAlert = forwardRef<SoundAlertHandle>((_props, ref): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const audioRef = useRef<HTMLAudioElement>(null)
   const [unlocked, setUnlocked] = useState(readUnlockedFlag)
 

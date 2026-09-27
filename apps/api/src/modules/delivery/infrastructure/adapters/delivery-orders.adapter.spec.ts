@@ -29,4 +29,14 @@ describe('DeliveryOrdersAdapter', () => {
 
     expect(context).toBeNull()
   })
+
+  it('markOrderDelivered делегирует OrdersFacade.markDelivered(orderId, {tenantId, now})', async () => {
+    const markDelivered = vi.fn().mockResolvedValue(undefined)
+    const adapter = new DeliveryOrdersAdapter({ markDelivered } as never)
+    const now = new Date('2026-09-25T10:00:00.000Z')
+
+    await adapter.markOrderDelivered({ orderId: 'order-1', tenantId: 'tenant-1', now })
+
+    expect(markDelivered).toHaveBeenCalledWith('order-1', { tenantId: 'tenant-1', now })
+  })
 })

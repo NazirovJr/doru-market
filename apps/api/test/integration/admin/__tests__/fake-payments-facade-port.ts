@@ -33,4 +33,5 @@ export const FAKE_PAYMENTS_FACADE_PORT: PaymentsFacadePort = {
       nextCursor: null,
       hasMore: false,
     }),
+  findPayoutScheduleByOrder: () => Promise.resolve(null),
 }

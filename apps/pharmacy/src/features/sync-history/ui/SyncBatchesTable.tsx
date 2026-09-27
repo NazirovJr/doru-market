@@ -1,5 +1,7 @@
 import { Fragment, useState, type ReactElement } from 'react'
 import { useT, type TranslateFunction } from '@dorutj/i18n'
+import { Badge, type BadgeTone, EmptyState } from '@dorutj/ui'
+import { useLocale } from '@/shared/config/locale-provider'
 import type { InventorySyncBatchListItemDto, InventorySyncBatchStatusDto } from '@dorutj/contracts'
 import { BatchErrorsAccordion } from '@/features/sync-history/ui/BatchErrorsAccordion'
 
@@ -7,12 +9,12 @@ export interface SyncBatchesTableProps {
   readonly items: readonly InventorySyncBatchListItemDto[]
 }
 
-const STATUS_COLOR_CLASS: Readonly<Record<InventorySyncBatchStatusDto, string>> = {
-  completed_full_success: 'text-brand-success',
-  completed_partial_success: 'text-brand-warning',
-  failed_validation: 'text-brand-danger',
-  queued: 'text-ink-muted',
-  processing: 'text-ink-muted',
+const STATUS_TONE: Readonly<Record<InventorySyncBatchStatusDto, BadgeTone>> = {
+  completed_full_success: 'success',
+  completed_partial_success: 'warning',
+  failed_validation: 'danger',
+  queued: 'neutral',
+  processing: 'neutral',
 }
 
 function statusLabel(t: TranslateFunction, status: InventorySyncBatchStatusDto): string {
@@ -41,7 +43,8 @@ function hasErrors(item: InventorySyncBatchListItemDto): boolean {
  * `Set<batchId>` локального состояния, каждая строка независима (не одна на весь список).
  */
 export const SyncBatchesTable = ({ items }: SyncBatchesTableProps): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set())
 
   function toggleExpanded(batchId: string): void {
@@ -58,9 +61,9 @@ export const SyncBatchesTable = ({ items }: SyncBatchesTableProps): ReactElement
 
   if (items.length === 0) {
     return (
-      <p className="text-sm text-ink-muted" data-testid="sync-batches-table-empty">
-        {t('pharmacy.inventory.sync_history.empty')}
-      </p>
+      <div data-testid="sync-batches-table-empty">
+        <EmptyState t={t} titleKey="pharmacy.inventory.sync_history.empty" />
+      </div>
     )
   }
 
@@ -90,8 +93,8 @@ export const SyncBatchesTable = ({ items }: SyncBatchesTableProps): ReactElement
               >
                 <td className="py-2 pr-2">{channelLabel(t, item.channel)}</td>
                 <td className="py-2 pr-2">{syncTypeLabel(t, item.syncType)}</td>
-                <td className={`py-2 pr-2 font-medium ${STATUS_COLOR_CLASS[item.status]}`} data-testid={`sync-batch-status-${item.batchId}`}>
-                  {statusLabel(t, item.status)}
+                <td className="py-2 pr-2" data-testid={`sync-batch-status-${item.batchId}`} data-tone={STATUS_TONE[item.status]}>
+                  <Badge tone={STATUS_TONE[item.status]}>{statusLabel(t, item.status)}</Badge>
                 </td>
                 <td className="py-2 pr-2">{item.acceptedRows}</td>
                 <td className="py-2 pr-2">{item.rejectedRows}</td>

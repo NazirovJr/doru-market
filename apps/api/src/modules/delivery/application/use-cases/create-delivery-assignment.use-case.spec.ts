@@ -24,7 +24,21 @@ function makeContext(overrides: Partial<AssignmentContext> = {}): AssignmentCont
   const geo = GeoPoint.create(38.5598, 68.787)
   if (!geo.ok) throw new Error('fixture error')
   return {
-    order: { orderId: ORDER_ID, tenantId: TENANT_ID, pharmacyId: 'pharmacy-1', medicineIds: [], itemsCount: 1, paymentMethod: 'cash_courier', deliveryGeoPoint: null, deliveryFeeDiram: 1000n },
+    order: {
+      orderId: ORDER_ID,
+      tenantId: TENANT_ID,
+      pharmacyId: 'pharmacy-1',
+      customerId: 'customer-1',
+      medicineIds: [],
+      itemsCount: 1,
+      paymentMethod: 'cash_courier',
+      deliveryGeoPoint: null,
+      deliveryFeeDiram: 1000n,
+      totalAmountDiram: 1000n,
+      deliveryAddress: 'Addr',
+      deliveryLandmark: null,
+      handoverOtpId: null,
+    },
     pharmacy: { id: 'pharmacy-1', name: 'Pharmacy', addressText: 'Addr', geoPoint: geo.value, chainId: null },
     requiresColdChain: false,
     candidateQuery: { tenantId: TENANT_ID, pharmacyChainId: null, pharmacyGeoPoint: geo.value, requiresColdChain: false },
@@ -59,6 +73,7 @@ function makeExistingAssignment(): DeliveryAssignment {
     contactAttemptsCount: 0,
     lastContactAttemptAt: null,
     distanceMeters: null,
+    proofPhotoUrl: null,
   }
   return DeliveryAssignment.restore(snapshot)
 }
@@ -81,6 +96,7 @@ function makeUseCase(params: { existing?: DeliveryAssignment | null; candidates?
   const assignments: DeliveryAssignmentRepositoryPort = {
     findById: vi.fn().mockResolvedValue(null),
     findActiveByOrderId: vi.fn().mockResolvedValue(params.existing === undefined ? null : params.existing),
+    findByCourierAndStatuses: vi.fn().mockResolvedValue([]),
     findByOrderId: vi.fn().mockResolvedValue(null),
     hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(false),
     claimUnassigned: vi.fn().mockResolvedValue(true),

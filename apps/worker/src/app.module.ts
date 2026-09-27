@@ -21,6 +21,7 @@ import { PickingSlaWatchdogModule } from './jobs/escrow-timeouts/picking-sla-wat
 import { AuditLogRetentionModule } from './jobs/audit-log-retention/audit-log-retention.module.js'
 import { DeliveryOfferTimeoutModule } from './jobs/delivery/delivery-offer-timeout.module.js'
 import { CourierDepartSlaWatchdogModule } from './jobs/delivery/courier-depart-sla-watchdog.module.js'
+import { RevokeExpiredRotatedKeysModule } from './jobs/revoke-expired-rotated-keys/revoke-expired-rotated-keys.module.js'
 
 /**
  * Барабанный модуль (D-27) — корневой `AppModule` apps/worker. Каждый новый тикет,
@@ -51,6 +52,7 @@ import { CourierDepartSlaWatchdogModule } from './jobs/delivery/courier-depart-s
     AuditLogRetentionModule,
     DeliveryOfferTimeoutModule,
     CourierDepartSlaWatchdogModule,
+    RevokeExpiredRotatedKeysModule,
   ],
 })
 // Класс существует только как носитель декоратора @Module для графа DI NestJS — штатный паттерн.

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { LocaleProvider } from '@/shared/config/locale-provider'
 import { MedicineAutocomplete } from './MedicineAutocomplete'
 
 /**
@@ -45,9 +46,11 @@ async function wait(ms: number): Promise<void> {
 function renderAutocomplete(onChange = vi.fn()): void {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
-    <QueryClientProvider client={queryClient}>
-      <MedicineAutocomplete value={null} onChange={onChange} />
-    </QueryClientProvider>,
+    <LocaleProvider>
+      <QueryClientProvider client={queryClient}>
+        <MedicineAutocomplete value={null} onChange={onChange} />
+      </QueryClientProvider>
+    </LocaleProvider>,
   )
 }
 

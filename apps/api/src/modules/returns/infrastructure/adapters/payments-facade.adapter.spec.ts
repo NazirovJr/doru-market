@@ -15,6 +15,7 @@ function buildHarness() {
     recordAdjustment,
     findEscrowLedgerEntries: vi.fn(),
     findPayoutSchedule: vi.fn(),
+    findPayoutScheduleByOrder: vi.fn(),
   }
   const adapter = new PaymentsFacadeAdapter(paymentsFacade)
   return { adapter, refundFull, recordAdjustment, holdPayout }

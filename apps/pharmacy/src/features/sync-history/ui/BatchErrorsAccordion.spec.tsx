@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { InventorySyncBatchListItemDto } from '@dorutj/contracts'
+import { LocaleProvider } from '@/shared/config/locale-provider'
 import { BatchErrorsAccordion } from './BatchErrorsAccordion'
 
 function batch(overrides?: Partial<InventorySyncBatchListItemDto>): InventorySyncBatchListItemDto {
@@ -40,9 +41,11 @@ const AccordionHarness = ({ item }: { readonly item: InventorySyncBatchListItemD
 function renderAccordion(item: InventorySyncBatchListItemDto): void {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
-    <QueryClientProvider client={queryClient}>
-      <AccordionHarness item={item} />
-    </QueryClientProvider>,
+    <LocaleProvider>
+      <QueryClientProvider client={queryClient}>
+        <AccordionHarness item={item} />
+      </QueryClientProvider>
+    </LocaleProvider>,
   )
 }
 

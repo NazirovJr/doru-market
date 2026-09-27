@@ -29,6 +29,18 @@ export interface DeliveryAssignmentRepositoryPort {
     input: FindByStatusesInput,
     tx?: DeliveryUnitOfWorkTx,
   ): Promise<readonly DeliveryAssignment[]>
+  // ДОБАВЛЕНО (DTJ-317) — GET /delivery-assignments/mine: та же keyset-пагинация, что findByStatuses, + courierId.
+  findByCourierAndStatuses(
+    input: FindByCourierAndStatusesInput,
+    tx?: DeliveryUnitOfWorkTx,
+  ): Promise<readonly DeliveryAssignment[]>
+}
+
+export interface FindByCourierAndStatusesInput {
+  readonly courierId: string
+  readonly statuses: readonly DeliveryAssignmentStatus[]
+  readonly limit: number
+  readonly cursor: { readonly createdAt: Date; readonly id: string } | null
 }
 
 export interface FindByStatusesInput {

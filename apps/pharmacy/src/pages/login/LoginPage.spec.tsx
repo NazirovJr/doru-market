@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import LoginPage from '@/pages/login/LoginPage'
 import { useAuthStore } from '@/shared/api/auth-store'
+import { LocaleProvider } from '@/shared/config/locale-provider'
 
 /**
  * DTJ-166 критерий приёмки 4: роль `customer`/`courier` технически проходит OTP-verify
@@ -23,14 +24,16 @@ afterEach(() => {
 function renderLoginPage(): void {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/login']}>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<div>queue-screen</div>} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>,
+    <LocaleProvider>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/login']}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<div>queue-screen</div>} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    </LocaleProvider>,
   )
 }
 

@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router'
 import type { PharmacyTerminalQueueItemDto } from '@dorutj/contracts'
+import { LocaleProvider } from '@/shared/config/locale-provider'
 import { OrderCard } from './OrderCard'
 
 function makeItem(overrides: Partial<PharmacyTerminalQueueItemDto>): PharmacyTerminalQueueItemDto {
@@ -25,13 +26,15 @@ function makeItem(overrides: Partial<PharmacyTerminalQueueItemDto>): PharmacyTer
 function renderCard(item: PharmacyTerminalQueueItemDto, currentUserId = 'me'): void {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
-        <ul>
-          <OrderCard item={item} currentUserId={currentUserId} onAccept={vi.fn()} isAccepting={false} />
-        </ul>
-      </MemoryRouter>
-    </QueryClientProvider>,
+    <LocaleProvider>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <ul>
+            <OrderCard item={item} currentUserId={currentUserId} onAccept={vi.fn()} isAccepting={false} />
+          </ul>
+        </MemoryRouter>
+      </QueryClientProvider>
+    </LocaleProvider>,
   )
 }
 

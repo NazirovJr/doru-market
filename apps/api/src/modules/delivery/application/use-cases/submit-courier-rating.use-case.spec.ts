@@ -61,6 +61,7 @@ function makeDeliveredAssignment(courierId: string | null = COURIER_ID): Deliver
     contactAttemptsCount: 0,
     lastContactAttemptAt: null,
     distanceMeters: null,
+    proofPhotoUrl: null,
   }
   return DeliveryAssignment.restore(snapshot)
 }
@@ -84,10 +85,14 @@ function makeUseCase(params: {
   const orders: DeliveryOrdersPort = {
     getOrderForRating: vi.fn().mockResolvedValue(params.order),
     getDeliveryContext: vi.fn().mockResolvedValue(null),
+    markOrderDelivered: vi.fn(),
+    verifyHandoverOtp: vi.fn(),
+    reissueHandoverOtp: vi.fn(),
   }
   const assignments: DeliveryAssignmentRepositoryPort = {
     findById: vi.fn().mockResolvedValue(null),
     findActiveByOrderId: vi.fn().mockResolvedValue(null),
+    findByCourierAndStatuses: vi.fn().mockResolvedValue([]),
     findByOrderId: vi.fn().mockResolvedValue(params.assignment === undefined ? makeDeliveredAssignment() : params.assignment),
     hasActiveAssignmentForCourier: vi.fn().mockResolvedValue(false),
     claimUnassigned: vi.fn().mockResolvedValue(true),

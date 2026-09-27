@@ -123,6 +123,7 @@ function makeHarness(overrides: HarnessOverrides = {}): Harness {
     findByPharmacy,
     findAllByPharmacy,
     findSchedule: vi.fn(),
+    findByOrderId: vi.fn(),
   }
 
   const useCase = new RefundOrderUseCase(ordersPort, paymentProvider, escrowLedger, payoutScheduleRepo, SILENT_LOGGER)

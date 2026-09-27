@@ -41,10 +41,12 @@ import { ONBOARDING_FACADE_PORT } from './application/ports/onboarding-facade.po
 import { ORDERS_FACADE_PORT } from './application/ports/orders-facade.port.js'
 import { PAYMENTS_FACADE_PORT } from './application/ports/payments-facade.port.js'
 import { INVENTORY_FACADE_PORT } from './application/ports/inventory-facade.port.js'
+import { PRESCRIPTIONS_FACADE_PORT } from './application/ports/prescriptions-facade.port.js'
 import { FEATURE_FLAGS_REPOSITORY_PROVIDER } from './infrastructure/repositories/feature-flags.repository.js'
 import { TENANCY_FACADE_PORT_PROVIDER } from './infrastructure/adapters/tenancy-facade.adapter.js'
 import { IDENTITY_FACADE_PORT_PROVIDER } from './infrastructure/adapters/identity-facade.adapter.js'
 import { DELIVERY_FACADE_PORT_PROVIDER } from './infrastructure/adapters/delivery-facade.adapter.js'
+import { NullPrescriptionsFacadeAdapter } from './infrastructure/adapters/null-prescriptions-facade.adapter.js'
 import { ListFeatureFlagsUseCase } from './application/use-cases/list-feature-flags.use-case.js'
 import { UpsertFeatureFlagUseCase } from './application/use-cases/upsert-feature-flag.use-case.js'
 import { ListTenantsUseCase } from './application/use-cases/list-tenants.use-case.js'
@@ -63,16 +65,40 @@ import { ProvisionCourierForChainUseCase } from './application/use-cases/provisi
 import { ListEscrowLedgerUseCase } from './application/use-cases/list-escrow-ledger.use-case.js'
 import { ListPayoutScheduleUseCase } from './application/use-cases/list-payout-schedule.use-case.js'
 import { ListReconciliationAlertsUseCase } from './application/use-cases/list-reconciliation-alerts.use-case.js'
+import { GetPharmacyScheduleUseCase } from './application/use-cases/get-pharmacy-schedule.use-case.js'
+import { UpdatePharmacyScheduleUseCase } from './application/use-cases/update-pharmacy-schedule.use-case.js'
+import { UpdateDeliveryZoneUseCase } from './application/use-cases/update-delivery-zone.use-case.js'
+import { ListOrdersAnyUseCase } from './application/use-cases/list-orders-any.use-case.js'
+import { ListOrdersOwnUseCase } from './application/use-cases/list-orders-own.use-case.js'
+import { GetOrderDetailAdminUseCase } from './application/use-cases/get-order-detail-admin.use-case.js'
+import { CreatePharmacyApiKeyUseCase } from './application/use-cases/create-pharmacy-api-key.use-case.js'
+import { ListPharmacyApiKeysUseCase } from './application/use-cases/list-pharmacy-api-keys.use-case.js'
+import { RevokePharmacyApiKeyUseCase } from './application/use-cases/revoke-pharmacy-api-key.use-case.js'
+import { RotatePharmacyApiKeyUseCase } from './application/use-cases/rotate-pharmacy-api-key.use-case.js'
+import { SetPharmacyApiKeyMtlsUseCase } from './application/use-cases/set-pharmacy-api-key-mtls.use-case.js'
 import { FeatureFlagsController } from './presentation/feature-flags.controller.js'
 import { TenantsController } from './presentation/tenants.controller.js'
 import { UsersAdminController } from './presentation/users-admin.controller.js'
 import { PharmacyAccountsOverviewController } from './presentation/pharmacy-accounts-overview.controller.js'
 import { StaffAccountsController } from './presentation/staff-accounts.controller.js'
 import { FinanceLedgerController } from './presentation/finance-ledger.controller.js'
+import { PharmacyScheduleController } from './presentation/pharmacy-schedule.controller.js'
+import { OrdersAdminController } from './presentation/orders-admin.controller.js'
+import { PharmacyApiKeysController } from './presentation/pharmacy-api-keys.controller.js'
 
 @Module({
   imports: [OnboardingModule, OrdersModule, PaymentsModule, AuthModule, TenancyModule, InventoryModule, DeliveryModule],
-  controllers: [FeatureFlagsController, TenantsController, UsersAdminController, PharmacyAccountsOverviewController, StaffAccountsController, FinanceLedgerController],
+  controllers: [
+    FeatureFlagsController,
+    TenantsController,
+    UsersAdminController,
+    PharmacyAccountsOverviewController,
+    StaffAccountsController,
+    FinanceLedgerController,
+    PharmacyScheduleController,
+    OrdersAdminController,
+    PharmacyApiKeysController,
+  ],
   providers: [
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },
     { provide: ORDERS_FACADE_PORT, useExisting: ORDERS_FACADE },
@@ -106,6 +132,21 @@ import { FinanceLedgerController } from './presentation/finance-ledger.controlle
     ListEscrowLedgerUseCase,
     ListPayoutScheduleUseCase,
     ListReconciliationAlertsUseCase,
+    // DTJ-367 — расписание/зона доставки, тот же ONBOARDING_FACADE_PORT (updateSchedule/updateDeliveryZone).
+    GetPharmacyScheduleUseCase,
+    UpdatePharmacyScheduleUseCase,
+    UpdateDeliveryZoneUseCase,
+    // PRESCRIPTIONS_FACADE_PORT — useClass (не useExisting): модуль prescriptions ещё не существует.
+    { provide: PRESCRIPTIONS_FACADE_PORT, useClass: NullPrescriptionsFacadeAdapter },
+    ListOrdersAnyUseCase,
+    ListOrdersOwnUseCase,
+    GetOrderDetailAdminUseCase,
+    // DTJ-365 — CRUD ключей 1С аптеки через INVENTORY_FACADE_PORT.
+    CreatePharmacyApiKeyUseCase,
+    ListPharmacyApiKeysUseCase,
+    RevokePharmacyApiKeyUseCase,
+    RotatePharmacyApiKeyUseCase,
+    SetPharmacyApiKeyMtlsUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.

@@ -24,8 +24,23 @@
  * (`JwtClaims.sub`) — курьерская личность резолвится через `ReturnsOrdersPort.getCourierIdForUser`
  * ПЕРЕД проверкой владения (см. JSDoc порта, DTJ-275 foundIssue).
  */
-import { Body, Controller, Get, HttpCode, Inject, InternalServerErrorException, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
-import { ErrorCode, ForbiddenError, NotFoundError, ok, type OrderReturnDto, type SuccessEnvelope } from '@dorutj/contracts'
+import { Body, Controller, Get, HttpCode, Inject, InternalServerErrorException, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common'
+import {
+  cursorQuerySchema,
+  decodeCursor,
+  encodeCursor,
+  ErrorCode,
+  ForbiddenError,
+  InvalidCursorError,
+  NotFoundError,
+  ok,
+  RETURN_STATUS_VALUES,
+  ValidationError,
+  type OrderReturnDto,
+  type PaginationMeta,
+  type ReturnStatus,
+  type SuccessEnvelope,
+} from '@dorutj/contracts'
 import { HttpStatus } from '@/common/http/http-status.constants.js'
 import { Idempotent } from '@/common/http/decorators/idempotent.decorator.js'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
@@ -33,6 +48,7 @@ import { AuthGuard, CurrentUser, Roles, RolesGuard, type JwtClaims } from '@/mod
 import { TenantContext } from '@/common/context/tenant-context.js'
 import { RETURNS_REPOSITORY, type ReturnsRepositoryPort, type OrderReturn } from '../application/ports/returns-repository.port.js'
 import { RETURNS_ORDERS_PORT, type ReturnsOrdersPort, type OrderReturnContext } from '../application/ports/orders-facade.port.js'
+import { OrderReturnsReportQueryService } from '../application/services/order-returns-report-query.service.js'
 import { RequestReturnUseCase } from '../application/use-cases/request-return.use-case.js'
 import { MarkReturnInTransitUseCase } from '../application/use-cases/mark-return-in-transit.use-case.js'
 import { ConfirmReturnReceivedUseCase } from '../application/use-cases/confirm-return-received.use-case.js'
@@ -69,7 +85,7 @@ interface LoadReturnAndAuthorizeResult {
 @Controller({ path: 'order-returns', version: '1' })
 @UseGuards(AuthGuard, RolesGuard)
 export class OrderReturnsController {
-  // eslint-disable-next-line max-params -- явный @Inject на каждой зависимости (esbuild/vitest не эмитит design:paramtypes, DTJ-001), 6 use case'ов + 2 порта для RBAC-предпроверки — 1:1 число зависимостей, что несёт этот контроллер по спецификации DTJ-275.
+  // eslint-disable-next-line max-params -- явный @Inject на каждой зависимости (esbuild/vitest не эмитит design:paramtypes, DTJ-001), 6 use case'ов + 2 порта + 1 read-сервис списка.
   public constructor(
     @Inject(RETURNS_REPOSITORY) private readonly repository: ReturnsRepositoryPort,
     @Inject(RETURNS_ORDERS_PORT) private readonly ordersPort: ReturnsOrdersPort,
@@ -79,6 +95,7 @@ export class OrderReturnsController {
     @Inject(RejectReturnUseCase) private readonly rejectReturn: RejectReturnUseCase,
     @Inject(AdminOverrideReturnUseCase) private readonly adminOverrideReturn: AdminOverrideReturnUseCase,
     @Inject(RetryReturnTransitUseCase) private readonly retryTransit: RetryReturnTransitUseCase,
+    @Inject(OrderReturnsReportQueryService) private readonly reportQuery: OrderReturnsReportQueryService,
   ) {}
 
   private readonly policy = new ReturnsPolicy()
@@ -209,6 +226,31 @@ export class OrderReturnsController {
     return ok(toOrderReturnDto(await this.mustFindReturn(id)))
   }
 
+  // Курсорный список «входящих» возвратов кабинета аптеки/сети (SRS-RET-011): скоуп по роли — resolveScope сервиса, не здесь.
+  @Get()
+  @Roles('pharmacist', 'pharmacy_admin', 'super_admin')
+  public async list(
+    @Query() rawQuery: Record<string, string | undefined>,
+    @CurrentUser() claims: JwtClaims,
+  ): Promise<SuccessEnvelope<{ readonly items: readonly OrderReturnDto[] }>> {
+    const tenantId = resolveTenantId()
+    const { limit, cursor } = parseListQuery(rawQuery.limit, rawQuery.cursor)
+    const statuses = parseStatusFilter(rawQuery['filter[status][in]'])
+    const result = await this.reportQuery.listIncoming({
+      tenantId,
+      actor: { role: claims.role, pharmacyId: claims.pharmacyId, chainId: claims.chainId },
+      statuses,
+      cursor,
+      limit,
+    })
+    const pagination: PaginationMeta = {
+      nextCursor: result.nextCursor === null ? null : encodeCursor(result.nextCursor),
+      hasMore: result.hasMore,
+      limit,
+    }
+    return ok({ items: result.items.map(toOrderReturnDto) }, { pagination })
+  }
+
   @Get(':id')
   @Roles('customer', 'pharmacist', 'super_admin')
   public async findOne(@Param('id', ID_PARSE_UUID) id: string, @CurrentUser() claims: JwtClaims): Promise<SuccessEnvelope<OrderReturnDto>> {
@@ -263,4 +305,42 @@ function resolveTenantId(): string {
     })
   }
   return store.tenantId
+}
+
+const DEFAULT_INCOMING_STATUSES: readonly ReturnStatus[] = ['return_in_transit', 'return_rejected']
+
+interface ParsedListQuery {
+  readonly limit: number
+  readonly cursor: { readonly v: string; readonly id: string } | null
+}
+
+function parseListQuery(limitRaw: string | undefined, cursorRaw: string | undefined): ParsedListQuery {
+  const parsed = cursorQuerySchema.safeParse({ limit: limitRaw, cursor: cursorRaw })
+  if (!parsed.success) {
+    throw new ValidationError('Invalid limit/cursor query parameters', { issues: parsed.error.issues })
+  }
+  const { limit, cursor: rawCursor } = parsed.data
+  if (rawCursor === undefined) {
+    return { limit, cursor: null }
+  }
+  const decoded = decodeCursor(rawCursor)
+  if (decoded === null || typeof decoded.v !== 'string') {
+    throw new InvalidCursorError(`Cannot decode cursor: "${rawCursor}"`, { raw: rawCursor })
+  }
+  return { limit, cursor: { v: decoded.v, id: decoded.id } }
+}
+
+function isReturnStatus(value: string): value is ReturnStatus {
+  return (RETURN_STATUS_VALUES as readonly string[]).includes(value)
+}
+
+function parseStatusFilter(raw: string | undefined): readonly ReturnStatus[] {
+  if (raw === undefined || raw.length === 0) {
+    return DEFAULT_INCOMING_STATUSES
+  }
+  const values = raw.split(',').map((value) => value.trim())
+  if (!values.every(isReturnStatus)) {
+    throw new ValidationError('Invalid filter[status][in] value', { raw })
+  }
+  return values
 }

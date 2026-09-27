@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { LocaleProvider } from '@/shared/config/locale-provider'
 import SyncHistoryPage from './SyncHistoryPage'
 
 /**
@@ -26,9 +27,11 @@ function batchesPage(ids: readonly string[], hasMore: boolean, nextCursor: strin
 function renderPage(): void {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
-    <QueryClientProvider client={queryClient}>
-      <SyncHistoryPage />
-    </QueryClientProvider>,
+    <LocaleProvider>
+      <QueryClientProvider client={queryClient}>
+        <SyncHistoryPage />
+      </QueryClientProvider>
+    </LocaleProvider>,
   )
 }
 

@@ -44,6 +44,8 @@ export const pharmacies = pgTable(PHARMACIES_TABLE, {
   is24_7: boolean('is_24_7').default(false),
   openingTime: time('opening_time'),
   closingTime: time('closing_time'),
+  // DTJ-367 (SRS-ADM-050), migrations/0059: круговая зона доставки, км.
+  maxDeliveryRadiusKm: numeric('max_delivery_radius_km', { precision: 5, scale: 2 }).notNull().default('10.0'),
   oneCEndpoint: text('one_c_endpoint'),
   isActive: boolean('is_active').default(true),
   licenseNumber: varchar('license_number', { length: 100 }),

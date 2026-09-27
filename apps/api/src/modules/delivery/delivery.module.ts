@@ -25,6 +25,13 @@ import { ReassignDeliveryUseCase } from './application/use-cases/reassign-delive
 import { GetAvailableDeliveryPoolUseCase } from './application/use-cases/get-available-delivery-pool.use-case.js'
 import { ListDeliveryAssignmentsUseCase } from './application/use-cases/list-delivery-assignments.use-case.js'
 import { ResolveCourierDepartSlaWatchdogUseCase } from './application/use-cases/resolve-courier-depart-sla-watchdog.use-case.js'
+import { DepartUseCase } from './application/use-cases/depart.use-case.js'
+import { DepartToCustomerUseCase } from './application/use-cases/depart-to-customer.use-case.js'
+import { RecordCashUseCase } from './application/use-cases/record-cash.use-case.js'
+import { DeliverUseCase } from './application/use-cases/deliver.use-case.js'
+import { ReissueHandoverOtpUseCase } from './application/use-cases/reissue-handover-otp.use-case.js'
+import { GetMineDeliveryAssignmentsUseCase } from './application/use-cases/get-mine-delivery-assignments.use-case.js'
+import { GetDeliveryAssignmentDetailUseCase } from './application/use-cases/get-delivery-assignment-detail.use-case.js'
 import { COURIER_REPOSITORY_PROVIDER } from './infrastructure/repositories/courier.repository.js'
 import { ProvisionCourierUseCase } from './application/use-cases/provision-courier.use-case.js'
 import { DELIVERY_ZONE_REPOSITORY_PROVIDER } from './infrastructure/repositories/delivery-zone.repository.js'
@@ -40,6 +47,7 @@ import { DELIVERY_TENANCY_PORT_PROVIDER } from './infrastructure/adapters/delive
 import { DELIVERY_OUTBOX_PROVIDER } from './infrastructure/adapters/delivery-outbox.adapter.js'
 import { DELIVERY_ORDERS_PORT_PROVIDER } from './infrastructure/adapters/delivery-orders.adapter.js'
 import { PHARMACY_LOOKUP_PORT_PROVIDER } from './infrastructure/adapters/pharmacy-lookup.adapter.js'
+import { MASKED_CALLING_PORT_PROVIDER } from './infrastructure/adapters/direct-phone-calling.adapter.js'
 import { DELIVERY_CANDIDATE_CACHE_PORT_PROVIDER } from './infrastructure/adapters/redis-delivery-candidate-cache.adapter.js'
 import { DELIVERY_OFFER_TIMEOUT_QUEUE_PROVIDER } from './infrastructure/jobs/delivery-offer-timeout.processor.js'
 import { COURIER_DEPART_SLA_WATCHDOG_QUEUE_PROVIDER } from './infrastructure/jobs/courier-depart-sla-watchdog.processor.js'
@@ -55,6 +63,8 @@ import { CourierDepartSlaWatchdogController } from './presentation/internal/cour
 import { DeliveryPricingController } from './presentation/delivery-pricing.controller.js'
 import { DeliveryZonesController } from './presentation/delivery-zones.controller.js'
 import { DeliveryAssignmentsDispatchController } from './presentation/delivery-assignments-dispatch.controller.js'
+import { DeliveryAssignmentDetailController } from './presentation/delivery-assignment-detail.controller.js'
+import { DeliveryAssignmentActionsController } from './presentation/delivery-assignment-actions.controller.js'
 
 @Module({
   imports: [AuthModule, TenancyModule, CatalogModule],
@@ -69,9 +79,12 @@ import { DeliveryAssignmentsDispatchController } from './presentation/delivery-a
     DeliveryPricingController,
     DeliveryZonesController,
     DeliveryAssignmentsDispatchController,
+    DeliveryAssignmentDetailController,
+    DeliveryAssignmentActionsController,
   ],
   providers: [
     COURIER_REPOSITORY_PROVIDER,
+    MASKED_CALLING_PORT_PROVIDER,
     DELIVERY_ASSIGNMENT_REPOSITORY_PROVIDER,
     DELIVERY_OFFER_REPOSITORY_PROVIDER,
     COURIER_SHIFT_REPOSITORY_PROVIDER,
@@ -113,6 +126,13 @@ import { DeliveryAssignmentsDispatchController } from './presentation/delivery-a
     GetAvailableDeliveryPoolUseCase,
     ListDeliveryAssignmentsUseCase,
     ResolveCourierDepartSlaWatchdogUseCase,
+    DepartUseCase,
+    DepartToCustomerUseCase,
+    RecordCashUseCase,
+    DeliverUseCase,
+    ReissueHandoverOtpUseCase,
+    GetMineDeliveryAssignmentsUseCase,
+    GetDeliveryAssignmentDetailUseCase,
     DeliveryFacade,
   ],
   exports: [DeliveryFacade],

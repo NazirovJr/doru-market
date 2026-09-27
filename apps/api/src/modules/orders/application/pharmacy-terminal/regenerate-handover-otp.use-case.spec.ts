@@ -186,6 +186,7 @@ describe('RegenerateHandoverOtpUseCase — success (TC-PHT-019)', () => {
       expiresAt: new Date(NOW.getTime() + 900_000),
       purpose: 'delivery_handover',
       regenerationsUsed: 1,
+      handoverOtpId: 'otp-id-new-1',
     })
     expect(otpGenerate).toHaveBeenCalledTimes(1)
     expect(otpGenerate).toHaveBeenCalledWith('delivery_handover')

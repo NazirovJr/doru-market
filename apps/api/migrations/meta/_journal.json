@@ -367,6 +367,30 @@
       "when": 1700000620000,
       "tag": "0058_audit_action_category_pharmacy_terminal",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "when": 1700000630000,
+      "tag": "0059_pharmacies_max_delivery_radius_km",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "when": 1700000640000,
+      "tag": "0060_audit_action_category_pharmacy_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "when": 1700000650000,
+      "tag": "0061_pharmacy_api_keys_rotation",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "when": 1700000660000,
+      "tag": "0062_delivery_assignment_proof_photo",
+      "breakpoints": true
     }
   ]
 }

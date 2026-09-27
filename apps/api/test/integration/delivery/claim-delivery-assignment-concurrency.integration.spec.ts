@@ -125,13 +125,26 @@ describe.skipIf(!postgresAvailable)('ClaimDeliveryAssignmentUseCase — TC-DELIV
       orderId: 'irrelevant',
       tenantId: 'irrelevant',
       pharmacyId: 'pharmacy',
+      customerId: 'customer-1',
       medicineIds: [],
       itemsCount: 1,
       paymentMethod: 'cash_courier',
       deliveryGeoPoint: null,
       deliveryFeeDiram: 1000n,
+      totalAmountDiram: 1000n,
+      deliveryAddress: 'Addr',
+      deliveryLandmark: null,
+      handoverOtpId: null,
     }
-    const orders: DeliveryOrdersPort = { getOrderForRating: () => Promise.resolve(null), getDeliveryContext: () => Promise.resolve(orderContext) }
+    const orders: DeliveryOrdersPort = {
+      getOrderForRating: () => Promise.resolve(null),
+      getDeliveryContext: () => Promise.resolve(orderContext),
+      markOrderDelivered: () => Promise.resolve(),
+
+      verifyHandoverOtp: () => Promise.resolve(),
+
+      reissueHandoverOtp: () => Promise.resolve({ code: '0000', expiresAt: new Date(), handoverOtpId: 'otp-reissued' }),
+    }
     const pharmacies: PharmacyLookupPort = { findById: () => Promise.resolve(pharmacyLocation), findByIds: () => Promise.resolve([]) }
     const outbox: DeliveryOutboxPort = { append: () => Promise.resolve() }
     const uow: DeliveryUnitOfWorkPort = { run: <T>(cb: DeliveryUnitOfWorkCallback<T>) => db.transaction((tx: unknown) => cb(tx)) }

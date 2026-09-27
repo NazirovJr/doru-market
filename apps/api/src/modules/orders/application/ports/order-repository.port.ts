@@ -100,6 +100,48 @@ export interface OrderCancellationAggregate {
   readonly cancelledCount: number
 }
 
+// Кросс-тенантный поиск заказов для admin. chainId резолвится сервером из actor, не принимается от клиента.
+export interface OrdersAnySearchFilter {
+  readonly orderNumberLike?: string
+  readonly status?: OrderStatus
+  readonly tenantId?: string
+  readonly pharmacyId?: string
+  readonly chainId?: string
+  readonly customerId?: string
+  readonly createdAtFrom?: Date
+  readonly createdAtTo?: Date
+  readonly slaBreached?: boolean
+}
+
+export interface OrdersAnySearchCursor {
+  readonly v: string
+  readonly id: string
+}
+
+export interface OrdersAnySearchPagination {
+  readonly limit: number
+  readonly cursor?: OrdersAnySearchCursor | null
+}
+
+export interface OrderAdminSummaryRow {
+  readonly id: string
+  readonly orderNumber: string
+  readonly status: OrderStatus
+  readonly tenantId: string
+  readonly pharmacyId: string | null
+  readonly customerId: string
+  readonly paymentMethod: OrderPaymentMethod
+  readonly totalAmountDiram: number
+  readonly slaBreached: boolean
+  readonly createdAt: Date
+}
+
+export interface OrdersAnySearchPage {
+  readonly items: readonly OrderAdminSummaryRow[]
+  readonly nextCursor: OrdersAnySearchCursor | null
+  readonly hasMore: boolean
+}
+
 export interface OrderRepositoryPort {
   findById(tenantId: string, orderId: string, tx?: OrderUnitOfWorkTx): Promise<Order | null>
   findByCheckoutAttemptId(tenantId: string, checkoutAttemptId: string, tx?: OrderUnitOfWorkTx): Promise<Order | null>
@@ -136,4 +178,6 @@ export interface OrderRepositoryPort {
   // deliverySlaMinutes — ASSUMPTION: домен не несёт отдельного дедлайна доставки, порог передаёт вызывающий.
   getSlaAggregate(tenantId: string, period: OrderMetricsPeriod, deliverySlaMinutes: number): Promise<OrderSlaAggregate>
   getCancellationAggregate(tenantId: string, period: OrderMetricsPeriod): Promise<OrderCancellationAggregate>
+
+  findOrdersAny(filter: OrdersAnySearchFilter, pagination: OrdersAnySearchPagination): Promise<OrdersAnySearchPage>
 }

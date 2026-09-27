@@ -10,7 +10,7 @@
  * ISO-8601 UTC-строки (граница JSON, конвенция `pharmacies-map.ts`/`search.ts`).
  */
 import { z } from 'zod'
-import type { ReportItemIssueReason } from './orders-pharmacy-terminal.contracts.js'
+import type { PharmacyTerminalPartialFulfillmentSummaryDto, ReportItemIssueReason } from './orders-pharmacy-terminal.contracts.js'
 
 /** DTJ-380 — 1:1 с `product_events.session_id VARCHAR(128)` (`db/schema/product-events.ts`). */
 const SESSION_ID_MAX_LENGTH = 128
@@ -114,6 +114,7 @@ export interface PharmacyTerminalOrderItemDto extends OrderItemDto {
 
 export interface PharmacyTerminalOrderDetailDto extends OrderDto {
   readonly items: readonly PharmacyTerminalOrderItemDto[]
+  readonly partialFulfillment: PharmacyTerminalPartialFulfillmentSummaryDto | null
 }
 
 /**

@@ -347,6 +347,7 @@ function buildUseCase(): Bundle {
     refreshGen,
     uow,
     logger as unknown as Logger,
+    { now: (): Date => NOW },
   )
   return { useCase, sessions, users, jwt, refreshGen, uow, logger }
 }

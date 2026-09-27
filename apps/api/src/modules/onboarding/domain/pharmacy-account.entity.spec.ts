@@ -179,3 +179,58 @@ describe('PharmacyAccount state machine (прочие переходы)', () => 
     expect(() => acc.submitForReview(NOW)).toThrow(InvalidOnboardingTransitionError)
   })
 })
+
+describe('PharmacyAccount.updateSchedule (DTJ-367, SRS-ADM-049)', () => {
+  it('сохраняет часы работы, status не меняется (в отличие от updateAddress)', () => {
+    const acc = PharmacyAccount.create(newAccountCommand())
+    const updated = acc.updateSchedule({ isOpen247: false, openingTime: '09:00', closingTime: '18:00' })
+    expect(updated.isOpen24x7).toBe(false)
+    expect(updated.openingTime).toBe('09:00')
+    expect(updated.closingTime).toBe('18:00')
+    expect(updated.status).toBe(acc.status)
+  })
+
+  it('isOpen247=true — openingTime/closingTime обнуляются, даже если переданы', () => {
+    const acc = PharmacyAccount.create(newAccountCommand())
+    const updated = acc.updateSchedule({ isOpen247: true, openingTime: '09:00', closingTime: '18:00' })
+    expect(updated.isOpen24x7).toBe(true)
+    expect(updated.openingTime).toBeNull()
+    expect(updated.closingTime).toBeNull()
+  })
+
+  it('интервал через полночь (20:00-02:00) — легитимен, НЕ бросает (см. PharmacyOpeningHoursPolicy DTJ-184)', () => {
+    const acc = PharmacyAccount.create(newAccountCommand())
+    const updated = acc.updateSchedule({ isOpen247: false, openingTime: '20:00', closingTime: '02:00' })
+    expect(updated.openingTime).toBe('20:00')
+    expect(updated.closingTime).toBe('02:00')
+  })
+
+  it('isOpen247=false без openingTime — ValidationError', () => {
+    const acc = PharmacyAccount.create(newAccountCommand())
+    expect(() => acc.updateSchedule({ isOpen247: false, openingTime: null, closingTime: '18:00' })).toThrow(ValidationError)
+  })
+})
+
+describe('PharmacyAccount.updateDeliveryZone (DTJ-367, SRS-ADM-050)', () => {
+  it('создание — дефолт 10 км', () => {
+    const acc = PharmacyAccount.create(newAccountCommand())
+    expect(acc.maxDeliveryRadiusKm).toBe(10)
+  })
+
+  it('сохраняет новый радиус, status не меняется', () => {
+    const acc = PharmacyAccount.create(newAccountCommand())
+    const updated = acc.updateDeliveryZone({ maxDeliveryRadiusKm: 5 })
+    expect(updated.maxDeliveryRadiusKm).toBe(5)
+    expect(updated.status).toBe(acc.status)
+  })
+
+  it('отрицательный радиус — ValidationError', () => {
+    const acc = PharmacyAccount.create(newAccountCommand())
+    expect(() => acc.updateDeliveryZone({ maxDeliveryRadiusKm: -5 })).toThrow(ValidationError)
+  })
+
+  it('радиус выше верхнего предела (50) — ValidationError', () => {
+    const acc = PharmacyAccount.create(newAccountCommand())
+    expect(() => acc.updateDeliveryZone({ maxDeliveryRadiusKm: 51 })).toThrow(ValidationError)
+  })
+})

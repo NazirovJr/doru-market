@@ -11,6 +11,7 @@ import {
   TERMINAL_DELIVERY_ASSIGNMENT_STATUSES,
   type AssignUnassignedInput,
   type DeliveryAssignmentRepositoryPort,
+  type FindByCourierAndStatusesInput,
   type FindByStatusesInput,
 } from '@/modules/delivery/application/ports/delivery-assignment.repository.port.js'
 import type { DeliveryUnitOfWorkTx } from '@/modules/delivery/application/ports/delivery-unit-of-work.port.js'
@@ -121,6 +122,32 @@ export class DrizzleDeliveryAssignmentRepository implements DeliveryAssignmentRe
     return rows.map(toDomain)
   }
 
+  // ДОБАВЛЕНО (DTJ-317) — 1:1 с findByStatuses, + courierId (GET /delivery-assignments/mine).
+  public async findByCourierAndStatuses(
+    input: FindByCourierAndStatusesInput,
+    tx?: DeliveryUnitOfWorkTx,
+  ): Promise<readonly DeliveryAssignment[]> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const { courierId, statuses, limit, cursor } = input
+    const conditions = [eq(deliveryAssignments.courierId, courierId), inArray(deliveryAssignments.status, [...statuses])]
+    if (cursor !== null) {
+      const keysetCondition = or(
+        lt(deliveryAssignments.createdAt, cursor.createdAt),
+        and(eq(deliveryAssignments.createdAt, cursor.createdAt), lt(deliveryAssignments.id, cursor.id)),
+      )
+      if (keysetCondition !== undefined) {
+        conditions.push(keysetCondition)
+      }
+    }
+    const rows = await client
+      .select()
+      .from(deliveryAssignments)
+      .where(and(...conditions))
+      .orderBy(desc(deliveryAssignments.createdAt), desc(deliveryAssignments.id))
+      .limit(limit)
+    return rows.map(toDomain)
+  }
+
   public async save(assignment: DeliveryAssignment, tx?: DeliveryUnitOfWorkTx): Promise<void> {
     const client = resolveDrizzleClient(this.db, tx)
     const row = toRow(assignment.toSnapshot())
@@ -154,6 +181,7 @@ function toDomain(row: DeliveryAssignmentRow): DeliveryAssignment {
     contactAttemptsCount: row.contactAttemptsCount,
     lastContactAttemptAt: row.lastContactAttemptAt,
     distanceMeters: row.distanceMeters,
+    proofPhotoUrl: row.proofPhotoUrl,
   }
   return DeliveryAssignment.restore(snapshot)
 }
@@ -181,6 +209,7 @@ function toRow(s: DeliveryAssignmentSnapshot): typeof deliveryAssignments.$infer
     contactAttemptsCount: s.contactAttemptsCount,
     lastContactAttemptAt: s.lastContactAttemptAt,
     distanceMeters: s.distanceMeters,
+    proofPhotoUrl: s.proofPhotoUrl,
   }
 }
 

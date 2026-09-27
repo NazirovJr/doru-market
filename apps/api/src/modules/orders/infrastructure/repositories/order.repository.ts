@@ -27,7 +27,7 @@
  * подтверждается как существующая).
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { and, eq, gte, inArray, lt, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, ilike, inArray, lt, or, sql, type SQL } from 'drizzle-orm'
 import { type DrizzleDb, DRIZZLE_DB } from '@/infrastructure/database/drizzle.provider.js'
 import { Money } from '@/shared-kernel/domain/value-objects/money.vo.js'
 import { orders, orderItems, type OrderRow } from '@/db/schema/orders.js'
@@ -41,9 +41,13 @@ import { users } from '@/db/schema/users.js'
 import {
   ORDER_REPOSITORY_PORT,
   type LockedOrderRow,
+  type OrderAdminSummaryRow,
   type OrderCancellationAggregate,
   type OrderGmvAggregate,
   type OrderMetricsPeriod,
+  type OrdersAnySearchFilter,
+  type OrdersAnySearchPage,
+  type OrdersAnySearchPagination,
   type OrderQueueQuery,
   type OrderQueueRow,
   type OrderRepositoryPort,
@@ -267,6 +271,108 @@ export class DrizzleOrderRepository implements OrderRepositoryPort {
     const row = rows[0]
     return { totalCount: row?.totalCount ?? 0, cancelledCount: row?.cancelledCount ?? 0 }
   }
+
+  // leftJoin (не innerJoin) — заказы без pharmacyId не должны выпадать из кросс-тенантной выдачи; own-scope фильтруется условием WHERE, не типом джойна.
+  async findOrdersAny(filter: OrdersAnySearchFilter, pagination: OrdersAnySearchPagination): Promise<OrdersAnySearchPage> {
+    const cursor = pagination.cursor ?? null
+    const conditions = buildOrdersAnyConditions(filter, cursor)
+    const rows = await this.db
+      .select({
+        id: orders.id,
+        orderNumber: orders.orderNumber,
+        status: orders.status,
+        tenantId: orders.tenantId,
+        pharmacyId: orders.pharmacyId,
+        customerId: orders.customerId,
+        paymentMethod: orders.paymentMethod,
+        totalAmountTjs: orders.totalAmountTjs,
+        slaBreached: SLA_BREACHED_EXPR,
+        createdAt: orders.createdAt,
+      })
+      .from(orders)
+      .leftJoin(pharmacies, eq(pharmacies.id, orders.pharmacyId))
+      .where(and(...conditions))
+      .orderBy(desc(orders.createdAt), desc(orders.id))
+      .limit(pagination.limit + 1)
+    const hasMore = rows.length > pagination.limit
+    const page = hasMore ? rows.slice(0, pagination.limit) : rows
+    const last = page[page.length - 1]
+    return {
+      items: page.map(toOrderAdminSummaryRow),
+      nextCursor: hasMore && last !== undefined ? { v: normalizeCreatedAt(last.createdAt).toISOString(), id: last.id } : null,
+      hasMore,
+    }
+  }
+}
+
+// Единственное место, вычисляющее slaBreached — не пересчитывается вызывающим кодом (единый источник истины).
+const SLA_BREACHED_EXPR = sql<boolean>`(${orders.status} = 'processing' AND ${orders.slaDeadlineAt} IS NOT NULL AND ${orders.slaDeadlineAt} < NOW())`
+
+function buildOrdersAnyConditions(filter: OrdersAnySearchFilter, cursor: { readonly v: string; readonly id: string } | null): SQL[] {
+  const conditions: SQL[] = [...buildOrdersAnyEqualityConditions(filter), ...buildOrdersAnyRangeConditions(filter)]
+  const cursorCondition = cursor !== null ? keysetConditionOrdersAny(cursor) : undefined
+  if (cursorCondition !== undefined) conditions.push(cursorCondition)
+  return conditions
+}
+
+function buildOrdersAnyEqualityConditions(filter: OrdersAnySearchFilter): SQL[] {
+  const conditions: SQL[] = []
+  if (filter.orderNumberLike !== undefined) conditions.push(ilike(orders.orderNumber, `%${filter.orderNumberLike}%`))
+  if (filter.status !== undefined) conditions.push(eq(orders.status, filter.status))
+  if (filter.tenantId !== undefined) conditions.push(eq(orders.tenantId, filter.tenantId))
+  if (filter.pharmacyId !== undefined) conditions.push(eq(orders.pharmacyId, filter.pharmacyId))
+  if (filter.chainId !== undefined) conditions.push(eq(pharmacies.chainId, filter.chainId))
+  if (filter.customerId !== undefined) conditions.push(eq(orders.customerId, filter.customerId))
+  return conditions
+}
+
+function buildOrdersAnyRangeConditions(filter: OrdersAnySearchFilter): SQL[] {
+  const conditions: SQL[] = []
+  if (filter.createdAtFrom !== undefined) conditions.push(gte(orders.createdAt, filter.createdAtFrom))
+  if (filter.createdAtTo !== undefined) conditions.push(lt(orders.createdAt, filter.createdAtTo))
+  if (filter.slaBreached === true) conditions.push(SLA_BREACHED_EXPR)
+  return conditions
+}
+
+function keysetConditionOrdersAny(cursor: { readonly v: string; readonly id: string }): SQL | undefined {
+  const anchorCreatedAt = new Date(cursor.v)
+  return or(lt(orders.createdAt, anchorCreatedAt), and(eq(orders.createdAt, anchorCreatedAt), lt(orders.id, cursor.id)))
+}
+
+interface OrderAdminSummarySelectionRow {
+  readonly id: string
+  readonly orderNumber: string
+  readonly status: OrderRow['status']
+  readonly tenantId: string
+  readonly pharmacyId: string | null
+  readonly customerId: string
+  readonly paymentMethod: string
+  readonly totalAmountTjs: string
+  readonly slaBreached: boolean
+  readonly createdAt: Date | string | null
+}
+
+function toOrderAdminSummaryRow(row: OrderAdminSummarySelectionRow): OrderAdminSummaryRow {
+  if (row.status === null) {
+    throw new Error(`orders.status is NULL for order ${row.id} — data integrity violation`)
+  }
+  return {
+    id: row.id,
+    orderNumber: row.orderNumber,
+    status: row.status,
+    tenantId: row.tenantId,
+    pharmacyId: row.pharmacyId,
+    customerId: row.customerId,
+    paymentMethod: row.paymentMethod as OrderAdminSummaryRow['paymentMethod'],
+    totalAmountDiram: Number(Money.fromDbDecimalTjs(row.totalAmountTjs).diram),
+    slaBreached: row.slaBreached,
+    createdAt: normalizeCreatedAt(row.createdAt),
+  }
+}
+
+// created_at приходит от pg то Date, то строкой.
+function normalizeCreatedAt(value: Date | string | null): Date {
+  return value === null ? new Date(0) : new Date(value)
 }
 
 export const ORDER_REPOSITORY_DRIZZLE_PROVIDER = {

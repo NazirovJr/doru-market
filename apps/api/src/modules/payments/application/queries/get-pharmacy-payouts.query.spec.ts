@@ -31,6 +31,7 @@ function fakePayoutRepository(): { repository: PayoutScheduleRepository; findByP
     findByPharmacy,
     findAllByPharmacy: vi.fn(),
     findSchedule: vi.fn(),
+    findByOrderId: vi.fn(),
   }
   return { repository, findByPharmacy }
 }

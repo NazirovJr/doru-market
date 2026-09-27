@@ -23,6 +23,7 @@
  *   - Сортировка через `Array.prototype.sort` (immutable copy, не мутирует
  *     `readonly` результат репозитория).
  */
+import { CLOCK, type Clock } from '@/shared-kernel/index.js'
 import { Inject, Injectable } from '@nestjs/common'
 import {
   AUTH_SESSIONS_REPOSITORY,
@@ -52,10 +53,11 @@ export interface ListSessionsInput {
 export class ListSessionsUseCase {
   constructor(
     @Inject(AUTH_SESSIONS_REPOSITORY) private readonly authSessions: AuthSessionsRepository,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   async execute(input: ListSessionsInput): Promise<readonly SessionSummary[]> {
-    const now = new Date()
+    const now = this.clock.now()
     const sessions = await this.authSessions.findActiveByUserId(input.userId, now)
     // Сортировка по lastSeenAt DESC — самые свежие сверху (для UI).
     // `.slice()` — копия, не мутируем `readonly`-массив из репозитория.

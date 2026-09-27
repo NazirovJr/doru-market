@@ -1,22 +1,9 @@
-import { useState, useId, type ReactElement, type SubmitEvent } from 'react'
+import { useState, type ReactElement, type SubmitEvent } from 'react'
 import { useT } from '@dorutj/i18n'
+import { Button, PhoneInput } from '@dorutj/ui'
+import { useLocale } from '@/shared/config/locale-provider'
 import { useRequestOtp } from '@/features/auth/api/use-request-otp'
 import { HttpError } from '@/shared/api/http-client'
-
-/**
- * `phone-step.tsx` (DTJ-166) — портировано из `apps/web/src/features/auth/ui/phone-step.tsx`
- * (EP-01, DTJ-028, `SRS-UX-002/018/019/023`), логика и разметка БЕЗ изменений.
- *
- * Единственная адаптация: локаль зафиксирована на `'tj'` напрямую (`useT('tj')`) вместо
- * `useLocale()` — `apps/pharmacy` не имеет требования на переключатель языка (в отличие от
- * `apps/web`, `SRS-UX-027`), полноценный `LocaleProvider` не заводился, чтобы не расширять scope
- * DTJ-166 сверх `files_owned`. TODO(EP-18): если кабинету аптеки потребуется переключатель —
- * завести `shared/config/locale-provider.tsx` по образцу `apps/web` и убрать этот хардкод.
- *
- * Поле телефона с фиксированным префиксом `+992` (маска `XX XXX XX XX`). Кнопка «Отправить код» —
- * `disabled` до 9 цифр. TODO(EP-18): заменить сырой `<input>`/`<button>` на `packages/ui`
- * (FormField, PrimaryButton), когда дизайн-система перестанет быть заглушкой.
- */
 
 const PHONE_PREFIX = '+992'
 const PHONE_DIGITS_REQUIRED = 9
@@ -31,7 +18,6 @@ const PHONE_MASK_BOUNDARIES = [
   PHONE_MASK_THIRD_END,
   PHONE_MASK_FOURTH_END,
 ]
-const MIN_TAP_ZONE_PX = 48
 
 export function formatPhone(digitsOnly: string): string {
   // `XX XXX XX XX`. Маска применяется ТОЛЬКО на display, в API уходит E.164.
@@ -58,8 +44,8 @@ export interface PhoneStepProps {
 }
 
 export const PhoneStep = ({ onSuccess, defaultPhone = '' }: PhoneStepProps): ReactElement => {
-  const { t } = useT('tj')
-  const inputId = useId()
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [digits, setDigits] = useState<string>(
     defaultPhone.startsWith(PHONE_PREFIX)
       ? defaultPhone.slice(PHONE_PREFIX.length).replace(/\D/g, '').slice(0, PHONE_DIGITS_REQUIRED)
@@ -108,50 +94,26 @@ export const PhoneStep = ({ onSuccess, defaultPhone = '' }: PhoneStepProps): Rea
       className="mx-auto flex w-full max-w-sm flex-col gap-3"
       data-testid="phone-step"
     >
-      <label htmlFor={inputId} className="text-sm font-medium text-ink">
-        {t('auth.login.phone_title')}
-      </label>
-      <div
-        className="flex items-center gap-2 rounded-md border border-line bg-surface px-3"
-        style={{ minHeight: MIN_TAP_ZONE_PX }}
-      >
-        <span className="font-mono text-ink-muted">{PHONE_PREFIX}</span>
-        <input
-          id={inputId}
-          type="tel"
-          inputMode="numeric"
-          autoComplete="tel"
-          autoFocus
-          disabled={isSubmitting}
-          value={formatPhone(digits)}
-          onChange={(e): void => {
-            setDigits(e.target.value.replace(/\D/g, '').slice(0, PHONE_DIGITS_REQUIRED))
-          }}
-          placeholder={t('auth.login.phone_placeholder').replace(PHONE_PREFIX, '').trim()}
-          aria-invalid={errorMessage.length > 0}
-          aria-describedby={errorMessage.length > 0 ? `${inputId}-error` : undefined}
-          className="w-full bg-transparent py-2 text-base text-ink outline-none focus:ring-2 focus:ring-brand-primary"
-        />
-      </div>
+      <PhoneInput
+        label={t('auth.login.phone_title')}
+        value={defaultPhone}
+        disabled={isSubmitting}
+        locale={locale}
+        autoFocus
+        onChange={(e164): void => {
+          // `PhoneInput` всегда отдаёт `${PHONE_PREFIX}${национальные цифры}` (см. её `toE164`).
+          setDigits(e164.startsWith(PHONE_PREFIX) ? e164.slice(PHONE_PREFIX.length) : e164.replace(/\D/g, ''))
+        }}
+      />
       <p className="text-xs text-ink-muted">{t('auth.login.phone_hint')}</p>
       {errorMessage.length > 0 ? (
-        <p
-          id={`${inputId}-error`}
-          role="alert"
-          className="text-sm text-red-600"
-          data-testid="phone-step-error"
-        >
+        <p role="alert" className="text-sm text-red-600" data-testid="phone-step-error">
           {errorMessage}
         </p>
       ) : null}
-      <button
-        type="submit"
-        disabled={!isValid || isSubmitting}
-        className="rounded-md bg-brand-primary px-4 py-2 font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-brand-primary"
-        style={{ minHeight: MIN_TAP_ZONE_PX }}
-      >
-        {isSubmitting ? `${t('auth.login.phone_title')}…` : t('auth.login.resend_code')}
-      </button>
+      <Button type="submit" disabled={!isValid || isSubmitting} loading={isSubmitting}>
+        {t('auth.login.resend_code')}
+      </Button>
     </form>
   )
 }

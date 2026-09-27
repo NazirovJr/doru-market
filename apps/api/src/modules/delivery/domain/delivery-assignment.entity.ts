@@ -81,6 +81,7 @@ export class DeliveryAssignment {
   private _contactAttemptsCount: number
   private _lastContactAttemptAt: Date | null
   private _distanceMeters: number | null
+  private _proofPhotoUrl: string | null
   private _domainEvents: DeliveryDomainEvent[] = []
 
   private constructor(s: DeliveryAssignmentSnapshot) {
@@ -105,6 +106,7 @@ export class DeliveryAssignment {
     this._contactAttemptsCount = s.contactAttemptsCount
     this._lastContactAttemptAt = s.lastContactAttemptAt
     this._distanceMeters = s.distanceMeters
+    this._proofPhotoUrl = s.proofPhotoUrl
   }
 
   get status(): DeliveryAssignmentStatus {
@@ -113,6 +115,11 @@ export class DeliveryAssignment {
 
   get courierId(): string | null {
     return this._courierId
+  }
+
+  // ДОБАВЛЕНО (DTJ-317) — DeliverUseCase верифицирует OTP по этому id (setHandoverOtp() в depart-to-customer).
+  get handoverOtpId(): string | null {
+    return this._handoverOtpId
   }
 
   /** SRS-DOM-036 — `hasActiveNonTerminalAssignment` уже проверен вызывающим кодом через порт
@@ -144,6 +151,7 @@ export class DeliveryAssignment {
         contactAttemptsCount: 0,
         lastContactAttemptAt: null,
         distanceMeters: null,
+        proofPhotoUrl: null,
       }),
     )
   }
@@ -214,13 +222,14 @@ export class DeliveryAssignment {
 
   /** `en_route_to_customer → delivered` (SRS-DOM-039/142). Верификация `OtpCode` — вызывающий
    * use case (см. JSDoc `delivery-assignment-create-command.ts` §2.6 — приём готового результата). */
-  markDelivered(now: Date, isCashOnDelivery: boolean): void {
+  markDelivered(now: Date, isCashOnDelivery: boolean, proofPhotoUrl: string | null = null): void {
     this.assertTransition('delivered')
     if (isCashOnDelivery && this._cashCollectedDiram === null) {
       throw new CashAmountMismatchError({ deliveryAssignmentId: this.id, reason: 'cash_not_recorded' })
     }
     this._status = 'delivered'
     this._deliveredAt = now
+    this._proofPhotoUrl = proofPhotoUrl
   }
 
   /** `en_route_to_customer → delivery_failed` (SRS-DOM-143). */
@@ -306,6 +315,7 @@ export class DeliveryAssignment {
       contactAttemptsCount: this._contactAttemptsCount,
       lastContactAttemptAt: this._lastContactAttemptAt,
       distanceMeters: this._distanceMeters,
+      proofPhotoUrl: this._proofPhotoUrl,
     }
   }
 

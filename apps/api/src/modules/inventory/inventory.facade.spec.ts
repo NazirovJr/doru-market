@@ -3,6 +3,12 @@ import { InventoryFacade } from './inventory.facade.js'
 import type { InventorySyncBatchRepository } from './application/ports/inventory-sync-batch.repository.port.js'
 import type { PharmacyInventoryRepository } from './application/ports/pharmacy-inventory.repository.port.js'
 import type { Clock } from '@/shared-kernel/application/ports/clock.port.js'
+import type { CreatePharmacyApiKeyUseCase } from './application/use-cases/create-pharmacy-api-key.use-case.js'
+import type { ListPharmacyApiKeysUseCase } from './application/use-cases/list-pharmacy-api-keys.use-case.js'
+import type { RevokePharmacyApiKeyUseCase } from './application/use-cases/revoke-pharmacy-api-key.use-case.js'
+import type { RotatePharmacyApiKeyUseCase } from './application/use-cases/rotate-pharmacy-api-key.use-case.js'
+import type { SetPharmacyApiKeyMtlsUseCase } from './application/use-cases/set-pharmacy-api-key-mtls.use-case.js'
+import type { RevokeExpiredRotatedKeyUseCase } from './application/use-cases/revoke-expired-rotated-key.use-case.js'
 
 // Мок — отдельная переменная (не repository.method) — @typescript-eslint/unbound-method.
 function fakeRepository(activePharmacyIds: readonly string[]): {
@@ -31,7 +37,17 @@ function fakeRepository(activePharmacyIds: readonly string[]): {
 
 function facadeWith(syncBatchRepository: InventorySyncBatchRepository): InventoryFacade {
   const clock: Clock = { now: () => new Date('2026-01-01') }
-  return new InventoryFacade({} as PharmacyInventoryRepository, clock, syncBatchRepository)
+  return new InventoryFacade(
+    {} as PharmacyInventoryRepository,
+    clock,
+    syncBatchRepository,
+    {} as CreatePharmacyApiKeyUseCase,
+    {} as ListPharmacyApiKeysUseCase,
+    {} as RevokePharmacyApiKeyUseCase,
+    {} as RotatePharmacyApiKeyUseCase,
+    {} as SetPharmacyApiKeyMtlsUseCase,
+    {} as RevokeExpiredRotatedKeyUseCase,
+  )
 }
 
 describe('InventoryFacade.findPharmacyIdsWithRecentSyncActivity (DTJ-382)', () => {

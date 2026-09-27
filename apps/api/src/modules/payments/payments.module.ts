@@ -196,8 +196,8 @@ import { TenancyModule } from '@/modules/tenancy/tenancy.module.js'
 import { PAYMENTS_TENANCY_PORT_PROVIDER } from './infrastructure/adapters/payments-tenancy.adapter.js'
 import { CaptureEscrowUseCase } from './application/use-cases/capture-escrow.use-case.js'
 import { OrderDeliveredSubscriber } from './infrastructure/subscribers/order-delivered.subscriber.js'
+import { OrderDeliveredDomainEventHandler } from './infrastructure/subscribers/order-delivered.domain-event-handler.js'
 import { PaymentsInternalServiceGuard } from './presentation/internal/payments-internal-service.guard.js'
-import { OrderDeliveredController } from './presentation/internal/order-delivered.controller.js'
 // DTJ-246 — AdminPaymentOverrideUseCase/AdjustLedgerUseCase (см. JSDoc блока providers выше).
 import { AdminPaymentOverrideUseCase } from './application/use-cases/admin-payment-override.use-case.js'
 import { AdjustLedgerUseCase } from './application/use-cases/adjust-ledger.use-case.js'
@@ -206,7 +206,7 @@ import { AdminPaymentOverrideController } from './presentation/admin-payment-ove
 import { HoldPayoutUseCase } from './application/use-cases/hold-payout.use-case.js'
 import { PAYMENTS_FACADE, type PaymentsFacade } from './index.js'
 // DTJ-357 — read-методы PaymentsFacade вынесены отдельным файлом (C2, max-lines 300).
-import { findEscrowLedgerEntries, findPayoutSchedule } from './application/queries/finance-facade.queries.js'
+import { findEscrowLedgerEntries, findPayoutSchedule, findPayoutScheduleByOrder } from './application/queries/finance-facade.queries.js'
 // DTJ-251 — PlatformBillingInvoiceRepository, задел для DTJ-252 (см. JSDoc блока providers выше).
 import { PLATFORM_BILLING_INVOICE_REPOSITORY_PROVIDER } from './infrastructure/repositories/platform-billing-invoice.repository.js'
 // DTJ-252 — авто-блокировка сети за неоплаченный B2B-инвойс + отчёты аптеке (см. JSDoc блока providers выше).
@@ -305,7 +305,6 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
     MockBankSimulatePaymentController,
     GetOrderLedgerController,
     PaymentsWebhookController,
-    OrderDeliveredController,
     AdminPaymentOverrideController,
     SuspendChainForUnpaidInvoiceController,
     GetPayoutsController,
@@ -384,6 +383,7 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
     PAYMENTS_TENANCY_PORT_PROVIDER,
     CaptureEscrowUseCase,
     OrderDeliveredSubscriber,
+    OrderDeliveredDomainEventHandler,
     PaymentsInternalServiceGuard,
     // DTJ-246 — контролируемые исключения (см. JSDoc блока providers выше).
     AdminPaymentOverrideUseCase,
@@ -407,6 +407,7 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
           }),
         findEscrowLedgerEntries: (orderId) => findEscrowLedgerEntries(escrowLedgerRepo, orderId),
         findPayoutSchedule: (filter, pagination) => findPayoutSchedule(payoutScheduleRepo, filter, pagination),
+        findPayoutScheduleByOrder: (orderId) => findPayoutScheduleByOrder(payoutScheduleRepo, orderId),
       }),
       inject: [PaymentsFacadeCommandPorts, ESCROW_LEDGER_REPOSITORY, PAYOUT_SCHEDULE_REPOSITORY],
     },

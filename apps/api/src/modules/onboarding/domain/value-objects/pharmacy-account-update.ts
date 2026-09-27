@@ -60,6 +60,8 @@ export function mergeAccountUpdate(current: PharmacyAccountProps, update: Accoun
     is24_7: pickBool(update.is24_7, current.is24_7),
     openingTime: pickStringOrNull(update.openingTime, current.openingTime),
     closingTime: pickStringOrNull(update.closingTime, current.closingTime),
+    // DTJ-367: не часть AccountUpdate (заявки draft/rejected) — меняется только через updateDeliveryZone.
+    maxDeliveryRadiusKm: current.maxDeliveryRadiusKm,
     licenseNumber: pickString(update.licenseNumber, current.licenseNumber),
     licenseIssuingAuthority: current.licenseIssuingAuthority,
     licenseIssueDate: current.licenseIssueDate,

@@ -86,6 +86,7 @@ function makeHarness(): Harness {
     reserveStock: vi.fn(),
     releaseStock,
     hasExpiredReservedBatch: vi.fn(),
+    findExpiredReservedItemIds: vi.fn(),
     getStockQuantity: vi.fn(),
     reserveForOrder,
     reconcileZeroStock: vi.fn(),

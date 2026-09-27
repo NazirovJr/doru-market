@@ -1,5 +1,6 @@
 import { useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
+import { useLocale } from '@/shared/config/locale-provider'
 import type { PharmacyTerminalOrderDetailDto, PharmacyTerminalOrderItemDto } from '@dorutj/contracts'
 import { findNextPendingItemId, isItemActionable } from '@/features/order-fulfillment/model/picking.model'
 import { BarcodeScanForm } from './BarcodeScanForm'
@@ -10,6 +11,8 @@ export interface ItemRowProps {
   readonly item: PharmacyTerminalOrderItemDto
   readonly isSelected: boolean
   readonly onSelect: (itemId: string | null) => void
+  /** DTJ-312 доработка — `422 EXPIRED_STOCK.details.itemIds` на `complete-picking`: подсветка позиции, партия которой протухла за время ожидания. */
+  readonly isExpiredStock?: boolean
 }
 
 // Статус различим без цвета — у каждого состояния своя иконка и свой текст.
@@ -20,7 +23,8 @@ const STATUS_GLYPH: Readonly<Record<PharmacyTerminalOrderItemDto['fulfillmentSta
 }
 
 const StatusBadge = ({ item }: { readonly item: PharmacyTerminalOrderItemDto }): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const colorClass =
     item.fulfillmentStatus === 'scanned_ok'
       ? 'text-brand-success'
@@ -38,13 +42,22 @@ const StatusBadge = ({ item }: { readonly item: PharmacyTerminalOrderItemDto }):
   )
 }
 
-export const ItemRow = ({ order, item, isSelected, onSelect }: ItemRowProps): ReactElement => {
-  const { t } = useT('tj')
+export const ItemRow = ({ order, item, isSelected, onSelect, isExpiredStock = false }: ItemRowProps): ReactElement => {
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [reportOpen, setReportOpen] = useState(false)
   const actionable = isItemActionable(item, order)
 
   return (
-    <li className="flex flex-col gap-2 rounded-md border border-line bg-surface p-4" data-testid="picking-item-row">
+    <li
+      className={`flex flex-col gap-2 rounded-md border bg-surface p-4 ${isExpiredStock ? 'border-brand-danger' : 'border-line'}`}
+      data-testid="picking-item-row"
+    >
+      {isExpiredStock ? (
+        <p role="alert" className="text-xs text-brand-danger" data-testid="picking-item-expired-stock-notice">
+          {t('pharmacy.picking.item.expired_stock_notice')}
+        </p>
+      ) : null}
       <button
         type="button"
         onClick={() => { onSelect(isSelected ? null : item.id) }}

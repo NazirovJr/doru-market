@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
+import { useLocale } from '@/shared/config/locale-provider'
 
 export interface OfflineBannerProps {
   readonly visible: boolean
@@ -7,7 +8,8 @@ export interface OfflineBannerProps {
 
 /** SRS-UX-025 — «Нет соединения» деградация: пока нет WS (TODO(DTJ-308)), REST-опрос сам себе индикатор связи (см. `orders-queue.api.ts` JSDoc). */
 export const OfflineBanner = ({ visible }: OfflineBannerProps): ReactElement | null => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   if (!visible) return null
 
   return (

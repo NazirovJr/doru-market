@@ -52,6 +52,7 @@ import { RetryReturnTransitUseCase } from './application/use-cases/retry-return-
 import { RefundOnReturnResolvedUseCase } from './application/use-cases/refund-on-return-resolved.use-case.js'
 import { RefundOnReturnResolvedSubscriber } from './application/use-cases/refund-on-return-resolved.subscriber.js'
 import { RefundOnReturnResolvedDomainEventHandler } from './application/use-cases/refund-on-return-resolved.domain-event-handler.js'
+import { OrderReturnsReportQueryService } from './application/services/order-returns-report-query.service.js'
 import { RETURNS_REPOSITORY_PROVIDER } from './infrastructure/repositories/drizzle-returns.repository.js'
 import { RETURNS_UNIT_OF_WORK_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-returns-unit-of-work.adapter.js'
 import { RETURNS_OUTBOX_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-returns-outbox.adapter.js'
@@ -91,6 +92,7 @@ import { OrderReturnsController } from './presentation/order-returns.controller.
     RefundOnReturnResolvedUseCase,
     RefundOnReturnResolvedSubscriber,
     RefundOnReturnResolvedDomainEventHandler,
+    OrderReturnsReportQueryService,
   ],
 })
 // NestJS module marker class: Nest требует класс-носитель декоратора @Module, providers
