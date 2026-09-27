@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router'
 import type { PharmacyTerminalQueueItemDto } from '@dorutj/contracts'
 import { useAuthStore } from '@/shared/api/auth-store'
+import { LocaleProvider } from '@/shared/config/locale-provider'
 import { OrderQueuePage } from './OrderQueuePage'
 
 type FetchImpl = (input: string, init?: RequestInit) => Promise<Response>
@@ -21,11 +22,13 @@ function jsonResponse(body: unknown, status = 200): Response {
 function renderPage(): QueryClient {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
-        <OrderQueuePage />
-      </MemoryRouter>
-    </QueryClientProvider>,
+    <LocaleProvider>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <OrderQueuePage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    </LocaleProvider>,
   )
   return queryClient
 }

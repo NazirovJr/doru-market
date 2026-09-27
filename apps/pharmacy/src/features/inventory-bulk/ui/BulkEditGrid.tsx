@@ -1,5 +1,7 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
+import { Button, EmptyState, Input } from '@dorutj/ui'
+import { useLocale } from '@/shared/config/locale-provider'
 import {
   BULK_GRID_PAGE_SIZE,
   flattenInventoryPages,
@@ -45,7 +47,8 @@ const MedicinePicker = ({
   readonly onSelect: (item: MedicineSuggestionItem) => void
   readonly onCancel: () => void
 }): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [rawQuery, setRawQuery] = useState('')
   const debouncedQuery = useDebouncedText(rawQuery)
   const suggestQuery = useMedicineSuggest(debouncedQuery, true)
@@ -53,13 +56,13 @@ const MedicinePicker = ({
 
   return (
     <div className="flex flex-col gap-2 rounded-md border border-line p-3" data-testid="bulk-grid-medicine-picker">
-      <input
+      <Input
         type="text"
         autoFocus
+        label={t('pharmacy.inventory.point_edit.medicine_label')}
         value={rawQuery}
         placeholder={t('pharmacy.inventory.autocomplete.placeholder')}
         data-testid="bulk-grid-medicine-picker-input"
-        className="rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink"
         onChange={(event) => { setRawQuery(event.target.value) }}
       />
       <ul data-testid="bulk-grid-medicine-picker-list" className="flex max-h-48 flex-col overflow-auto">
@@ -80,13 +83,18 @@ const MedicinePicker = ({
           </li>
         ))}
       </ul>
-      <button type="button" onClick={onCancel} data-testid="bulk-grid-medicine-picker-cancel" className="self-start text-xs text-ink-muted underline">
+      <Button type="button" variant="ghost" onClick={onCancel} data-testid="bulk-grid-medicine-picker-cancel">
         {t('pharmacy.inventory.bulk_edit.grid_cancel_new_row')}
-      </button>
+      </Button>
     </div>
   )
 }
 
+/**
+ * Ячейки сетки — намеренно СЫРЫЕ `<input>` (не `packages/ui` `Input`): та обязана показать
+ * видимый `<label>` над полем (`FieldChrome`), что в плотной построчной таблице задвоило бы
+ * подпись колонки на каждой строке. Доступное имя даём через `aria-label` с текстом колонки.
+ */
 const GridRow = ({
   row,
   today,
@@ -98,7 +106,8 @@ const GridRow = ({
   readonly onChange: (rowId: string, patch: Partial<BulkGridRow>) => void
   readonly onRemove: (rowId: string) => void
 }): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const priceInvalid = row.priceTjs.length > 0 && !isRowPriceValid(row.priceTjs)
   const quantityInvalid = row.quantity.length > 0 && !isRowQuantityValid(row.quantity)
   const expiryInvalid = row.expiryDate.length > 0 && !isRowExpiryValid(row.expiryDate, today)
@@ -113,6 +122,7 @@ const GridRow = ({
           value={row.priceTjs}
           data-testid="bulk-grid-price-input"
           aria-invalid={priceInvalid}
+          aria-label={t('pharmacy.inventory.bulk_edit.grid_price_column')}
           className="w-24 rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink"
           onChange={(event) => { onChange(row.rowId, { priceTjs: event.target.value }) }}
         />
@@ -124,6 +134,7 @@ const GridRow = ({
           value={row.quantity}
           data-testid="bulk-grid-quantity-input"
           aria-invalid={quantityInvalid}
+          aria-label={t('pharmacy.inventory.bulk_edit.grid_quantity_column')}
           className="w-20 rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink"
           onChange={(event) => { onChange(row.rowId, { quantity: event.target.value }) }}
         />
@@ -134,6 +145,7 @@ const GridRow = ({
           value={row.expiryDate}
           data-testid="bulk-grid-expiry-input"
           aria-invalid={expiryInvalid}
+          aria-label={t('pharmacy.inventory.bulk_edit.grid_expiry_column')}
           className="rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink"
           onChange={(event) => { onChange(row.rowId, { expiryDate: event.target.value }) }}
         />
@@ -143,21 +155,23 @@ const GridRow = ({
           type="text"
           value={row.batchNumber}
           data-testid="bulk-grid-batch-input"
+          aria-label={t('pharmacy.inventory.bulk_edit.grid_batch_column')}
           className="w-24 rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink"
           onChange={(event) => { onChange(row.rowId, { batchNumber: event.target.value }) }}
         />
       </td>
       <td className="px-2 py-1">
-        <button type="button" onClick={() => { onRemove(row.rowId) }} data-testid="bulk-grid-remove-row" className="text-xs text-brand-danger underline">
+        <Button type="button" variant="ghost" onClick={() => { onRemove(row.rowId) }} data-testid="bulk-grid-remove-row">
           {t('pharmacy.inventory.bulk_edit.grid_remove_row')}
-        </button>
+        </Button>
       </td>
     </tr>
   )
 }
 
 export const BulkEditGrid = (): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [rows, setRows] = useState<readonly BulkGridRow[]>([])
   const [page, setPage] = useState(0)
   const [isPickerOpen, setIsPickerOpen] = useState(false)
@@ -231,21 +245,16 @@ export const BulkEditGrid = (): ReactElement => {
     <div className="flex flex-col gap-3" data-testid="bulk-edit-grid">
       <p className="text-sm font-medium text-ink">{t('pharmacy.inventory.bulk_edit.grid_title')}</p>
 
-      <button
-        type="button"
-        onClick={() => { setIsPickerOpen(true) }}
-        data-testid="bulk-grid-add-row-button"
-        className="self-start rounded-md border border-brand-primary px-3 py-1 text-sm text-brand-primary"
-      >
+      <Button type="button" variant="secondary" onClick={() => { setIsPickerOpen(true) }} data-testid="bulk-grid-add-row-button">
         {t('pharmacy.inventory.bulk_edit.grid_add_row')}
-      </button>
+      </Button>
 
       {isPickerOpen ? <MedicinePicker onSelect={handleAddMedicine} onCancel={() => { setIsPickerOpen(false) }} /> : null}
 
       {rows.length === 0 ? (
-        <p className="text-sm text-ink-muted" data-testid="bulk-grid-empty">
-          {t('pharmacy.inventory.bulk_edit.grid_empty')}
-        </p>
+        <div data-testid="bulk-grid-empty">
+          <EmptyState t={t} titleKey="pharmacy.inventory.bulk_edit.grid_empty" />
+        </div>
       ) : (
         <>
           <div className="overflow-x-auto">
@@ -269,34 +278,34 @@ export const BulkEditGrid = (): ReactElement => {
           </div>
 
           <div className="flex items-center justify-between text-sm text-ink-muted">
-            <button type="button" disabled={page === 0} onClick={() => { goToPage(page - 1) }} data-testid="bulk-grid-prev-page" className="underline disabled:opacity-50">
+            <Button type="button" variant="ghost" disabled={page === 0} onClick={() => { goToPage(page - 1) }} data-testid="bulk-grid-prev-page">
               {t('pharmacy.inventory.bulk_edit.grid_prev_page')}
-            </button>
+            </Button>
             <span data-testid="bulk-grid-page-info">
               {t('pharmacy.inventory.bulk_edit.grid_page_info', { page: page + 1, totalPages })}
             </span>
-            <button
+            <Button
               type="button"
+              variant="ghost"
               disabled={page >= totalPages - 1 && !inventoryList.hasNextPage}
               onClick={() => { goToPage(page + 1) }}
               data-testid="bulk-grid-next-page"
-              className="underline disabled:opacity-50"
             >
               {t('pharmacy.inventory.bulk_edit.grid_next_page')}
-            </button>
+            </Button>
           </div>
         </>
       )}
 
-      <button
+      <Button
         type="button"
         disabled={!canSave}
+        loading={bulkSave.isPending}
         onClick={handleSave}
         data-testid="bulk-grid-save-button"
-        className="inline-flex items-center justify-center self-start rounded-md bg-brand-primary px-4 py-2 font-semibold text-white disabled:opacity-50"
       >
-        {bulkSave.isPending ? t('pharmacy.inventory.bulk_edit.grid_save_pending') : t('pharmacy.inventory.bulk_edit.grid_save')}
-      </button>
+        {t('pharmacy.inventory.bulk_edit.grid_save')}
+      </Button>
 
       {saveState === 'success' ? (
         <p role="status" data-testid="bulk-grid-save-success" className="text-sm text-ink">

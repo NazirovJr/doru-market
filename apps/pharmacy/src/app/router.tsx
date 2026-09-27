@@ -1,5 +1,6 @@
 import { createBrowserRouter, type RouteObject } from 'react-router'
 import { AuthGuard } from '@/shared/auth/auth-guard'
+import { AppLayout } from '@/app/layout'
 
 /**
  * `router.tsx` (DTJ-166) — react-router 7 конфигурация кабинета аптеки.
@@ -26,43 +27,50 @@ const routes: RouteObject[] = [
   {
     element: <AuthGuard />,
     children: [
+      // `AppLayout` (DTJ-433) — оболочка кабинета (шапка + навигация по разделам), общий предок
+      // ВСЕХ защищённых экранов; не меняет ни один из вложенных путей.
       {
-        index: true,
-        lazy: async () => {
-          const { default: Component } = await import('@/features/order-fulfillment/order-queue/ui/OrderQueuePage')
-          return { Component }
-        },
-      },
-      // Одна строка маршрута в общем каркасе — сам экран сборки живёт в своей папке фичи.
-      {
-        path: 'orders/:id',
-        lazy: async () => {
-          const { default: Component } = await import('@/features/order-fulfillment/picking/ui/PickingPage')
-          return { Component }
-        },
-      },
-      {
-        path: 'inventory',
-        lazy: async () => {
-          const { default: Component } = await import('@/pages/inventory/InventoryPage')
-          return { Component }
-        },
-      },
-      {
-        path: 'inventory/sync-history',
-        lazy: async () => {
-          const { default: Component } = await import('@/pages/inventory/SyncHistoryPage')
-          return { Component }
-        },
-      },
-      // DTJ-277 (EP-11) — единственная строка, которой этот тикет касается общего каркаса
-      // (files_owned DTJ-277 — только features/returns/**): очередь возвратов своей аптеки.
-      {
-        path: 'pharmacy/returns',
-        lazy: async () => {
-          const { IncomingReturnsList: Component } = await import('@/features/returns/ui/IncomingReturnsList')
-          return { Component }
-        },
+        element: <AppLayout />,
+        children: [
+          {
+            index: true,
+            lazy: async () => {
+              const { default: Component } = await import('@/features/order-fulfillment/order-queue/ui/OrderQueuePage')
+              return { Component }
+            },
+          },
+          // Одна строка маршрута в общем каркасе — сам экран сборки живёт в своей папке фичи.
+          {
+            path: 'orders/:id',
+            lazy: async () => {
+              const { default: Component } = await import('@/features/order-fulfillment/picking/ui/PickingPage')
+              return { Component }
+            },
+          },
+          {
+            path: 'inventory',
+            lazy: async () => {
+              const { default: Component } = await import('@/pages/inventory/InventoryPage')
+              return { Component }
+            },
+          },
+          {
+            path: 'inventory/sync-history',
+            lazy: async () => {
+              const { default: Component } = await import('@/pages/inventory/SyncHistoryPage')
+              return { Component }
+            },
+          },
+          // DTJ-277 (EP-11) — единственная строка, которой этот тикет касается общего каркаса
+          // (files_owned DTJ-277 — только features/returns/**): очередь возвратов своей аптеки.
+          {
+            path: 'pharmacy/returns',
+            lazy: async () => {
+              const { IncomingReturnsList: Component } = await import('@/features/returns/ui/IncomingReturnsList')
+              return { Component }
+            },
+          },
+        ],
       },
     ],
   },

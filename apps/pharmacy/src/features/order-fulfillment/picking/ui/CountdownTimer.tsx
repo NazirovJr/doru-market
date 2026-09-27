@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
+import { useLocale } from '@/shared/config/locale-provider'
 import { computeRemainingSeconds, formatRemainingClock, isSlaNearingBreach } from '@/features/order-fulfillment/model/picking.model'
 
 // TODO(DTJ-400): перенести в packages/ui, когда там появится готовый CountdownTimer.
@@ -10,7 +11,8 @@ export interface CountdownTimerProps {
 const TICK_MS = 1_000
 
 export const CountdownTimer = ({ deadlineAt }: CountdownTimerProps): ReactElement | null => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [nowMs, setNowMs] = useState(() => Date.now())
 
   useEffect(() => {

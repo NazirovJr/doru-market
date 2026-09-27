@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { InventorySyncBatchListItemDto, InventorySyncBatchStatusDto } from '@dorutj/contracts'
+import { LocaleProvider } from '@/shared/config/locale-provider'
 import { SyncBatchesTable } from './SyncBatchesTable'
 
 function batch(status: InventorySyncBatchStatusDto, overrides?: Partial<InventorySyncBatchListItemDto>): InventorySyncBatchListItemDto {
@@ -23,9 +24,11 @@ function batch(status: InventorySyncBatchStatusDto, overrides?: Partial<Inventor
 function renderTable(items: readonly InventorySyncBatchListItemDto[]): void {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
-    <QueryClientProvider client={queryClient}>
-      <SyncBatchesTable items={items} />
-    </QueryClientProvider>,
+    <LocaleProvider>
+      <QueryClientProvider client={queryClient}>
+        <SyncBatchesTable items={items} />
+      </QueryClientProvider>
+    </LocaleProvider>,
   )
 }
 
@@ -41,9 +44,11 @@ describe('<SyncBatchesTable /> (DTJ-169)', () => {
       batch('failed_validation', { rejectedRows: 10, acceptedRows: 0 }),
     ])
 
-    expect(screen.getByTestId('sync-batch-status-b-completed_full_success')).toHaveClass('text-brand-success')
-    expect(screen.getByTestId('sync-batch-status-b-completed_partial_success')).toHaveClass('text-brand-warning')
-    expect(screen.getByTestId('sync-batch-status-b-failed_validation')).toHaveClass('text-brand-danger')
+    // `Badge` (packages/ui) окрашивает через `tone` (CSS-переменные), не через утилитарный класс —
+    // цвет по статусу проверяем через `data-tone` обёртки, назначенный из той же карты `STATUS_TONE`.
+    expect(screen.getByTestId('sync-batch-status-b-completed_full_success')).toHaveAttribute('data-tone', 'success')
+    expect(screen.getByTestId('sync-batch-status-b-completed_partial_success')).toHaveAttribute('data-tone', 'warning')
+    expect(screen.getByTestId('sync-batch-status-b-failed_validation')).toHaveAttribute('data-tone', 'danger')
   })
 
   it('монтирование таблицы с батчами, у которых есть ошибки, НЕ вызывает fetch (ошибки грузятся только по раскрытию)', () => {

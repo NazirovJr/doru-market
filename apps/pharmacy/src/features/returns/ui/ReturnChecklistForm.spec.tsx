@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { LocaleProvider } from '@/shared/config/locale-provider'
 import { ReturnChecklistForm } from './ReturnChecklistForm'
 
 type FetchImpl = (input: string, init?: RequestInit) => Promise<Response>
@@ -18,9 +19,11 @@ afterEach(() => {
 function renderForm(props: { readonly controlCategory?: 'none' | 'psychotropic'; readonly onClose?: () => void } = {}): void {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   render(
-    <QueryClientProvider client={queryClient}>
-      <ReturnChecklistForm returnId="ret-1" onClose={props.onClose ?? vi.fn()} {...(props.controlCategory !== undefined && { controlCategory: props.controlCategory })} />
-    </QueryClientProvider>,
+    <LocaleProvider>
+      <QueryClientProvider client={queryClient}>
+        <ReturnChecklistForm returnId="ret-1" onClose={props.onClose ?? vi.fn()} {...(props.controlCategory !== undefined && { controlCategory: props.controlCategory })} />
+      </QueryClientProvider>
+    </LocaleProvider>,
   )
 }
 
@@ -28,13 +31,13 @@ function renderForm(props: { readonly controlCategory?: 'none' | 'psychotropic';
 describe('<ReturnChecklistForm />', () => {
   it('controlCategory=none (или отсутствует) — переключатель packagingIntact активен', () => {
     renderForm()
-    expect(screen.getByTestId('checklist-packaging-toggle')).toBeEnabled()
+    expect(screen.getByRole('switch')).toBeEnabled()
     expect(screen.queryByTestId('checklist-packaging-locked-hint')).not.toBeInTheDocument()
   })
 
   it('controlCategory=psychotropic — переключатель заблокирован в положении "restock невозможен", виден поясняющий текст', () => {
     renderForm({ controlCategory: 'psychotropic' })
-    const toggle = screen.getByTestId('checklist-packaging-toggle')
+    const toggle = screen.getByRole('switch')
     expect(toggle).toBeDisabled()
     expect(toggle).toHaveAttribute('aria-checked', 'false')
     expect(screen.getByTestId('checklist-packaging-locked-hint')).toBeInTheDocument()

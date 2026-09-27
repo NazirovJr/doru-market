@@ -1,5 +1,6 @@
 import { useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
+import { useLocale } from '@/shared/config/locale-provider'
 import { REPORT_ITEM_ISSUE_REASON_VALUES, type ReportItemIssueReason } from '@dorutj/contracts'
 import { useReportItemIssue } from '@/features/order-fulfillment/api/order-items.api'
 
@@ -11,7 +12,8 @@ export interface ReportIssueModalProps {
 
 /** Чипы причин — контракт несёт три значения, без литерала "other"; заметка покрывает остальные случаи. */
 export const ReportIssueModal = ({ orderId, itemId, onClose }: ReportIssueModalProps): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [reason, setReason] = useState<ReportItemIssueReason | null>(null)
   const [note, setNote] = useState('')
   const reportIssue = useReportItemIssue(orderId)

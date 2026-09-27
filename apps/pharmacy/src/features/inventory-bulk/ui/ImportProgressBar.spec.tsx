@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { LocaleProvider } from '@/shared/config/locale-provider'
 import { ImportProgressBar } from './ImportProgressBar'
 import { IMPORT_POLL_INTERVAL_MS } from '@/features/inventory-bulk/api/use-excel-import'
 
@@ -17,9 +18,11 @@ function batchesResponse(status: string): Response {
 
 function renderBar(queryClient: QueryClient): void {
   render(
-    <QueryClientProvider client={queryClient}>
-      <ImportProgressBar sourceUploadId="up-1" />
-    </QueryClientProvider>,
+    <LocaleProvider>
+      <QueryClientProvider client={queryClient}>
+        <ImportProgressBar sourceUploadId="up-1" />
+      </QueryClientProvider>
+    </LocaleProvider>,
   )
 }
 

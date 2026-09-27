@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
+import { useLocale } from '@/shared/config/locale-provider'
 import type { PharmacyTerminalQueueItemDto } from '@dorutj/contracts'
 import { useAuthStore } from '@/shared/api/auth-store'
 import { useAcceptOrder, useOrderQueue, type OrderQueueItems } from '@/features/order-fulfillment/api/orders-queue.api'
@@ -10,7 +11,8 @@ import { OfflineBanner } from './OfflineBanner'
 import { SoundAlert, type SoundAlertHandle } from './SoundAlert'
 
 export const OrderQueuePage = (): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const currentUserId = useAuthStore((state) => state.user?.id ?? null)
   const query = useOrderQueue()
   const acceptOrder = useAcceptOrder(currentUserId ?? '')
@@ -83,7 +85,8 @@ interface QueueSectionProps {
 }
 
 const QueueSection = ({ titleKey, emptyKey, items, currentUserId, onAccept, isAccepting }: QueueSectionProps): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   return (
     <div className="flex flex-col gap-3" data-testid="order-queue-section">
       <h2 className="text-sm font-semibold text-ink-muted">{t(titleKey, { count: items.length })}</h2>

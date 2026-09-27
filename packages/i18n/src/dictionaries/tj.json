@@ -1,5 +1,13 @@
 {
   "brand.name": "DoruTJ",
+  "pharmacy.shell.nav_aria_label": "Гардиши кабинети дорухона",
+  "pharmacy.shell.nav.order_queue": "Навбати фармоишҳо",
+  "pharmacy.shell.nav.inventory": "Захира",
+  "pharmacy.shell.nav.sync_history": "Таърихи синхронизатсия",
+  "pharmacy.shell.nav.returns": "Баргардонидан",
+  "pharmacy.shell.language_switcher_aria_label": "Интихоби забон",
+  "pharmacy.shell.logout": "Баромадан",
+  "pharmacy.shell.staff_fallback": "Ходими дорухона",
   "auth.login.phone_title": "Рақами телефони худро ворид кунед",
   "auth.login.phone_hint": "Мо тавассути SMS рамзи тасдиқро мефиристем",
   "auth.login.phone_placeholder": "+992 XX XXX XX XX",

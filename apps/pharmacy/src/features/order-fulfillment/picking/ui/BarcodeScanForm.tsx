@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactElement, type SubmitEvent } from 'react'
 import { useT } from '@dorutj/i18n'
+import { useLocale } from '@/shared/config/locale-provider'
 import { HttpError } from '@/shared/api/http-client'
 import { useScanOrderItem } from '@/features/order-fulfillment/api/order-items.api'
 import { resolveScanErrorMessageKey, resolveWrongBarcodeMessage } from '@/features/order-fulfillment/model/picking.model'
@@ -13,7 +14,8 @@ export interface BarcodeScanFormProps {
 
 /** Поле «Ввести штрихкод» одной конкретной позиции — открывается по выбору строки. */
 export const BarcodeScanForm = ({ orderId, itemId, onScanned }: BarcodeScanFormProps): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [rawBarcode, setRawBarcode] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const scanItem = useScanOrderItem(orderId)

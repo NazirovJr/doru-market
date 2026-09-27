@@ -1,5 +1,13 @@
 {
   "brand.name": "DoruTJ",
+  "pharmacy.shell.nav_aria_label": "Навигация кабинета аптеки",
+  "pharmacy.shell.nav.order_queue": "Очередь заказов",
+  "pharmacy.shell.nav.inventory": "Остатки",
+  "pharmacy.shell.nav.sync_history": "История синхронизации",
+  "pharmacy.shell.nav.returns": "Возвраты",
+  "pharmacy.shell.language_switcher_aria_label": "Выбор языка",
+  "pharmacy.shell.logout": "Выйти",
+  "pharmacy.shell.staff_fallback": "Сотрудник аптеки",
   "auth.login.phone_title": "Введите номер телефона",
   "auth.login.phone_hint": "Мы отправим код подтверждения по SMS",
   "auth.login.phone_placeholder": "+992 XX XXX XX XX",

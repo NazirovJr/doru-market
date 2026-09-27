@@ -1,5 +1,7 @@
 import { useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
+import { Button, ErrorState, Skeleton, Tabs, type TabItem } from '@dorutj/ui'
+import { useLocale } from '@/shared/config/locale-provider'
 import {
   SYNC_CHANNEL_FILTERS,
   useCurrentPharmacyId,
@@ -23,33 +25,9 @@ function useSyncHistoryState(channel: SyncChannelFilter): SyncHistoryState {
   return { ...filtered, freshestBatch: allBatches.items[0] ?? null }
 }
 
-const FilterChip = ({
-  active,
-  onClick,
-  testId,
-  children,
-}: {
-  readonly active: boolean
-  readonly onClick: () => void
-  readonly testId: string
-  readonly children: string
-}): ReactElement => {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      data-testid={testId}
-      className={`rounded-full border px-3 py-1 text-sm ${active ? 'border-brand-primary text-brand-primary' : 'border-line text-ink-muted'}`}
-    >
-      {children}
-    </button>
-  )
-}
-
 const ModerationBanner = ({ pharmacyId }: { readonly pharmacyId: string | null }): ReactElement | null => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const query = usePendingModerationCount(pharmacyId)
   if (query.data === undefined || query.data.pendingCount === 0) {
     return null
@@ -62,10 +40,16 @@ const ModerationBanner = ({ pharmacyId }: { readonly pharmacyId: string | null }
 }
 
 const SyncHistoryPage = (): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [channel, setChannel] = useState<SyncChannelFilter>('all')
   const pharmacyId = useCurrentPharmacyId()
   const { items, freshestBatch, isInitialLoading, isFetchingNextPage, hasNextPage, error, fetchNextPage } = useSyncHistoryState(channel)
+
+  const filterTabs: TabItem[] = SYNC_CHANNEL_FILTERS.map((filterValue) => ({
+    id: filterValue,
+    label: t(`pharmacy.inventory.sync_history.filter.${filterValue}`),
+  }))
 
   return (
     <section className="mx-auto flex w-full max-w-2xl flex-col gap-4 py-8" data-testid="sync-history-page">
@@ -74,34 +58,35 @@ const SyncHistoryPage = (): ReactElement => {
       <StaleDataBadge freshestBatch={freshestBatch} />
       <ModerationBanner pharmacyId={pharmacyId} />
 
-      <div role="tablist" className="flex flex-wrap gap-2">
-        {SYNC_CHANNEL_FILTERS.map((filterValue) => (
-          <FilterChip
-            key={filterValue}
-            active={channel === filterValue}
-            onClick={() => { setChannel(filterValue) }}
-            testId={`sync-history-filter-${filterValue}`}
-          >
-            {t(`pharmacy.inventory.sync_history.filter.${filterValue}`)}
-          </FilterChip>
-        ))}
-      </div>
+      <Tabs
+        tabs={filterTabs}
+        activeId={channel}
+        onChange={(id) => { setChannel(id as SyncChannelFilter) }}
+        aria-label={t('pharmacy.inventory.sync_history.page_title')}
+      />
 
-      {isInitialLoading ? <p className="text-sm text-ink-muted">{t('pharmacy.inventory.sync_history.loading')}</p> : null}
-      {error !== null ? <p role="alert" className="text-sm text-brand-danger">{t('pharmacy.inventory.sync_history.error')}</p> : null}
+      {isInitialLoading ? (
+        <div className="flex flex-col gap-2">
+          <Skeleton variant="row" />
+          <Skeleton variant="row" />
+          <Skeleton variant="row" />
+        </div>
+      ) : null}
+      {error !== null ? <ErrorState t={t} titleKey="pharmacy.inventory.sync_history.error" variant="inline" /> : null}
 
       {!isInitialLoading && error === null ? <SyncBatchesTable items={items} /> : null}
 
       {hasNextPage ? (
-        <button
+        <Button
           type="button"
+          variant="secondary"
           onClick={fetchNextPage}
           disabled={isFetchingNextPage}
+          loading={isFetchingNextPage}
           data-testid="sync-history-load-more"
-          className="self-start rounded-md border border-line px-3 py-1 text-sm text-ink"
         >
-          {t(isFetchingNextPage ? 'pharmacy.inventory.sync_history.load_more_pending' : 'pharmacy.inventory.sync_history.load_more')}
-        </button>
+          {t('pharmacy.inventory.sync_history.load_more')}
+        </Button>
       ) : null}
     </section>
   )

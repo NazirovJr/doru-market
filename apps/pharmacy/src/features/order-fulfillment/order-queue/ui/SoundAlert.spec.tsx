@@ -1,6 +1,7 @@
 import { createRef } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
+import { LocaleProvider } from '@/shared/config/locale-provider'
 import { SoundAlert, type SoundAlertHandle } from './SoundAlert'
 
 /**
@@ -23,13 +24,21 @@ afterEach(() => {
 
 describe('<SoundAlert /> (DTJ-310, «Что сделать» п.5)', () => {
   it('до жеста пользователя показывает «Начать смену», звук НЕ проигрывается сам по себе', () => {
-    render(<SoundAlert />)
+    render(
+      <LocaleProvider>
+        <SoundAlert />
+      </LocaleProvider>,
+    )
     expect(screen.getByTestId('start-shift-button')).toBeInTheDocument()
     expect(playMock).not.toHaveBeenCalled()
   })
 
   it('клик «Начать смену» — разблокирует звук (play+pause жестом) и скрывает кнопку', () => {
-    render(<SoundAlert />)
+    render(
+      <LocaleProvider>
+        <SoundAlert />
+      </LocaleProvider>,
+    )
     fireEvent.click(screen.getByTestId('start-shift-button'))
 
     expect(playMock).toHaveBeenCalledTimes(1)
@@ -38,7 +47,11 @@ describe('<SoundAlert /> (DTJ-310, «Что сделать» п.5)', () => {
 
   it('после разблокировки notifyNewOrder() реально проигрывает звук', () => {
     const ref = createRef<SoundAlertHandle>()
-    render(<SoundAlert ref={ref} />)
+    render(
+      <LocaleProvider>
+        <SoundAlert ref={ref} />
+      </LocaleProvider>,
+    )
     fireEvent.click(screen.getByTestId('start-shift-button'))
     playMock.mockClear()
 
@@ -49,7 +62,11 @@ describe('<SoundAlert /> (DTJ-310, «Что сделать» п.5)', () => {
 
   it('ДО разблокировки notifyNewOrder() ничего не проигрывает (нет автовоспроизведения без жеста)', () => {
     const ref = createRef<SoundAlertHandle>()
-    render(<SoundAlert ref={ref} />)
+    render(
+      <LocaleProvider>
+        <SoundAlert ref={ref} />
+      </LocaleProvider>,
+    )
 
     ref.current?.notifyNewOrder()
 
@@ -60,7 +77,11 @@ describe('<SoundAlert /> (DTJ-310, «Что сделать» п.5)', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     playMock.mockRejectedValueOnce(new DOMException('blocked', 'NotAllowedError'))
     const ref = createRef<SoundAlertHandle>()
-    render(<SoundAlert ref={ref} />)
+    render(
+      <LocaleProvider>
+        <SoundAlert ref={ref} />
+      </LocaleProvider>,
+    )
     fireEvent.click(screen.getByTestId('start-shift-button'))
 
     expect(() => { ref.current?.notifyNewOrder() }).not.toThrow()

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BULK_GRID_PAGE_SIZE } from '@/features/inventory-bulk/api/use-bulk-grid'
+import { LocaleProvider } from '@/shared/config/locale-provider'
 import { BulkEditGrid } from './BulkEditGrid'
 
 const DEFAULT_MEDICINE_SEARCH_ITEM = { medicineId: 'med-1', tradeName: 'Aspirin', dosageForm: 'tablet', dosageStrength: '500mg' }
@@ -32,9 +33,11 @@ const INVENTORY_ITEM_2: InventoryItemFixture = {
 function renderGrid(): void {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   render(
-    <QueryClientProvider client={queryClient}>
-      <BulkEditGrid />
-    </QueryClientProvider>,
+    <LocaleProvider>
+      <QueryClientProvider client={queryClient}>
+        <BulkEditGrid />
+      </QueryClientProvider>
+    </LocaleProvider>,
   )
 }
 
@@ -128,7 +131,7 @@ describe('<BulkEditGrid /> (DTJ-168)', () => {
     stubApi()
     renderGrid()
     expect(screen.getByTestId('bulk-grid-empty')).toBeInTheDocument()
-    expect(screen.getByTestId('bulk-grid-save-button')).toBeDisabled()
+    expect(screen.getByTestId('bulk-grid-save-button')).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('добавление строки через выбор медикамента делает её видимой и readonly по названию', async () => {
@@ -151,7 +154,7 @@ describe('<BulkEditGrid /> (DTJ-168)', () => {
     fireEvent.change(screen.getByTestId('bulk-grid-quantity-input'), { target: { value: '3' } })
     fireEvent.change(screen.getByTestId('bulk-grid-expiry-input'), { target: { value: '2030-01-01' } })
 
-    expect(screen.getByTestId('bulk-grid-save-button')).not.toBeDisabled()
+    expect(screen.getByTestId('bulk-grid-save-button')).not.toHaveAttribute('aria-disabled')
 
     fireEvent.click(screen.getByTestId('bulk-grid-save-button'))
 
@@ -184,7 +187,7 @@ describe('<BulkEditGrid /> (DTJ-168)', () => {
     fireEvent.change(priceInputs[0]!, { target: { value: '11.00' } })
     fireEvent.change(priceInputs[1]!, { target: { value: '6.00' } })
 
-    await waitFor(() => { expect(screen.getByTestId('bulk-grid-save-button')).not.toBeDisabled() })
+    await waitFor(() => { expect(screen.getByTestId('bulk-grid-save-button')).not.toHaveAttribute('aria-disabled') })
     fireEvent.click(screen.getByTestId('bulk-grid-save-button'))
 
     await waitFor(() => { expect(screen.getByTestId('bulk-grid-save-success')).toBeInTheDocument() })
@@ -214,7 +217,7 @@ describe('<BulkEditGrid /> (DTJ-168)', () => {
 
     await waitFor(() => { expect(screen.getAllByTestId('bulk-grid-row')).toHaveLength(BULK_GRID_PAGE_SIZE) })
     expect(countInventoryListCalls(fetchMock)).toBe(1)
-    expect(screen.getByTestId('bulk-grid-next-page')).not.toBeDisabled()
+    expect(screen.getByTestId('bulk-grid-next-page')).not.toHaveAttribute('aria-disabled')
 
     fireEvent.click(screen.getByTestId('bulk-grid-next-page'))
 

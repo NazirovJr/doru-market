@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ToastProvider } from '@dorutj/ui'
+import { LocaleProvider } from '@/shared/config/locale-provider'
 import { PointEditForm } from './PointEditForm'
 
 type FetchImpl = (input: string, init?: RequestInit) => Promise<Response>
@@ -45,9 +47,13 @@ function routeFetch(manualEntryResponse: () => Response): FetchImpl {
 function renderForm(): void {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   render(
-    <QueryClientProvider client={queryClient}>
-      <PointEditForm />
-    </QueryClientProvider>,
+    <LocaleProvider>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider closeButtonLabel="Закрыть">
+          <PointEditForm />
+        </ToastProvider>
+      </QueryClientProvider>
+    </LocaleProvider>,
   )
 }
 
@@ -73,7 +79,9 @@ afterEach(() => {
 describe('<PointEditForm /> (DTJ-167)', () => {
   it('кнопка «Сохранить» неактивна, пока медикамент не выбран', () => {
     renderForm()
-    expect(screen.getByTestId('point-edit-submit')).toBeDisabled()
+    // `Button` (packages/ui) — персистентный disabled помечается `aria-disabled`, БЕЗ нативного
+    // `disabled` (остаётся в tab-order по дизайну компонента).
+    expect(screen.getByTestId('point-edit-submit')).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('цена <= 0 — кнопка остаётся неактивной, запрос к API не отправляется (критерий приёмки 3)', async () => {
@@ -85,8 +93,8 @@ describe('<PointEditForm /> (DTJ-167)', () => {
     fireEvent.change(screen.getByTestId('point-edit-quantity'), { target: { value: '10' } })
     fireEvent.change(screen.getByTestId('point-edit-expiry'), { target: { value: '2030-01-01' } })
 
-    expect(screen.getByTestId('point-edit-price-error')).toBeInTheDocument()
-    expect(screen.getByTestId('point-edit-submit')).toBeDisabled()
+    expect(document.getElementById('point-edit-price-error')).toBeInTheDocument()
+    expect(screen.getByTestId('point-edit-submit')).toHaveAttribute('aria-disabled', 'true')
 
     fireEvent.click(screen.getByTestId('point-edit-submit'))
     expect(fetchMock.mock.calls.some(([url]) => url.includes('/inventory-manual-entry'))).toBe(false)
@@ -100,10 +108,10 @@ describe('<PointEditForm /> (DTJ-167)', () => {
     await selectMedicine()
     fillValidRow()
 
-    expect(screen.getByTestId('point-edit-submit')).toBeEnabled()
+    expect(screen.getByTestId('point-edit-submit')).not.toHaveAttribute('aria-disabled')
     fireEvent.click(screen.getByTestId('point-edit-submit'))
 
-    await waitFor(() => { expect(screen.getByTestId('manual-entry-toast-success')).toBeInTheDocument() })
+    await waitFor(() => { expect(screen.getByRole('status')).toHaveTextContent('Мондагӣ навсозӣ шуд') })
 
     const submitCall = fetchMock.mock.calls.find(([url]) => url.includes('/inventory-manual-entry'))
     const [, init] = submitCall as [string, RequestInit]
@@ -124,9 +132,9 @@ describe('<PointEditForm /> (DTJ-167)', () => {
 
     fireEvent.click(screen.getByTestId('point-edit-submit'))
 
-    await waitFor(() => { expect(screen.getByTestId('manual-entry-toast-error')).toBeInTheDocument() })
-    expect(screen.getByTestId('manual-entry-toast-error')).not.toHaveTextContent('INSUFFICIENT_ROLE')
-    expect(screen.getByTestId('manual-entry-toast-error')).not.toHaveTextContent('{')
+    await waitFor(() => { expect(screen.getByRole('alert')).toBeInTheDocument() })
+    expect(screen.getByRole('alert')).not.toHaveTextContent('INSUFFICIENT_ROLE')
+    expect(screen.getByRole('alert')).not.toHaveTextContent('{')
   })
 
   it('«Товара нет в списке» показывает заглушку «Функция появится позже»', () => {

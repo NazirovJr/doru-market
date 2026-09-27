@@ -1,5 +1,6 @@
 import { useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
+import { useLocale } from '@/shared/config/locale-provider'
 import type { PharmacyTerminalOrderDetailDto, PharmacyTerminalOrderItemDto } from '@dorutj/contracts'
 import { findNextPendingItemId, isItemActionable } from '@/features/order-fulfillment/model/picking.model'
 import { BarcodeScanForm } from './BarcodeScanForm'
@@ -20,7 +21,8 @@ const STATUS_GLYPH: Readonly<Record<PharmacyTerminalOrderItemDto['fulfillmentSta
 }
 
 const StatusBadge = ({ item }: { readonly item: PharmacyTerminalOrderItemDto }): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const colorClass =
     item.fulfillmentStatus === 'scanned_ok'
       ? 'text-brand-success'
@@ -39,7 +41,8 @@ const StatusBadge = ({ item }: { readonly item: PharmacyTerminalOrderItemDto }):
 }
 
 export const ItemRow = ({ order, item, isSelected, onSelect }: ItemRowProps): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [reportOpen, setReportOpen] = useState(false)
   const actionable = isItemActionable(item, order)
 
