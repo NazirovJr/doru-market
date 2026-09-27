@@ -3,6 +3,7 @@ import { useState, type ChangeEvent, type ReactElement, type SyntheticEvent } fr
 import { Link } from 'react-router'
 import { useT, toIntlLocale } from '@dorutj/i18n'
 import type { FinanceEscrowLedgerEntryDto } from '@dorutj/contracts'
+import { useLocale } from '@/shared/config/locale-provider'
 import { ADMIN_LOCALE } from '@/shared/config/locale'
 import { useEscrowLedger } from '../api/use-finance-ledger'
 
@@ -14,7 +15,8 @@ function formatSomoni(diram: number): string {
 }
 
 export const EscrowLedgerPage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [orderIdDraft, setOrderIdDraft] = useState('')
   const [orderId, setOrderId] = useState<string | undefined>(undefined)
   const query = useEscrowLedger(orderId)
@@ -49,7 +51,8 @@ interface EscrowLedgerResultsProps {
 }
 
 const EscrowLedgerResults = ({ items, isLoading }: EscrowLedgerResultsProps): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   if (!isLoading && items.length === 0) {
     return <p>{t('admin.finance.escrow_ledger.empty')}</p>
   }
@@ -74,7 +77,8 @@ const EscrowLedgerResults = ({ items, isLoading }: EscrowLedgerResultsProps): Re
 }
 
 const EscrowLedgerRow = ({ entry }: { readonly entry: FinanceEscrowLedgerEntryDto }): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   return (
     <tr data-testid="escrow-ledger-row">
       <td>{t(`admin.finance.escrow_ledger.entry_type.${entry.entryType}`)}</td>

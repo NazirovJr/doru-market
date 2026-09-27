@@ -1,7 +1,7 @@
 // DTJ-384 — без дизайн-референса (та же оговорка, что platform-metrics-page.tsx/top-analogs-page.tsx).
 import { type ReactElement } from 'react'
 import { useT, type TranslateFunction } from '@dorutj/i18n'
-import { ADMIN_LOCALE } from '@/shared/config/locale'
+import { useLocale } from '@/shared/config/locale-provider'
 import { getCurrentTenantId } from '@/shared/auth/current-role'
 import { useFunnelPeriod, type FunnelPeriodMode } from '../api/use-funnel'
 import { useOnboardingFunnel, type OnboardingFunnelData } from '../api/use-onboarding-funnel'
@@ -11,7 +11,8 @@ const HOURS_FRACTION_DIGITS = 1
 const DECISION_ORDER = ['approved', 'rejected'] as const
 
 export const OnboardingFunnelPage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const tenantId = getCurrentTenantId()
   const { mode, period, setMode } = useFunnelPeriod()
   const query = useOnboardingFunnel(tenantId, period)

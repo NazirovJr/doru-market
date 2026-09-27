@@ -5,14 +5,15 @@
 import { useMemo, useState, type ReactElement } from 'react'
 import { Link } from 'react-router'
 import { useT } from '@dorutj/i18n'
-import { ADMIN_LOCALE } from '@/shared/config/locale'
+import { useLocale } from '@/shared/config/locale-provider'
 import { useSupportTickets } from '../api/use-support-tickets'
 import { compareByUrgency, isOverdue } from '../model/sla-status'
 import { SlaBadge } from './SlaBadge'
 import { SupportTicketFilters } from './SupportTicketFilters'
 
 export const SupportTicketQueue = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const { query, filters, setFilter } = useSupportTickets()
   const [onlyOverdue, setOnlyOverdue] = useState(false)
 

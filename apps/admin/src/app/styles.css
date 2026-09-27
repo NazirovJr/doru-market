@@ -1,0 +1,15 @@
+@import 'tailwindcss';
+
+/* Временные @theme-токены оболочки (DTJ-434) — тот же приём, что apps/pharmacy/src/app/styles.css. */
+@theme {
+  --color-surface: #ffffff;
+  --color-ink: #0f172a;
+  --color-ink-muted: #64748b;
+  --color-line: #e2e8f0;
+}
+
+body {
+  min-height: 100vh;
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+}

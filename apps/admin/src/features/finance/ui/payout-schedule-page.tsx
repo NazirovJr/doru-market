@@ -2,6 +2,7 @@ import { useEffect, useState, type ChangeEvent, type ReactElement } from 'react'
 import { Link } from 'react-router'
 import { useT, toIntlLocale } from '@dorutj/i18n'
 import { PAYOUT_SCHEDULE_STATUS_VALUES, type FinancePayoutScheduleEntryDto } from '@dorutj/contracts'
+import { useLocale } from '@/shared/config/locale-provider'
 import { ADMIN_LOCALE } from '@/shared/config/locale'
 import { usePayoutSchedule, type PayoutScheduleFilters } from '../api/use-finance-ledger'
 
@@ -15,7 +16,8 @@ function formatSomoni(diram: number): string {
 const EMPTY_FILTERS: PayoutScheduleFilters = { status: undefined, pharmacyId: undefined }
 
 export const PayoutSchedulePage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [filters, setFilters] = useState<PayoutScheduleFilters>(EMPTY_FILTERS)
   const [pharmacyIdDraft, setPharmacyIdDraft] = useState('')
   const [cursor, setCursor] = useState<string | null>(null)

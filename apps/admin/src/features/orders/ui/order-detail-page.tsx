@@ -4,6 +4,7 @@ import { useParams } from 'react-router'
 import { formatMoney, useT } from '@dorutj/i18n'
 import { Badge, OrderTimeline, type OrderTimelineStep } from '@dorutj/ui'
 import type { OrderAdminEscrowLedgerEntryDto, OrderDetailAdminDto } from '@dorutj/contracts'
+import { useLocale } from '@/shared/config/locale-provider'
 import { ADMIN_LOCALE } from '@/shared/config/locale'
 import { getCurrentRole } from '@/shared/auth/current-role'
 import { useOrderDetailAdmin } from '../api/use-orders-admin'
@@ -14,7 +15,8 @@ function formatSomoni(diram: number): string {
 }
 
 export const OrderDetailPage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const { id } = useParams<{ id: string }>()
   const query = useOrderDetailAdmin(id ?? null)
   const role = getCurrentRole()
@@ -40,7 +42,8 @@ export const OrderDetailPage = (): ReactElement => {
 }
 
 const OrderSummarySection = ({ order }: { readonly order: OrderDetailAdminDto }): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   return (
     <dl data-testid="order-detail-summary">
       <dt>{t('admin.order_detail.field.order_number')}</dt>
@@ -64,7 +67,8 @@ const OrderSummarySection = ({ order }: { readonly order: OrderDetailAdminDto })
 }
 
 const TimelineSection = ({ order }: { readonly order: OrderDetailAdminDto }): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const steps: readonly OrderTimelineStep[] = [
     {
       status: 'created',
@@ -104,7 +108,8 @@ const TimelineSection = ({ order }: { readonly order: OrderDetailAdminDto }): Re
 }
 
 const EscrowSection = ({ order }: { readonly order: OrderDetailAdminDto }): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   return (
     <section data-testid="order-detail-escrow">
       <h2>{t('admin.order_detail.section.escrow')}</h2>
@@ -143,7 +148,8 @@ const EscrowRow = ({ entry }: { readonly entry: OrderAdminEscrowLedgerEntryDto }
 )
 
 const PayoutSection = ({ order }: { readonly order: OrderDetailAdminDto }): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const payout = order.payoutSchedule
   return (
     <section data-testid="order-detail-payout">
@@ -167,7 +173,8 @@ const PayoutSection = ({ order }: { readonly order: OrderDetailAdminDto }): Reac
 }
 
 const PrescriptionSection = ({ order }: { readonly order: OrderDetailAdminDto }): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const meta = order.prescriptionMeta
   return (
     <section data-testid="order-detail-prescription">
@@ -189,7 +196,8 @@ const PrescriptionSection = ({ order }: { readonly order: OrderDetailAdminDto })
 
 // TODO(DTJ-356): payment-override/force-cancel как кнопки действий над заказом.
 const OrderAdminActionsPlaceholder = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   return (
     <section data-testid="order-detail-actions-placeholder">
       <p>{t('admin.order_detail.actions.placeholder')}</p>

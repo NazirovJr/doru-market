@@ -2,7 +2,7 @@
 import { useEffect, useState, type ChangeEvent, type ReactElement, type SubmitEvent } from 'react'
 import { useT } from '@dorutj/i18n'
 import { STAFF_ACCOUNT_ROLE_VALUES, type StaffAccountRole, type StaffAccountSummaryDto } from '@dorutj/contracts'
-import { ADMIN_LOCALE } from '@/shared/config/locale'
+import { useLocale } from '@/shared/config/locale-provider'
 import { getCurrentChainId } from '@/shared/auth/current-role'
 import {
   useStaffAccounts,
@@ -20,7 +20,8 @@ function toE164(digits: string): string {
 }
 
 export const StaffAccountsPage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [chainId] = useState<string | null>(() => getCurrentChainId())
   const [cursor, setCursor] = useState<string | null>(null)
   const [items, setItems] = useState<readonly StaffAccountSummaryDto[]>([])
@@ -89,7 +90,8 @@ interface StaffAccountRowProps {
 }
 
 const StaffAccountRow = ({ item, isDeactivating, onToggleDeactivate, onDone }: StaffAccountRowProps): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const deactivateMutation = useDeactivateStaffAccount()
   const retryMutation = useProvisionCourierRetry()
 
@@ -132,7 +134,8 @@ const StaffAccountRow = ({ item, isDeactivating, onToggleDeactivate, onDone }: S
 }
 
 const CreateStaffAccountForm = ({ chainId }: { readonly chainId: string | null }): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const mutation = useCreateStaffAccount()
   const [digits, setDigits] = useState('')
   const [fullName, setFullName] = useState('')

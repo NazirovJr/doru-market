@@ -2,7 +2,7 @@
 import { useEffect, useState, type ChangeEvent, type Dispatch, type ReactElement, type SetStateAction, type SyntheticEvent } from 'react'
 import { useParams } from 'react-router'
 import { useT, type TranslateFunction } from '@dorutj/i18n'
-import { ADMIN_LOCALE } from '@/shared/config/locale'
+import { useLocale } from '@/shared/config/locale-provider'
 import { useTenant, useUpdateTenantSettings, type UpdateTenantSettingsInput } from '../api/use-tenants'
 
 const PALETTE_PRIMARY_KEY = '--brand-primary'
@@ -58,7 +58,8 @@ function draftFromDetail(detail: {
 }
 
 export const TenantSettingsForm = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const { tenantId } = useParams<{ tenantId: string }>()
   const query = useTenant(tenantId)
   const mutation = useUpdateTenantSettings()

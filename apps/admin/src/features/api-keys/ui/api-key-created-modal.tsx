@@ -3,7 +3,7 @@ import { useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
 import { Button, Modal } from '@dorutj/ui'
 import type { PharmacyApiKeyCreatedDto } from '@dorutj/contracts'
-import { ADMIN_LOCALE } from '@/shared/config/locale'
+import { useLocale } from '@/shared/config/locale-provider'
 
 export interface ApiKeyCreatedModalProps {
   readonly created: PharmacyApiKeyCreatedDto | null
@@ -11,7 +11,8 @@ export interface ApiKeyCreatedModalProps {
 }
 
 export const ApiKeyCreatedModal = ({ created, onClose }: ApiKeyCreatedModalProps): ReactElement | null => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [copied, setCopied] = useState<'apiKey' | 'hmacSecret' | null>(null)
 
   if (created === null) return null

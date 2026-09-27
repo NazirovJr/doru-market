@@ -1,3 +1,7 @@
+import { useAuthStore } from '@/shared/auth/auth-store'
+
+// httpRequest добавляет Bearer/retry-refresh; envelope-хелперы ниже не меняют сигнатуру (admin-client.ts зависит от неё).
+
 interface Env {
   readonly apiBaseUrl: string
 }
@@ -14,23 +18,162 @@ export function getClientEnv(): Env {
 
 type HttpClientOptions = RequestInit
 
-export async function httpRequest(path: string, init: HttpClientOptions = {}): Promise<Response> {
-  const url = `${getClientEnv().apiBaseUrl}${path}`
-  // eslint-disable-next-line no-restricted-globals -- этот файл И ЕСТЬ разрешённый слой api.
-  return fetch(url, init)
+const HTTP_STATUS_UNAUTHORIZED = 401
+const TOKEN_EXPIRED_ERROR_CODE = 'TOKEN_EXPIRED'
+const AUTH_REFRESH_PATH = '/api/v1/auth/refresh'
+const LOGIN_PATH = '/login'
+
+interface ApiErrorBody {
+  readonly error?: { readonly code?: string }
 }
 
-/**
- * `HttpError`/`httpGetJson`/`httpPostJson` (DTJ-283) — ДОБАВЛЕНО поверх уже существующего
- * `httpRequest` (не переписывает его — `onboarding-queue.page.tsx`, DTJ-075, продолжает работать
- * как раньше). Тот же конверт `{ data, meta? } | { error: { code, message?, details? } }`, что
- * `apps/web/src/shared/api/http-client.ts` (DTJ-234/235) — сюда перенесена ТОЛЬКО
- * envelope-часть, БЕЗ auth-retry/refresh (`apps/admin` пока не имеет собственной аутентификации,
- * `useAuthStore`/Bearer-заголовков здесь нет — см. `git log`/DTJ-075: это отдельный,
- * непройденный тикет каркаса `apps/admin`, не периметр DTJ-283). Когда аутентификация появится,
- * естественная точка для Bearer-заголовка — ВНУТРИ `httpRequest` (единственная функция, шлющая
- * реальный `fetch`) — код ниже не изменится.
- */
+async function readErrorCode(response: Response): Promise<string | undefined> {
+  try {
+    const body = (await response.clone().json()) as ApiErrorBody
+    return body.error?.code
+  } catch {
+    return undefined
+  }
+}
+
+async function isTokenExpired(response: Response): Promise<boolean> {
+  if (response.status !== HTTP_STATUS_UNAUTHORIZED) {
+    return false
+  }
+  return (await readErrorCode(response)) === TOKEN_EXPIRED_ERROR_CODE
+}
+
+function buildHeaders(init?: HeadersInit): Headers {
+  const headers = new Headers(init)
+  const accessToken = useAuthStore.getState().accessToken
+  if (accessToken !== null) {
+    headers.set('Authorization', `Bearer ${accessToken}`)
+  }
+  return headers
+}
+
+function performRequest(path: string, init: HttpClientOptions): Promise<Response> {
+  const url = `${getClientEnv().apiBaseUrl}${path}`
+  // eslint-disable-next-line no-restricted-globals -- этот файл И ЕСТЬ разрешённый слой api.
+  return fetch(url, { ...init, headers: buildHeaders(init.headers) })
+}
+
+interface RefreshResponseUser {
+  readonly id?: string
+  readonly role?: string
+  readonly tenantId?: string | null
+  readonly phoneNumber?: string | null
+  readonly fullName?: string | null
+}
+
+interface RefreshResponsePayload {
+  readonly accessToken?: string
+  readonly refreshToken?: string
+  readonly user?: RefreshResponseUser
+}
+
+type RefreshResponseBody = RefreshResponsePayload & { readonly data?: RefreshResponsePayload }
+
+function parseRefreshUser(user: RefreshResponseUser | undefined): ReturnType<typeof useAuthStore.getState>['user'] {
+  if (user === undefined || typeof user.id !== 'string' || typeof user.role !== 'string') {
+    return null
+  }
+  return {
+    id: user.id,
+    role: user.role,
+    tenantId: user.tenantId ?? null,
+    phoneNumber: user.phoneNumber ?? null,
+    fullName: user.fullName ?? null,
+  }
+}
+
+interface ParsedRefreshPayload {
+  readonly accessToken: string
+  readonly refreshToken: string | null
+  readonly user: ReturnType<typeof useAuthStore.getState>['user']
+}
+
+function parseRefreshPayload(body: RefreshResponseBody, currentRefresh: string | null): ParsedRefreshPayload | null {
+  const payload = body.data ?? body
+  if (typeof payload.accessToken !== 'string') {
+    return null
+  }
+  return {
+    accessToken: payload.accessToken,
+    refreshToken: payload.refreshToken ?? currentRefresh,
+    user: parseRefreshUser(payload.user),
+  }
+}
+
+function applyRefreshResult(parsed: ParsedRefreshPayload): void {
+  const resolvedUser = parsed.user ?? useAuthStore.getState().user
+  if (resolvedUser !== null && parsed.refreshToken !== null) {
+    useAuthStore.getState().setSession({ accessToken: parsed.accessToken, refreshToken: parsed.refreshToken, user: resolvedUser })
+  } else {
+    useAuthStore.getState().setAccessToken(parsed.accessToken)
+  }
+}
+
+async function refreshAccessToken(): Promise<boolean> {
+  const currentRefresh = useAuthStore.getState().refreshToken
+  try {
+    // eslint-disable-next-line no-restricted-globals -- см. performRequest.
+    const response = await fetch(`${getClientEnv().apiBaseUrl}${AUTH_REFRESH_PATH}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: currentRefresh }),
+    })
+    if (!response.ok) {
+      useAuthStore.getState().clear()
+      return false
+    }
+    const parsed = parseRefreshPayload((await response.json()) as RefreshResponseBody, currentRefresh)
+    if (parsed === null) {
+      return false
+    }
+    applyRefreshResult(parsed)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function redirectToLogin(): void {
+  useAuthStore.getState().clear()
+  window.location.assign(LOGIN_PATH)
+}
+
+// Дедупликация параллельных refresh — несколько 401 TOKEN_EXPIRED одновременно ждут один POST.
+let inFlightRefresh: Promise<boolean> | null = null
+
+function refreshAccessTokenOnce(): Promise<boolean> {
+  inFlightRefresh ??= refreshAccessToken().finally(() => {
+    inFlightRefresh = null
+  })
+  return inFlightRefresh
+}
+
+async function requestWithAuthRetry(path: string, init: HttpClientOptions, alreadyRetried: boolean): Promise<Response> {
+  const response = await performRequest(path, init)
+  if (!(await isTokenExpired(response))) {
+    return response
+  }
+  if (alreadyRetried) {
+    redirectToLogin()
+    return response
+  }
+  const refreshed = await refreshAccessTokenOnce()
+  if (!refreshed) {
+    redirectToLogin()
+    return response
+  }
+  return requestWithAuthRetry(path, init, true)
+}
+
+export async function httpRequest(path: string, init: HttpClientOptions = {}): Promise<Response> {
+  return requestWithAuthRetry(path, init, false)
+}
+
 export class HttpError extends Error {
   public readonly status: number
   public readonly code: string
@@ -85,7 +228,8 @@ function parseResponseBody(text: string, path: string, status: number): unknown 
 
 async function requestJsonEnvelope<T>(path: string, init: HttpClientOptions = {}): Promise<JsonEnvelopeResult<T>> {
   const headers = new Headers(init.headers)
-  if (!headers.has('Content-Type') && init.body !== undefined) {
+  const isFormDataBody = init.body instanceof FormData
+  if (!headers.has('Content-Type') && init.body !== undefined && !isFormDataBody) {
     headers.set('Content-Type', 'application/json')
   }
   const response = await httpRequest(path, { ...init, headers })
@@ -95,8 +239,6 @@ async function requestJsonEnvelope<T>(path: string, init: HttpClientOptions = {}
     return { data: parsed.data, meta: parsed.meta }
   }
   if (!response.ok && isErrorEnvelope(parsed)) {
-    // `exactOptionalPropertyTypes` — `message` включается ТОЛЬКО когда определено (envelope
-    // `error.message` опционален) — явный `message: undefined` не совпадает с «поле отсутствует».
     throw new HttpError(response.status, parsed.error.code, {
       ...(parsed.error.message !== undefined && { message: parsed.error.message }),
       details: parsed.error.details,
@@ -132,7 +274,6 @@ export function httpPostJson<T>(path: string, body: unknown, headers?: HeadersIn
   return requestJsonEnvelope<T>(path, { method: 'POST', body: JSON.stringify(body), ...(headers !== undefined && { headers }) }).then((r) => r.data)
 }
 
-/** DTJ-354 — добавлено тем же приёмом, что `httpPostJson` (деактивация/смена роли пользователя). */
 export function httpPatchJson<T>(path: string, body: unknown): Promise<T> {
   return requestJsonEnvelope<T>(path, { method: 'PATCH', body: JSON.stringify(body) }).then((r) => r.data)
 }
