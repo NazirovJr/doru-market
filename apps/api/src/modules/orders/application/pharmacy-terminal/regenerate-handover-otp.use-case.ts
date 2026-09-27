@@ -64,7 +64,7 @@ const SHA256_HEX_LENGTH = 64
 
 export interface RegenerateHandoverOtpActor {
   readonly userId: string
-  readonly role: 'pharmacist' | 'pharmacy_admin'
+  readonly role: 'pharmacist' | 'pharmacy_admin' | 'support_agent' | 'super_admin'
   readonly tenantId: string
   readonly pharmacyId: string | null
 }
@@ -79,6 +79,7 @@ export interface RegenerateHandoverOtpResult {
   readonly expiresAt: Date
   readonly purpose: 'delivery_handover'
   readonly regenerationsUsed: number
+  readonly handoverOtpId: string
 }
 
 @Injectable()
@@ -146,7 +147,7 @@ export class RegenerateHandoverOtpUseCase {
       regenerationsUsed,
     }
     await this.ordersOutbox.appendAll(tenantId, [...order.pullDomainEvents(), event], tx)
-    return { code: newHandoverOtp.code, expiresAt: newHandoverOtp.expiresAt, purpose: HANDOVER_OTP_PURPOSE, regenerationsUsed }
+    return { code: newHandoverOtp.code, expiresAt: newHandoverOtp.expiresAt, purpose: HANDOVER_OTP_PURPOSE, regenerationsUsed, handoverOtpId: newHandoverOtp.id }
   }
 
   /** Загрузка + тенант-скоуп + `OrderPolicy` — единая точка проверки доступа (см. `ScanOrderItemUseCase`/`ReportItemIssueUseCase`). */

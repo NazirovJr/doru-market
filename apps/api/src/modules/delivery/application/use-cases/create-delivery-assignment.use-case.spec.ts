@@ -73,6 +73,7 @@ function makeExistingAssignment(): DeliveryAssignment {
     contactAttemptsCount: 0,
     lastContactAttemptAt: null,
     distanceMeters: null,
+    proofPhotoUrl: null,
   }
   return DeliveryAssignment.restore(snapshot)
 }

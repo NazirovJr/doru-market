@@ -1,5 +1,4 @@
-// Читающие эндпоинты назначения: mine (курьер, REST catch-up после WS-реконнекта) и деталь по id
-// (courier/customer own-scope, staff — операционный доступ, RBAC внутри use case, DTJ-317 п.1/2).
+// mine (курьер, REST catch-up после WS-реконнекта) и деталь по id (скоуп — внутри use case).
 import { Controller, Get, HttpCode, Inject, Param, ParseUUIDPipe, Query, UseGuards } from '@nestjs/common'
 import { encodeCursor, ok, ValidationError, type PaginationMeta, type SuccessEnvelope } from '@dorutj/contracts'
 import { HttpStatus } from '@/common/http/http-status.constants.js'
@@ -58,7 +57,10 @@ export class DeliveryAssignmentDetailController {
     @Param('id', UUID_PIPE) assignmentId: string,
     @CurrentUser() claims: JwtClaims,
   ): Promise<SuccessEnvelope<DeliveryAssignmentDetailDto>> {
-    const view = await this.getDetail.execute({ assignmentId, actor: { userId: claims.sub, role: claims.role } })
+    const view = await this.getDetail.execute({
+      assignmentId,
+      actor: { userId: claims.sub, role: claims.role, tenantId: claims.tenantId, pharmacyId: claims.pharmacyId, chainId: claims.chainId },
+    })
     return ok(toDeliveryAssignmentDetailDto(view))
   }
 }

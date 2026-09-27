@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto'
 import { describe, expect, it, vi } from 'vitest'
 import {
   CashAmountMismatchError,
@@ -6,11 +5,8 @@ import {
   ForbiddenTransitionError,
   HandoverOtpNotFoundError,
   NotFoundError,
-  OtpAttemptsExceededError,
-  OtpExpiredError,
   OtpMismatchError,
 } from '@dorutj/contracts'
-import type { OtpCodeRecord, OtpCodesRepository, RateLimitCheckerPort, UnitOfWorkPort } from '@/modules/auth/index.js'
 import { Courier } from '../../domain/courier.entity.js'
 import { DeliveryAssignment } from '../../domain/delivery-assignment.entity.js'
 import type { DeliveryAssignmentSnapshot } from '../../domain/delivery-assignment-snapshot.js'
@@ -28,12 +24,6 @@ const ORDER_ID = 'order-1'
 const COURIER_ID = 'courier-1'
 const USER_ID = 'user-1'
 const OTP_ID = 'otp-1'
-const OTP_CODE = '1234'
-const SHA256_HEX_LENGTH = 64
-
-function hashOtpCode(code: string, salt: string): string {
-  return createHash('sha256').update(`${code}:${salt}`).digest('hex').slice(0, SHA256_HEX_LENGTH)
-}
 
 function makeAssignment(): DeliveryAssignment {
   const snapshot: DeliveryAssignmentSnapshot = {
@@ -58,6 +48,7 @@ function makeAssignment(): DeliveryAssignment {
     contactAttemptsCount: 0,
     lastContactAttemptAt: null,
     distanceMeters: null,
+    proofPhotoUrl: null,
   }
   return DeliveryAssignment.restore(snapshot)
 }
@@ -84,38 +75,20 @@ function makeOrderContext(paymentMethod = 'card_online'): DeliveryOrderContext {
   }
 }
 
-function makeOtpRecord(overrides: Partial<OtpCodeRecord> = {}): OtpCodeRecord {
-  return {
-    id: OTP_ID,
-    tenantId: 'tenant-1',
-    subjectRef: ORDER_ID,
-    purpose: 'delivery_handover',
-    codeHash: hashOtpCode(OTP_CODE, OTP_ID),
-    plainCode: OTP_CODE,
-    attempts: 0,
-    issuedAt: new Date(NOW.getTime() - 60_000),
-    expiresAt: new Date(NOW.getTime() + 60_000),
-    consumedAt: null,
-    ...overrides,
-  }
-}
-
 interface Harness {
   readonly useCase: DeliverUseCase
   readonly assignmentsSave: ReturnType<typeof vi.fn>
   readonly outboxAppend: ReturnType<typeof vi.fn>
   readonly earningsCreate: ReturnType<typeof vi.fn>
   readonly markOrderDelivered: ReturnType<typeof vi.fn>
-  readonly markConsumed: ReturnType<typeof vi.fn>
-  readonly incrementAttempts: ReturnType<typeof vi.fn>
+  readonly verifyHandoverOtp: ReturnType<typeof vi.fn>
 }
 
 function makeUseCase(params: {
   assignment?: DeliveryAssignment | null
   courier?: Courier | null
   orderContext?: DeliveryOrderContext
-  otpRecord?: OtpCodeRecord | null
-  rateLimitCount?: number
+  verifyHandoverOtpImpl?: ReturnType<typeof vi.fn>
 }): Harness {
   const assignmentsSave = vi.fn().mockResolvedValue(undefined)
   const assignments: DeliveryAssignmentRepositoryPort = {
@@ -136,55 +109,41 @@ function makeUseCase(params: {
     save: vi.fn().mockResolvedValue(undefined),
   }
   const markOrderDelivered = vi.fn().mockResolvedValue(undefined)
+  const verifyHandoverOtp = params.verifyHandoverOtpImpl ?? vi.fn().mockResolvedValue(undefined)
   const orders: DeliveryOrdersPort = {
     getOrderForRating: vi.fn().mockResolvedValue(null),
     getDeliveryContext: vi.fn().mockResolvedValue(params.orderContext ?? makeOrderContext()),
     markOrderDelivered,
+    verifyHandoverOtp: verifyHandoverOtp as DeliveryOrdersPort['verifyHandoverOtp'],
+    reissueHandoverOtp: vi.fn(),
   }
   const outboxAppend = vi.fn().mockResolvedValue(undefined)
   const outbox: DeliveryOutboxPort = { append: outboxAppend }
   const earningsCreate = vi.fn().mockResolvedValue(undefined)
   const earnings: CourierEarningsRepositoryPort = { findPage: vi.fn(), create: earningsCreate }
   const uow: DeliveryUnitOfWorkPort = { run: async (cb) => cb(undefined) }
-  const markConsumed = vi.fn().mockResolvedValue(undefined)
-  const incrementAttempts = vi.fn().mockResolvedValue(undefined)
-  const otpRecordValue = params.otpRecord === undefined ? makeOtpRecord() : params.otpRecord
-  const otpCodes: OtpCodesRepository = {
-    create: vi.fn(),
-    findById: vi.fn().mockResolvedValue(otpRecordValue),
-    findByIdForUpdate: vi.fn().mockResolvedValue(otpRecordValue),
-    markConsumed,
-    incrementAttempts,
-    findActiveBySubject: vi.fn(),
-    countBySubjectAndPurpose: vi.fn(),
-  }
-  const rateLimit: RateLimitCheckerPort = {
-    incrementAndGet: vi.fn().mockResolvedValue({ count: params.rateLimitCount ?? 1, ttlSeconds: 900 }),
-  }
-  const authUow: UnitOfWorkPort = { run: async (cb) => cb(undefined) }
   const ids = { next: () => 'earning-1' }
   const clock = { now: () => NOW }
   return {
-    useCase: new DeliverUseCase(couriers, assignments, orders, outbox, earnings, uow, otpCodes, rateLimit, authUow, clock, ids),
+    useCase: new DeliverUseCase(couriers, assignments, orders, outbox, earnings, uow, clock, ids),
     assignmentsSave,
     outboxAppend,
     earningsCreate,
     markOrderDelivered,
-    markConsumed,
-    incrementAttempts,
+    verifyHandoverOtp,
   }
 }
 
 describe('DeliverUseCase', () => {
-  it('TC-DELIV-013: верный OTP, TTL не истёк -> 200, delivered, OrderDeliveredEvent, courier_earnings (chainId=null)', async () => {
-    const { useCase, assignmentsSave, outboxAppend, earningsCreate, markOrderDelivered, markConsumed } = makeUseCase({})
+  it('TC-DELIV-013: verifyHandoverOtp (через OrdersFacade) успешен -> 200, delivered, OrderDeliveredEvent, courier_earnings (chainId=null)', async () => {
+    const { useCase, assignmentsSave, outboxAppend, earningsCreate, markOrderDelivered, verifyHandoverOtp } = makeUseCase({})
 
-    const result = await useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID, otpCode: OTP_CODE })
+    const result = await useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID, otpCode: '1234' })
 
     expect(result.deliveryAssignmentId).toBe(ASSIGNMENT_ID)
+    expect(verifyHandoverOtp).toHaveBeenCalledWith({ orderId: ORDER_ID, tenantId: 'tenant-1', candidateCode: '1234', now: NOW })
     const saved = assignmentsSave.mock.calls[0]?.[0] as DeliveryAssignment
     expect(saved.status).toBe('delivered')
-    expect(markConsumed).toHaveBeenCalledWith(undefined, OTP_ID, NOW)
     const [event] = outboxAppend.mock.calls[0] as [unknown]
     expect(event).toMatchObject({ type: 'OrderDeliveredEvent', deliveryAssignmentId: ASSIGNMENT_ID, courierId: COURIER_ID })
     expect(earningsCreate).toHaveBeenCalledWith(
@@ -197,7 +156,7 @@ describe('DeliverUseCase', () => {
   it('chainId !== null (собственный флот сети) -> courier_earnings НЕ создаётся (REQ-COUR-3)', async () => {
     const { useCase, earningsCreate } = makeUseCase({ courier: makeCourier('chain-1') })
 
-    await useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID, otpCode: OTP_CODE })
+    await useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID, otpCode: '1234' })
 
     expect(earningsCreate).not.toHaveBeenCalled()
   })
@@ -205,49 +164,31 @@ describe('DeliverUseCase', () => {
   it('TC-DELIV-012: cash_courier, recordCash НЕ вызван -> CashAmountMismatchError (домен отклоняет)', async () => {
     const { useCase } = makeUseCase({ orderContext: makeOrderContext('cash_courier') })
 
-    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID, otpCode: OTP_CODE })).rejects.toBeInstanceOf(
+    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID, otpCode: '1234' })).rejects.toBeInstanceOf(
       CashAmountMismatchError,
     )
   })
 
-  it('OTP истёк -> 400 OtpExpiredError', async () => {
-    const { useCase } = makeUseCase({ otpRecord: makeOtpRecord({ expiresAt: new Date(NOW.getTime() - 1000) }) })
-
-    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID, otpCode: OTP_CODE })).rejects.toBeInstanceOf(OtpExpiredError)
-  })
-
-  it('неверный код -> 400 OtpMismatchError', async () => {
-    const { useCase } = makeUseCase({})
+  it('OrdersFacade.verifyHandoverOtp отклоняет (неверный/истёкший код) -> ошибка пробрасывается, assignment НЕ сохраняется', async () => {
+    const verifyHandoverOtp = vi.fn().mockRejectedValue(new OtpMismatchError())
+    const { useCase, assignmentsSave } = makeUseCase({ verifyHandoverOtpImpl: verifyHandoverOtp })
 
     await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID, otpCode: '0000' })).rejects.toBeInstanceOf(OtpMismatchError)
-  })
-
-  it('TC-DELIV-075: дубль deliver ПОСЛЕ успеха (otp уже consumedAt) -> 400 OtpMismatchError, НЕ 500', async () => {
-    const { useCase } = makeUseCase({ otpRecord: makeOtpRecord({ consumedAt: NOW }) })
-
-    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID, otpCode: OTP_CODE })).rejects.toBeInstanceOf(OtpMismatchError)
-  })
-
-  it('превышен презентационный лимит попыток -> 423 OtpAttemptsExceededError', async () => {
-    const { useCase } = makeUseCase({ rateLimitCount: 999 })
-
-    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID, otpCode: OTP_CODE })).rejects.toBeInstanceOf(
-      OtpAttemptsExceededError,
-    )
+    expect(assignmentsSave).not.toHaveBeenCalled()
   })
 
   it('назначение принадлежит другому курьеру -> ForbiddenError', async () => {
     const otherCourier = Courier.create({ id: 'courier-2', userId: USER_ID, chainId: null, taxStatus: 'individual_patent', vehicleType: 'car', now: NOW })
     const { useCase } = makeUseCase({ courier: otherCourier })
 
-    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID, otpCode: OTP_CODE })).rejects.toBeInstanceOf(ForbiddenError)
+    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID, otpCode: '1234' })).rejects.toBeInstanceOf(ForbiddenError)
   })
 
   it('handoverOtpId не закреплён на назначении -> HandoverOtpNotFoundError', async () => {
     const snapshot = makeAssignment().toSnapshot()
     const { useCase } = makeUseCase({ assignment: DeliveryAssignment.restore({ ...snapshot, handoverOtpId: null }) })
 
-    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID, otpCode: OTP_CODE })).rejects.toBeInstanceOf(
+    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID, otpCode: '1234' })).rejects.toBeInstanceOf(
       HandoverOtpNotFoundError,
     )
   })
@@ -256,7 +197,7 @@ describe('DeliverUseCase', () => {
     const snapshot = makeAssignment().toSnapshot()
     const { useCase } = makeUseCase({ assignment: DeliveryAssignment.restore({ ...snapshot, status: 'assigned' }) })
 
-    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID, otpCode: OTP_CODE })).rejects.toBeInstanceOf(
+    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID, otpCode: '1234' })).rejects.toBeInstanceOf(
       ForbiddenTransitionError,
     )
   })
@@ -264,6 +205,6 @@ describe('DeliverUseCase', () => {
   it('назначение не найдено -> NotFoundError', async () => {
     const { useCase } = makeUseCase({ assignment: null })
 
-    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID, otpCode: OTP_CODE })).rejects.toBeInstanceOf(NotFoundError)
+    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, userId: USER_ID, otpCode: '1234' })).rejects.toBeInstanceOf(NotFoundError)
   })
 })

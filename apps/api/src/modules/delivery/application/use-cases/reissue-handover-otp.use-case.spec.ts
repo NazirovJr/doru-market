@@ -1,10 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import { NotFoundError, type DeliveryAssignmentStatus } from '@dorutj/contracts'
-import type { OtpGeneratorPort } from '@/modules/auth/index.js'
 import { DeliveryAssignment } from '../../domain/delivery-assignment.entity.js'
 import type { DeliveryAssignmentSnapshot } from '../../domain/delivery-assignment-snapshot.js'
 import type { DeliveryAssignmentRepositoryPort } from '../ports/delivery-assignment.repository.port.js'
-import type { DeliveryOrdersPort, DeliveryOrderContext } from '../ports/delivery-orders.port.js'
+import type { DeliveryOrdersPort, ReissueHandoverOtpActor } from '../ports/delivery-orders.port.js'
 import type { DeliveryUnitOfWorkPort } from '../ports/delivery-unit-of-work.port.js'
 import { ReissueHandoverOtpUseCase } from './reissue-handover-otp.use-case.js'
 
@@ -13,6 +12,8 @@ const ASSIGNMENT_ID = 'assignment-1'
 const ORDER_ID = 'order-1'
 const OLD_OTP_ID = 'otp-old'
 const NEW_OTP_ID = 'otp-new'
+
+const ACTOR: ReissueHandoverOtpActor = { userId: 'user-1', role: 'support_agent', tenantId: 'tenant-1', pharmacyId: null }
 
 function makeAssignment(status: DeliveryAssignmentStatus = 'en_route_to_customer', handoverOtpId: string | null = OLD_OTP_ID): DeliveryAssignment {
   const snapshot: DeliveryAssignmentSnapshot = {
@@ -37,35 +38,18 @@ function makeAssignment(status: DeliveryAssignmentStatus = 'en_route_to_customer
     contactAttemptsCount: 0,
     lastContactAttemptAt: null,
     distanceMeters: null,
+    proofPhotoUrl: null,
   }
   return DeliveryAssignment.restore(snapshot)
-}
-
-function makeOrderContext(): DeliveryOrderContext {
-  return {
-    orderId: ORDER_ID,
-    tenantId: 'tenant-1',
-    pharmacyId: 'pharmacy-1',
-    customerId: 'customer-1',
-    medicineIds: [],
-    itemsCount: 1,
-    paymentMethod: 'cash_courier',
-    deliveryGeoPoint: null,
-    deliveryFeeDiram: 500n,
-    totalAmountDiram: 6000n,
-    deliveryAddress: 'Addr',
-    deliveryLandmark: null,
-    handoverOtpId: OLD_OTP_ID,
-  }
 }
 
 interface Harness {
   readonly useCase: ReissueHandoverOtpUseCase
   readonly assignmentsSave: ReturnType<typeof vi.fn>
-  readonly otpCreate: ReturnType<typeof vi.fn>
+  readonly reissueHandoverOtp: ReturnType<typeof vi.fn>
 }
 
-function makeUseCase(params: { assignment?: DeliveryAssignment | null; orderContext?: DeliveryOrderContext | null }): Harness {
+function makeUseCase(params: { assignment?: DeliveryAssignment | null; reissueHandoverOtpImpl?: ReturnType<typeof vi.fn> }): Harness {
   const assignmentsSave = vi.fn().mockResolvedValue(undefined)
   const assignments: DeliveryAssignmentRepositoryPort = {
     findById: vi.fn().mockResolvedValue(params.assignment === undefined ? makeAssignment() : params.assignment),
@@ -79,40 +63,27 @@ function makeUseCase(params: { assignment?: DeliveryAssignment | null; orderCont
     findByStatuses: vi.fn().mockResolvedValue([]),
     save: assignmentsSave,
   }
+  const reissueHandoverOtp =
+    params.reissueHandoverOtpImpl ?? vi.fn().mockResolvedValue({ code: '4321', expiresAt: new Date(NOW.getTime() + 900_000), handoverOtpId: NEW_OTP_ID })
   const orders: DeliveryOrdersPort = {
-    getOrderForRating: vi.fn().mockResolvedValue(null),
-    getDeliveryContext: vi.fn().mockResolvedValue(params.orderContext === undefined ? makeOrderContext() : params.orderContext),
+    getOrderForRating: vi.fn(),
+    getDeliveryContext: vi.fn(),
     markOrderDelivered: vi.fn(),
+    verifyHandoverOtp: vi.fn(),
+    reissueHandoverOtp: reissueHandoverOtp as DeliveryOrdersPort['reissueHandoverOtp'],
   }
   const uow: DeliveryUnitOfWorkPort = { run: async (cb) => cb(undefined) }
-  const otpGenerator: OtpGeneratorPort = { generate: vi.fn().mockReturnValue({ code: '4321', codeHash: 'unused' }) }
-  const otpCreate = vi.fn().mockResolvedValue(undefined)
-  const otpCodesRepository = {
-    create: otpCreate,
-    findById: vi.fn(),
-    findByIdForUpdate: vi.fn(),
-    markConsumed: vi.fn(),
-    incrementAttempts: vi.fn(),
-    findActiveBySubject: vi.fn(),
-    countBySubjectAndPurpose: vi.fn(),
-  }
-  const clock = { now: () => NOW }
-  const ids = { next: () => NEW_OTP_ID }
-  return {
-    useCase: new ReissueHandoverOtpUseCase(assignments, orders, uow, otpGenerator, otpCodesRepository, clock, ids),
-    assignmentsSave,
-    otpCreate,
-  }
+  return { useCase: new ReissueHandoverOtpUseCase(assignments, orders, uow), assignmentsSave, reissueHandoverOtp }
 }
 
 describe('ReissueHandoverOtpUseCase', () => {
-  it('назначение нетерминально + handoverOtpId уже есть -> новый OTP выпущен, закреплён на назначении, код возвращён', async () => {
-    const { useCase, assignmentsSave, otpCreate } = makeUseCase({})
+  it('назначение нетерминально + handoverOtpId уже есть -> вызывает orders.reissueHandoverOtp, синхронизирует локальную копию, возвращает код', async () => {
+    const { useCase, assignmentsSave, reissueHandoverOtp } = makeUseCase({})
 
-    const result = await useCase.execute({ assignmentId: ASSIGNMENT_ID })
+    const result = await useCase.execute({ assignmentId: ASSIGNMENT_ID, actor: ACTOR })
 
     expect(result).toEqual({ deliveryAssignmentId: ASSIGNMENT_ID, code: '4321', expiresAt: expect.any(Date) as Date })
-    expect(otpCreate).toHaveBeenCalledWith(expect.objectContaining({ id: NEW_OTP_ID, purpose: 'delivery_handover', subjectRef: ORDER_ID }) as unknown)
+    expect(reissueHandoverOtp).toHaveBeenCalledWith({ orderId: ORDER_ID, actor: ACTOR })
     const saved = assignmentsSave.mock.calls[0]?.[0] as DeliveryAssignment
     expect(saved.handoverOtpId).toBe(NEW_OTP_ID)
   })
@@ -120,24 +91,26 @@ describe('ReissueHandoverOtpUseCase', () => {
   it('назначение терминально (delivered) -> NotFoundError', async () => {
     const { useCase } = makeUseCase({ assignment: makeAssignment('delivered') })
 
-    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID })).rejects.toBeInstanceOf(NotFoundError)
+    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, actor: ACTOR })).rejects.toBeInstanceOf(NotFoundError)
   })
 
   it('handoverOtpId ещё не закреплён (департ к клиенту ещё не было) -> NotFoundError', async () => {
     const { useCase } = makeUseCase({ assignment: makeAssignment('en_route_to_customer', null) })
 
-    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID })).rejects.toBeInstanceOf(NotFoundError)
+    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, actor: ACTOR })).rejects.toBeInstanceOf(NotFoundError)
   })
 
   it('назначение не найдено -> NotFoundError', async () => {
     const { useCase } = makeUseCase({ assignment: null })
 
-    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID })).rejects.toBeInstanceOf(NotFoundError)
+    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, actor: ACTOR })).rejects.toBeInstanceOf(NotFoundError)
   })
 
-  it('заказ не найден -> NotFoundError', async () => {
-    const { useCase } = makeUseCase({ orderContext: null })
+  it('OrdersFacade.reissueHandoverOtp отклоняет (напр. рейт-лимит) -> ошибка пробрасывается, assignment НЕ сохраняется', async () => {
+    const reissueHandoverOtp = vi.fn().mockRejectedValue(new Error('rate limited'))
+    const { useCase, assignmentsSave } = makeUseCase({ reissueHandoverOtpImpl: reissueHandoverOtp })
 
-    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID })).rejects.toBeInstanceOf(NotFoundError)
+    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, actor: ACTOR })).rejects.toThrow('rate limited')
+    expect(assignmentsSave).not.toHaveBeenCalled()
   })
 })

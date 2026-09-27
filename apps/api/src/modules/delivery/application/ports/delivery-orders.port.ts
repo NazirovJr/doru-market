@@ -30,8 +30,36 @@ export interface MarkOrderDeliveredInput {
   readonly now: Date
 }
 
+export interface VerifyHandoverOtpInput {
+  readonly orderId: string
+  readonly tenantId: string
+  readonly candidateCode: string
+  readonly now: Date
+}
+
+export interface ReissueHandoverOtpActor {
+  readonly userId: string
+  readonly role: 'pharmacist' | 'support_agent' | 'super_admin'
+  readonly tenantId: string
+  readonly pharmacyId: string | null
+}
+
+export interface ReissueHandoverOtpInput {
+  readonly orderId: string
+  readonly actor: ReissueHandoverOtpActor
+}
+
+export interface ReissueHandoverOtpOutput {
+  readonly code: string
+  readonly expiresAt: Date
+  readonly handoverOtpId: string
+}
+
+// Механизм OTP вручения — один, живёт в orders (DTJ-306); delivery вызывает ТОЛЬКО через фасад.
 export interface DeliveryOrdersPort {
   getOrderForRating(tenantId: string, orderId: string): Promise<OrderRatingContext | null>
   getDeliveryContext(orderId: string): Promise<DeliveryOrderContext | null>
   markOrderDelivered(input: MarkOrderDeliveredInput): Promise<void>
+  verifyHandoverOtp(input: VerifyHandoverOtpInput): Promise<void>
+  reissueHandoverOtp(input: ReissueHandoverOtpInput): Promise<ReissueHandoverOtpOutput>
 }

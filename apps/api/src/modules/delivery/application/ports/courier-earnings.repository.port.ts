@@ -27,13 +27,12 @@ export interface FindCourierEarningsResult {
   readonly hasMore: boolean
 }
 
-// ДОБАВЛЕНО (DTJ-317) — DeliverUseCase создаёт строку ТОЛЬКО для chainId IS NULL (REQ-COUR-3).
 export interface CreateCourierEarningInput {
   readonly id: string
   readonly courierId: string
   readonly deliveryAssignmentId: string
   readonly amountDiram: bigint
-  // Натуральный ключ идемпотентности — 1 строка earnings на 1 доставленное назначение (assignmentId уникален).
+  // Натуральный ключ идемпотентности — assignmentId уникален, 1 строка earnings на 1 доставку.
   readonly idempotencyKey: string
 }
 

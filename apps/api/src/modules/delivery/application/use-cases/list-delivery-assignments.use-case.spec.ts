@@ -31,6 +31,7 @@ function makeAssignment(id: string): DeliveryAssignment {
     contactAttemptsCount: 0,
     lastContactAttemptAt: null,
     distanceMeters: null,
+    proofPhotoUrl: null,
   }
   return DeliveryAssignment.restore(snapshot)
 }
@@ -75,6 +76,8 @@ function makeUseCase(params: {
       return Promise.resolve(context)
     }),
     markOrderDelivered: vi.fn(),
+    verifyHandoverOtp: vi.fn(),
+    reissueHandoverOtp: vi.fn(),
   }
   const findByIds = vi.fn().mockImplementation((pharmacyIds: readonly string[]) => {
     const locations: PharmacyLocation[] = pharmacyIds.map((pharmacyId) => {

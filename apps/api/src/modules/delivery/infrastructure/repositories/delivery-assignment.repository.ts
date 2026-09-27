@@ -181,6 +181,7 @@ function toDomain(row: DeliveryAssignmentRow): DeliveryAssignment {
     contactAttemptsCount: row.contactAttemptsCount,
     lastContactAttemptAt: row.lastContactAttemptAt,
     distanceMeters: row.distanceMeters,
+    proofPhotoUrl: row.proofPhotoUrl,
   }
   return DeliveryAssignment.restore(snapshot)
 }
@@ -208,6 +209,7 @@ function toRow(s: DeliveryAssignmentSnapshot): typeof deliveryAssignments.$infer
     contactAttemptsCount: s.contactAttemptsCount,
     lastContactAttemptAt: s.lastContactAttemptAt,
     distanceMeters: s.distanceMeters,
+    proofPhotoUrl: s.proofPhotoUrl,
   }
 }
 

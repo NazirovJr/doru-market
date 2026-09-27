@@ -41,6 +41,7 @@ function makeAssignment(): DeliveryAssignment {
     contactAttemptsCount: 0,
     lastContactAttemptAt: null,
     distanceMeters: null,
+    proofPhotoUrl: null,
   }
   return DeliveryAssignment.restore(snapshot)
 }
@@ -117,6 +118,8 @@ function makeUseCase(params: {
     getOrderForRating: vi.fn().mockResolvedValue(null),
     getDeliveryContext: vi.fn().mockResolvedValue(params.orderContext ?? makeOrderContext()),
     markOrderDelivered: vi.fn(),
+    verifyHandoverOtp: vi.fn(),
+    reissueHandoverOtp: vi.fn(),
   }
   const uow: DeliveryUnitOfWorkPort = { run: async (cb) => cb(undefined) }
   return { useCase: new RecordCashUseCase(couriers, assignments, shifts, orders, uow), assignmentsSave, shiftsSave, couriersSave }

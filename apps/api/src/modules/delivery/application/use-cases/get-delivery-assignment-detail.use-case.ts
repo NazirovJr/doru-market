@@ -1,4 +1,3 @@
-// landmarkPhotoUrl/entrance/floor/apartment/deliveryComment/courierEtaMinutes — null, вне скоупа.
 import { Inject, Injectable } from '@nestjs/common'
 import { ForbiddenError, NotFoundError, type UserRole } from '@dorutj/contracts'
 import {
@@ -13,6 +12,9 @@ import { MASKED_CALLING_PORT, type MaskedCallingPort } from '../ports/masked-cal
 export interface DetailActor {
   readonly userId: string
   readonly role: UserRole
+  readonly tenantId: string | null
+  readonly pharmacyId: string | null
+  readonly chainId: string | null
 }
 
 export interface GetDeliveryAssignmentDetailCommand {
@@ -67,19 +69,21 @@ export class GetDeliveryAssignmentDetailUseCase {
     if (assignment.status === 'unassigned') {
       throw new ForbiddenError('Delivery assignment details are unavailable before assignment', { assignmentId: cmd.assignmentId })
     }
-    await this.assertActorAllowed(cmd.actor, assignment, orderContext.customerId)
-
     const pharmacy = await this.pharmacies.findById(orderContext.pharmacyId)
+    await this.assertActorAllowed({ actor: cmd.actor, assignment, orderContext, pharmacyChainId: pharmacy?.chainId ?? null })
+
     const isCustomer = cmd.actor.role === 'customer'
     const customerContact = isCustomer ? null : await this.maskedCalling.getCustomerContact(orderContext.customerId)
     return buildDetailView({ assignment, orderContext, pharmacy, customerContact })
   }
 
-  private async assertActorAllowed(
-    actor: DetailActor,
-    assignment: { readonly courierId: string | null },
-    orderCustomerId: string,
-  ): Promise<void> {
+  private async assertActorAllowed(input: {
+    readonly actor: DetailActor
+    readonly assignment: { readonly courierId: string | null }
+    readonly orderContext: { readonly tenantId: string; readonly pharmacyId: string; readonly customerId: string }
+    readonly pharmacyChainId: string | null
+  }): Promise<void> {
+    const { actor, assignment, orderContext, pharmacyChainId } = input
     if (actor.role === 'courier') {
       const courier = await this.couriers.findByUserId(actor.userId)
       if (assignment.courierId !== courier?.id) {
@@ -87,8 +91,29 @@ export class GetDeliveryAssignmentDetailUseCase {
       }
       return
     }
-    if (actor.role === 'customer' && actor.userId !== orderCustomerId) {
-      throw new ForbiddenError('Delivery assignment does not belong to this customer', {})
+    if (actor.role === 'customer') {
+      if (actor.userId !== orderContext.customerId) {
+        throw new ForbiddenError('Delivery assignment does not belong to this customer', {})
+      }
+      return
+    }
+    this.assertStaffActorAllowed(actor, orderContext, pharmacyChainId)
+  }
+
+  private assertStaffActorAllowed(
+    actor: DetailActor,
+    orderContext: { readonly tenantId: string; readonly pharmacyId: string },
+    pharmacyChainId: string | null,
+  ): void {
+    if (actor.role === 'super_admin') return
+    if (actor.tenantId !== orderContext.tenantId) {
+      throw new NotFoundError({ resource: 'delivery_assignment' })
+    }
+    if (actor.role === 'pharmacist' && actor.pharmacyId !== orderContext.pharmacyId) {
+      throw new ForbiddenError('Delivery assignment does not belong to this pharmacist', {})
+    }
+    if (actor.role === 'pharmacy_admin' && (pharmacyChainId === null || pharmacyChainId !== actor.chainId)) {
+      throw new ForbiddenError('Delivery assignment is outside this pharmacy_admin fleet', {})
     }
   }
 }

@@ -47,6 +47,7 @@ function makeAssignment(status: DeliveryAssignmentStatus, requiresColdChain = fa
     contactAttemptsCount: 0,
     lastContactAttemptAt: null,
     distanceMeters: null,
+    proofPhotoUrl: null,
   }
   return DeliveryAssignment.restore(snapshot)
 }
@@ -103,6 +104,8 @@ function makeUseCase(params: {
     getOrderForRating: vi.fn().mockResolvedValue(null),
     getDeliveryContext: vi.fn().mockResolvedValue(params.orderContext === undefined ? makeOrderContext() : params.orderContext),
     markOrderDelivered: vi.fn(),
+    verifyHandoverOtp: vi.fn(),
+    reissueHandoverOtp: vi.fn(),
   }
   const uow: DeliveryUnitOfWorkPort = { run: async (cb) => cb(undefined) }
   const clock: Clock = { now: () => NOW }

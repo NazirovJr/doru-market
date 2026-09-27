@@ -140,6 +140,10 @@ describe.skipIf(!postgresAvailable)('ClaimDeliveryAssignmentUseCase — TC-DELIV
       getOrderForRating: () => Promise.resolve(null),
       getDeliveryContext: () => Promise.resolve(orderContext),
       markOrderDelivered: () => Promise.resolve(),
+
+      verifyHandoverOtp: () => Promise.resolve(),
+
+      reissueHandoverOtp: () => Promise.resolve({ code: '0000', expiresAt: new Date(), handoverOtpId: 'otp-reissued' }),
     }
     const pharmacies: PharmacyLookupPort = { findById: () => Promise.resolve(pharmacyLocation), findByIds: () => Promise.resolve([]) }
     const outbox: DeliveryOutboxPort = { append: () => Promise.resolve() }

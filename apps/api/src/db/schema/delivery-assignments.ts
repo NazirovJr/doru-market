@@ -58,6 +58,8 @@ export const deliveryAssignments = pgTable(
     lastContactAttemptAt: timestamp('last_contact_attempt_at', { withTimezone: true }),
     /** Снапшот дистанции аптека→клиент на момент создания (аудит `delivery_fee`), метры. */
     distanceMeters: integer('distance_meters'),
+    // ДОБАВЛЕНО (DTJ-317, миграция 0062) — доказательство вручения, ДОПОЛНИТЕЛЬНОЕ к OTP, не замена.
+    proofPhotoUrl: text('proof_photo_url'),
   },
   (table) => [
     check(

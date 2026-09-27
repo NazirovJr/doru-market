@@ -1,7 +1,8 @@
-import { Body, Controller, HttpCode, Inject, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, HttpCode, Inject, InternalServerErrorException, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
 import {
   deliverRequestSchema,
   departToCustomerRequestSchema,
+  ErrorCode,
   ok,
   recordCashRequestSchema,
   type DeliverRequest,
@@ -86,7 +87,7 @@ export class DeliveryAssignmentActionsController {
     @Body(new ZodValidationPipe(deliverRequestSchema)) body: DeliverRequest,
     @CurrentUser() claims: JwtClaims,
   ): Promise<SuccessEnvelope<DeliverResult>> {
-    const result = await this.deliver.execute({ assignmentId, userId: claims.sub, otpCode: body.otpCode })
+    const result = await this.deliver.execute({ assignmentId, userId: claims.sub, otpCode: body.otpCode, proofPhotoUrl: body.proofPhotoUrl })
     return ok(result)
   }
 
@@ -95,8 +96,31 @@ export class DeliveryAssignmentActionsController {
   @Roles('pharmacist', 'support_agent', 'super_admin')
   public async reissueHandoverOtpAction(
     @Param('id', UUID_PIPE) assignmentId: string,
+    @CurrentUser() claims: JwtClaims,
   ): Promise<SuccessEnvelope<ReissueHandoverOtpResult>> {
-    const result = await this.reissueHandoverOtp.execute({ assignmentId })
+    const result = await this.reissueHandoverOtp.execute({
+      assignmentId,
+      actor: {
+        userId: claims.sub,
+        role: requireReissueRole(claims),
+        tenantId: requireTenantId(claims),
+        pharmacyId: claims.pharmacyId,
+      },
+    })
     return ok(result)
   }
+}
+
+function requireTenantId(claims: JwtClaims): string {
+  if (claims.tenantId === null) {
+    throw new InternalServerErrorException({ code: ErrorCode.INTERNAL_ERROR, message: 'reissue-handover-otp requires a tenant-scoped actor' })
+  }
+  return claims.tenantId
+}
+
+function requireReissueRole(claims: JwtClaims): 'pharmacist' | 'support_agent' | 'super_admin' {
+  if (claims.role !== 'pharmacist' && claims.role !== 'support_agent' && claims.role !== 'super_admin') {
+    throw new InternalServerErrorException({ code: ErrorCode.INTERNAL_ERROR, message: 'reissue-handover-otp requires an allowed role' })
+  }
+  return claims.role
 }

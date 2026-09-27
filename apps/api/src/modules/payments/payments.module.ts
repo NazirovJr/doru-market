@@ -196,8 +196,8 @@ import { TenancyModule } from '@/modules/tenancy/tenancy.module.js'
 import { PAYMENTS_TENANCY_PORT_PROVIDER } from './infrastructure/adapters/payments-tenancy.adapter.js'
 import { CaptureEscrowUseCase } from './application/use-cases/capture-escrow.use-case.js'
 import { OrderDeliveredSubscriber } from './infrastructure/subscribers/order-delivered.subscriber.js'
+import { OrderDeliveredDomainEventHandler } from './infrastructure/subscribers/order-delivered.domain-event-handler.js'
 import { PaymentsInternalServiceGuard } from './presentation/internal/payments-internal-service.guard.js'
-import { OrderDeliveredController } from './presentation/internal/order-delivered.controller.js'
 // DTJ-246 — AdminPaymentOverrideUseCase/AdjustLedgerUseCase (см. JSDoc блока providers выше).
 import { AdminPaymentOverrideUseCase } from './application/use-cases/admin-payment-override.use-case.js'
 import { AdjustLedgerUseCase } from './application/use-cases/adjust-ledger.use-case.js'
@@ -305,7 +305,6 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
     MockBankSimulatePaymentController,
     GetOrderLedgerController,
     PaymentsWebhookController,
-    OrderDeliveredController,
     AdminPaymentOverrideController,
     SuspendChainForUnpaidInvoiceController,
     GetPayoutsController,
@@ -384,6 +383,7 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
     PAYMENTS_TENANCY_PORT_PROVIDER,
     CaptureEscrowUseCase,
     OrderDeliveredSubscriber,
+    OrderDeliveredDomainEventHandler,
     PaymentsInternalServiceGuard,
     // DTJ-246 — контролируемые исключения (см. JSDoc блока providers выше).
     AdminPaymentOverrideUseCase,

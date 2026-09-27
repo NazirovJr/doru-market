@@ -34,6 +34,7 @@ function makeAssignment(id: string): DeliveryAssignment {
     contactAttemptsCount: 0,
     lastContactAttemptAt: null,
     distanceMeters: null,
+    proofPhotoUrl: null,
   }
   return DeliveryAssignment.restore(snapshot)
 }

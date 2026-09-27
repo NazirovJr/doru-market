@@ -4,8 +4,7 @@ import type { MineAssignmentView } from '../application/use-cases/get-mine-deliv
 export type DeliveryAssignmentDetailDto = DeliveryAssignmentDetailView
 export type MineAssignmentDto = MineAssignmentView
 
-// Тонкая идентичность (view уже JSON-safe: bigint переведён в number use case'ом) — отдельная
-// функция ради единообразия со стилем `delivery-offer.dto.ts` (presentation не мутирует domain view).
+// Тонкая идентичность (view уже JSON-safe) — единообразие со стилем delivery-offer.dto.ts.
 export function toDeliveryAssignmentDetailDto(view: DeliveryAssignmentDetailView): DeliveryAssignmentDetailDto {
   return view
 }

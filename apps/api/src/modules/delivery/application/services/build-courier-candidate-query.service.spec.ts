@@ -57,6 +57,8 @@ function makeService(params: {
     getOrderForRating: vi.fn().mockResolvedValue(null),
     getDeliveryContext: vi.fn().mockResolvedValue(params.order === undefined ? makeOrderContext(['med-1']) : params.order),
     markOrderDelivered: vi.fn(),
+    verifyHandoverOtp: vi.fn(),
+    reissueHandoverOtp: vi.fn(),
   }
   const pharmacy: PharmacyLocation = { id: PHARMACY_ID, name: 'P', addressText: 'A', geoPoint: geo(), chainId: 'chain-1' }
   const pharmacies: PharmacyLookupPort = { findById: vi.fn().mockResolvedValue(params.pharmacy === undefined ? pharmacy : params.pharmacy), findByIds: vi.fn().mockResolvedValue([]) }

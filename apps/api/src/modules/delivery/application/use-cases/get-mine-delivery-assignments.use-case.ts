@@ -1,5 +1,4 @@
-/** `GET /delivery-assignments/mine?status=active|history` (тикет DTJ-317 п.1) — ОБЯЗАТЕЛЕН для
- *  REST catch-up курьера после WS-реконнекта (клиент вызывает ПЕРВЫМ делом при восстановлении). */
+// REST catch-up курьера после WS-реконнекта — клиент вызывает ПЕРВЫМ делом при восстановлении.
 import { Inject, Injectable } from '@nestjs/common'
 import { DELIVERY_ASSIGNMENT_STATUS_VALUES, NotFoundError, type DeliveryAssignmentStatus } from '@dorutj/contracts'
 import {

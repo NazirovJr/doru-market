@@ -60,6 +60,7 @@ function makeAssignment(requiresColdChain: boolean): DeliveryAssignment {
     contactAttemptsCount: 0,
     lastContactAttemptAt: null,
     distanceMeters: null,
+    proofPhotoUrl: null,
   }
   return DeliveryAssignment.restore(snapshot)
 }
@@ -107,7 +108,7 @@ describe('GetPendingDeliveryOffersUseCase', () => {
       deliveryLandmark: null,
       handoverOtpId: null,
     }
-    const orders: DeliveryOrdersPort = { getOrderForRating: vi.fn().mockResolvedValue(null), getDeliveryContext: vi.fn().mockResolvedValue(orderContext), markOrderDelivered: vi.fn() }
+    const orders: DeliveryOrdersPort = { getOrderForRating: vi.fn().mockResolvedValue(null), getDeliveryContext: vi.fn().mockResolvedValue(orderContext), markOrderDelivered: vi.fn(), verifyHandoverOtp: vi.fn(), reissueHandoverOtp: vi.fn() }
     const pharmacyLocation: PharmacyLocation = { id: 'pharmacy-1', name: 'Pharmacy', addressText: 'Addr', geoPoint: geo(), chainId: null }
     const pharmacies: PharmacyLookupPort = { findById: vi.fn().mockResolvedValue(pharmacyLocation), findByIds: vi.fn().mockResolvedValue([]) }
     const useCase = new GetPendingDeliveryOffersUseCase(offers, assignments, couriers, orders, pharmacies)
@@ -144,7 +145,7 @@ describe('GetPendingDeliveryOffersUseCase', () => {
       save: vi.fn(),
     }
     const couriers: CourierRepositoryPort = { findById: vi.fn(), findByUserId: vi.fn().mockResolvedValue(null), save: vi.fn() }
-    const orders: DeliveryOrdersPort = { getOrderForRating: vi.fn(), getDeliveryContext: vi.fn(), markOrderDelivered: vi.fn() }
+    const orders: DeliveryOrdersPort = { getOrderForRating: vi.fn(), getDeliveryContext: vi.fn(), markOrderDelivered: vi.fn(), verifyHandoverOtp: vi.fn(), reissueHandoverOtp: vi.fn() }
     const pharmacies: PharmacyLookupPort = { findById: vi.fn(), findByIds: vi.fn() }
     const useCase = new GetPendingDeliveryOffersUseCase(offers, assignments, couriers, orders, pharmacies)
 

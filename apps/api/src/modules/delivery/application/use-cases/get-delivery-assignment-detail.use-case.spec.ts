@@ -41,6 +41,7 @@ function makeAssignment(status: DeliveryAssignmentStatus = 'assigned'): Delivery
     contactAttemptsCount: 2,
     lastContactAttemptAt: null,
     distanceMeters: null,
+    proofPhotoUrl: null,
   }
   return DeliveryAssignment.restore(snapshot)
 }
@@ -63,7 +64,7 @@ function makeOrderContext(): DeliveryOrderContext {
   }
 }
 
-function makeUseCase(params: { assignment?: DeliveryAssignment | null }): GetDeliveryAssignmentDetailUseCase {
+function makeUseCase(params: { assignment?: DeliveryAssignment | null; pharmacyChainId?: string | null }): GetDeliveryAssignmentDetailUseCase {
   const assignments: DeliveryAssignmentRepositoryPort = {
     findById: vi.fn().mockResolvedValue(params.assignment === undefined ? makeAssignment() : params.assignment),
     findActiveByOrderId: vi.fn(),
@@ -86,20 +87,33 @@ function makeUseCase(params: { assignment?: DeliveryAssignment | null }): GetDel
     getOrderForRating: vi.fn(),
     getDeliveryContext: vi.fn().mockResolvedValue(makeOrderContext()),
     markOrderDelivered: vi.fn(),
+    verifyHandoverOtp: vi.fn(),
+    reissueHandoverOtp: vi.fn(),
   }
   const geo = GeoPoint.create(38.5598, 68.787)
   if (!geo.ok) throw new Error('fixture error')
-  const pharmacyLocation: PharmacyLocation = { id: 'pharmacy-1', name: 'Pharmacy', addressText: 'PharmAddr', geoPoint: geo.value, chainId: null }
+  const pharmacyLocation: PharmacyLocation = {
+    id: 'pharmacy-1',
+    name: 'Pharmacy',
+    addressText: 'PharmAddr',
+    geoPoint: geo.value,
+    chainId: params.pharmacyChainId ?? null,
+  }
   const pharmacies: PharmacyLookupPort = { findById: vi.fn().mockResolvedValue(pharmacyLocation), findByIds: vi.fn() }
   const maskedCalling: MaskedCallingPort = { getCustomerContact: vi.fn().mockResolvedValue({ phoneNumber: '+992900000000', isMasked: false }) }
   return new GetDeliveryAssignmentDetailUseCase(couriers, assignments, orders, pharmacies, maskedCalling)
 }
 
+const SUPER_ADMIN_ACTOR = { userId: 'super-admin-1', role: 'super_admin' as const, tenantId: null, pharmacyId: null, chainId: null }
+
 describe('GetDeliveryAssignmentDetailUseCase', () => {
   it('курьер-владелец видит детали, включая customerContact', async () => {
     const useCase = makeUseCase({})
 
-    const view = await useCase.execute({ assignmentId: ASSIGNMENT_ID, actor: { userId: COURIER_USER_ID, role: 'courier' } })
+    const view = await useCase.execute({
+      assignmentId: ASSIGNMENT_ID,
+      actor: { userId: COURIER_USER_ID, role: 'courier', tenantId: null, pharmacyId: null, chainId: null },
+    })
 
     expect(view.pharmacy.addressText).toBe('PharmAddr')
     expect(view.customerAddress.addressText).toBe('Addr')
@@ -112,16 +126,85 @@ describe('GetDeliveryAssignmentDetailUseCase', () => {
   it('customer-владелец заказа видит детали, БЕЗ customerContact (своего же номера)', async () => {
     const useCase = makeUseCase({})
 
-    const view = await useCase.execute({ assignmentId: ASSIGNMENT_ID, actor: { userId: CUSTOMER_ID, role: 'customer' } })
+    const view = await useCase.execute({
+      assignmentId: ASSIGNMENT_ID,
+      actor: { userId: CUSTOMER_ID, role: 'customer', tenantId: null, pharmacyId: null, chainId: null },
+    })
 
     expect(view.customerContact).toBeNull()
+  })
+
+  it('pharmacist той же аптеки и тенанта -> видит детали', async () => {
+    const useCase = makeUseCase({})
+
+    const view = await useCase.execute({
+      assignmentId: ASSIGNMENT_ID,
+      actor: { userId: 'pharmacist-1', role: 'pharmacist', tenantId: 'tenant-1', pharmacyId: 'pharmacy-1', chainId: null },
+    })
+
+    expect(view.id).toBe(ASSIGNMENT_ID)
+  })
+
+  it('pharmacist чужой аптеки того же тенанта -> ForbiddenError', async () => {
+    const useCase = makeUseCase({})
+
+    await expect(
+      useCase.execute({
+        assignmentId: ASSIGNMENT_ID,
+        actor: { userId: 'pharmacist-2', role: 'pharmacist', tenantId: 'tenant-1', pharmacyId: 'other-pharmacy', chainId: null },
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenError)
+  })
+
+  it('pharmacy_admin чужой сети (chainId не совпадает) -> ForbiddenError', async () => {
+    const useCase = makeUseCase({ pharmacyChainId: 'chain-a' })
+
+    await expect(
+      useCase.execute({
+        assignmentId: ASSIGNMENT_ID,
+        actor: { userId: 'admin-1', role: 'pharmacy_admin', tenantId: 'tenant-1', pharmacyId: null, chainId: 'other-chain' },
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenError)
+  })
+
+  it('pharmacy_admin своей сети -> видит детали', async () => {
+    const useCase = makeUseCase({ pharmacyChainId: 'chain-a' })
+
+    const view = await useCase.execute({
+      assignmentId: ASSIGNMENT_ID,
+      actor: { userId: 'admin-1', role: 'pharmacy_admin', tenantId: 'tenant-1', pharmacyId: null, chainId: 'chain-a' },
+    })
+
+    expect(view.id).toBe(ASSIGNMENT_ID)
+  })
+
+  it('support_agent чужого тенанта -> NotFoundError (тенант скрыт, SRS-API-046)', async () => {
+    const useCase = makeUseCase({})
+
+    await expect(
+      useCase.execute({
+        assignmentId: ASSIGNMENT_ID,
+        actor: { userId: 'support-1', role: 'support_agent', tenantId: 'other-tenant', pharmacyId: null, chainId: null },
+      }),
+    ).rejects.toBeInstanceOf(NotFoundError)
+  })
+
+  it('support_agent своего тенанта -> видит детали без доп. скоупа по аптеке', async () => {
+    const useCase = makeUseCase({})
+
+    const view = await useCase.execute({
+      assignmentId: ASSIGNMENT_ID,
+      actor: { userId: 'support-1', role: 'support_agent', tenantId: 'tenant-1', pharmacyId: null, chainId: null },
+    })
+
+    expect(view.id).toBe(ASSIGNMENT_ID)
   })
 
   it('чужой курьер -> ForbiddenError', async () => {
     const useCase = makeUseCase({})
 
     await expect(
-      useCase.execute({ assignmentId: ASSIGNMENT_ID, actor: { userId: 'other-user', role: 'courier' } }),
+      useCase.execute({ assignmentId: ASSIGNMENT_ID, actor: { userId: 'other-user', role: 'courier', tenantId: null, pharmacyId: null, chainId: null } }),
     ).rejects.toBeInstanceOf(ForbiddenError)
   })
 
@@ -129,23 +212,22 @@ describe('GetDeliveryAssignmentDetailUseCase', () => {
     const useCase = makeUseCase({})
 
     await expect(
-      useCase.execute({ assignmentId: ASSIGNMENT_ID, actor: { userId: 'other-customer', role: 'customer' } }),
+      useCase.execute({
+        assignmentId: ASSIGNMENT_ID,
+        actor: { userId: 'other-customer', role: 'customer', tenantId: null, pharmacyId: null, chainId: null },
+      }),
     ).rejects.toBeInstanceOf(ForbiddenError)
   })
 
   it('status=unassigned -> 403 FORBIDDEN (тикет п.2)', async () => {
     const useCase = makeUseCase({ assignment: makeAssignment('unassigned') })
 
-    await expect(
-      useCase.execute({ assignmentId: ASSIGNMENT_ID, actor: { userId: 'super-admin-1', role: 'super_admin' } }),
-    ).rejects.toBeInstanceOf(ForbiddenError)
+    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, actor: SUPER_ADMIN_ACTOR })).rejects.toBeInstanceOf(ForbiddenError)
   })
 
   it('назначение не найдено -> NotFoundError', async () => {
     const useCase = makeUseCase({ assignment: null })
 
-    await expect(
-      useCase.execute({ assignmentId: ASSIGNMENT_ID, actor: { userId: 'super-admin-1', role: 'super_admin' } }),
-    ).rejects.toBeInstanceOf(NotFoundError)
+    await expect(useCase.execute({ assignmentId: ASSIGNMENT_ID, actor: SUPER_ADMIN_ACTOR })).rejects.toBeInstanceOf(NotFoundError)
   })
 })

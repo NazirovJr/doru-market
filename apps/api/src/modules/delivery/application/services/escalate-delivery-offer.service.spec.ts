@@ -41,6 +41,7 @@ function makeAssignment(status: DeliveryAssignmentSnapshot['status'] = 'unassign
     contactAttemptsCount: 0,
     lastContactAttemptAt: null,
     distanceMeters: null,
+    proofPhotoUrl: null,
   }
   return DeliveryAssignment.restore(snapshot)
 }

@@ -39,6 +39,7 @@ function makeAssignment(status: DeliveryAssignmentStatus, courierId: string | nu
     contactAttemptsCount: 0,
     lastContactAttemptAt: null,
     distanceMeters: null,
+    proofPhotoUrl: null,
   }
   return DeliveryAssignment.restore(snapshot)
 }

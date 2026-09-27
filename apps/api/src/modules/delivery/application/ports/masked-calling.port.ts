@@ -1,5 +1,4 @@
-// MVP: DirectPhoneCallingAdapter возвращает прямой номер (isMasked: false); реальный маскирующий
-// шлюз подключается позже отдельным адаптером без изменений вызывающего кода.
+// MVP: DirectPhoneCallingAdapter возвращает прямой номер; маскирующий шлюз — отдельный адаптер позже.
 export const MASKED_CALLING_PORT = Symbol.for('@dorutj/delivery/masked-calling-port')
 
 export interface CustomerContact {
