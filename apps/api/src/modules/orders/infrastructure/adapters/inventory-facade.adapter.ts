@@ -124,6 +124,16 @@ export class InventoryFacadeAdapter implements InventoryFacadePort {
     return rows.length > 0
   }
 
+  /** ДОБАВЛЕНО (DTJ-312 доработка) — 1:1 запрос `hasExpiredReservedBatch`, но без `.limit(1)` и с `order_items.id` в проекции (см. JSDoc порта). */
+  async findExpiredReservedItemIds(orderId: string): Promise<readonly string[]> {
+    const rows = await this.db
+      .select({ id: orderItems.id })
+      .from(orderItems)
+      .innerJoin(pharmacyInventory, eq(pharmacyInventory.id, orderItems.inventoryBatchId))
+      .where(and(eq(orderItems.orderId, orderId), sql`${pharmacyInventory.expiresAt} <= CURRENT_DATE`))
+    return rows.map((row) => row.id)
+  }
+
   /** D-EP09-12 — только для показа (`AvailabilityCalculator`), НИКОГДА не источник истины резерва. */
   async getStockQuantity(pharmacyId: string, medicineId: string): Promise<number> {
     const rows = await this.db

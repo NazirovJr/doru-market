@@ -1,11 +1,15 @@
 /** `GetOrderDetailUseCase` — порты замоканы/фейкнуты, реальный Postgres — в интеграционном наборе. */
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { isOk } from '@dorutj/domain-kernel'
 import { ForbiddenError, NotFoundError } from '@dorutj/contracts'
 import { Order } from '@/modules/orders/domain/order.entity.js'
 import { InMemoryOrderRepository } from '@/modules/orders/testing/fixtures/in-memory-order-repository.fixture.js'
 import { FakeCatalogFacadePort } from '@/modules/orders/testing/fixtures/fake-catalog-facade-port.fixture.js'
 import { validOrderCreateCommand, validOrderItemCommand } from '@/modules/orders/testing/fixtures/order-create-command.fixture.js'
+import type {
+  PartialFulfillmentRequestRecord,
+  PartialFulfillmentRequestRepositoryPort,
+} from '@/modules/orders/application/ports/partial-fulfillment-request-repository.port.js'
 import { GetOrderDetailUseCase, type GetOrderDetailActor } from './get-order-detail.use-case.js'
 
 const TENANT_ID = 'tenant-1'
@@ -37,12 +41,20 @@ interface Harness {
   readonly useCase: GetOrderDetailUseCase
   readonly repo: InMemoryOrderRepository
   readonly catalogFacade: FakeCatalogFacadePort
+  readonly findLatestByOrderId: ReturnType<typeof vi.fn<PartialFulfillmentRequestRepositoryPort['findLatestByOrderId']>>
 }
 
 function makeHarness(): Harness {
   const repo = new InMemoryOrderRepository()
   const catalogFacade = new FakeCatalogFacadePort()
-  return { useCase: new GetOrderDetailUseCase(repo, catalogFacade), repo, catalogFacade }
+  const findLatestByOrderId = vi.fn<PartialFulfillmentRequestRepositoryPort['findLatestByOrderId']>().mockResolvedValue(null)
+  const requestRepository: PartialFulfillmentRequestRepositoryPort = {
+    create: vi.fn(),
+    findById: vi.fn(),
+    findLatestByOrderId,
+    transitionStatus: vi.fn(),
+  }
+  return { useCase: new GetOrderDetailUseCase(repo, catalogFacade, requestRepository), repo, catalogFacade, findLatestByOrderId }
 }
 
 describe('GetOrderDetailUseCase', () => {
@@ -129,5 +141,48 @@ describe('GetOrderDetailUseCase', () => {
     repo.seed(order)
 
     await expect(useCase.execute({ orderId: order.id, actor: ADMIN_NO_CHAIN })).rejects.toBeInstanceOf(ForbiddenError)
+  })
+})
+
+describe('GetOrderDetailUseCase — partialFulfillment (DTJ-312 доработка, foundIssue приёмки)', () => {
+  it('ни разу не предлагалась частичная сборка — partialFulfillment: null', async () => {
+    const { useCase, repo } = makeHarness()
+    const order = makeOrder(PHARMACY_ID)
+    repo.seed(order)
+
+    const result = await useCase.execute({ orderId: order.id, actor: PHARMACIST_OWN })
+
+    expect(result.partialFulfillment).toBeNull()
+  })
+
+  it('есть awaiting_customer-запрос — статус и даты смаплены из последней строки', async () => {
+    const { useCase, repo, findLatestByOrderId } = makeHarness()
+    const order = makeOrder(PHARMACY_ID)
+    repo.seed(order)
+    const requestedAt = new Date('2026-09-27T10:00:00.000Z')
+    const expiresAt = new Date('2026-09-27T10:10:00.000Z')
+    const record: PartialFulfillmentRequestRecord = {
+      id: 'request-1',
+      orderId: order.id,
+      proposedBy: 'pharmacist-1',
+      itemsSnapshot: [],
+      itemsTotalBeforeDiram: 1000n,
+      itemsTotalAfterDiram: 500n,
+      refundAmountDiram: 500n,
+      status: 'awaiting_customer',
+      idempotencyKey: 'key-1',
+      requestedAt,
+      expiresAt,
+      respondedAt: null,
+    }
+    findLatestByOrderId.mockResolvedValue(record)
+
+    const result = await useCase.execute({ orderId: order.id, actor: PHARMACIST_OWN })
+
+    expect(result.partialFulfillment).toEqual({
+      status: 'awaiting_customer',
+      requestedAt: requestedAt.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+    })
   })
 })

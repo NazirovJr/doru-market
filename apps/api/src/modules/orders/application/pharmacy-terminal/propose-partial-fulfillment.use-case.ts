@@ -26,7 +26,7 @@
  * ВЕСЬ callback при любом исключении внутри (та же гарантия, что `AcceptOrderUseCase`).
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { ForbiddenError, NotFoundError, BusinessRuleViolationError, type UserRole } from '@dorutj/contracts'
+import { ForbiddenError, NotFoundError, BusinessRuleViolationError, PendingCustomerConfirmationError, type UserRole } from '@dorutj/contracts'
 import { CLOCK, ID_GENERATOR, type Clock, type IdGenerator } from '@/shared-kernel/index.js'
 import type { Order } from '@/modules/orders/domain/order.entity.js'
 import type { OrderDomainEvent, PartialFulfillmentSnapshotItem } from '@/modules/orders/domain/order-domain-event.js'
@@ -118,6 +118,7 @@ export class ProposePartialFulfillmentUseCase {
     assertAllItemsResolved(order)
     const unavailableItems = order.items.filter((item) => item.fulfillmentStatus === 'unavailable')
     assertHasUnavailableItem(unavailableItems)
+    await this.assertNoActiveRequest(cmd.actor.tenantId, order.id)
 
     const preview = await this.buildPreview(cmd, order, unavailableItems)
     const request = await this.unitOfWork.run((tx) => this.persist({ cmd, order, preview, tx }))
@@ -171,6 +172,14 @@ export class ProposePartialFulfillmentUseCase {
     }
     await this.ordersOutbox.appendAll(cmd.actor.tenantId, [event], tx)
     return created
+  }
+
+  /** Гейт против дубля (foundIssue DTJ-312) — без него повторный клик (второй таб/сессия) упал бы сырым нарушением `ux_partial_fulfillment_one_active`, а не доменной ошибкой. `409 PARTIAL_FULFILLMENT_PENDING` — тот же код, что `CompletePickingUseCase` уже использует для «клиент ещё не подтвердил» (то же состояние). */
+  private async assertNoActiveRequest(tenantId: string, orderId: string): Promise<void> {
+    const latest = await this.requestRepository.findLatestByOrderId(tenantId, orderId)
+    if (latest?.status === 'awaiting_customer') {
+      throw new PendingCustomerConfirmationError({ orderId, requestId: latest.id })
+    }
   }
 
   /** Загрузка + тенант-скоуп + `OrderPolicy` — единая точка проверки доступа (см. `ScanOrderItemUseCase`/`ReportItemIssueUseCase`). */

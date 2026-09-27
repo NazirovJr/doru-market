@@ -423,6 +423,19 @@ describe.skipIf(!postgresAvailable)('Pharmacy terminal Idempotency-Key — Super
       expect(second.status).toBe(409)
       expect((second.body as ErrorBody).error.code).toBe('IDEMPOTENCY_KEY_CONFLICT')
     })
+
+    // ДРУГОЙ Idempotency-Key — НОВАЯ попытка (не повтор того же запроса), а не идемпотентный кэш.
+    it('второй propose ДРУГИМ Idempotency-Key при уже awaiting_customer-запросе → 409 PARTIAL_FULFILLMENT_PENDING, в БД ровно одна строка', async () => {
+      const orderId = await seedReadyOrder()
+      const first = await post(`/api/v1/orders/${orderId}/propose-partial-fulfillment`).set('Idempotency-Key', randomUUID()).send({})
+      expect(first.status).toBe(201)
+
+      const second = await post(`/api/v1/orders/${orderId}/propose-partial-fulfillment`).set('Idempotency-Key', randomUUID()).send({})
+
+      expect(second.status).toBe(409)
+      expect((second.body as ErrorBody).error.code).toBe('PARTIAL_FULFILLMENT_PENDING')
+      expect(await countPartialRequests(orderId)).toBe(1)
+    })
   })
 
   describe('complete-picking', () => {

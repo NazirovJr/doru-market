@@ -18,6 +18,11 @@ describe('UnimplementedInventoryFacadeAdapter (D-EP09-16)', () => {
     await expect(adapter.hasExpiredReservedBatch('order-1')).rejects.toThrow()
   })
 
+  it('findExpiredReservedItemIds — тот же класс, что hasExpiredReservedBatch — бросает, НЕ возвращает [] (DTJ-312 доработка)', async () => {
+    const adapter = new UnimplementedInventoryFacadeAdapter()
+    await expect(adapter.findExpiredReservedItemIds('order-1')).rejects.toThrow()
+  })
+
   it('getStockQuantity — чтение данных — по-прежнему безопасный дефолт 0, не бросает', async () => {
     const adapter = new UnimplementedInventoryFacadeAdapter()
     await expect(adapter.getStockQuantity('pharmacy-1', 'medicine-1')).resolves.toBe(0)

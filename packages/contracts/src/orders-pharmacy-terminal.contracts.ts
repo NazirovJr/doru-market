@@ -105,6 +105,13 @@ export interface PartialFulfillmentRequestDto {
   readonly expiresAt: string
 }
 
+/** ДОБАВЛЕНО (DTJ-312 доработка) — свод по ПОСЛЕДНЕМУ запросу частичной сборки для `GET /orders/:id` (`...OrderDetailDto.partialFulfillment`), заменяет хрупкую клиентскую эвристику по `totalAmountDiram`. Только статус/даты — `itemsSnapshot`/суммы уже вернул `propose`. */
+export interface PharmacyTerminalPartialFulfillmentSummaryDto {
+  readonly status: PartialFulfillmentStatusDto
+  readonly requestedAt: string
+  readonly expiresAt: string
+}
+
 // ==================== A.5 — complete-picking ====================
 
 /**

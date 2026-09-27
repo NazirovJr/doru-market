@@ -13,6 +13,10 @@ export function areAllItemsResolved(items: readonly PharmacyTerminalOrderItemDto
   return items.every((item) => item.fulfillmentStatus !== 'pending')
 }
 
+export function hasUnavailableItem(items: readonly PharmacyTerminalOrderItemDto[]): boolean {
+  return items.some((item) => item.fulfillmentStatus === 'unavailable')
+}
+
 // `medicineName` не перезаписывается — её нет в ответе `scan`/`report-issue`, остальное — от сервера.
 export function mergeUpdatedItem(
   items: readonly PharmacyTerminalOrderItemDto[],
@@ -59,21 +63,29 @@ export function resolveScanErrorMessageKey(code: string): string {
   }
 }
 
-const SLA_WARNING_THRESHOLD_SECONDS = 120
-
-export function computeRemainingSeconds(deadlineAt: string | null, nowMs: number): number | null {
-  if (deadlineAt === null) return null
-  return Math.max(0, Math.floor((new Date(deadlineAt).getTime() - nowMs) / 1000))
+/** `complete-picking` → ключ i18n. `PARTIAL_FULFILLMENT_PENDING` сюда не попадает — баннер ожидания вместо текста ошибки (п.4 «Что сделать» DTJ-312). */
+export function resolveCompletePickingErrorMessageKey(code: string): string {
+  switch (code) {
+    case ErrorCode.SEAL_CONFIRMATION_REQUIRED as string:
+      return 'pharmacy.picking.complete.error.seal_required'
+    case ErrorCode.EXPIRED_STOCK as string:
+      return 'pharmacy.picking.complete.error.expired_stock'
+    default:
+      return 'pharmacy.picking.complete.error.generic'
+  }
 }
 
-export function isSlaNearingBreach(remainingSeconds: number | null): boolean {
-  return remainingSeconds !== null && remainingSeconds <= SLA_WARNING_THRESHOLD_SECONDS
+/** Given код ошибки `complete-picking` (или `null` — ошибки нет), текст баннера. `PARTIAL_FULFILLMENT_PENDING` — `null` (баннер ожидания вместо текста, см. `resolveCompletePickingErrorMessageKey`). Вынесено из `PickingPage` — C1 (`complexity`, порог 10). */
+export function resolveCompletePickingBannerErrorMessage(t: (key: string) => string, code: string | null): string | null {
+  if (code === null) return null
+  if (code === (ErrorCode.PARTIAL_FULFILLMENT_PENDING as string)) return null
+  return t(resolveCompletePickingErrorMessageKey(code))
 }
 
-const SECONDS_PER_MINUTE = 60
-
-export function formatRemainingClock(remainingSeconds: number): string {
-  const minutes = Math.floor(remainingSeconds / SECONDS_PER_MINUTE)
-  const seconds = remainingSeconds % SECONDS_PER_MINUTE
-  return `${String(minutes)}:${String(seconds).padStart(2, '0')}`
+/** `422 EXPIRED_STOCK` на `complete-picking` (DTJ-312 доработка) — `details.itemIds` для подсветки конкретной позиции (см. `assertNoExpiredBatch`/`InventoryFacadePort.findExpiredReservedItemIds`, apps/api). Тот же приём, что `readResolvedName` выше — сервер решает форму `details`, клиент читает защитно. */
+export function readExpiredStockItemIds(details: unknown): readonly string[] {
+  if (typeof details !== 'object' || details === null) return []
+  const itemIds = (details as { itemIds?: unknown }).itemIds
+  return Array.isArray(itemIds) ? itemIds.filter((id): id is string => typeof id === 'string') : []
 }
+

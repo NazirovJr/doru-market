@@ -19,6 +19,7 @@ const PICKING_KEYS: readonly string[] = [
   'pharmacy.picking.item.status.unavailable',
   'pharmacy.picking.item.quantity',
   'pharmacy.picking.item.report_issue_cta',
+  'pharmacy.picking.item.expired_stock_notice',
   'pharmacy.picking.scan.input_placeholder',
   'pharmacy.picking.scan.submit',
   'pharmacy.picking.scan.submit_pending',
@@ -35,6 +36,11 @@ const PICKING_KEYS: readonly string[] = [
   'pharmacy.picking.report_issue.submit_pending',
   'pharmacy.picking.report_issue.cancel',
   'pharmacy.picking.report_issue.error',
+  'pharmacy.picking.complete.seal_checkbox_label',
+  'pharmacy.picking.complete.cta',
+  'pharmacy.picking.complete.error.seal_required',
+  'pharmacy.picking.complete.error.expired_stock',
+  'pharmacy.picking.complete.error.generic',
 ]
 
 const MISSING_KEY_MARKER = '[[missing:'

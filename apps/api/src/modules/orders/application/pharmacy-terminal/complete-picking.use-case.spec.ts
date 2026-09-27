@@ -104,7 +104,7 @@ interface Harness {
   readonly useCase: CompletePickingUseCase
   readonly orderRepo: InMemoryOrderRepository
   readonly appendAll: ReturnType<typeof vi.fn<OrdersOutboxPort['appendAll']>>
-  readonly hasExpiredReservedBatch: ReturnType<typeof vi.fn<InventoryFacadePort['hasExpiredReservedBatch']>>
+  readonly findExpiredReservedItemIds: ReturnType<typeof vi.fn<InventoryFacadePort['findExpiredReservedItemIds']>>
   readonly findLatestByOrderId: ReturnType<typeof vi.fn<PartialFulfillmentRequestRepositoryPort['findLatestByOrderId']>>
   readonly otpGenerate: ReturnType<typeof vi.fn<OtpGeneratorPort['generate']>>
   readonly otpCodesCreate: ReturnType<typeof vi.fn<OtpCodesRepository['create']>>
@@ -114,11 +114,12 @@ function makeHarness(): Harness {
   const orderRepo = new InMemoryOrderRepository()
   const appendAll = vi.fn<OrdersOutboxPort['appendAll']>().mockResolvedValue(undefined)
   const ordersOutbox: OrdersOutboxPort = { appendAll }
-  const hasExpiredReservedBatch = vi.fn<InventoryFacadePort['hasExpiredReservedBatch']>().mockResolvedValue(false)
+  const findExpiredReservedItemIds = vi.fn<InventoryFacadePort['findExpiredReservedItemIds']>().mockResolvedValue([])
   const inventoryFacade: InventoryFacadePort = {
     reserveStock: vi.fn(),
     releaseStock: vi.fn(),
-    hasExpiredReservedBatch,
+    hasExpiredReservedBatch: vi.fn(),
+    findExpiredReservedItemIds,
     getStockQuantity: vi.fn(),
     reserveForOrder: vi.fn(),
     reconcileZeroStock: vi.fn(),
@@ -157,7 +158,7 @@ function makeHarness(): Harness {
     new SequentialIdGenerator(),
     SILENT_LOGGER,
   )
-  return { useCase, orderRepo, appendAll, hasExpiredReservedBatch, findLatestByOrderId, otpGenerate, otpCodesCreate }
+  return { useCase, orderRepo, appendAll, findExpiredReservedItemIds, findLatestByOrderId, otpGenerate, otpCodesCreate }
 }
 
 function cmd(orderId: string, overrides: Partial<CompletePickingCommand> = {}): CompletePickingCommand {
@@ -256,13 +257,18 @@ describe('CompletePickingUseCase — precondition (б) SRS-PHT-026 п.2 (TC-PHT-
 })
 
 describe('CompletePickingUseCase — precondition (в) SRS-PHT-026 п.3 (гонка партии)', () => {
-  it('партия просрочена НА МОМЕНТ вызова (hasExpiredReservedBatch=true) → 422 EXPIRED_STOCK, не тихий проход', async () => {
-    const { useCase, orderRepo, hasExpiredReservedBatch, otpGenerate } = makeHarness()
-    hasExpiredReservedBatch.mockResolvedValue(true)
+  it('партия просрочена НА МОМЕНТ вызова → 422 EXPIRED_STOCK с itemIds просроченных позиций (DTJ-312 доработка), не тихий проход', async () => {
+    const { useCase, orderRepo, findExpiredReservedItemIds, otpGenerate } = makeHarness()
     const order = makeOrder(['scanned_ok', 'scanned_ok'])
+    const expiredItemId = order.items[0]?.id
+    if (expiredItemId === undefined) throw new Error('fixture: order has no items')
+    findExpiredReservedItemIds.mockResolvedValue([expiredItemId])
     orderRepo.seed(order)
 
-    await expect(useCase.execute(cmd(order.id))).rejects.toBeInstanceOf(ExpiredStockError)
+    const error = await useCase.execute(cmd(order.id)).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(ExpiredStockError)
+    expect((error as ExpiredStockError).details).toEqual({ orderId: order.id, itemIds: [expiredItemId] })
     expect(otpGenerate).not.toHaveBeenCalled()
   })
 })

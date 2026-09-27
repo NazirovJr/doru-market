@@ -222,6 +222,7 @@ function makeHarness(overrides: Partial<HarnessOverrides> = {}): Harness {
     reserveStock,
     releaseStock: vi.fn<InventoryFacadePort['releaseStock']>().mockResolvedValue(undefined),
     hasExpiredReservedBatch: vi.fn<InventoryFacadePort['hasExpiredReservedBatch']>().mockResolvedValue(false),
+    findExpiredReservedItemIds: vi.fn<InventoryFacadePort['findExpiredReservedItemIds']>().mockResolvedValue([]),
     getStockQuantity: vi.fn<InventoryFacadePort['getStockQuantity']>().mockResolvedValue(100),
     reserveForOrder: vi.fn<InventoryFacadePort['reserveForOrder']>(),
     reconcileZeroStock: vi.fn<InventoryFacadePort['reconcileZeroStock']>(),
