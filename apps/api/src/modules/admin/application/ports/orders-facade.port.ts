@@ -1,14 +1,75 @@
-/**
- * DI-токен `ORDERS_FACADE_PORT` (DTJ-350, EP-15) — сужение `OrdersFacade` (`@/modules/orders`,
- * `ORDERS_FACADE`) до методов, реально нужных use case'ам `admin` (Interface Segregation,
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.3). Прямой импорт `modules/orders/domain|application|
- * infrastructure/*` запрещён (§1.1/§1.2, ловится `pnpm arch:check`).
- *
- * Тот же приём отложенной типизации, что `onboarding-facade.port.ts` рядом (см. его JSDoc за
- * полным обоснованием): токен объявлен сейчас, интерфейс — когда появится первый метод
- * (DTJ-351..367). `admin.module.ts` связывает токен с РЕАЛЬНЫМ `ORDERS_FACADE` (уже
- * забинженным в `orders.module.ts` на `OrdersFacade`) через `useExisting`.
- *
- * // заполняется тикетами DTJ-351..367
- */
+// Сужение OrdersFacade до методов admin (useExisting в admin.module.ts) — методы структурно совпадают, не импортируются напрямую (arch:check).
+import type { OrderPaymentMethod, OrderStatus } from '@dorutj/contracts'
+
 export const ORDERS_FACADE_PORT = Symbol.for('@dorutj/admin/orders-facade-port')
+
+export interface OrdersAnyFilter {
+  readonly orderNumberLike?: string
+  readonly status?: OrderStatus
+  readonly tenantId?: string
+  readonly pharmacyId?: string
+  readonly chainId?: string
+  readonly customerId?: string
+  readonly createdAtFrom?: Date
+  readonly createdAtTo?: Date
+  readonly slaBreached?: boolean
+}
+
+export interface OrdersCursor {
+  readonly v: string
+  readonly id: string
+}
+
+export interface OrdersPagination {
+  readonly limit: number
+  readonly cursor?: OrdersCursor | null
+}
+
+export interface OrderAdminSummaryView {
+  readonly id: string
+  readonly orderNumber: string
+  readonly status: OrderStatus
+  readonly tenantId: string
+  readonly pharmacyId: string | null
+  readonly customerId: string
+  readonly paymentMethod: OrderPaymentMethod
+  readonly totalAmountDiram: number
+  readonly slaBreached: boolean
+  readonly createdAt: Date
+}
+
+export interface OrdersAnyPage {
+  readonly items: readonly OrderAdminSummaryView[]
+  readonly nextCursor: OrdersCursor | null
+  readonly hasMore: boolean
+}
+
+export interface OrderAdminDetailView {
+  readonly id: string
+  readonly orderNumber: string
+  readonly status: OrderStatus
+  readonly tenantId: string
+  readonly pharmacyId: string
+  readonly customerId: string
+  readonly paymentMethod: OrderPaymentMethod
+  readonly totalAmountDiram: number
+  readonly prescriptionId: string | null
+  readonly createdAt: Date
+}
+
+export interface OrderTimelineView {
+  readonly createdAt: Date
+  readonly processingStartedAt: Date | null
+  readonly pickedUpAt: Date | null
+  readonly deliveredAt: Date | null
+  readonly slaDeadlineAt: Date | null
+  readonly cancelReason: string | null
+  readonly updatedAt: Date
+}
+
+export interface OrdersFacadePort {
+  findOrdersAny(filter: OrdersAnyFilter, pagination: OrdersPagination): Promise<OrdersAnyPage>
+  // Несуществующий orderId — null, не throw.
+  getOrderDetail(orderId: string): Promise<OrderAdminDetailView | null>
+  getOrderTimeline(orderId: string): Promise<OrderTimelineView | null>
+}

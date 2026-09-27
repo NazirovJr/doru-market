@@ -103,4 +103,7 @@ export interface PaymentsFacade {
   findEscrowLedgerEntries(orderId: string): Promise<readonly EscrowLedgerEntryDto[]>
 
   findPayoutSchedule(filter: FindPayoutScheduleFilter, pagination: FinancePagination): Promise<FinancePage<PayoutScheduleEntryDto>>
+
+  // null для cash_courier/ещё не доставленного заказа.
+  findPayoutScheduleByOrder(orderId: string): Promise<PayoutScheduleEntryDto | null>
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type ReactElement } from 'react'
+import { Link } from 'react-router'
 import { useT, toIntlLocale } from '@dorutj/i18n'
 import { PAYOUT_SCHEDULE_STATUS_VALUES, type FinancePayoutScheduleEntryDto } from '@dorutj/contracts'
 import { ADMIN_LOCALE } from '@/shared/config/locale'
@@ -99,7 +100,9 @@ export const PayoutSchedulePage = (): ReactElement => {
         <tbody>
           {items.map((row) => (
             <tr key={row.orderId} data-testid="payout-schedule-row">
-              <td>{row.orderNumber}</td>
+              <td>
+                <Link to={`/admin/orders/${row.orderId}`}>{row.orderNumber}</Link>
+              </td>
               <td>{row.pharmacyId}</td>
               <td>{formatSomoni(row.grossAmountDiram)}</td>
               <td>{formatSomoni(row.commissionDiram)}</td>

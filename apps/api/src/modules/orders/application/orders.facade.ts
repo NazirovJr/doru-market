@@ -30,11 +30,14 @@
  * провайдер всегда есть, `undefined` там недостижимо.
  */
 import { Inject, Injectable, Optional } from '@nestjs/common'
-import { NotFoundError, type OrderPaymentMethod } from '@dorutj/contracts'
+import { NotFoundError, type OrderPaymentMethod, type OrderStatus } from '@dorutj/contracts'
 import {
   ORDER_REPOSITORY_PORT,
   type OrderMetricsPeriod,
   type OrderRepositoryPort,
+  type OrdersAnySearchFilter,
+  type OrdersAnySearchPage,
+  type OrdersAnySearchPagination,
   type OrderUnitOfWorkTx,
 } from './ports/order-repository.port.js'
 import { TENANCY_FACADE_PORT, type TenancyFacadePort } from './ports/tenancy-facade.port.js'
@@ -93,6 +96,29 @@ export interface CancelOrderCommand {
   readonly reason: OrderCancelReason
   readonly actor: OrderCancelActor
   readonly now: Date
+}
+
+export interface OrderAdminDetailView {
+  readonly id: string
+  readonly orderNumber: string
+  readonly status: OrderStatus
+  readonly tenantId: string
+  readonly pharmacyId: string
+  readonly customerId: string
+  readonly paymentMethod: OrderPaymentMethod
+  readonly totalAmountDiram: number
+  readonly prescriptionId: string | null
+  readonly createdAt: Date
+}
+
+export interface OrderTimelineView {
+  readonly createdAt: Date
+  readonly processingStartedAt: Date | null
+  readonly pickedUpAt: Date | null
+  readonly deliveredAt: Date | null
+  readonly slaDeadlineAt: Date | null
+  readonly cancelReason: OrderCancelReason | null
+  readonly updatedAt: Date
 }
 
 // Единственный легальный путь, каким delivery читает данные заказа (см. db/schema/orders.ts).
@@ -193,6 +219,43 @@ export class OrdersFacade {
     return {
       pickupSlaComplianceRate: safeDivide(aggregate.pickupMetCount, aggregate.pickupEligibleCount),
       deliverySlaComplianceRate: safeDivide(aggregate.deliveryMetCount, aggregate.deliveryEligibleCount),
+    }
+  }
+
+  async findOrdersAny(filter: OrdersAnySearchFilter, pagination: OrdersAnySearchPagination): Promise<OrdersAnySearchPage> {
+    return this.repository.findOrdersAny(filter, pagination)
+  }
+
+  async getOrderDetail(orderId: string): Promise<OrderAdminDetailView | null> {
+    const order = await this.repository.findByIdAcrossTenants(orderId)
+    if (order === null) return null
+    return {
+      id: order.id,
+      orderNumber: order.orderNumber.value,
+      status: order.status,
+      tenantId: order.tenantId,
+      pharmacyId: order.pharmacyId,
+      customerId: order.customerId,
+      paymentMethod: order.paymentMethod,
+      totalAmountDiram: Number(order.totalAmount.diram),
+      prescriptionId: order.prescriptionId,
+      createdAt: order.createdAt,
+    }
+  }
+
+  // Отдельный от getOrderDetail метод — второй поход к той же строке, не денежная операция.
+  async getOrderTimeline(orderId: string): Promise<OrderTimelineView | null> {
+    const order = await this.repository.findByIdAcrossTenants(orderId)
+    if (order === null) return null
+    const s = order.toSnapshot()
+    return {
+      createdAt: s.createdAt,
+      processingStartedAt: s.processingStartedAt,
+      pickedUpAt: s.pickedUpAt,
+      deliveredAt: s.deliveredAt,
+      slaDeadlineAt: s.slaDeadlineAt,
+      cancelReason: s.cancelReason,
+      updatedAt: s.updatedAt,
     }
   }
 

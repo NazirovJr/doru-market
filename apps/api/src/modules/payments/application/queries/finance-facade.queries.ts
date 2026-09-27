@@ -4,6 +4,25 @@ import type { EscrowLedgerRepository } from '../ports/escrow-ledger-repository.p
 import type { PayoutScheduleRepository } from '../ports/payout-schedule-repository.port.js'
 import type { EscrowLedgerEntryDto, FinancePage, FinancePagination, FindPayoutScheduleFilter, PayoutScheduleEntryDto } from '../ports/payments-facade.port.js'
 
+// null для cash_courier — строки нет вовсе, не пустой результат.
+export async function findPayoutScheduleByOrder(repo: PayoutScheduleRepository, orderId: string): Promise<PayoutScheduleEntryDto | null> {
+  const row = await repo.findByOrderId(orderId)
+  if (row === null) {
+    return null
+  }
+  return {
+    orderId: row.orderId,
+    orderNumber: row.orderNumber,
+    pharmacyId: row.pharmacyId,
+    grossAmountDiram: Number(row.grossAmountDiram),
+    commissionDiram: Number(row.commissionDiram),
+    netAmountDiram: Number(row.netAmountDiram),
+    status: row.status,
+    dueAt: row.dueAt,
+    paidAt: row.paidAt,
+  }
+}
+
 /** `orderId` обязателен — платформенный дамп ЦЕЛОГО ledger вне периметра тикета/AC. Без пагинации — леджер заказа ограничен по размеру. */
 export async function findEscrowLedgerEntries(repo: EscrowLedgerRepository, orderId: string | undefined): Promise<readonly EscrowLedgerEntryDto[]> {
   if (orderId === undefined) {

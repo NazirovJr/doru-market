@@ -1,5 +1,6 @@
 // packages/ui пуст (тот же приём, что audit-log-page.tsx) — нативная таблица, поиск по orderId (единственный практический фильтр).
 import { useState, type ChangeEvent, type ReactElement, type SyntheticEvent } from 'react'
+import { Link } from 'react-router'
 import { useT, toIntlLocale } from '@dorutj/i18n'
 import type { FinanceEscrowLedgerEntryDto } from '@dorutj/contracts'
 import { ADMIN_LOCALE } from '@/shared/config/locale'
@@ -80,8 +81,9 @@ const EscrowLedgerRow = ({ entry }: { readonly entry: FinanceEscrowLedgerEntryDt
       <td>{t(`admin.finance.escrow_ledger.direction.${entry.direction}`)}</td>
       <td>{formatSomoni(entry.amountDiram)}</td>
       <td>{new Date(entry.createdAt).toLocaleString()}</td>
-      {/* DTJ-355 добавит страницу заказа — до тех пор просто id, не ссылка в никуда. */}
-      <td>{entry.orderId}</td>
+      <td>
+        <Link to={`/admin/orders/${entry.orderId}`}>{entry.orderId}</Link>
+      </td>
     </tr>
   )
 }

@@ -41,10 +41,12 @@ import { ONBOARDING_FACADE_PORT } from './application/ports/onboarding-facade.po
 import { ORDERS_FACADE_PORT } from './application/ports/orders-facade.port.js'
 import { PAYMENTS_FACADE_PORT } from './application/ports/payments-facade.port.js'
 import { INVENTORY_FACADE_PORT } from './application/ports/inventory-facade.port.js'
+import { PRESCRIPTIONS_FACADE_PORT } from './application/ports/prescriptions-facade.port.js'
 import { FEATURE_FLAGS_REPOSITORY_PROVIDER } from './infrastructure/repositories/feature-flags.repository.js'
 import { TENANCY_FACADE_PORT_PROVIDER } from './infrastructure/adapters/tenancy-facade.adapter.js'
 import { IDENTITY_FACADE_PORT_PROVIDER } from './infrastructure/adapters/identity-facade.adapter.js'
 import { DELIVERY_FACADE_PORT_PROVIDER } from './infrastructure/adapters/delivery-facade.adapter.js'
+import { NullPrescriptionsFacadeAdapter } from './infrastructure/adapters/null-prescriptions-facade.adapter.js'
 import { ListFeatureFlagsUseCase } from './application/use-cases/list-feature-flags.use-case.js'
 import { UpsertFeatureFlagUseCase } from './application/use-cases/upsert-feature-flag.use-case.js'
 import { ListTenantsUseCase } from './application/use-cases/list-tenants.use-case.js'
@@ -66,6 +68,9 @@ import { ListReconciliationAlertsUseCase } from './application/use-cases/list-re
 import { GetPharmacyScheduleUseCase } from './application/use-cases/get-pharmacy-schedule.use-case.js'
 import { UpdatePharmacyScheduleUseCase } from './application/use-cases/update-pharmacy-schedule.use-case.js'
 import { UpdateDeliveryZoneUseCase } from './application/use-cases/update-delivery-zone.use-case.js'
+import { ListOrdersAnyUseCase } from './application/use-cases/list-orders-any.use-case.js'
+import { ListOrdersOwnUseCase } from './application/use-cases/list-orders-own.use-case.js'
+import { GetOrderDetailAdminUseCase } from './application/use-cases/get-order-detail-admin.use-case.js'
 import { FeatureFlagsController } from './presentation/feature-flags.controller.js'
 import { TenantsController } from './presentation/tenants.controller.js'
 import { UsersAdminController } from './presentation/users-admin.controller.js'
@@ -73,6 +78,7 @@ import { PharmacyAccountsOverviewController } from './presentation/pharmacy-acco
 import { StaffAccountsController } from './presentation/staff-accounts.controller.js'
 import { FinanceLedgerController } from './presentation/finance-ledger.controller.js'
 import { PharmacyScheduleController } from './presentation/pharmacy-schedule.controller.js'
+import { OrdersAdminController } from './presentation/orders-admin.controller.js'
 
 @Module({
   imports: [OnboardingModule, OrdersModule, PaymentsModule, AuthModule, TenancyModule, InventoryModule, DeliveryModule],
@@ -84,6 +90,7 @@ import { PharmacyScheduleController } from './presentation/pharmacy-schedule.con
     StaffAccountsController,
     FinanceLedgerController,
     PharmacyScheduleController,
+    OrdersAdminController,
   ],
   providers: [
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },
@@ -122,6 +129,11 @@ import { PharmacyScheduleController } from './presentation/pharmacy-schedule.con
     GetPharmacyScheduleUseCase,
     UpdatePharmacyScheduleUseCase,
     UpdateDeliveryZoneUseCase,
+    // PRESCRIPTIONS_FACADE_PORT — useClass (не useExisting): модуль prescriptions ещё не существует.
+    { provide: PRESCRIPTIONS_FACADE_PORT, useClass: NullPrescriptionsFacadeAdapter },
+    ListOrdersAnyUseCase,
+    ListOrdersOwnUseCase,
+    GetOrderDetailAdminUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.

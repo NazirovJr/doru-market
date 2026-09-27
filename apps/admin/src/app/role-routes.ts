@@ -102,6 +102,14 @@ const PharmacySchedulePage: LazyExoticComponent<ComponentType<SectionPlaceholder
   import('@/features/schedule/ui/pharmacy-schedule-page').then((m) => ({ default: m.PharmacySchedulePage })),
 )
 
+const OrdersListPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/orders/ui/orders-list-page').then((m) => ({ default: m.OrdersListPage })),
+)
+
+const OwnOrdersPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/orders/ui/own-orders-page').then((m) => ({ default: m.OwnOrdersPage })),
+)
+
 /** DTJ-357 — та же схема совместимости без пропсов, что `AuditLogPage`; 3 записи вместо 1 placeholder `finance` (см. «Что сделать» тикета). */
 const EscrowLedgerPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
   import('@/features/finance/ui/escrow-ledger-page').then((m) => ({ default: m.EscrowLedgerPage })),
@@ -129,7 +137,7 @@ const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
   { path: 'analytics/onboarding-funnel', titleKey: 'admin.nav.onboarding_funnel', icon: 'analytics', Component: OnboardingFunnelPage },
   { path: 'pharmacies', titleKey: 'admin.nav.pharmacies', icon: 'pharmacies', Component: PharmacyAccountsPage },
   { path: 'users', titleKey: 'admin.nav.users', icon: 'users', Component: UsersPage },
-  section('orders', 'admin.nav.orders', 'orders'),
+  { path: 'orders', titleKey: 'admin.nav.orders', icon: 'orders', Component: OrdersListPage },
   // DTJ-357 — заменяет placeholder `finance` тремя реальными READ-ONLY экранами (эскроу-леджер/выплаты/алерты сверки).
   { path: 'finance/escrow-ledger', titleKey: 'admin.nav.finance_escrow_ledger', icon: 'finance', Component: EscrowLedgerPage },
   { path: 'finance/payout-schedule', titleKey: 'admin.nav.finance_payout_schedule', icon: 'finance', Component: PayoutSchedulePage },
@@ -140,7 +148,7 @@ const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
 /** `pharmacy_admin`: Мои точки/Заказы/Сотрудники/Ключи 1С/Отчёты/Расписание. */
 const PHARMACY_ADMIN_ROUTES: readonly RouteConfig[] = [
   { path: 'my-pharmacies', titleKey: 'admin.nav.my_pharmacies', icon: 'pharmacies', Component: OwnPharmaciesPage },
-  section('my-orders', 'admin.nav.my_orders', 'orders'),
+  { path: 'my-orders', titleKey: 'admin.nav.my_orders', icon: 'orders', Component: OwnOrdersPage },
   { path: 'staff', titleKey: 'admin.nav.staff', icon: 'staff', Component: StaffAccountsPage },
   section('integration-keys', 'admin.nav.integration_keys', 'keys'),
   section('reports', 'admin.nav.reports', 'reports'),

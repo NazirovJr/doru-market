@@ -31,6 +31,7 @@ function fakePayoutRepository(rows: readonly PayoutReportRow[]): { repository: P
     findByPharmacy: vi.fn(),
     findAllByPharmacy,
     findSchedule: vi.fn(),
+    findByOrderId: vi.fn(),
   }
   return { repository, findAllByPharmacy }
 }

@@ -124,3 +124,68 @@ describe('OrdersFacade.mergeGuestCart (DTJ-226) — делегация к MergeG
     )
   })
 })
+
+describe('OrdersFacade — DTJ-355/363 (findOrdersAny/getOrderDetail/getOrderTimeline, admin)', () => {
+  it('findOrdersAny — делегирует в repository без изменений', async () => {
+    const repo = new InMemoryOrderRepository()
+    const order = buildOrder()
+    repo.seed(order)
+    const facade = new OrdersFacade(repo)
+
+    const page = await facade.findOrdersAny({ tenantId: 'tenant-1' }, { limit: 20 })
+
+    expect(page.items).toHaveLength(1)
+    expect(page.items[0]?.id).toBe(order.id)
+  })
+
+  it('getOrderDetail — найден, кросс-тенантно (без tenantId-параметра)', async () => {
+    const repo = new InMemoryOrderRepository()
+    const order = buildOrder()
+    repo.seed(order)
+    const facade = new OrdersFacade(repo)
+
+    const detail = await facade.getOrderDetail(order.id)
+
+    expect(detail).toEqual({
+      id: order.id,
+      orderNumber: order.orderNumber.value,
+      status: order.status,
+      tenantId: order.tenantId,
+      pharmacyId: order.pharmacyId,
+      customerId: order.customerId,
+      paymentMethod: order.paymentMethod,
+      totalAmountDiram: Number(order.totalAmount.diram),
+      prescriptionId: order.prescriptionId,
+      createdAt: order.createdAt,
+    })
+  })
+
+  it('getOrderDetail — не найден → null', async () => {
+    const facade = new OrdersFacade(new InMemoryOrderRepository())
+    await expect(facade.getOrderDetail('missing')).resolves.toBeNull()
+  })
+
+  it('getOrderTimeline — найден, поля из toSnapshot()', async () => {
+    const repo = new InMemoryOrderRepository()
+    const order = buildOrder()
+    repo.seed(order)
+    const facade = new OrdersFacade(repo)
+
+    const timeline = await facade.getOrderTimeline(order.id)
+
+    expect(timeline).toEqual({
+      createdAt: order.createdAt,
+      processingStartedAt: null,
+      pickedUpAt: null,
+      deliveredAt: null,
+      slaDeadlineAt: null,
+      cancelReason: null,
+      updatedAt: order.toSnapshot().updatedAt,
+    })
+  })
+
+  it('getOrderTimeline — не найден → null', async () => {
+    const facade = new OrdersFacade(new InMemoryOrderRepository())
+    await expect(facade.getOrderTimeline('missing')).resolves.toBeNull()
+  })
+})

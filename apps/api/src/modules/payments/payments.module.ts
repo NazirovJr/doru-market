@@ -206,7 +206,7 @@ import { AdminPaymentOverrideController } from './presentation/admin-payment-ove
 import { HoldPayoutUseCase } from './application/use-cases/hold-payout.use-case.js'
 import { PAYMENTS_FACADE, type PaymentsFacade } from './index.js'
 // DTJ-357 — read-методы PaymentsFacade вынесены отдельным файлом (C2, max-lines 300).
-import { findEscrowLedgerEntries, findPayoutSchedule } from './application/queries/finance-facade.queries.js'
+import { findEscrowLedgerEntries, findPayoutSchedule, findPayoutScheduleByOrder } from './application/queries/finance-facade.queries.js'
 // DTJ-251 — PlatformBillingInvoiceRepository, задел для DTJ-252 (см. JSDoc блока providers выше).
 import { PLATFORM_BILLING_INVOICE_REPOSITORY_PROVIDER } from './infrastructure/repositories/platform-billing-invoice.repository.js'
 // DTJ-252 — авто-блокировка сети за неоплаченный B2B-инвойс + отчёты аптеке (см. JSDoc блока providers выше).
@@ -407,6 +407,7 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
           }),
         findEscrowLedgerEntries: (orderId) => findEscrowLedgerEntries(escrowLedgerRepo, orderId),
         findPayoutSchedule: (filter, pagination) => findPayoutSchedule(payoutScheduleRepo, filter, pagination),
+        findPayoutScheduleByOrder: (orderId) => findPayoutScheduleByOrder(payoutScheduleRepo, orderId),
       }),
       inject: [PaymentsFacadeCommandPorts, ESCROW_LEDGER_REPOSITORY, PAYOUT_SCHEDULE_REPOSITORY],
     },

@@ -61,4 +61,7 @@ export interface PaymentsFacadePort {
     filter: { readonly status?: string | undefined; readonly pharmacyId?: string | undefined },
     pagination: FinancePagination,
   ): Promise<FinancePage<PayoutScheduleEntryView>>
+
+  // null для cash_courier.
+  findPayoutScheduleByOrder(orderId: string): Promise<PayoutScheduleEntryView | null>
 }
