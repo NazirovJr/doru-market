@@ -33,6 +33,8 @@ const DEFAULT_RECONCILIATION_DEDUP_DAYS = 7
 // DTJ-253, SRS-ORD-032, ticket «Что сделать» п.2: ASSUMPTION буквально из тикета — каждые
 // 2 минуты (короче минимального разумного платёжного окна на оплату).
 const DEFAULT_UNPAID_ORDER_TIMEOUT_CRON = '*/2 * * * *'
+// DTJ-365: ASSUMPTION — раз в час (грейс-период ключа 1С измеряется часами, не минутами).
+const DEFAULT_REVOKE_EXPIRED_ROTATED_KEYS_CRON = '0 * * * *'
 // DTJ-249, SRS-PAY-030, ticket «Технический контекст»: ASSUMPTION буквально из тикета —
 // ежечасно (pending→due — единственный переход payout, управляемый временем, D-19).
 const DEFAULT_PAYOUT_SCHEDULER_CRON = '0 * * * *'
@@ -113,6 +115,7 @@ export const envSchema = z.object({
     .transform((v) => v === 'true'),
   // DTJ-253, DoD «UNPAID_ORDER_TIMEOUT_CRON — именованная ENV-константа».
   UNPAID_ORDER_TIMEOUT_CRON: z.string().min(1).default(DEFAULT_UNPAID_ORDER_TIMEOUT_CRON),
+  REVOKE_EXPIRED_ROTATED_KEYS_CRON: z.string().min(1).default(DEFAULT_REVOKE_EXPIRED_ROTATED_KEYS_CRON),
   // DTJ-254, DoD «PickupSlaTimeoutJob интервал — именованная ENV-константа».
   PICKUP_SLA_TIMEOUT_CRON: z.string().min(1).default(DEFAULT_PICKUP_SLA_TIMEOUT_CRON),
   // DTJ-280, DoD «интервал шедулера и анти-дребезг эскалации — через конфигурацию/ENV».

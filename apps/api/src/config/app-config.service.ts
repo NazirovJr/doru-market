@@ -118,6 +118,10 @@ export class AppConfigService {
     return this.configService.get('CART_HOLD_TTL_SECONDS', { infer: true })
   }
 
+  get apiKeyRotationGracePeriodHours(): number {
+    return this.configService.get('API_KEY_ROTATION_GRACE_PERIOD_HOURS', { infer: true })
+  }
+
   /** [DTJ-227, SRS-DOM-166] Таймаут `PaymentInvoicePort.createInvoice` (мс), см. `env.schema.ts`. */
   get paymentProviderTimeoutMs(): number {
     return this.configService.get('PAYMENT_PROVIDER_TIMEOUT_MS', { infer: true })

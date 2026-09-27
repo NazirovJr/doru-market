@@ -110,6 +110,11 @@ const OwnOrdersPage: LazyExoticComponent<ComponentType<SectionPlaceholderPagePro
   import('@/features/orders/ui/own-orders-page').then((m) => ({ default: m.OwnOrdersPage })),
 )
 
+/** DTJ-365 — та же схема совместимости без пропсов, что `AuditLogPage`. */
+const ApiKeysPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/api-keys/ui/api-keys-page').then((m) => ({ default: m.ApiKeysPage })),
+)
+
 /** DTJ-357 — та же схема совместимости без пропсов, что `AuditLogPage`; 3 записи вместо 1 placeholder `finance` (см. «Что сделать» тикета). */
 const EscrowLedgerPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
   import('@/features/finance/ui/escrow-ledger-page').then((m) => ({ default: m.EscrowLedgerPage })),
@@ -150,7 +155,7 @@ const PHARMACY_ADMIN_ROUTES: readonly RouteConfig[] = [
   { path: 'my-pharmacies', titleKey: 'admin.nav.my_pharmacies', icon: 'pharmacies', Component: OwnPharmaciesPage },
   { path: 'my-orders', titleKey: 'admin.nav.my_orders', icon: 'orders', Component: OwnOrdersPage },
   { path: 'staff', titleKey: 'admin.nav.staff', icon: 'staff', Component: StaffAccountsPage },
-  section('integration-keys', 'admin.nav.integration_keys', 'keys'),
+  { path: 'integration-keys', titleKey: 'admin.nav.integration_keys', icon: 'keys', Component: ApiKeysPage },
   section('reports', 'admin.nav.reports', 'reports'),
   { path: 'schedule', titleKey: 'admin.nav.schedule', icon: 'schedule', Component: PharmacySchedulePage },
 ]

@@ -26,7 +26,14 @@ function fakeFacades(
       updateSchedule: vi.fn(),
       updateDeliveryZone: vi.fn(),
     },
-    inventoryFacade: { getInventorySummary },
+    inventoryFacade: {
+      getInventorySummary,
+      createPharmacyApiKey: vi.fn(),
+      listPharmacyApiKeys: vi.fn(),
+      revokePharmacyApiKey: vi.fn(),
+      rotatePharmacyApiKey: vi.fn(),
+      setPharmacyApiKeyMtls: vi.fn(),
+    },
     getPharmacyChainId,
     getInventorySummary,
   }

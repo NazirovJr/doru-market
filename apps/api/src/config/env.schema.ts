@@ -31,6 +31,8 @@ const DEFAULT_SEARCH_QUERY_TIMEOUT_MS = 2_000
 const DEFAULT_CART_HOLD_TTL_SECONDS = 900
 /** [DTJ-160, SRS-INV-014] Максимум строк в одном файле Excel/CSV-импорта остатков (ASSUMPTION). */
 const DEFAULT_EXCEL_IMPORT_MAX_ROWS = 20_000
+/** [DTJ-365] Грейс-период параллельной валидности старого ключа 1С после rotate — ASSUMPTION тикета (24ч). */
+const DEFAULT_API_KEY_ROTATION_GRACE_PERIOD_HOURS = 24
 /** [DTJ-227, SRS-DOM-166] Таймаут синхронного вызова `PaymentInvoicePort.createInvoice` после
  * commit транзакции группы — ASSUMPTION тикета (8000мс), см. «Что сделать» п.2.4.d. */
 const DEFAULT_PAYMENT_PROVIDER_TIMEOUT_MS = 8_000
@@ -114,6 +116,7 @@ export const envSchema = z.object({
   // [DTJ-224, SRS-ORD-005] TTL мягкого резерва Redis (`cart:hold:*`) — независим от
   // `CART_ABANDONED_TTL_DAYS` (apps/worker, хранение самой корзины) — два разных временных окна.
   CART_HOLD_TTL_SECONDS: z.coerce.number().int().positive().default(DEFAULT_CART_HOLD_TTL_SECONDS),
+  API_KEY_ROTATION_GRACE_PERIOD_HOURS: z.coerce.number().int().positive().default(DEFAULT_API_KEY_ROTATION_GRACE_PERIOD_HOURS),
   // [DTJ-227, SRS-DOM-166] Таймаут createInvoice — таймаут/ошибка НЕ откатывает уже
   // закоммиченный заказ (D-EP09-17), группа помечается `paymentPending: true`.
   PAYMENT_PROVIDER_TIMEOUT_MS: z.coerce.number().int().positive().default(DEFAULT_PAYMENT_PROVIDER_TIMEOUT_MS),

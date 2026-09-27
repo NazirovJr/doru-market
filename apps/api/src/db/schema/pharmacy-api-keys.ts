@@ -25,9 +25,10 @@
  * (SRS-ADM-043). Сравнение — constant-time на уровне адаптера (DTJ-156).
  */
 import { sql } from 'drizzle-orm'
-import { boolean, check, index, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
+import { boolean, check, index, pgTable, text, timestamp, uuid, varchar, type PgColumn } from 'drizzle-orm/pg-core'
 import { pharmacies } from './pharmacies.js'
 import { pharmacyChains } from './pharmacy-chains.js'
+import { users } from './users.js'
 
 export const PHARMACY_API_KEYS_TABLE = 'pharmacy_api_keys'
 
@@ -52,6 +53,14 @@ export const pharmacyApiKeys = pgTable(
     isActive: boolean('is_active').notNull().default(true),
     note: text('note'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    // DTJ-365 (0061): требование mTLS, отзыв, ротация с грейс-периодом — см. JSDoc миграции.
+    requireMtls: boolean('require_mtls').notNull().default(false),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    revokeReason: text('revoke_reason'),
+    rotationGraceExpiresAt: timestamp('rotation_grace_expires_at', { withTimezone: true }),
+    rotatedFromKeyId: uuid('rotated_from_key_id').references((): PgColumn => pharmacyApiKeys.id, { onDelete: 'set null' }),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   },
   (table) => [
     // Lookup при `PharmacyApiKeyGuard` (DTJ-156): `key_prefix` ищется
@@ -61,6 +70,9 @@ export const pharmacyApiKeys = pgTable(
     index('ix_pharmacy_api_keys_active').on(table.isActive),
     index('ix_pharmacy_api_keys_pharmacy').on(table.pharmacyId),
     index('ix_pharmacy_api_keys_chain').on(table.chainId),
+    index('ix_pharmacy_api_keys_rotation_grace_pending')
+      .on(table.rotationGraceExpiresAt)
+      .where(sql`${table.rotationGraceExpiresAt} IS NOT NULL AND ${table.revokedAt} IS NULL`),
     // DTJ-142, п.4: CHECK «ровно один скоуп заполнен». XOR двух условий:
     // (pharmacy_id IS NOT NULL AND chain_id IS NULL) OR
     // (pharmacy_id IS NULL AND chain_id IS NOT NULL).

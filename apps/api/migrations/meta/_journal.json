@@ -381,6 +381,12 @@
       "breakpoints": true
     },
     {
+      "idx": 63,
+      "when": 1700000650000,
+      "tag": "0061_pharmacy_api_keys_rotation",
+      "breakpoints": true
+    },
+    {
       "idx": 64,
       "when": 1700000660000,
       "tag": "0062_delivery_assignment_proof_photo",
