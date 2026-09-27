@@ -58,6 +58,11 @@ describe('validateEnv', () => {
     expect(validateEnv({ ...VALID_ENV, NODE_ENV: 'development', DEV_FIXED_OTP: 'true' }).DEV_FIXED_OTP).toBe('true')
   })
 
+  it('E2E_TEST_ENDPOINTS=true в production — процесс не стартует, в development допустимо', () => {
+    expect(() => validateEnv({ ...VALID_ENV, NODE_ENV: 'production', E2E_TEST_ENDPOINTS: 'true' })).toThrow(/E2E_TEST_ENDPOINTS/)
+    expect(validateEnv({ ...VALID_ENV, NODE_ENV: 'development', E2E_TEST_ENDPOINTS: 'true' }).E2E_TEST_ENDPOINTS).toBe('true')
+  })
+
   it('бросает ошибку при недопустимом NODE_ENV', () => {
     expect(() => validateEnv({ ...VALID_ENV, NODE_ENV: 'staging' })).toThrow()
   })

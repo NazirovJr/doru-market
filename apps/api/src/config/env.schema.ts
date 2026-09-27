@@ -85,6 +85,8 @@ export const envSchema = z.object({
     .default('false'),
   // Пока нет реального SMS-провайдера: OTP в dev всегда из нулей. В production запрещён (validateEnv).
   DEV_FIXED_OTP: z.union([z.literal('true'), z.literal('false')]).default('false'),
+  // GET /api/v1/_test/last-otp для Playwright-стенда. В production запрещён (validateEnv).
+  E2E_TEST_ENDPOINTS: z.union([z.literal('true'), z.literal('false')]).default('false'),
   // [DTJ-023] Rate-limit окна OTP-запросов (SRS-API-019). Дефолты — из спеки.
   OTP_REQUEST_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(DEFAULT_OTP_COOLDOWN_SECONDS),
   OTP_REQUEST_MAX_PER_10MIN: z.coerce.number().int().positive().default(DEFAULT_OTP_MAX_PER_10MIN),
@@ -194,13 +196,18 @@ function formatIssues(issues: readonly z.core.$ZodIssue[]): string {
  * обязательном ENV бросает `Error` с понятным сообщением — Nest пробрасывает её из
  * `NestFactory.create`, `main.ts` ловит и завершает процесс ненулевым кодом (критерий №4).
  */
+const PRODUCTION_FORBIDDEN_FLAGS = ['DEV_FIXED_OTP', 'E2E_TEST_ENDPOINTS'] as const
+
 export function validateEnv(rawConfig: Record<string, unknown>): EnvConfig {
   const result = envSchema.safeParse(rawConfig)
   if (!result.success) {
     throw new Error(`Некорректная конфигурация окружения apps/api:\n${formatIssues(result.error.issues)}`)
   }
-  if (result.data.NODE_ENV === 'production' && result.data.DEV_FIXED_OTP === 'true') {
-    throw new Error('Некорректная конфигурация окружения apps/api:\n  - DEV_FIXED_OTP: запрещён в production')
+  const forbidden = PRODUCTION_FORBIDDEN_FLAGS.find(
+    (flag) => result.data.NODE_ENV === 'production' && result.data[flag] === 'true',
+  )
+  if (forbidden !== undefined) {
+    throw new Error(`Некорректная конфигурация окружения apps/api:\n  - ${forbidden}: запрещён в production`)
   }
   return result.data
 }

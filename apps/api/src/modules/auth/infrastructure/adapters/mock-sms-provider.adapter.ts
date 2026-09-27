@@ -7,7 +7,7 @@
  *     Playwright-E2E), иначе — маскированный хвост.
  *
  * `peekLast()` отдаёт ПОСЛЕДНЮЮ запись отправки — для дев-диагностики и unit-тестов.
- * В HTTP-эндпоинт НЕ выставлен (Charter §13 «Никогда не логируй…»); контроллер
+ * Наружу — только `GET /_test/last-otp` при E2E_TEST_ENDPOINTS=true (запрещён в production); контроллер
  * `POST /auth/otp/request` ВСЕГДА возвращает одинаковый ответ независимо от среды
  * (SRS-API-018).
  */
@@ -29,6 +29,7 @@ interface SmsRecord {
 export class MockSmsProviderAdapter implements SmsProviderPort {
   /** Последняя отправка — для тестов/dev-диагностики. НЕ персистируется. */
   private lastSent: SmsRecord | null = null
+  private readonly lastByPhone = new Map<string, SmsRecord>()
 
   // Явный @Inject: esbuild (vitest) не эмитит `design:paramtypes` — см. DTJ-001,
   // тот же приём, что и в `HealthController`.
@@ -36,16 +37,22 @@ export class MockSmsProviderAdapter implements SmsProviderPort {
 
   /**
    * Возвращает последнюю запись отправки (для unit-тестов use case и dev-диагностики).
-   * В HTTP-эндпоинт НЕ выставлен — контроллер `POST /auth/otp/request` ВСЕГДА
+   * В HTTP выставлен только `GET /_test/last-otp` под флагом E2E_TEST_ENDPOINTS (не в проде); `POST /auth/otp/request` ВСЕГДА
    * возвращает одинаковый ответ (SRS-API-018, защита от перебора существующих номеров).
    */
   peekLast(): SmsRecord | null {
     return this.lastSent
   }
 
+  // Параллельные E2E-сценарии логинят разные номера — «последняя вообще» им не подходит.
+  peekLastFor(phone: string): SmsRecord | null {
+    return this.lastByPhone.get(phone) ?? null
+  }
+
   sendOtp(phone: PhoneNumber, code: string, purpose: OtpPurpose): Promise<void> {
     const sentAt = new Date()
     this.lastSent = { phone: phone.value, code, purpose, sentAt }
+    this.lastByPhone.set(phone.value, this.lastSent)
     if (this.config.isProduction) {
       // НЕ логируем сырой код в проде (SRS-API-021).
       return Promise.resolve()
