@@ -10,13 +10,6 @@ import {
   type LoginFlowState,
 } from '@/features/auth/model/login-flow.model'
 
-/**
- * `code-step.tsx` (DTJ-166, DTJ-433) — портировано из `apps/web/src/features/auth/ui/code-step.tsx`
- * (EP-01, DTJ-028, `SRS-UX-002/014/018/019/023`). DTJ-433: локаль — из `LocaleProvider`, ввод кода —
- * `packages/ui` `OtpInput` (DTJ-405, 6 ячеек, авто-переход/авто-submit/paste — встроены в компонент)
- * вместо локальной реализации. Cooldown-таймер для resend — `setInterval(1000)`.
- */
-
 const OTP_LENGTH = 6
 
 export interface CodeStepProps {

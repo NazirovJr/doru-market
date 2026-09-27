@@ -5,13 +5,6 @@ import { useLocale } from '@/shared/config/locale-provider'
 import { useRequestOtp } from '@/features/auth/api/use-request-otp'
 import { HttpError } from '@/shared/api/http-client'
 
-/**
- * `phone-step.tsx` (DTJ-166, DTJ-433) — портировано из `apps/web/src/features/auth/ui/phone-step.tsx`
- * (EP-01, DTJ-028, `SRS-UX-002/018/019/023`). DTJ-433: локаль берётся из `LocaleProvider`
- * (`useLocale`, не хардкод `'tj'`), поле/кнопка — `packages/ui` `PhoneInput`/`Button` (DTJ-405/404)
- * вместо сырых `<input>`/`<button>`.
- */
-
 const PHONE_PREFIX = '+992'
 const PHONE_DIGITS_REQUIRED = 9
 const PHONE_MASK_FULL = 9

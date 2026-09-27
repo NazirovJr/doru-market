@@ -9,12 +9,8 @@ import {
 } from 'react'
 import type { Locale } from '@dorutj/i18n'
 
-/**
- * `LocaleProvider` (DTJ-433) — портировано из `apps/web/src/shared/config/locale-provider.tsx`
- * (DTJ-003/402, SRS-UX-027): та же схема резолвинга/персистентности, свой ключ `localStorage`
- * (`dorutj.pharmacy.locale`, не `dorutj.locale` — тот же приём разделения неймспейсов, что
- * `shared/api/auth-store.ts`).
- */
+// Портировано из apps/web/shared/config/locale-provider.tsx; свой ключ localStorage —
+// тот же приём разделения неймспейсов, что shared/api/auth-store.ts.
 const DEFAULT_LOCALE: Locale = 'tj'
 const LOCALE_STORAGE_KEY = 'dorutj.pharmacy.locale'
 const SUPPORTED_LOCALES: readonly Locale[] = ['tj', 'ru', 'en']

@@ -5,12 +5,7 @@ import { AppLayout } from '@/app/layout'
 import { LocaleProvider } from '@/shared/config/locale-provider'
 import { useAuthStore, type AuthUser } from '@/shared/api/auth-store'
 
-/**
- * DTJ-433 тест-план: переключение языка сохраняется между разделами (критерий приёмки 1,
- * персистентность — отдельно в `locale-provider.spec.tsx`) и навигация скрывает разделы,
- * недоступные роли (критерий приёмки 2).
- */
-
+// Персистентность локали между перезагрузками отдельно проверяется в locale-provider.spec.tsx.
 function renderShell(initialPath = '/'): void {
   const router = createMemoryRouter(
     [

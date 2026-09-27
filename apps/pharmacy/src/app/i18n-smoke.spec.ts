@@ -1,7 +1,4 @@
-/**
- * Smoke-тест локализации `pharmacy.shell.*` (DTJ-433, тест-план — «i18n-smoke новых ключей в трёх
- * локалях», тот же приём, что `features/returns/i18n-smoke.spec.ts`, DTJ-277).
- */
+// Smoke-тест локализации pharmacy.shell.* — тот же приём, что features/returns/i18n-smoke.spec.ts.
 import { describe, expect, it } from 'vitest'
 import { useT, type Locale } from '@dorutj/i18n'
 

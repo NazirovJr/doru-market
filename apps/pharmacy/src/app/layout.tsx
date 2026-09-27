@@ -6,35 +6,23 @@ import { BrandLogo, Button, LanguageSwitcher, Tabs, type TabItem } from '@dorutj
 import { useLocale } from '@/shared/config/locale-provider'
 import { useAuthStore } from '@/shared/api/auth-store'
 
-/**
- * `AppLayout` (DTJ-433, SRS-UX-027) — оболочка кабинета аптеки: шапка (бренд, сотрудник,
- * `LanguageSwitcher`, выход) + навигация по разделам (`Tabs` из `packages/ui`, DTJ-408). Раздел
- * скрывается для роли, если реальный API-эндпоинт этого раздела её не пускает (см. `NAV_ITEMS`
- * ниже — сверено с `@Roles(...)` контроллеров `apps/api`, не угадано).
- */
-
+// Роли per-раздела сверены с @Roles(...) реальных контроллеров apps/api, не угаданы.
 interface NavItem {
   readonly id: string
   readonly path: string
   readonly labelKey: string
-  /** Роли, которым реальный API-эндпоинт раздела разрешает доступ (см. JSDoc модуля). */
   readonly roles: readonly UserRole[]
 }
 
 const NAV_ITEMS: readonly NavItem[] = [
-  // GET/POST /api/v1/orders (pharmacy-terminal-queue.controller.ts) — @Roles('pharmacist', 'pharmacy_admin').
   { id: 'order-queue', path: '/', labelKey: 'pharmacy.shell.nav.order_queue', roles: ['pharmacist', 'pharmacy_admin'] },
-  // GET /api/v1/inventory (inventory-list.controller.ts) — @Roles('pharmacist', 'pharmacy_admin').
   { id: 'inventory', path: '/inventory', labelKey: 'pharmacy.shell.nav.inventory', roles: ['pharmacist', 'pharmacy_admin'] },
-  // GET /api/v1/inventory/sync-batches (inventory-sync-batches-report.controller.ts) — REPORT_ROLES (все три).
   {
     id: 'sync-history',
     path: '/inventory/sync-history',
     labelKey: 'pharmacy.shell.nav.sync_history',
     roles: ['pharmacist', 'pharmacy_admin', 'super_admin'],
   },
-  // order-returns.controller.ts: confirm/reject — pharmacist; mark-in-transit/admin-override/retry-transit —
-  // pharmacy_admin; все действия домена, вместе взятые, покрывают все три роли кабинета.
   {
     id: 'returns',
     path: '/pharmacy/returns',
