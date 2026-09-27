@@ -1,6 +1,7 @@
 // Без дизайн-референса — те же идиомы, что funnel-page.tsx: нативная разметка, packages/ui пуст.
 import { type ReactElement } from 'react'
 import { useT, toIntlLocale, type TranslateFunction } from '@dorutj/i18n'
+import { useLocale } from '@/shared/config/locale-provider'
 import { ADMIN_LOCALE } from '@/shared/config/locale'
 import { getCurrentTenantId } from '@/shared/auth/current-role'
 import { useFunnelPeriod, type FunnelPeriodMode } from '../api/use-funnel'
@@ -28,7 +29,8 @@ function formatPercent(rate: number): string {
 }
 
 export const PlatformMetricsPage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const tenantId = getCurrentTenantId()
   const { mode, period, setMode } = useFunnelPeriod()
   const query = usePlatformMetrics(tenantId, period)

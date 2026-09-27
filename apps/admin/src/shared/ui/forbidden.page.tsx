@@ -11,11 +11,11 @@
  */
 import { type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
-
-const DEFAULT_LOCALE = 'tj' as const
+import { useLocale } from '@/shared/config/locale-provider'
 
 export const ForbiddenPage = (): ReactElement => {
-  const { t } = useT(DEFAULT_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   return (
     <section data-testid="admin-forbidden">
       <h2>{t('admin.forbidden.title')}</h2>

@@ -2,7 +2,7 @@ import { useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
 import { Badge, Button, Input, Select, Switch } from '@dorutj/ui'
 import type { PharmacyAccountAdminSummaryDto, PharmacyApiKeyCreatedDto, PharmacyApiKeySummaryDto } from '@dorutj/contracts'
-import { ADMIN_LOCALE } from '@/shared/config/locale'
+import { useLocale } from '@/shared/config/locale-provider'
 import {
   useCreatePharmacyApiKey,
   useOwnPharmacies,
@@ -18,7 +18,8 @@ function resolvePharmacyId(explicit: string | null, items: readonly PharmacyAcco
 }
 
 export const ApiKeysPage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const pharmaciesQuery = useOwnPharmacies()
   const [pharmacyId, setPharmacyId] = useState<string | null>(null)
   const [created, setCreated] = useState<PharmacyApiKeyCreatedDto | null>(null)
@@ -59,7 +60,8 @@ interface PharmacySelectProps {
 }
 
 const PharmacySelect = ({ items, value, onChange }: PharmacySelectProps): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   return (
     <Select
       label={t('admin.api_keys.pharmacy_select_label')}
@@ -76,7 +78,8 @@ interface CreateApiKeyButtonProps {
 }
 
 const CreateApiKeyButton = ({ pharmacyId, onCreated }: CreateApiKeyButtonProps): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const createMutation = useCreatePharmacyApiKey(pharmacyId ?? '')
 
   return (
@@ -105,7 +108,8 @@ interface ApiKeysTableProps {
 }
 
 const ApiKeysTable = ({ items, pharmacyId, isLoading, revokingId, onToggleRevoke, onRotated }: ApiKeysTableProps): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   return (
     <>
       <table>
@@ -148,7 +152,8 @@ interface ApiKeyRowProps {
 }
 
 const ApiKeyRow = ({ item, pharmacyId, isRevoking, onToggleRevoke, onDone, onRotated }: ApiKeyRowProps): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const rotateMutation = useRotatePharmacyApiKey(pharmacyId)
   const mtlsMutation = useSetPharmacyApiKeyMtls(pharmacyId)
 
@@ -203,7 +208,8 @@ interface RevokeConfirmRowProps {
 }
 
 const RevokeConfirmRow = ({ keyId, pharmacyId, onDone }: RevokeConfirmRowProps): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const revokeMutation = useRevokePharmacyApiKey(pharmacyId)
   const [reason, setReason] = useState('')
 

@@ -6,7 +6,7 @@
 import type { ChangeEvent, ReactElement } from 'react'
 import { SUPPORT_TICKET_CATEGORY_VALUES, SUPPORT_TICKET_STATUS_VALUES } from '@dorutj/contracts'
 import { useT } from '@dorutj/i18n'
-import { ADMIN_LOCALE } from '@/shared/config/locale'
+import { useLocale } from '@/shared/config/locale-provider'
 import type { SupportTicketsFilters } from '../api/use-support-tickets'
 
 export interface SupportTicketFiltersProps {
@@ -26,7 +26,8 @@ export const SupportTicketFilters = ({
   onlyOverdue,
   onOnlyOverdueChange,
 }: SupportTicketFiltersProps): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   return (
     <div className="support-ticket-filters" data-testid="support-ticket-filters">
       <label>

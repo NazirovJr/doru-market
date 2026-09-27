@@ -1,6 +1,7 @@
 // DTJ-383 — без дизайн-референса (та же оговорка, что platform-metrics-page.tsx). Таблица, тот же приём, что audit-log-page.tsx.
 import { type ReactElement } from 'react'
 import { useT, toIntlLocale, type TranslateFunction } from '@dorutj/i18n'
+import { useLocale } from '@/shared/config/locale-provider'
 import { ADMIN_LOCALE } from '@/shared/config/locale'
 import { getCurrentTenantId } from '@/shared/auth/current-role'
 import { useFunnelPeriod, type FunnelPeriodMode } from '../api/use-funnel'
@@ -27,7 +28,8 @@ function formatPercent(rate: number): string {
 }
 
 export const TopAnalogsPage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const tenantId = getCurrentTenantId()
   const { mode, period, setMode } = useFunnelPeriod()
   const query = useTopAnalogs(tenantId, period)

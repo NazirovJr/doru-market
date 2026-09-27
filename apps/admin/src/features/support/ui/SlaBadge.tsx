@@ -10,7 +10,7 @@
  */
 import type { ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
-import { ADMIN_LOCALE } from '@/shared/config/locale'
+import { useLocale } from '@/shared/config/locale-provider'
 import { computeSlaState, type SlaState, type SlaTicketLike } from '../model/sla-status'
 
 const STATE_TOKENS: Readonly<Record<SlaState, { readonly bg: string; readonly text: string }>> = {
@@ -26,7 +26,8 @@ const BADGE_BORDER_RADIUS = '4px'
 export type SlaBadgeProps = SlaTicketLike
 
 export const SlaBadge = ({ firstResponseDueAt, firstRespondedAt }: SlaBadgeProps): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const state = computeSlaState({ firstResponseDueAt, firstRespondedAt })
   const tokens = STATE_TOKENS[state]
   return (

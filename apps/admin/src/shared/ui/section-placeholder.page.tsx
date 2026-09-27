@@ -11,9 +11,7 @@
  */
 import { type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
-
-/** Локаль зафиксирована временно — `apps/admin` ещё не имеет своего провайдера локали (см. риски DTJ-350). */
-const DEFAULT_LOCALE = 'tj' as const
+import { useLocale } from '@/shared/config/locale-provider'
 
 export interface SectionPlaceholderPageProps {
   /** Ключ словаря `admin.nav.*` для заголовка раздела (напр. `admin.nav.tenants`). */
@@ -21,7 +19,8 @@ export interface SectionPlaceholderPageProps {
 }
 
 export const SectionPlaceholderPage = ({ titleKey }: SectionPlaceholderPageProps): ReactElement => {
-  const { t } = useT(DEFAULT_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   return (
     <section data-testid="section-placeholder">
       <h2>{t(titleKey)}</h2>

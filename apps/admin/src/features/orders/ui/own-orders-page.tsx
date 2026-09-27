@@ -4,12 +4,13 @@ import { Link } from 'react-router'
 import { useT } from '@dorutj/i18n'
 import { Badge, CursorTable, type CursorTableColumn } from '@dorutj/ui'
 import type { OrderAdminSummaryDto } from '@dorutj/contracts'
-import { ADMIN_LOCALE } from '@/shared/config/locale'
+import { useLocale } from '@/shared/config/locale-provider'
 import { useOwnOrdersAdmin, useOwnOrdersAdminFilters } from '../api/use-orders-admin'
 import { ORDER_STATUS_BADGE_TONE, ORDER_STATUS_VALUES } from './order-status.constants'
 
 export const OwnOrdersPage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const { filters, setStatus, setSlaBreached, resetFilters } = useOwnOrdersAdminFilters()
   const [cursor, setCursor] = useState<string | null>(null)
   const [items, setItems] = useState<readonly OrderAdminSummaryDto[]>([])

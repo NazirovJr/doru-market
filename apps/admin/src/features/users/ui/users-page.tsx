@@ -2,13 +2,14 @@
 import { useEffect, useState, type ChangeEvent, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
 import { STAFF_ROLE_VALUES, PLATFORM_ROLE_VALUES, USER_ROLES, type StaffRole, type PlatformRole, type UserSummaryDto } from '@dorutj/contracts'
-import { ADMIN_LOCALE } from '@/shared/config/locale'
+import { useLocale } from '@/shared/config/locale-provider'
 import { useUsers, useUsersFilters, useDeactivateUser, useChangeStaffRole, useGrantPlatformRole } from '../api/use-users'
 
 type RowAction = 'none' | 'deactivate' | 'change-role' | 'grant-role'
 
 export const UsersPage = (): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const { filters, setFilter, resetFilters } = useUsersFilters()
   const [phoneDraft, setPhoneDraft] = useState(filters.phoneNumber ?? '')
   const [cursor, setCursor] = useState<string | null>(null)
@@ -127,7 +128,8 @@ interface UserRowProps {
 }
 
 const UserRow = ({ user, openAction, onToggleAction, onDone }: UserRowProps): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   return (
     <>
       <tr data-testid="user-row">
@@ -155,7 +157,8 @@ const UserRow = ({ user, openAction, onToggleAction, onDone }: UserRowProps): Re
 }
 
 const DeactivateRow = ({ userId, onDone }: { readonly userId: string; readonly onDone: () => void }): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const mutation = useDeactivateUser()
   return (
     <tr data-testid="deactivate-confirm-row">
@@ -175,7 +178,8 @@ const DeactivateRow = ({ userId, onDone }: { readonly userId: string; readonly o
 }
 
 const ChangeRoleRow = ({ userId, onDone }: { readonly userId: string; readonly onDone: () => void }): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const mutation = useChangeStaffRole()
   const [role, setRole] = useState<StaffRole>(STAFF_ROLE_VALUES[0])
   return (
@@ -207,7 +211,8 @@ const ChangeRoleRow = ({ userId, onDone }: { readonly userId: string; readonly o
 const GRANT_REASON_MIN_LENGTH = 10
 
 const GrantPlatformRoleRow = ({ userId, onDone }: { readonly userId: string; readonly onDone: () => void }): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const mutation = useGrantPlatformRole()
   const [role, setRole] = useState<PlatformRole>(PLATFORM_ROLE_VALUES[0])
   const [reason, setReason] = useState('')

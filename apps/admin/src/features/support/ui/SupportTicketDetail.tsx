@@ -12,7 +12,7 @@
 import { useState, type ReactElement, type SyntheticEvent } from 'react'
 import type { SupportTicketStatus } from '@dorutj/contracts'
 import { useT } from '@dorutj/i18n'
-import { ADMIN_LOCALE } from '@/shared/config/locale'
+import { useLocale } from '@/shared/config/locale-provider'
 import { useSupportTicketDetail } from '../api/use-support-ticket-detail'
 import { useRespondTicket } from '../api/use-respond-ticket'
 import { useChangeTicketStatus, type StatusTransition } from '../api/use-change-ticket-status'
@@ -32,7 +32,8 @@ export interface SupportTicketDetailProps {
 }
 
 export const SupportTicketDetail = ({ ticketId }: SupportTicketDetailProps): ReactElement => {
-  const { t } = useT(ADMIN_LOCALE)
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const detailQuery = useSupportTicketDetail(ticketId)
   const respond = useRespondTicket(ticketId)
   const changeStatus = useChangeTicketStatus(ticketId)
