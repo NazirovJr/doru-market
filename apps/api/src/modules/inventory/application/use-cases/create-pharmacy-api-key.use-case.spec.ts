@@ -7,12 +7,19 @@ const CREATED: CreatedPharmacyApiKey = { id: 'key-1', secret: 'abc123', keyPrefi
 describe('CreatePharmacyApiKeyUseCase (DTJ-365)', () => {
   it('делегирует репозиторию и возвращает секрет РОВНО в этом ответе', async () => {
     const create = vi.fn().mockResolvedValue(CREATED)
-    const repository: PharmacyApiKeysRepository = { create, listByPharmacy: vi.fn(), revoke: vi.fn() }
+    const repository: PharmacyApiKeysRepository = {
+      create,
+      listByPharmacy: vi.fn(),
+      revoke: vi.fn(),
+      rotate: vi.fn(),
+      setRequireMtls: vi.fn(),
+      revokeExpiredRotated: vi.fn(),
+    }
     const useCase = new CreatePharmacyApiKeyUseCase(repository)
 
-    const result = await useCase.execute('pharmacy-1')
+    const result = await useCase.execute('pharmacy-1', 'admin-1')
 
     expect(result).toBe(CREATED)
-    expect(create).toHaveBeenCalledWith('pharmacy-1')
+    expect(create).toHaveBeenCalledWith('pharmacy-1', 'admin-1')
   })
 })

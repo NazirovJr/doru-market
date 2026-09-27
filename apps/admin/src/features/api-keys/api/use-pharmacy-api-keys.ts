@@ -1,15 +1,12 @@
-// DTJ-365: hooks CRUD ключей 1С аптеки. Rotate/requireMtls не реализованы (блокер миграции,
-// см. отчёт сдачи) — здесь нет соответствующих мутаций.
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query'
 import type { PharmacyAccountAdminSummaryDto, PharmacyApiKeyCreatedDto, PharmacyApiKeySummaryDto } from '@dorutj/contracts'
-import { httpGetJsonWithMeta, httpPostJson, type HttpError } from '@/shared/api/http-client'
+import { httpGetJsonWithMeta, httpPatchJson, httpPostJson, type HttpError } from '@/shared/api/http-client'
 
 function apiKeysPath(pharmacyId: string): string {
   return `/api/v1/pharmacy-accounts/${pharmacyId}/api-keys`
 }
 
-// Не переиспользует features/pharmacies-crud/api (горизонтальный импорт между фичами запрещён,
-// `fe-features-are-isolated`, AGENTS.md §5) — тот же REST-эндпоинт, свой тонкий запрос.
+// Свой тонкий запрос к тому же REST-эндпоинту — импорт features/pharmacies-crud/api запрещён (fe-features-are-isolated).
 export function useOwnPharmacies(): UseQueryResult<readonly PharmacyAccountAdminSummaryDto[], HttpError> {
   return useQuery<readonly PharmacyAccountAdminSummaryDto[], HttpError>({
     queryKey: ['admin', 'api-keys', 'own-pharmacies'] as const,
@@ -57,6 +54,28 @@ export function useRevokePharmacyApiKey(pharmacyId: string): UseMutationResult<u
   const queryClient = useQueryClient()
   return useMutation<unknown, HttpError, RevokePharmacyApiKeyInput>({
     mutationFn: ({ keyId, reason }) => httpPostJson(`${apiKeysPath(pharmacyId)}/${keyId}/revoke`, { reason }),
+    onSuccess: () => { invalidatePharmacyApiKeys(queryClient, pharmacyId) },
+  })
+}
+
+// Idempotency-Key обязателен на rotate (SRS-API-010) — генерируется один раз на клик, не на каждый retry react-query.
+export function useRotatePharmacyApiKey(pharmacyId: string): UseMutationResult<PharmacyApiKeyCreatedDto, HttpError, string> {
+  const queryClient = useQueryClient()
+  return useMutation<PharmacyApiKeyCreatedDto, HttpError, string>({
+    mutationFn: (keyId) => httpPostJson<PharmacyApiKeyCreatedDto>(`${apiKeysPath(pharmacyId)}/${keyId}/rotate`, {}, { 'idempotency-key': crypto.randomUUID() }),
+    onSuccess: () => { invalidatePharmacyApiKeys(queryClient, pharmacyId) },
+  })
+}
+
+export interface SetPharmacyApiKeyMtlsInput {
+  readonly keyId: string
+  readonly requireMtls: boolean
+}
+
+export function useSetPharmacyApiKeyMtls(pharmacyId: string): UseMutationResult<PharmacyApiKeySummaryDto, HttpError, SetPharmacyApiKeyMtlsInput> {
+  const queryClient = useQueryClient()
+  return useMutation<PharmacyApiKeySummaryDto, HttpError, SetPharmacyApiKeyMtlsInput>({
+    mutationFn: ({ keyId, requireMtls }) => httpPatchJson<PharmacyApiKeySummaryDto>(`${apiKeysPath(pharmacyId)}/${keyId}`, { requireMtls }),
     onSuccess: () => { invalidatePharmacyApiKeys(queryClient, pharmacyId) },
   })
 }

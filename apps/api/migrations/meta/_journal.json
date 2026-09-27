@@ -367,6 +367,12 @@
       "when": 1700000620000,
       "tag": "0058_audit_action_category_pharmacy_terminal",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "when": 1700000650000,
+      "tag": "0061_pharmacy_api_keys_rotation",
+      "breakpoints": true
     }
   ]
 }

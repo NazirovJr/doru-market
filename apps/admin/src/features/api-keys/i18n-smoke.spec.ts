@@ -1,4 +1,3 @@
-// Полнота словарей tj/ru/en для admin.api_keys.* — тот же приём, что features/staff/i18n-smoke.spec.ts.
 import { describe, expect, it } from 'vitest'
 import { useT, type Locale } from '@dorutj/i18n'
 
@@ -17,6 +16,10 @@ const ADMIN_API_KEYS_KEYS: readonly string[] = [
   'admin.api_keys.column.status',
   'admin.api_keys.column.created_at',
   'admin.api_keys.column.actions',
+  'admin.api_keys.column.mtls',
+  'admin.api_keys.column.last_used_at',
+  'admin.api_keys.action.rotate',
+  'admin.api_keys.rotate.error',
   'admin.api_keys.status.active',
   'admin.api_keys.status.revoked',
   'admin.api_keys.action.revoke',

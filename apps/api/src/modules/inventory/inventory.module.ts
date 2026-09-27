@@ -86,6 +86,11 @@ import { DrizzlePharmacyApiKeysRepository } from './infrastructure/adapters/driz
 import { CreatePharmacyApiKeyUseCase } from './application/use-cases/create-pharmacy-api-key.use-case.js'
 import { ListPharmacyApiKeysUseCase } from './application/use-cases/list-pharmacy-api-keys.use-case.js'
 import { RevokePharmacyApiKeyUseCase } from './application/use-cases/revoke-pharmacy-api-key.use-case.js'
+import { RotatePharmacyApiKeyUseCase } from './application/use-cases/rotate-pharmacy-api-key.use-case.js'
+import { SetPharmacyApiKeyMtlsUseCase } from './application/use-cases/set-pharmacy-api-key-mtls.use-case.js'
+import { RevokeExpiredRotatedKeyUseCase } from './application/use-cases/revoke-expired-rotated-key.use-case.js'
+import { RevokeExpiredRotatedKeyController } from './presentation/internal/revoke-expired-rotated-key.controller.js'
+import { InternalServiceGuard } from './presentation/internal/internal-service.guard.js'
 import { XlsxExcelInventoryParserAdapter } from './infrastructure/adapters/xlsx-excel-inventory-parser.adapter.js'
 import { DrizzleCatalogMatchQueueReadAdapter } from './infrastructure/adapters/drizzle-catalog-match-queue-read.adapter.js'
 import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/in-memory-catalog-match-queue-read.adapter.js'
@@ -108,6 +113,10 @@ import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/
     CreatePharmacyApiKeyUseCase,
     ListPharmacyApiKeysUseCase,
     RevokePharmacyApiKeyUseCase,
+    RotatePharmacyApiKeyUseCase,
+    SetPharmacyApiKeyMtlsUseCase,
+    RevokeExpiredRotatedKeyUseCase,
+    InternalServiceGuard,
     // DTJ-160: единственная реализация — `exceljs`, тот же пакет, что генератор шаблона DTJ-159.
     { provide: EXCEL_INVENTORY_PARSER, useClass: XlsxExcelInventoryParserAdapter },
     // DTJ-163: узкий read-порт к catalog_match_queue (чужая таблица, см. JSDoc порта).
@@ -154,6 +163,7 @@ import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/
     InventorySyncBatchesReportController,
     InventoryExcelErrorReportController,
     InventoryListController,
+    RevokeExpiredRotatedKeyController,
   ],
   exports: [
     PHARMACY_INVENTORY_REPOSITORY,

@@ -25,6 +25,8 @@ function fakeFacades(
       createPharmacyApiKey: vi.fn(),
       listPharmacyApiKeys: vi.fn(),
       revokePharmacyApiKey: vi.fn(),
+      rotatePharmacyApiKey: vi.fn(),
+      setPharmacyApiKeyMtls: vi.fn(),
     },
     getPharmacyChainId,
     getInventorySummary,

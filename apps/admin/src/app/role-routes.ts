@@ -142,7 +142,6 @@ const PHARMACY_ADMIN_ROUTES: readonly RouteConfig[] = [
   { path: 'my-pharmacies', titleKey: 'admin.nav.my_pharmacies', icon: 'pharmacies', Component: OwnPharmaciesPage },
   section('my-orders', 'admin.nav.my_orders', 'orders'),
   { path: 'staff', titleKey: 'admin.nav.staff', icon: 'staff', Component: StaffAccountsPage },
-  // DTJ-365 — заменяет placeholder `integration-keys` реальной ApiKeysPage.
   { path: 'integration-keys', titleKey: 'admin.nav.integration_keys', icon: 'keys', Component: ApiKeysPage },
   section('reports', 'admin.nav.reports', 'reports'),
   section('schedule', 'admin.nav.schedule', 'schedule'),

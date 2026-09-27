@@ -1,5 +1,4 @@
-// DTJ-365: ЕДИНСТВЕННОЕ место, где apiKey/hmacSecret видны целиком (SRS-ADM-043) — закрывается
-// ТОЛЬКО явным действием пользователя, без автозакрытия таймером (в отличие от Toast).
+// Закрывается ТОЛЬКО явным действием пользователя, без автозакрытия таймером (в отличие от Toast).
 import { useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
 import { Button, Modal } from '@dorutj/ui'

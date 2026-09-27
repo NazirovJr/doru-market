@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { getClientEnv } from '@/shared/api/http-client'
-import { useCreatePharmacyApiKey, usePharmacyApiKeys, useRevokePharmacyApiKey } from './use-pharmacy-api-keys'
+import { useCreatePharmacyApiKey, usePharmacyApiKeys, useRevokePharmacyApiKey, useRotatePharmacyApiKey, useSetPharmacyApiKeyMtls } from './use-pharmacy-api-keys'
 
 const API_BASE = getClientEnv().apiBaseUrl
 
@@ -77,5 +77,37 @@ describe('useRevokePharmacyApiKey', () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(url).toBe(`${API_BASE}/api/v1/pharmacy-accounts/pharmacy-1/api-keys/key-1/revoke`)
     expect(JSON.parse(init.body as string)).toEqual({ reason: 'скомпрометирован' })
+  })
+})
+
+describe('useRotatePharmacyApiKey', () => {
+  it('POST /pharmacy-accounts/:id/api-keys/:keyId/rotate с заголовком Idempotency-Key', async () => {
+    const rotated = { id: 'key-2', apiKey: 'secret2x.secret2', hmacSecret: 'secret2', keyPrefix: 'secret2x', createdAt: '2026-01-02T00:00:00.000Z' }
+    const fetchMock = stubFetch(() => Promise.resolve(jsonResponse({ data: rotated })))
+    const { result } = renderHook(() => useRotatePharmacyApiKey('pharmacy-1'), { wrapper: makeWrapper() })
+
+    act(() => { result.current.mutate('key-1') })
+    await waitFor(() => { expect(result.current.isSuccess).toBe(true) })
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe(`${API_BASE}/api/v1/pharmacy-accounts/pharmacy-1/api-keys/key-1/rotate`)
+    expect(new Headers(init.headers).get('idempotency-key')).toBeTruthy()
+    expect(result.current.data).toEqual(rotated)
+  })
+})
+
+describe('useSetPharmacyApiKeyMtls', () => {
+  it('PATCH /pharmacy-accounts/:id/api-keys/:keyId { requireMtls }', async () => {
+    const summary = { id: 'key-1', keyPrefix: 'abc12345', isActive: true, requireMtls: true, createdAt: '2026-01-01T00:00:00.000Z', lastUsedAt: null, revokedAt: null }
+    const fetchMock = stubFetch(() => Promise.resolve(jsonResponse({ data: summary })))
+    const { result } = renderHook(() => useSetPharmacyApiKeyMtls('pharmacy-1'), { wrapper: makeWrapper() })
+
+    act(() => { result.current.mutate({ keyId: 'key-1', requireMtls: true }) })
+    await waitFor(() => { expect(result.current.isSuccess).toBe(true) })
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe(`${API_BASE}/api/v1/pharmacy-accounts/pharmacy-1/api-keys/key-1`)
+    expect(init.method).toBe('PATCH')
+    expect(JSON.parse(init.body as string)).toEqual({ requireMtls: true })
   })
 })

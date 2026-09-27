@@ -13,7 +13,10 @@ import {
 import { CreatePharmacyApiKeyUseCase } from './application/use-cases/create-pharmacy-api-key.use-case.js'
 import { ListPharmacyApiKeysUseCase } from './application/use-cases/list-pharmacy-api-keys.use-case.js'
 import { RevokePharmacyApiKeyUseCase } from './application/use-cases/revoke-pharmacy-api-key.use-case.js'
-import type { CreatedPharmacyApiKey, PharmacyApiKeySummary } from './application/ports/pharmacy-api-keys.repository.port.js'
+import { RotatePharmacyApiKeyUseCase } from './application/use-cases/rotate-pharmacy-api-key.use-case.js'
+import { SetPharmacyApiKeyMtlsUseCase } from './application/use-cases/set-pharmacy-api-key-mtls.use-case.js'
+import { RevokeExpiredRotatedKeyUseCase } from './application/use-cases/revoke-expired-rotated-key.use-case.js'
+import type { CreatedPharmacyApiKey, PharmacyApiKeySummary, RotatePharmacyApiKeyParams } from './application/ports/pharmacy-api-keys.repository.port.js'
 
 const ASSUMED_INVENTORY_DELTA_SLA_MINUTES = 5
 const MS_PER_MINUTE = 60_000
@@ -31,10 +34,12 @@ export class InventoryFacade {
     @Inject(PHARMACY_INVENTORY_REPOSITORY) private readonly repository: PharmacyInventoryRepository,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(INVENTORY_SYNC_BATCH_REPOSITORY) private readonly syncBatchRepository: InventorySyncBatchRepository,
-    // Тенант-скоуп проверяет вызывающая сторона (modules/admin) до обращения сюда.
     @Inject(CreatePharmacyApiKeyUseCase) private readonly createPharmacyApiKeyUseCase: CreatePharmacyApiKeyUseCase,
     @Inject(ListPharmacyApiKeysUseCase) private readonly listPharmacyApiKeysUseCase: ListPharmacyApiKeysUseCase,
     @Inject(RevokePharmacyApiKeyUseCase) private readonly revokePharmacyApiKeyUseCase: RevokePharmacyApiKeyUseCase,
+    @Inject(RotatePharmacyApiKeyUseCase) private readonly rotatePharmacyApiKeyUseCase: RotatePharmacyApiKeyUseCase,
+    @Inject(SetPharmacyApiKeyMtlsUseCase) private readonly setPharmacyApiKeyMtlsUseCase: SetPharmacyApiKeyMtlsUseCase,
+    @Inject(RevokeExpiredRotatedKeyUseCase) private readonly revokeExpiredRotatedKeyUseCase: RevokeExpiredRotatedKeyUseCase,
   ) {}
 
   async getInventorySummary(pharmacyId: string): Promise<InventorySummary> {
@@ -52,8 +57,8 @@ export class InventoryFacade {
     return new Set(ids)
   }
 
-  async createPharmacyApiKey(pharmacyId: string): Promise<CreatedPharmacyApiKey> {
-    return this.createPharmacyApiKeyUseCase.execute(pharmacyId)
+  async createPharmacyApiKey(pharmacyId: string, createdByAdminId: string): Promise<CreatedPharmacyApiKey> {
+    return this.createPharmacyApiKeyUseCase.execute(pharmacyId, createdByAdminId)
   }
 
   async listPharmacyApiKeys(pharmacyId: string): Promise<readonly PharmacyApiKeySummary[]> {
@@ -62,5 +67,17 @@ export class InventoryFacade {
 
   async revokePharmacyApiKey(pharmacyId: string, keyId: string, reason: string): Promise<boolean> {
     return this.revokePharmacyApiKeyUseCase.execute(pharmacyId, keyId, reason)
+  }
+
+  async rotatePharmacyApiKey(params: RotatePharmacyApiKeyParams): Promise<CreatedPharmacyApiKey | null> {
+    return this.rotatePharmacyApiKeyUseCase.execute(params)
+  }
+
+  async setPharmacyApiKeyMtls(pharmacyId: string, keyId: string, requireMtls: boolean): Promise<PharmacyApiKeySummary | null> {
+    return this.setPharmacyApiKeyMtlsUseCase.execute(pharmacyId, keyId, requireMtls)
+  }
+
+  async revokeExpiredRotatedKey(keyId: string): Promise<boolean> {
+    return this.revokeExpiredRotatedKeyUseCase.execute(keyId)
   }
 }

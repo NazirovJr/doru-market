@@ -12,7 +12,7 @@ export class CreatePharmacyApiKeyUseCase {
     @Inject(PHARMACY_API_KEYS_REPOSITORY) private readonly repository: PharmacyApiKeysRepository,
   ) {}
 
-  async execute(pharmacyId: string): Promise<CreatedPharmacyApiKey> {
-    return this.repository.create(pharmacyId)
+  async execute(pharmacyId: string, createdByAdminId: string): Promise<CreatedPharmacyApiKey> {
+    return this.repository.create(pharmacyId, createdByAdminId)
   }
 }

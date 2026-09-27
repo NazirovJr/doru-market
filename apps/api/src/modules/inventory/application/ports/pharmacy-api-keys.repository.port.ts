@@ -1,5 +1,3 @@
-// Write-порт CRUD ключа 1С (create/list/revoke), только скоуп аптеки (pharmacy_id), не сети.
-// rotate/setRequireMtls не заведены — нужны новые колонки схемы, миграция не назначена (см. отчёт).
 export const PHARMACY_API_KEYS_REPOSITORY = Symbol.for('@dorutj/inventory/pharmacy-api-keys-repository')
 
 export interface CreatedPharmacyApiKey {
@@ -13,13 +11,25 @@ export interface PharmacyApiKeySummary {
   readonly id: string
   readonly keyPrefix: string
   readonly isActive: boolean
+  readonly requireMtls: boolean
   readonly createdAt: Date
+  readonly lastUsedAt: Date | null
+  readonly revokedAt: Date | null
 }
 
+export interface RotatePharmacyApiKeyParams {
+  readonly pharmacyId: string
+  readonly oldKeyId: string
+  readonly gracePeriodHours: number
+  readonly createdByAdminId: string
+}
+
+// null/false — не найдено/чужая аптека/уже отозван (условие проверяется прямо в SQL, не отдельным SELECT).
 export interface PharmacyApiKeysRepository {
-  /** Генерирует секрет и argon2-хеш здесь (infrastructure), не в use case. */
-  create(pharmacyId: string): Promise<CreatedPharmacyApiKey>
+  create(pharmacyId: string, createdByAdminId: string): Promise<CreatedPharmacyApiKey>
   listByPharmacy(pharmacyId: string): Promise<readonly PharmacyApiKeySummary[]>
-  /** `false` — не найдено/чужая аптека/уже отозван (pharmacyId проверяется прямо в запросе). */
   revoke(pharmacyId: string, keyId: string, reason: string): Promise<boolean>
+  rotate(params: RotatePharmacyApiKeyParams): Promise<CreatedPharmacyApiKey | null>
+  setRequireMtls(pharmacyId: string, keyId: string, requireMtls: boolean): Promise<PharmacyApiKeySummary | null>
+  revokeExpiredRotated(keyId: string, now: Date): Promise<boolean>
 }

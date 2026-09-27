@@ -66,6 +66,8 @@ import { ListReconciliationAlertsUseCase } from './application/use-cases/list-re
 import { CreatePharmacyApiKeyUseCase } from './application/use-cases/create-pharmacy-api-key.use-case.js'
 import { ListPharmacyApiKeysUseCase } from './application/use-cases/list-pharmacy-api-keys.use-case.js'
 import { RevokePharmacyApiKeyUseCase } from './application/use-cases/revoke-pharmacy-api-key.use-case.js'
+import { RotatePharmacyApiKeyUseCase } from './application/use-cases/rotate-pharmacy-api-key.use-case.js'
+import { SetPharmacyApiKeyMtlsUseCase } from './application/use-cases/set-pharmacy-api-key-mtls.use-case.js'
 import { FeatureFlagsController } from './presentation/feature-flags.controller.js'
 import { TenantsController } from './presentation/tenants.controller.js'
 import { UsersAdminController } from './presentation/users-admin.controller.js'
@@ -114,6 +116,8 @@ import { PharmacyApiKeysController } from './presentation/pharmacy-api-keys.cont
     CreatePharmacyApiKeyUseCase,
     ListPharmacyApiKeysUseCase,
     RevokePharmacyApiKeyUseCase,
+    RotatePharmacyApiKeyUseCase,
+    SetPharmacyApiKeyMtlsUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.

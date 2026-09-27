@@ -1,10 +1,16 @@
-// Кабинет pharmacy_admin — CRUD ключей 1С своей аптеки; маршрут плоский, поэтому аптека выбирается Select'ом.
 import { useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
-import { Badge, Button, Input, Select } from '@dorutj/ui'
+import { Badge, Button, Input, Select, Switch } from '@dorutj/ui'
 import type { PharmacyAccountAdminSummaryDto, PharmacyApiKeyCreatedDto, PharmacyApiKeySummaryDto } from '@dorutj/contracts'
 import { ADMIN_LOCALE } from '@/shared/config/locale'
-import { useCreatePharmacyApiKey, useOwnPharmacies, usePharmacyApiKeys, useRevokePharmacyApiKey } from '../api/use-pharmacy-api-keys'
+import {
+  useCreatePharmacyApiKey,
+  useOwnPharmacies,
+  usePharmacyApiKeys,
+  useRevokePharmacyApiKey,
+  useRotatePharmacyApiKey,
+  useSetPharmacyApiKeyMtls,
+} from '../api/use-pharmacy-api-keys'
 import { ApiKeyCreatedModal } from './api-key-created-modal'
 
 function resolvePharmacyId(explicit: string | null, items: readonly PharmacyAccountAdminSummaryDto[]): string | null {
@@ -38,6 +44,7 @@ export const ApiKeysPage = (): ReactElement => {
         isLoading={keysQuery.isLoading}
         revokingId={revokingId}
         onToggleRevoke={setRevokingId}
+        onRotated={setCreated}
       />
 
       <ApiKeyCreatedModal created={created} onClose={() => { setCreated(null) }} />
@@ -86,15 +93,18 @@ const CreateApiKeyButton = ({ pharmacyId, onCreated }: CreateApiKeyButtonProps):
   )
 }
 
+const TABLE_COLUMN_COUNT = 6
+
 interface ApiKeysTableProps {
   readonly items: readonly PharmacyApiKeySummaryDto[]
   readonly pharmacyId: string
   readonly isLoading: boolean
   readonly revokingId: string | null
   readonly onToggleRevoke: (keyId: string | null) => void
+  readonly onRotated: (created: PharmacyApiKeyCreatedDto) => void
 }
 
-const ApiKeysTable = ({ items, pharmacyId, isLoading, revokingId, onToggleRevoke }: ApiKeysTableProps): ReactElement => {
+const ApiKeysTable = ({ items, pharmacyId, isLoading, revokingId, onToggleRevoke, onRotated }: ApiKeysTableProps): ReactElement => {
   const { t } = useT(ADMIN_LOCALE)
   return (
     <>
@@ -103,6 +113,8 @@ const ApiKeysTable = ({ items, pharmacyId, isLoading, revokingId, onToggleRevoke
           <tr>
             <th>{t('admin.api_keys.column.key_prefix')}</th>
             <th>{t('admin.api_keys.column.status')}</th>
+            <th>{t('admin.api_keys.column.mtls')}</th>
+            <th>{t('admin.api_keys.column.last_used_at')}</th>
             <th>{t('admin.api_keys.column.created_at')}</th>
             <th>{t('admin.api_keys.column.actions')}</th>
           </tr>
@@ -116,6 +128,7 @@ const ApiKeysTable = ({ items, pharmacyId, isLoading, revokingId, onToggleRevoke
               isRevoking={revokingId === item.id}
               onToggleRevoke={() => { onToggleRevoke(revokingId === item.id ? null : item.id) }}
               onDone={() => { onToggleRevoke(null) }}
+              onRotated={onRotated}
             />
           ))}
         </tbody>
@@ -131,12 +144,13 @@ interface ApiKeyRowProps {
   readonly isRevoking: boolean
   readonly onToggleRevoke: () => void
   readonly onDone: () => void
+  readonly onRotated: (created: PharmacyApiKeyCreatedDto) => void
 }
 
-const ApiKeyRow = ({ item, pharmacyId, isRevoking, onToggleRevoke, onDone }: ApiKeyRowProps): ReactElement => {
+const ApiKeyRow = ({ item, pharmacyId, isRevoking, onToggleRevoke, onDone, onRotated }: ApiKeyRowProps): ReactElement => {
   const { t } = useT(ADMIN_LOCALE)
-  const revokeMutation = useRevokePharmacyApiKey(pharmacyId)
-  const [reason, setReason] = useState('')
+  const rotateMutation = useRotatePharmacyApiKey(pharmacyId)
+  const mtlsMutation = useSetPharmacyApiKeyMtls(pharmacyId)
 
   return (
     <>
@@ -147,34 +161,65 @@ const ApiKeyRow = ({ item, pharmacyId, isRevoking, onToggleRevoke, onDone }: Api
             {item.isActive ? t('admin.api_keys.status.active') : t('admin.api_keys.status.revoked')}
           </Badge>
         </td>
+        <td>
+          <Switch
+            label={t('admin.api_keys.column.mtls')}
+            checked={item.requireMtls}
+            disabled={!item.isActive || mtlsMutation.isPending}
+            onChange={(checked) => { mtlsMutation.mutate({ keyId: item.id, requireMtls: checked }) }}
+          />
+        </td>
+        <td>{item.lastUsedAt ?? '—'}</td>
         <td>{item.createdAt}</td>
         <td>
+          <Button
+            variant="secondary"
+            disabled={!item.isActive || rotateMutation.isPending}
+            onClick={() => { rotateMutation.mutate(item.id, { onSuccess: onRotated }) }}
+          >
+            {t('admin.api_keys.action.rotate')}
+          </Button>
           <Button variant="danger" disabled={!item.isActive} onClick={onToggleRevoke}>
             {t('admin.api_keys.action.revoke')}
           </Button>
         </td>
       </tr>
-      {isRevoking ? (
-        <tr data-testid="revoke-confirm-row">
-          <td colSpan={4}>
-            <Input
-              label={t('admin.api_keys.revoke.reason_label')}
-              value={reason}
-              onChange={(e) => { setReason(e.target.value) }}
-            />
-            <Button
-              variant="danger"
-              disabled={reason.trim().length === 0 || revokeMutation.isPending}
-              onClick={() => {
-                revokeMutation.mutate({ keyId: item.id, reason: reason.trim() }, { onSuccess: onDone })
-              }}
-            >
-              {t('admin.api_keys.revoke.confirm')}
-            </Button>
-            {revokeMutation.isError ? <p role="alert">{t('admin.api_keys.revoke.error')}</p> : null}
+      {rotateMutation.isError ? (
+        <tr>
+          <td colSpan={TABLE_COLUMN_COUNT}>
+            <p role="alert">{t('admin.api_keys.rotate.error')}</p>
           </td>
         </tr>
       ) : null}
+      {isRevoking ? <RevokeConfirmRow keyId={item.id} pharmacyId={pharmacyId} onDone={onDone} /> : null}
     </>
+  )
+}
+
+interface RevokeConfirmRowProps {
+  readonly keyId: string
+  readonly pharmacyId: string
+  readonly onDone: () => void
+}
+
+const RevokeConfirmRow = ({ keyId, pharmacyId, onDone }: RevokeConfirmRowProps): ReactElement => {
+  const { t } = useT(ADMIN_LOCALE)
+  const revokeMutation = useRevokePharmacyApiKey(pharmacyId)
+  const [reason, setReason] = useState('')
+
+  return (
+    <tr data-testid="revoke-confirm-row">
+      <td colSpan={TABLE_COLUMN_COUNT}>
+        <Input label={t('admin.api_keys.revoke.reason_label')} value={reason} onChange={(e) => { setReason(e.target.value) }} />
+        <Button
+          variant="danger"
+          disabled={reason.trim().length === 0 || revokeMutation.isPending}
+          onClick={() => { revokeMutation.mutate({ keyId, reason: reason.trim() }, { onSuccess: onDone }) }}
+        >
+          {t('admin.api_keys.revoke.confirm')}
+        </Button>
+        {revokeMutation.isError ? <p role="alert">{t('admin.api_keys.revoke.error')}</p> : null}
+      </td>
+    </tr>
   )
 }

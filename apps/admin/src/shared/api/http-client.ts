@@ -128,8 +128,8 @@ export function httpGetJsonWithMeta<T>(path: string, params?: QueryParams): Prom
   return requestJsonEnvelope<T>(`${path}${params !== undefined ? buildQueryString(params) : ''}`)
 }
 
-export function httpPostJson<T>(path: string, body: unknown): Promise<T> {
-  return requestJsonEnvelope<T>(path, { method: 'POST', body: JSON.stringify(body) }).then((r) => r.data)
+export function httpPostJson<T>(path: string, body: unknown, headers?: HeadersInit): Promise<T> {
+  return requestJsonEnvelope<T>(path, { method: 'POST', body: JSON.stringify(body), ...(headers !== undefined && { headers }) }).then((r) => r.data)
 }
 
 /** DTJ-354 — добавлено тем же приёмом, что `httpPostJson` (деактивация/смена роли пользователя). */
