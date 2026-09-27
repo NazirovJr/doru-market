@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import type { OrderItemDto } from '@dorutj/contracts'
@@ -64,6 +64,7 @@ function makeOrder(overrides: Partial<Record<string, unknown>> & { readonly item
     deliveredAt: null,
     createdAt: '2026-09-25T10:00:00.000Z',
     updatedAt: '2026-09-25T10:00:00.000Z',
+    partialFulfillment: null,
     ...overrides,
   }
 }
@@ -240,8 +241,10 @@ describe('<PickingPage /> (DTJ-311)', () => {
       makeItem({ id: 'a', medicineName: 'Парацетамол 500мг', fulfillmentStatus: 'scanned_ok' }),
       makeItem({ id: 'b', medicineName: 'Ибупрофен 200мг', fulfillmentStatus: 'unavailable', itemIssueReason: 'out_of_stock' }),
     ]
+    let proposed = false
     stubFetch((url) => {
       if (url.includes('/propose-partial-fulfillment')) {
+        proposed = true
         return Promise.resolve(
           jsonResponse(
             {
@@ -260,7 +263,17 @@ describe('<PickingPage /> (DTJ-311)', () => {
           ),
         )
       }
-      return Promise.resolve(jsonResponse({ data: makeOrder({ items }) }))
+      // Рефетч после успешного propose (invalidateQueries) подтягивает актуальный partialFulfillment с сервера.
+      return Promise.resolve(
+        jsonResponse({
+          data: makeOrder({
+            items,
+            partialFulfillment: proposed
+              ? { status: 'awaiting_customer', requestedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 10 * 60_000).toISOString() }
+              : null,
+          }),
+        }),
+      )
     })
     renderPage()
 
@@ -275,11 +288,23 @@ describe('<PickingPage /> (DTJ-311)', () => {
 
   it('409 PARTIAL_FULFILLMENT_PENDING на complete-picking — баннер ожидания вместо сырой ошибки (гонка, DTJ-312)', async () => {
     const items = [makeItem({ id: 'a', medicineName: 'Парацетамол 500мг', fulfillmentStatus: 'scanned_ok' })]
+    let raced = false
     stubFetch((url) => {
       if (url.includes('/complete-picking')) {
+        raced = true
         return Promise.resolve(jsonResponse({ error: { code: 'PARTIAL_FULFILLMENT_PENDING' } }, 409))
       }
-      return Promise.resolve(jsonResponse({ data: makeOrder({ items }) }))
+      // Рефетч после 409 (invalidateQueries) подтягивает партию, конкурентно предложенную где-то ещё.
+      return Promise.resolve(
+        jsonResponse({
+          data: makeOrder({
+            items,
+            partialFulfillment: raced
+              ? { status: 'awaiting_customer', requestedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 10 * 60_000).toISOString() }
+              : null,
+          }),
+        }),
+      )
     })
     renderPage()
 
@@ -289,6 +314,29 @@ describe('<PickingPage /> (DTJ-311)', () => {
 
     await waitFor(() => { expect(screen.getByTestId('partial-fulfillment-awaiting-banner')).toBeInTheDocument() })
     expect(screen.queryByTestId('complete-picking-error')).not.toBeInTheDocument()
+  })
+
+  it('422 EXPIRED_STOCK с itemIds на complete-picking — подсвечивает именно эту позицию (DTJ-312 доработка)', async () => {
+    const items = [
+      makeItem({ id: 'a', medicineName: 'Парацетамол 500мг', fulfillmentStatus: 'scanned_ok' }),
+      makeItem({ id: 'b', medicineName: 'Ибупрофен 200мг', fulfillmentStatus: 'scanned_ok' }),
+    ]
+    stubFetch((url) => {
+      if (url.includes('/complete-picking')) {
+        return Promise.resolve(jsonResponse({ error: { code: 'EXPIRED_STOCK', details: { orderId: 'order-1', itemIds: ['b'] } } }, 422))
+      }
+      return Promise.resolve(jsonResponse({ data: makeOrder({ items }) }))
+    })
+    renderPage()
+
+    await waitFor(() => { expect(screen.getByTestId('complete-picking-section')).toBeInTheDocument() })
+    fireEvent.click(screen.getByLabelText('Бастабандӣ мӯҳр карда шудааст'))
+    fireEvent.click(screen.getByTestId('complete-picking-cta'))
+
+    await waitFor(() => { expect(screen.getByTestId('complete-picking-error')).toBeInTheDocument() })
+    const rows = screen.getAllByTestId('picking-item-row')
+    expect(within(rows[1]!).getByTestId('picking-item-expired-stock-notice')).toBeInTheDocument()
+    expect(within(rows[0]!).queryByTestId('picking-item-expired-stock-notice')).not.toBeInTheDocument()
   })
 
   it('заказ уже picked_up (возврат из очереди) — сразу экран OTP, код подтягивается через GET (DTJ-312)', async () => {

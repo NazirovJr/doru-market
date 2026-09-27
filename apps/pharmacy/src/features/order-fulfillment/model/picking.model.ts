@@ -83,3 +83,10 @@ export function resolveCompletePickingBannerErrorMessage(t: (key: string) => str
   return t(resolveCompletePickingErrorMessageKey(code))
 }
 
+/** `422 EXPIRED_STOCK` на `complete-picking` (DTJ-312 доработка) — `details.itemIds` для подсветки конкретной позиции (см. `assertNoExpiredBatch`/`InventoryFacadePort.findExpiredReservedItemIds`, apps/api). Тот же приём, что `readResolvedName` выше — сервер решает форму `details`, клиент читает защитно. */
+export function readExpiredStockItemIds(details: unknown): readonly string[] {
+  if (typeof details !== 'object' || details === null) return []
+  const itemIds = (details as { itemIds?: unknown }).itemIds
+  return Array.isArray(itemIds) ? itemIds.filter((id): id is string => typeof id === 'string') : []
+}
+

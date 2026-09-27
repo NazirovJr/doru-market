@@ -19,6 +19,7 @@ const PICKING_KEYS: readonly string[] = [
   'pharmacy.picking.item.status.unavailable',
   'pharmacy.picking.item.quantity',
   'pharmacy.picking.item.report_issue_cta',
+  'pharmacy.picking.item.expired_stock_notice',
   'pharmacy.picking.scan.input_placeholder',
   'pharmacy.picking.scan.submit',
   'pharmacy.picking.scan.submit_pending',

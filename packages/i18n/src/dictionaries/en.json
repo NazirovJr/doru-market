@@ -238,6 +238,7 @@
   "pharmacy.picking.item.status.unavailable": "Unavailable",
   "pharmacy.picking.item.quantity": "Quantity: {quantity}",
   "pharmacy.picking.item.report_issue_cta": "Item unavailable",
+  "pharmacy.picking.item.expired_stock_notice": "Batch has expired — rescan the item or report the issue",
   "pharmacy.picking.scan.input_placeholder": "Enter barcode",
   "pharmacy.picking.scan.submit": "Submit",
   "pharmacy.picking.scan.submit_pending": "Sending…",

@@ -238,6 +238,7 @@
   "pharmacy.picking.item.status.unavailable": "Недоступно",
   "pharmacy.picking.item.quantity": "Количество: {quantity}",
   "pharmacy.picking.item.report_issue_cta": "Товар недоступен",
+  "pharmacy.picking.item.expired_stock_notice": "Партия просрочена — пересканируйте товар или сообщите о проблеме",
   "pharmacy.picking.scan.input_placeholder": "Введите штрихкод",
   "pharmacy.picking.scan.submit": "Отправить",
   "pharmacy.picking.scan.submit_pending": "Отправляем…",

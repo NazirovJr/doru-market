@@ -7,6 +7,7 @@ import {
   isItemActionable,
   isOrderCancelled,
   mergeUpdatedItem,
+  readExpiredStockItemIds,
   resolveCompletePickingErrorMessageKey,
   resolveScanErrorMessageKey,
   resolveWrongBarcodeMessage,
@@ -147,6 +148,21 @@ describe('picking.model — resolveCompletePickingErrorMessageKey', () => {
     ['SOME_OTHER_CODE', 'pharmacy.picking.complete.error.generic'],
   ])('%s -> %s', (code, expectedKey) => {
     expect(resolveCompletePickingErrorMessageKey(code)).toBe(expectedKey)
+  })
+})
+
+describe('picking.model — readExpiredStockItemIds', () => {
+  it('details без itemIds — пустой массив', () => {
+    expect(readExpiredStockItemIds({ orderId: 'order-1' })).toEqual([])
+  })
+
+  it('details с itemIds (строки) — массив id', () => {
+    expect(readExpiredStockItemIds({ orderId: 'order-1', itemIds: ['item-a', 'item-b'] })).toEqual(['item-a', 'item-b'])
+  })
+
+  it('details=null/не объект — пустой массив', () => {
+    expect(readExpiredStockItemIds(null)).toEqual([])
+    expect(readExpiredStockItemIds('unexpected')).toEqual([])
   })
 })
 

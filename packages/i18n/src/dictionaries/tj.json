@@ -238,6 +238,7 @@
   "pharmacy.picking.item.status.unavailable": "Дастнорас",
   "pharmacy.picking.item.quantity": "Миқдор: {quantity}",
   "pharmacy.picking.item.report_issue_cta": "Маҳсулот дастнорас аст",
+  "pharmacy.picking.item.expired_stock_notice": "Мӯҳлати партия гузаштааст — аз нав сканер кунед ё дар бораи мушкилот хабар диҳед",
   "pharmacy.picking.scan.input_placeholder": "Штрихкодро ворид кунед",
   "pharmacy.picking.scan.submit": "Фиристодан",
   "pharmacy.picking.scan.submit_pending": "Фиристода истодааст…",

@@ -1,18 +1,22 @@
-import { useEffect, useState, type Dispatch, type ReactElement, type SetStateAction } from 'react'
+import { useState, type ReactElement } from 'react'
 import { useNavigate, useParams } from 'react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { useT } from '@dorutj/i18n'
 import { CountdownTimer, PriceTag } from '@dorutj/ui'
 import type { HandoverOtpDto, OrderDto } from '@dorutj/contracts'
-import { useOrderDetail } from '@/features/order-fulfillment/api/order-items.api'
+import { orderDetailQueryKey, useOrderDetail } from '@/features/order-fulfillment/api/order-items.api'
 import { useCompletePicking } from '@/features/order-fulfillment/api/complete-picking.api'
-import { areAllItemsResolved, isOrderCancelled, resolveCompletePickingBannerErrorMessage } from '@/features/order-fulfillment/model/picking.model'
+import {
+  areAllItemsResolved,
+  isOrderCancelled,
+  readExpiredStockItemIds,
+  resolveCompletePickingBannerErrorMessage,
+} from '@/features/order-fulfillment/model/picking.model'
 import { HttpError } from '@/shared/api/http-client'
 import {
-  PARTIAL_FULFILLMENT_IDLE_STATE,
   canCompletePicking,
   canProposePartialFulfillment,
-  resolvePartialFulfillmentUiState,
-  type PartialFulfillmentUiState,
+  derivePartialFulfillmentUiStatus,
 } from '@/features/order-fulfillment/partial-fulfillment/model/partial-fulfillment.model'
 import { useProposePartialFulfillment } from '@/features/order-fulfillment/partial-fulfillment/api/propose-partial-fulfillment.api'
 import { PartialFulfillmentBanner } from '@/features/order-fulfillment/partial-fulfillment/ui/PartialFulfillmentBanner'
@@ -24,18 +28,6 @@ import { OrderCancelledDialog } from './OrderCancelledDialog'
 // Единственный тир предупреждения (нет отдельного «warning», в отличие от 15-минутного handover-таймера) — 1:1 приём удалённого локального CountdownTimer (TODO(DTJ-400), снят этим тикетом).
 const SLA_WARNING_THRESHOLD_SECONDS = 120
 const SLA_DANGER_THRESHOLD_SECONDS = 0
-
-/** WS DTJ-308 отсутствует — разрешение баннера частичной сборки уже существующим опросом `GET /orders/:id` (см. JSDoc `resolvePartialFulfillmentUiState`). Вынесено в хук — C1 (`complexity` `PickingPage`, порог 10). */
-function usePartialFulfillmentUiState(
-  order: Pick<OrderDto, 'status' | 'totalAmountDiram'> | undefined,
-): readonly [PartialFulfillmentUiState, Dispatch<SetStateAction<PartialFulfillmentUiState>>] {
-  const [state, setState] = useState<PartialFulfillmentUiState>(PARTIAL_FULFILLMENT_IDLE_STATE)
-  useEffect(() => {
-    if (order === undefined) return
-    setState((previous) => resolvePartialFulfillmentUiState(previous, order))
-  }, [order?.totalAmountDiram, order?.status])
-  return [state, setState]
-}
 
 // «Что сделать» п.5/п.6 — сразу после успешного complete-picking ИЛИ при возврате на уже picked_up заказ.
 function shouldShowHandoverScreen(order: Pick<OrderDto, 'status'>, completedOtp: HandoverOtpDto | null): boolean {
@@ -53,6 +45,12 @@ function extractHttpErrorCode(error: unknown): string | null {
 
 function resolveProposeBannerErrorMessage(t: (key: string) => string, isError: boolean): string | null {
   return isError ? t('pharmacy.partial_fulfillment.propose_error') : null
+}
+
+// `422 EXPIRED_STOCK` — единственный код с `details.itemIds` для подсветки (см. `readExpiredStockItemIds`), остальные коды сюда не попадают.
+function resolveExpiredStockItemIds(error: unknown): readonly string[] {
+  if (!(error instanceof HttpError) || error.code !== 'EXPIRED_STOCK') return []
+  return readExpiredStockItemIds(error.details)
 }
 
 // До `accept` заказ ещё не несёт `slaDeadlineAt` — терминал уже не показывает эту страницу без accept, но тип поля остаётся `string | null`. Отдельный компонент, не инлайн-тернарий в JSX — C1 (`complexity` `PickingPage`).
@@ -80,10 +78,10 @@ const AllItemsResolvedBanner = ({ items }: { readonly items: Parameters<typeof a
 export const PickingPage = (): ReactElement => {
   const { t } = useT('tj')
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { id: orderId } = useParams<{ id: string }>()
   const query = useOrderDetail(orderId ?? '')
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
-  const [partialFulfillmentUiState, setPartialFulfillmentUiState] = usePartialFulfillmentUiState(query.data)
   const [sealConfirmed, setSealConfirmed] = useState(false)
   const [completedOtp, setCompletedOtp] = useState<HandoverOtpDto | null>(null)
   const proposePartialFulfillment = useProposePartialFulfillment(orderId ?? '')
@@ -109,9 +107,13 @@ export const PickingPage = (): ReactElement => {
     return <HandoverOtpScreen {...buildHandoverOtpScreenProps(order.id, completedOtp, () => { void navigate('/') })} />
   }
 
+  // `partialFulfillment` — точный статус с сервера (DTJ-312 доработка), не клиентская эвристика — см. JSDoc `derivePartialFulfillmentUiStatus`.
+  const partialFulfillmentStatus = derivePartialFulfillmentUiStatus(order.partialFulfillment)
+
   function handlePropose(): void {
     proposePartialFulfillment.mutate(undefined, {
-      onSuccess: () => { setPartialFulfillmentUiState({ kind: 'awaiting', totalBeforeDiram: order.totalAmountDiram }) },
+      // Сразу подтягиваем актуальный `partialFulfillment` — не ждём следующего тика опроса (до 4с).
+      onSuccess: () => { void queryClient.invalidateQueries({ queryKey: orderDetailQueryKey(order.id) }) },
     })
   }
 
@@ -119,15 +121,16 @@ export const PickingPage = (): ReactElement => {
     completePicking.mutate(sealConfirmed, {
       onSuccess: (result) => { setCompletedOtp(result.handoverOtp) },
       onError: (error) => {
-        // Гонка (SRS-PHT-026) — баннер ожидания вместо сырой ошибки, экран остаётся на списке позиций.
+        // Гонка (SRS-PHT-026) — рефетч подтянет актуальный partialFulfillment, баннер ожидания вместо сырой ошибки.
         if (error instanceof HttpError && error.code === 'PARTIAL_FULFILLMENT_PENDING') {
-          setPartialFulfillmentUiState({ kind: 'awaiting', totalBeforeDiram: order.totalAmountDiram })
+          void queryClient.invalidateQueries({ queryKey: orderDetailQueryKey(order.id) })
         }
       },
     })
   }
 
   const completePickingErrorMessage = resolveCompletePickingBannerErrorMessage(t, extractHttpErrorCode(completePicking.error))
+  const expiredStockItemIds = resolveExpiredStockItemIds(completePicking.error)
 
   return (
     <section className="mx-auto flex w-full max-w-2xl flex-col gap-4 py-8" data-testid="picking-page">
@@ -141,8 +144,8 @@ export const PickingPage = (): ReactElement => {
       <AllItemsResolvedBanner items={order.items} />
 
       <PartialFulfillmentBanner
-        canPropose={canProposePartialFulfillment(order.items, partialFulfillmentUiState)}
-        isAwaiting={partialFulfillmentUiState.kind === 'awaiting'}
+        canPropose={canProposePartialFulfillment(order.items, partialFulfillmentStatus)}
+        isAwaiting={partialFulfillmentStatus === 'awaiting'}
         onPropose={handlePropose}
         isProposing={proposePartialFulfillment.isPending}
         proposeErrorMessage={resolveProposeBannerErrorMessage(t, proposePartialFulfillment.isError)}
@@ -156,12 +159,13 @@ export const PickingPage = (): ReactElement => {
             item={item}
             isSelected={selectedItemId === item.id}
             onSelect={setSelectedItemId}
+            isExpiredStock={expiredStockItemIds.includes(item.id)}
           />
         ))}
       </ul>
 
       <CompletePickingSection
-        canComplete={canCompletePicking(order.items, partialFulfillmentUiState)}
+        canComplete={canCompletePicking(order.items, partialFulfillmentStatus)}
         sealConfirmed={sealConfirmed}
         onSealConfirmedChange={setSealConfirmed}
         onComplete={handleCompletePicking}
