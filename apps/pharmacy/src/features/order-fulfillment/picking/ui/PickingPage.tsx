@@ -1,6 +1,7 @@
 import { useState, type ReactElement } from 'react'
 import { useParams } from 'react-router'
 import { useT } from '@dorutj/i18n'
+import { useLocale } from '@/shared/config/locale-provider'
 import { useOrderDetail } from '@/features/order-fulfillment/api/order-items.api'
 import { areAllItemsResolved, isOrderCancelled } from '@/features/order-fulfillment/model/picking.model'
 import { CountdownTimer } from './CountdownTimer'
@@ -8,7 +9,8 @@ import { ItemRow } from './ItemRow'
 import { OrderCancelledDialog } from './OrderCancelledDialog'
 
 export const PickingPage = (): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const { id: orderId } = useParams<{ id: string }>()
   const query = useOrderDetail(orderId ?? '')
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)

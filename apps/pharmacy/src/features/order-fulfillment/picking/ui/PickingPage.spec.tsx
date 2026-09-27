@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import type { OrderItemDto } from '@dorutj/contracts'
 import { useAuthStore } from '@/shared/api/auth-store'
+import { LocaleProvider } from '@/shared/config/locale-provider'
 import { PickingPage } from './PickingPage'
 
 type FetchImpl = (input: string, init?: RequestInit) => Promise<Response>
@@ -71,13 +72,15 @@ function makeOrder(overrides: Partial<Record<string, unknown>> & { readonly item
 function renderPage(): QueryClient {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/orders/order-1']}>
-        <Routes>
-          <Route path="/orders/:id" element={<PickingPage />} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>,
+    <LocaleProvider>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/orders/order-1']}>
+          <Routes>
+            <Route path="/orders/:id" element={<PickingPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    </LocaleProvider>,
   )
   return queryClient
 }

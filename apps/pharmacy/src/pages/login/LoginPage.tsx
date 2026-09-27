@@ -1,6 +1,8 @@
 import { useCallback, useReducer, useState, type ReactElement } from 'react'
 import { useNavigate } from 'react-router'
 import { useT } from '@dorutj/i18n'
+import { Button } from '@dorutj/ui'
+import { useLocale } from '@/shared/config/locale-provider'
 import { PhoneStep } from '@/features/auth/ui/phone-step'
 import { CodeStep } from '@/features/auth/ui/code-step'
 import { useAuthStore } from '@/shared/api/auth-store'
@@ -24,7 +26,8 @@ import { initialState, loginFlowReducer } from '@/features/auth/model/login-flow
  * на случай прямого перехода по URL с уже сохранённой (чужой) сессией.
  */
 const LoginPage = (): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const navigate = useNavigate()
   const [state, dispatch] = useReducer(loginFlowReducer, initialState)
   const [accessDeniedMessage, setAccessDeniedMessage] = useState<string | null>(null)
@@ -96,8 +99,6 @@ const LoginPage = (): ReactElement => {
 
 export default LoginPage
 
-const LOCKED_BUTTON_MIN_HEIGHT_PX = 48
-
 const LockedScreen = ({
   errorText,
   resendLabel,
@@ -112,14 +113,9 @@ const LockedScreen = ({
       <p role="alert" className="text-base text-ink">
         {errorText}
       </p>
-      <button
-        type="button"
-        onClick={onResend}
-        className="rounded-md bg-brand-primary px-4 py-2 font-semibold text-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
-        style={{ minHeight: LOCKED_BUTTON_MIN_HEIGHT_PX }}
-      >
+      <Button type="button" onClick={onResend}>
         {resendLabel}
-      </button>
+      </Button>
     </div>
   )
 }

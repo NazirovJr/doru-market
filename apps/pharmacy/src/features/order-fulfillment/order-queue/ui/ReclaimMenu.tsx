@@ -1,5 +1,6 @@
 import { useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
+import { useLocale } from '@/shared/config/locale-provider'
 import { RECLAIM_ORDER_REASON_VALUES, type ReclaimOrderReason } from '@dorutj/contracts'
 import { useReclaimOrder } from '@/features/order-fulfillment/api/orders-queue.api'
 
@@ -10,7 +11,8 @@ export interface ReclaimMenuProps {
 
 /** «Перехватить» (карточка «В сборке», занятая коллегой, «Что сделать» п.1) — компактный выбор причины, не полноценный модал, чтобы не раздувать карточку списка. */
 export const ReclaimMenu = ({ orderId, onClose }: ReclaimMenuProps): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [reason, setReason] = useState<ReclaimOrderReason>('colleague_unavailable')
   const reclaimOrder = useReclaimOrder()
 

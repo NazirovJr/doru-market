@@ -1,5 +1,7 @@
 import type { ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
+import { Badge } from '@dorutj/ui'
+import { useLocale } from '@/shared/config/locale-provider'
 import type { InventorySyncBatchListItemDto, TenantMetaDto } from '@dorutj/contracts'
 import { useTenantMeta } from '@/shared/api/use-tenant-meta'
 
@@ -32,7 +34,8 @@ export function hoursSinceReceived(now: Date, receivedAt: string): number {
 }
 
 export const StaleDataBadge = ({ freshestBatch, now }: StaleDataBadgeProps): ReactElement | null => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const { data: meta } = useTenantMeta(freshestBatch !== null)
   const currentTime = now ?? new Date()
 
@@ -53,15 +56,10 @@ export const StaleDataBadge = ({ freshestBatch, now }: StaleDataBadgeProps): Rea
   const stale = isBatchStale(currentTime, freshestBatch, meta)
   const hours = hoursSinceReceived(currentTime, freshestBatch.receivedAt)
 
+  // `Badge` (packages/ui) не принимает `data-testid`/`data-stale` — они остаются на обёртке.
   return (
-    <div
-      className={`flex flex-col gap-1 rounded-md border p-3 ${stale ? 'border-brand-warning' : 'border-line'}`}
-      data-testid="stale-data-badge"
-      data-stale={stale}
-    >
-      <p className={stale ? 'text-sm font-medium text-brand-warning' : 'text-sm text-ink'}>
-        {t('pharmacy.inventory.sync_history.stale.label', { hours })}
-      </p>
+    <div className="flex flex-col gap-1" data-testid="stale-data-badge" data-stale={stale}>
+      <Badge tone={stale ? 'warning' : 'neutral'}>{t('pharmacy.inventory.sync_history.stale.label', { hours })}</Badge>
       {stale ? (
         <p className="text-xs text-brand-warning" role="alert">
           {t('pharmacy.inventory.sync_history.stale.warning')}

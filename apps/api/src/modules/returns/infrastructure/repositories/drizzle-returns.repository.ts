@@ -13,14 +13,18 @@
  * TABLE + колонка) — вне периметра этого тикета, см. финальный отчёт координатору.
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { and, eq, ne } from 'drizzle-orm'
+import { and, desc, eq, inArray, lt, ne, or } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { orderReturns, type OrderReturnRow } from '@/db/schema/returns.js'
+import { orders } from '@/db/schema/orders.js'
+import { pharmacies } from '@/db/schema/pharmacies.js'
 import { Money } from '@/shared-kernel/domain/value-objects/money.vo.js'
 import { OrderReturn, ReturnReason, ReturnDisposition } from '@/modules/returns/domain/index.js'
 import {
   RETURNS_REPOSITORY,
   type ReturnsRepositoryPort,
+  type FindIncomingScope,
+  type FindIncomingResult,
 } from '@/modules/returns/application/ports/returns-repository.port.js'
 import type { ReturnsUnitOfWorkTx } from '@/modules/returns/application/ports/orders-facade.port.js'
 import { resolveDrizzleClient } from '../drizzle-tx.util.js'
@@ -47,6 +51,33 @@ export class DrizzleReturnsRepository implements ReturnsRepositoryPort {
     return rows.map((row) => row.id)
   }
 
+  // Скоуп по сети требует pharmacies (chain_id живёт там, не на orders) — иначе прямой WHERE по orders.pharmacy_id.
+  public async findIncoming(scope: FindIncomingScope): Promise<FindIncomingResult> {
+    const client = this.db
+    const fetchLimit = scope.limit + 1
+    const conditions = [
+      eq(orders.tenantId, scope.tenantId),
+      inArray(orderReturns.status, scope.statuses),
+      ...buildCursorConditions(scope.cursor),
+    ]
+    if (scope.chainId !== null) {
+      conditions.push(eq(pharmacies.chainId, scope.chainId))
+    } else if (scope.pharmacyId !== null) {
+      conditions.push(eq(orders.pharmacyId, scope.pharmacyId))
+    }
+    const rows = await client
+      .select({ ret: orderReturns })
+      .from(orderReturns)
+      .innerJoin(orders, eq(orders.id, orderReturns.orderId))
+      .leftJoin(pharmacies, eq(pharmacies.id, orders.pharmacyId))
+      .where(and(...conditions))
+      .orderBy(desc(orderReturns.requestedAt), desc(orderReturns.id))
+      .limit(fetchLimit)
+    const hasMore = rows.length > scope.limit
+    const page = hasMore ? rows.slice(0, scope.limit) : rows
+    return { items: page.map((row) => toDomain(row.ret)), hasMore }
+  }
+
   public async save(orderReturn: OrderReturn, tx?: ReturnsUnitOfWorkTx): Promise<void> {
     const client = resolveDrizzleClient(this.db, tx)
     const snapshot = orderReturn.toSnapshot()
@@ -68,6 +99,17 @@ export class DrizzleReturnsRepository implements ReturnsRepositoryPort {
     }
     await client.insert(orderReturns).values(row).onConflictDoUpdate({ target: orderReturns.id, set: row })
   }
+}
+
+function buildCursorConditions(cursor: FindIncomingScope['cursor']) {
+  if (cursor === null) {
+    return []
+  }
+  const cursorDate = new Date(cursor.v)
+  return [
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- or()/and() типизированы как возможно undefined, с непустыми аргументами всегда возвращают SQL
+    or(lt(orderReturns.requestedAt, cursorDate), and(eq(orderReturns.requestedAt, cursorDate), lt(orderReturns.id, cursor.id)))!,
+  ]
 }
 
 function toDisposition(value: string | null): ReturnDisposition | null {

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { OrderReturnDto } from '@dorutj/contracts'
+import { LocaleProvider } from '@/shared/config/locale-provider'
 import { IncomingReturnsList } from './IncomingReturnsList'
 
 type FetchImpl = (input: string, init?: RequestInit) => Promise<Response>
@@ -19,9 +20,11 @@ function jsonResponse(body: unknown, status = 200): Response {
 function renderList(): QueryClient {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   render(
-    <QueryClientProvider client={queryClient}>
-      <IncomingReturnsList />
-    </QueryClientProvider>,
+    <LocaleProvider>
+      <QueryClientProvider client={queryClient}>
+        <IncomingReturnsList />
+      </QueryClientProvider>
+    </LocaleProvider>,
   )
   return queryClient
 }

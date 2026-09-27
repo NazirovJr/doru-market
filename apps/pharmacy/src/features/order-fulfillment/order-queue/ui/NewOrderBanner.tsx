@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
+import { useLocale } from '@/shared/config/locale-provider'
 
 export interface NewOrderBannerProps {
   readonly orderNumber: string | null
@@ -8,7 +9,8 @@ export interface NewOrderBannerProps {
 
 /** Визуальный канал двойного оповещения (SRS-UX-007/025) — мигающий баннер поверх экрана, независимый от звука (звук мог быть недоступен/заглушён устройством). */
 export const NewOrderBanner = ({ orderNumber, onDismiss }: NewOrderBannerProps): ReactElement | null => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   if (orderNumber === null) return null
 
   return (

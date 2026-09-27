@@ -1,6 +1,8 @@
 import { useState, type ReactElement } from 'react'
 import type { OrderReturnDto } from '@dorutj/contracts'
-import { useT, toIntlLocale } from '@dorutj/i18n'
+import { useT, toIntlLocale, type Locale, type TranslationKey } from '@dorutj/i18n'
+import { Button, Card, EmptyState, ErrorState, Skeleton, Textarea } from '@dorutj/ui'
+import { useLocale } from '@/shared/config/locale-provider'
 import { useIncomingReturns } from '@/features/returns/api/use-incoming-returns'
 import { useRejectReturn } from '@/features/returns/api/use-reject-return'
 import { ReturnChecklistForm } from './ReturnChecklistForm'
@@ -18,22 +20,24 @@ import { isRejectReasonValid } from './ReturnChecklistForm.model'
 type ActiveAction = { readonly returnId: string; readonly mode: 'confirm' | 'reject' } | null
 
 export const IncomingReturnsList = (): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const query = useIncomingReturns()
   const [activeAction, setActiveAction] = useState<ActiveAction>(null)
 
   if (query.isPending) {
     return (
-      <p className="text-sm text-ink-muted" data-testid="incoming-returns-loading">
-        {t('pharmacy.returns.list.loading')}
-      </p>
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 py-8" data-testid="incoming-returns-loading">
+        <Skeleton variant="row" />
+        <Skeleton variant="row" />
+      </div>
     )
   }
   if (query.isError) {
     return (
-      <p role="alert" className="text-sm text-brand-danger" data-testid="incoming-returns-error">
-        {t('pharmacy.returns.list.error')}
-      </p>
+      <div data-testid="incoming-returns-error">
+        <ErrorState t={t} titleKey="pharmacy.returns.list.error" variant="inline" />
+      </div>
     )
   }
 
@@ -47,6 +51,7 @@ export const IncomingReturnsList = (): ReactElement => {
         allowActions
         activeAction={activeAction}
         onAction={setActiveAction}
+        locale={locale}
       />
       <ReturnSection
         titleKey="pharmacy.returns.list.section.rejected"
@@ -55,27 +60,29 @@ export const IncomingReturnsList = (): ReactElement => {
         allowActions={false}
         activeAction={activeAction}
         onAction={setActiveAction}
+        locale={locale}
       />
     </section>
   )
 }
 
 interface ReturnSectionProps {
-  readonly titleKey: string
-  readonly emptyKey: string
+  readonly titleKey: TranslationKey
+  readonly emptyKey: TranslationKey
   readonly items: readonly OrderReturnDto[]
   readonly allowActions: boolean
   readonly activeAction: ActiveAction
   readonly onAction: (action: ActiveAction) => void
+  readonly locale: Locale
 }
 
-const ReturnSection = ({ titleKey, emptyKey, items, allowActions, activeAction, onAction }: ReturnSectionProps): ReactElement => {
-  const { t } = useT('tj')
+const ReturnSection = ({ titleKey, emptyKey, items, allowActions, activeAction, onAction, locale }: ReturnSectionProps): ReactElement => {
+  const { t } = useT(locale)
   return (
     <div className="flex flex-col gap-3" data-testid="returns-section">
       <h2 className="text-sm font-semibold text-ink-muted">{t(titleKey)}</h2>
       {items.length === 0 ? (
-        <p className="text-sm text-ink-muted">{t(emptyKey)}</p>
+        <EmptyState t={t} titleKey={emptyKey} />
       ) : (
         <ul className="flex flex-col gap-3">
           {items.map((item) => (
@@ -96,56 +103,60 @@ interface ReturnCardProps {
   readonly onAction: (action: ActiveAction) => void
 }
 
-function formatRequestedAt(requestedAt: string): string {
-  return new Intl.DateTimeFormat(toIntlLocale('tj'), { dateStyle: 'medium' }).format(new Date(requestedAt))
+function formatRequestedAt(requestedAt: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(toIntlLocale(locale), { dateStyle: 'medium' }).format(new Date(requestedAt))
 }
 
 const ReturnCard = ({ item, allowActions, activeAction, onAction }: ReturnCardProps): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const isConfirming = activeAction?.returnId === item.id && activeAction.mode === 'confirm'
   const isRejecting = activeAction?.returnId === item.id && activeAction.mode === 'reject'
 
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-line bg-surface p-4" data-testid="return-card">
-      <p className="text-sm font-medium text-ink">{t('pharmacy.returns.card.order_label', { orderId: item.orderId })}</p>
-      <p className="text-sm text-ink-muted">{t(`pharmacy.returns.reason.${item.reason}`)}</p>
-      <p className="text-xs text-ink-muted">{t('pharmacy.returns.card.requested_at', { date: formatRequestedAt(item.requestedAt) })}</p>
+    // `Card` (packages/ui) не принимает `data-testid` (фиксированный набор пропов) — обёртка.
+    <div data-testid="return-card">
+      <Card className="flex flex-col gap-2">
+        <p className="text-sm font-medium text-ink">{t('pharmacy.returns.card.order_label', { orderId: item.orderId })}</p>
+        <p className="text-sm text-ink-muted">{t(`pharmacy.returns.reason.${item.reason}`)}</p>
+        <p className="text-xs text-ink-muted">{t('pharmacy.returns.card.requested_at', { date: formatRequestedAt(item.requestedAt, locale) })}</p>
 
-      {allowActions && activeAction === null ? (
-        <div className="flex gap-2 pt-1">
-          <button
-            type="button"
-            onClick={() => { onAction({ returnId: item.id, mode: 'confirm' }) }}
-            data-testid="return-card-confirm-cta"
-            className="rounded-md bg-brand-primary px-3 py-2 text-sm font-semibold text-white"
-          >
-            {t('pharmacy.returns.card.confirm_cta')}
-          </button>
-          <button
-            type="button"
-            onClick={() => { onAction({ returnId: item.id, mode: 'reject' }) }}
-            data-testid="return-card-reject-cta"
-            className="rounded-md border border-line px-3 py-2 text-sm font-medium text-ink"
-          >
-            {t('pharmacy.returns.card.reject_cta')}
-          </button>
-        </div>
-      ) : null}
+        {allowActions && activeAction === null ? (
+          <div className="flex gap-2 pt-1">
+            <Button
+              type="button"
+              onClick={() => { onAction({ returnId: item.id, mode: 'confirm' }) }}
+              data-testid="return-card-confirm-cta"
+            >
+              {t('pharmacy.returns.card.confirm_cta')}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => { onAction({ returnId: item.id, mode: 'reject' }) }}
+              data-testid="return-card-reject-cta"
+            >
+              {t('pharmacy.returns.card.reject_cta')}
+            </Button>
+          </div>
+        ) : null}
 
-      {isConfirming ? (
-        <ReturnChecklistForm
-          returnId={item.id}
-          {...(item.controlCategory !== undefined && { controlCategory: item.controlCategory })}
-          onClose={() => { onAction(null) }}
-        />
-      ) : null}
-      {isRejecting ? <RejectPanel returnId={item.id} onClose={() => { onAction(null) }} /> : null}
+        {isConfirming ? (
+          <ReturnChecklistForm
+            returnId={item.id}
+            {...(item.controlCategory !== undefined && { controlCategory: item.controlCategory })}
+            onClose={() => { onAction(null) }}
+          />
+        ) : null}
+        {isRejecting ? <RejectPanel returnId={item.id} onClose={() => { onAction(null) }} /> : null}
+      </Card>
     </div>
   )
 }
 
 const RejectPanel = ({ returnId, onClose }: { readonly returnId: string; readonly onClose: () => void }): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [reason, setReason] = useState('')
   const [touched, setTouched] = useState(false)
   const rejectReturn = useRejectReturn()
@@ -161,17 +172,14 @@ const RejectPanel = ({ returnId, onClose }: { readonly returnId: string; readonl
 
   return (
     <div className="flex flex-col gap-2 rounded-md border border-line bg-surface p-3" data-testid="reject-panel">
-      <label className="flex flex-col gap-1 text-sm text-ink">
-        {t('pharmacy.returns.reject.reason_label')}
-        <textarea
-          value={reason}
-          onChange={(event) => { setReason(event.target.value) }}
-          rows={2}
-          disabled={rejectReturn.isPending}
-          data-testid="reject-reason"
-          className="rounded-md border border-line px-3 py-2"
-        />
-      </label>
+      <Textarea
+        label={t('pharmacy.returns.reject.reason_label')}
+        value={reason}
+        onChange={(event) => { setReason(event.target.value) }}
+        rows={2}
+        disabled={rejectReturn.isPending}
+        data-testid="reject-reason"
+      />
       {touched && !isValid ? (
         <p role="alert" className="text-xs text-brand-danger" data-testid="reject-reason-required">
           {t('pharmacy.returns.reject.reason_required')}
@@ -183,23 +191,18 @@ const RejectPanel = ({ returnId, onClose }: { readonly returnId: string; readonl
         </p>
       ) : null}
       <div className="flex gap-2">
-        <button
+        <Button
           type="button"
           onClick={handleSubmit}
           disabled={rejectReturn.isPending}
+          loading={rejectReturn.isPending}
           data-testid="reject-submit"
-          className="rounded-md bg-brand-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
-          {rejectReturn.isPending ? t('pharmacy.returns.reject.submit_pending') : t('pharmacy.returns.reject.submit')}
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={rejectReturn.isPending}
-          className="rounded-md border border-line px-3 py-2 text-sm font-medium text-ink disabled:opacity-50"
-        >
+          {t('pharmacy.returns.reject.submit')}
+        </Button>
+        <Button type="button" variant="secondary" onClick={onClose} disabled={rejectReturn.isPending} data-testid="reject-cancel">
           {t('pharmacy.returns.reject.cancel')}
-        </button>
+        </Button>
       </div>
     </div>
   )

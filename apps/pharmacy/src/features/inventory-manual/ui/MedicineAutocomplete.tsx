@@ -1,5 +1,7 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
+import { Input } from '@dorutj/ui'
+import { useLocale } from '@/shared/config/locale-provider'
 import { useMedicineSuggest, MIN_MEDICINE_QUERY_LENGTH, type MedicineSuggestionItem } from '@/shared/api/use-medicine-search'
 import { formatMedicineLabel } from '@/features/inventory-manual/model/manual-entry-form.model'
 
@@ -39,7 +41,8 @@ const SuggestList = ({
   readonly isError: boolean
   readonly onSelect: (item: MedicineSuggestionItem) => void
 }): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   return (
     <ul
       role="listbox"
@@ -76,7 +79,8 @@ const SuggestList = ({
 }
 
 export const MedicineAutocomplete = ({ value, onChange, disabled = false }: MedicineAutocompleteProps): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [rawQuery, setRawQuery] = useState(value === null ? '' : formatMedicineLabel(value.tradeName, value.dosageForm, value.dosageStrength))
   const [isOpen, setIsOpen] = useState(false)
   const debouncedQuery = useDebouncedText(rawQuery)
@@ -93,19 +97,16 @@ export const MedicineAutocomplete = ({ value, onChange, disabled = false }: Medi
 
   return (
     <div className="relative flex flex-col gap-1">
-      <label htmlFor="medicine-autocomplete-input" className="text-sm text-ink">
-        {t('pharmacy.inventory.point_edit.medicine_label')}
-      </label>
-      <input
+      <Input
         id="medicine-autocomplete-input"
         type="text"
         role="combobox"
         aria-expanded={showDropdown}
+        label={t('pharmacy.inventory.point_edit.medicine_label')}
         value={rawQuery}
         disabled={disabled}
         placeholder={t('pharmacy.inventory.autocomplete.placeholder')}
         data-testid="medicine-autocomplete-input"
-        className="rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink"
         onChange={(event) => {
           setRawQuery(event.target.value)
           setIsOpen(true)

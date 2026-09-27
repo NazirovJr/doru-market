@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef, useId, type ReactElement, type KeyboardEvent } from 'react'
+import { useEffect, useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
+import { Button, OtpInput } from '@dorutj/ui'
+import { useLocale } from '@/shared/config/locale-provider'
 import { useVerifyOtp } from '@/features/auth/api/use-verify-otp'
 import { HttpError } from '@/shared/api/http-client'
 import {
@@ -8,18 +10,7 @@ import {
   type LoginFlowState,
 } from '@/features/auth/model/login-flow.model'
 
-/**
- * `code-step.tsx` (DTJ-166) — портировано из `apps/web/src/features/auth/ui/code-step.tsx`
- * (EP-01, DTJ-028, `SRS-UX-002/014/018/019/023`), логика и разметка БЕЗ изменений — см.
- * `phone-step.tsx` про единственную адаптацию (`useT('tj')` вместо `useLocale()`).
- *
- * 6-ячеечный OTP-ввод. Авто-переход между ячейками, авто-submit на 6-й цифре. `Backspace` на
- * пустой ячейке → переход назад. Cooldown-таймер для resend — `setInterval(1000)`.
- * TODO(EP-18): заменить `OTPInput` (этот файл) на `packages/ui/OtpField`, когда появится.
- */
-
 const OTP_LENGTH = 6
-const MIN_TAP_ZONE_PX = 48
 
 export interface CodeStepProps {
   readonly state: LoginFlowState
@@ -40,11 +31,9 @@ export const CodeStep = ({
   onResend,
   onCooldownTick,
 }: CodeStepProps): ReactElement => {
-  const { t } = useT('tj')
-  const formId = useId()
-  const [code, setCode] = useState<string[]>(Array.from({ length: OTP_LENGTH }, () => ''))
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [networkError, setNetworkError] = useState<string>('')
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
   const mutation = useVerifyOtp()
   const isSubmitting = mutation.isPending
@@ -62,23 +51,8 @@ export const CodeStep = ({
     }
   }, [state.resendCooldownSeconds, onCooldownTick])
 
-  const setCell = (index: number, value: string): void => {
-    const next = [...code]
-    next[index] = value
-    setCode(next)
-    if (value.length > 0 && index < OTP_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus()
-    }
-  }
-
-  const handleCellKey = (index: number, event: KeyboardEvent<HTMLInputElement>): void => {
-    if (event.key === 'Backspace' && code[index] === '' && index > 0) {
-      inputRefs.current[index - 1]?.focus()
-    }
-  }
-
   const submit = (fullCode: string): void => {
-    if (fullCode.length !== OTP_LENGTH || state.otpRequestId === null) {
+    if (state.otpRequestId === null) {
       return
     }
     setNetworkError('')
@@ -113,39 +87,16 @@ export const CodeStep = ({
       <p className="text-sm text-ink-muted">
         {t('auth.login.code_sent_to', { phone: state.phone })}
       </p>
-      <div
-        className="flex justify-center gap-2"
-        role="group"
-        aria-label={t('auth.login.code_title')}
-      >
-        {code.map((cell, index) => (
-          <input
-            key={`${formId}-cell-${String(index)}`}
-            ref={(el): void => {
-              inputRefs.current[index] = el
-            }}
-            type="text"
-            inputMode="numeric"
-            maxLength={1}
-            autoFocus={index === 0}
-            disabled={isSubmitting}
-            value={cell}
-            onChange={(e): void => {
-              const value = e.target.value.replace(/\D/g, '').slice(0, 1)
-              setCell(index, value)
-              if (value.length > 0 && index === OTP_LENGTH - 1) {
-                const fullCode = code.map((c, i) => (i === index ? value : c)).join('')
-                submit(fullCode)
-              }
-            }}
-            onKeyDown={(e): void => {
-              handleCellKey(index, e)
-            }}
-            aria-label={`${t('auth.login.code_title')} ${String(index + 1)}`}
-            className="rounded-md border border-line bg-surface text-center text-lg font-mono focus:outline-none focus:ring-2 focus:ring-brand-primary"
-            style={{ minWidth: MIN_TAP_ZONE_PX, minHeight: MIN_TAP_ZONE_PX }}
-          />
-        ))}
+      <div className="flex justify-center">
+        <OtpInput
+          length={OTP_LENGTH}
+          label={t('auth.login.code_title')}
+          error={errorText !== null}
+          locked={isSubmitting}
+          locale={locale}
+          autoFocus
+          onComplete={submit}
+        />
       </div>
       {errorText !== null ? (
         <p
@@ -157,17 +108,16 @@ export const CodeStep = ({
         </p>
       ) : null}
       <div className="flex items-center justify-between text-sm">
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={onResend}
           disabled={state.resendCooldownSeconds > 0 || isSubmitting}
-          className="text-brand-primary disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-brand-primary"
-          style={{ minHeight: MIN_TAP_ZONE_PX }}
         >
           {state.resendCooldownSeconds > 0
             ? t('auth.login.resend_countdown', { seconds: state.resendCooldownSeconds })
             : t('auth.login.resend_code')}
-        </button>
+        </Button>
         <span className="text-ink-muted">
           {state.attemptsLeft} / {MAX_VERIFY_ATTEMPTS}
         </span>

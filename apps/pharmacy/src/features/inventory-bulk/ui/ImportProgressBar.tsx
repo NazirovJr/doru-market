@@ -1,5 +1,7 @@
 import { useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
+import { Button, ProgressBar } from '@dorutj/ui'
+import { useLocale } from '@/shared/config/locale-provider'
 import {
   downloadImportErrorReport,
   progressFromBatches,
@@ -10,13 +12,10 @@ export interface ImportProgressBarProps {
   readonly sourceUploadId: string
 }
 
-function roundPercent(percent: number): number {
-  return Math.round(percent)
-}
-
 // Один прогресс-бар на N батчей одной загрузки — скрывает от пользователя разбивку на батчи.
 export const ImportProgressBar = ({ sourceUploadId }: ImportProgressBarProps): ReactElement => {
-  const { t } = useT('tj')
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const [reportError, setReportError] = useState(false)
   const batchesQuery = useImportBatchesPolling(sourceUploadId)
   const batches = batchesQuery.data
@@ -32,19 +31,7 @@ export const ImportProgressBar = ({ sourceUploadId }: ImportProgressBarProps): R
 
   return (
     <div className="flex flex-col gap-2 rounded-md border border-line p-3" data-testid="import-progress-bar">
-      <p className="text-sm font-medium text-ink">{t('pharmacy.inventory.bulk_edit.progress_title')}</p>
-
-      <div className="h-2 w-full overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={roundPercent(progress.percent)} aria-valuemin={0} aria-valuemax={100}>
-        <div
-          className="h-full rounded-full bg-brand-primary transition-[width]"
-          style={{ width: `${String(roundPercent(progress.percent))}%` }}
-          data-testid="import-progress-fill"
-        />
-      </div>
-
-      <p className="text-xs text-ink-muted" data-testid="import-progress-percent">
-        {roundPercent(progress.percent)}%
-      </p>
+      <ProgressBar value={progress.percent} labelKey="pharmacy.inventory.bulk_edit.progress_title" t={t} />
 
       {progress.isComplete ? (
         <div className="flex flex-col gap-2" data-testid="import-progress-complete">
@@ -64,14 +51,9 @@ export const ImportProgressBar = ({ sourceUploadId }: ImportProgressBarProps): R
           </p>
           {progress.hasErrors ? (
             <div>
-              <button
-                type="button"
-                onClick={handleDownloadErrorReport}
-                data-testid="import-download-error-report"
-                className="text-sm text-brand-primary underline"
-              >
+              <Button type="button" variant="ghost" onClick={handleDownloadErrorReport} data-testid="import-download-error-report">
                 {t('pharmacy.inventory.bulk_edit.progress_download_error_report')}
-              </button>
+              </Button>
               {reportError ? (
                 <p role="alert" className="text-xs text-brand-danger">
                   {t('pharmacy.inventory.bulk_edit.progress_error_report_error')}

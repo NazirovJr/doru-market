@@ -1,5 +1,13 @@
 {
   "brand.name": "DoruTJ",
+  "pharmacy.shell.nav_aria_label": "Pharmacy cabinet navigation",
+  "pharmacy.shell.nav.order_queue": "Order queue",
+  "pharmacy.shell.nav.inventory": "Inventory",
+  "pharmacy.shell.nav.sync_history": "Sync history",
+  "pharmacy.shell.nav.returns": "Returns",
+  "pharmacy.shell.language_switcher_aria_label": "Language selection",
+  "pharmacy.shell.logout": "Log out",
+  "pharmacy.shell.staff_fallback": "Pharmacy staff",
   "auth.login.phone_title": "Enter your phone number",
   "auth.login.phone_hint": "We'll send a confirmation code by SMS",
   "auth.login.phone_placeholder": "+992 XX XXX XX XX",

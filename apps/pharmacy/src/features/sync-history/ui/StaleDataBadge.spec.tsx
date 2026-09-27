@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { InventorySyncBatchListItemDto } from '@dorutj/contracts'
+import { LocaleProvider } from '@/shared/config/locale-provider'
 import { StaleDataBadge } from './StaleDataBadge'
 
 function freshBatch(overrides?: Partial<InventorySyncBatchListItemDto>): InventorySyncBatchListItemDto {
@@ -33,7 +34,11 @@ function stubTenantMeta(inventoryDeltaSlaMinutes: number, inventoryManualStaleHo
 
 function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>)
+  return render(
+    <LocaleProvider>
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    </LocaleProvider>,
+  )
 }
 
 afterEach(() => {

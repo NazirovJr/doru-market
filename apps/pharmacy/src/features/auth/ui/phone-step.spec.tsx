@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { LocaleProvider } from '@/shared/config/locale-provider'
 import { PhoneStep, formatPhone, toE164 } from '@/features/auth/ui/phone-step'
 
 /**
@@ -18,9 +19,11 @@ afterEach(() => {
 function renderPhoneStep(onSuccess = vi.fn()): { onSuccess: typeof onSuccess } {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   render(
-    <QueryClientProvider client={queryClient}>
-      <PhoneStep onSuccess={onSuccess} />
-    </QueryClientProvider>,
+    <LocaleProvider>
+      <QueryClientProvider client={queryClient}>
+        <PhoneStep onSuccess={onSuccess} />
+      </QueryClientProvider>
+    </LocaleProvider>,
   )
   return { onSuccess }
 }
@@ -49,10 +52,12 @@ describe('<PhoneStep /> — валидация перед отправкой OTP
 
     const input = screen.getByRole('textbox')
     const button = screen.getByRole('button')
-    expect(button).toBeDisabled()
+    // `Button` (packages/ui) — персистентный disabled помечается `aria-disabled`, БЕЗ нативного
+    // `disabled` (кнопка остаётся в tab-order по дизайну компонента, см. её JSDoc).
+    expect(button).toHaveAttribute('aria-disabled', 'true')
 
     fireEvent.change(input, { target: { value: '93700' } })
-    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('кнопка активна ровно при 9 введённых цифрах, невалидный ввод не отправляет запрос', () => {
@@ -64,11 +69,11 @@ describe('<PhoneStep /> — валидация перед отправкой OTP
     const button = screen.getByRole('button')
 
     fireEvent.change(input, { target: { value: '93700112' } })
-    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute('aria-disabled', 'true')
     expect(fetchMock).not.toHaveBeenCalled()
 
     fireEvent.change(input, { target: { value: '937001122' } })
-    expect(button).toBeEnabled()
+    expect(button).not.toHaveAttribute('aria-disabled')
   })
 
   it('успешный ввод 9 цифр и submit вызывают OTP-запрос с E.164-номером', async () => {
