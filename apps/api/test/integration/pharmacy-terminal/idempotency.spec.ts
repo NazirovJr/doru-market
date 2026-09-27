@@ -424,8 +424,7 @@ describe.skipIf(!postgresAvailable)('Pharmacy terminal Idempotency-Key — Super
       expect((second.body as ErrorBody).error.code).toBe('IDEMPOTENCY_KEY_CONFLICT')
     })
 
-    // DTJ-312 доработка (foundIssue приёмки) — ДРУГОЙ Idempotency-Key (не повтор одного и того же
-    // запроса, а НОВАЯ попытка, напр. вторая вкладка/перезагрузка) на уже awaiting_customer заказ.
+    // ДРУГОЙ Idempotency-Key — НОВАЯ попытка (не повтор того же запроса), а не идемпотентный кэш.
     it('второй propose ДРУГИМ Idempotency-Key при уже awaiting_customer-запросе → 409 PARTIAL_FULFILLMENT_PENDING, в БД ровно одна строка', async () => {
       const orderId = await seedReadyOrder()
       const first = await post(`/api/v1/orders/${orderId}/propose-partial-fulfillment`).set('Idempotency-Key', randomUUID()).send({})

@@ -1,11 +1,4 @@
-/**
- * `GET /api/v1/orders/:id` (терминал фармацевта) — деталь заказа для экрана сборки.
- *
- * ДОБАВЛЕНО (DTJ-312 доработка, foundIssue приёмки) — `partialFulfillment` из `findLatestByOrderId`:
- * клиент раньше определял «ждём подтверждения» эвристикой (сравнение `totalAmountDiram`) — сумма
- * может измениться и по другим причинам, статус запроса точнее. `findLatestByOrderId` не
- * фильтрует по статусу (см. JSDoc порта) — любой исход валиден для отображения.
- */
+/** `GET /api/v1/orders/:id` (терминал фармацевта) — деталь заказа для экрана сборки; `partialFulfillment` — точный статус вместо клиентской эвристики по `totalAmountDiram`. */
 import { Inject, Injectable } from '@nestjs/common'
 import { ForbiddenError, NotFoundError, type PharmacyTerminalOrderDetailDto, type UserRole } from '@dorutj/contracts'
 import { ORDER_REPOSITORY_PORT, type OrderRepositoryPort } from '@/modules/orders/application/ports/order-repository.port.js'

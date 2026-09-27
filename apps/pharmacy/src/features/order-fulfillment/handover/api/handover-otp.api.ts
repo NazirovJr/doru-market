@@ -19,7 +19,6 @@ export function useHandoverOtp(orderId: string, initialData?: HandoverOtpDto): U
   })
 }
 
-/** `POST /orders/:id/handover-otp/regenerate` (SRS-PHT-029) — тело пустое, `Idempotency-Key` обязателен. */
 function regenerateHandoverOtp(orderId: string, idempotencyKey: string): Promise<HandoverOtpDto> {
   return httpRequestJson<HandoverOtpDto>(`/api/v1/orders/${orderId}/handover-otp/regenerate`, {
     method: 'POST',

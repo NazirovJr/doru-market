@@ -114,7 +114,6 @@ export interface PharmacyTerminalOrderItemDto extends OrderItemDto {
 
 export interface PharmacyTerminalOrderDetailDto extends OrderDto {
   readonly items: readonly PharmacyTerminalOrderItemDto[]
-  // ДОБАВЛЕНО (DTJ-312 доработка) — статус последнего запроса частичной сборки, `null` если ни разу не предлагалась.
   readonly partialFulfillment: PharmacyTerminalPartialFulfillmentSummaryDto | null
 }
 

@@ -29,7 +29,6 @@ import { OrderCancelledDialog } from './OrderCancelledDialog'
 const SLA_WARNING_THRESHOLD_SECONDS = 120
 const SLA_DANGER_THRESHOLD_SECONDS = 0
 
-// «Что сделать» п.5/п.6 — сразу после успешного complete-picking ИЛИ при возврате на уже picked_up заказ.
 function shouldShowHandoverScreen(order: Pick<OrderDto, 'status'>, completedOtp: HandoverOtpDto | null): boolean {
   return completedOtp !== null || order.status === 'picked_up'
 }

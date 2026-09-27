@@ -1,4 +1,3 @@
-/** Smoke-тест локализации `pharmacy.partial_fulfillment.*` (DTJ-312) — тот же приём, что `picking/i18n-smoke.spec.ts` (DTJ-311). */
 import { describe, expect, it } from 'vitest'
 import { useT, type Locale } from '@dorutj/i18n'
 

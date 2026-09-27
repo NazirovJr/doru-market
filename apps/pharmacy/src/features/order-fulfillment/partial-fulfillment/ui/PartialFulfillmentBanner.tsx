@@ -3,9 +3,7 @@ import { useT } from '@dorutj/i18n'
 import { Button } from '@dorutj/ui'
 
 export interface PartialFulfillmentBannerProps {
-  /** Все позиции решены И есть unavailable И запрос ещё не отправлен (`canProposePartialFulfillment`). */
   readonly canPropose: boolean
-  /** Запрос отправлен, клиент ещё не ответил (`uiState.kind === 'awaiting'`). */
   readonly isAwaiting: boolean
   readonly onPropose: () => void
   readonly isProposing: boolean

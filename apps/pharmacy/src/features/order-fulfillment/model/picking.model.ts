@@ -13,7 +13,6 @@ export function areAllItemsResolved(items: readonly PharmacyTerminalOrderItemDto
   return items.every((item) => item.fulfillmentStatus !== 'pending')
 }
 
-// DTJ-312 — предпосылка и для баннера частичной сборки, и для гейта «Завершить сборку».
 export function hasUnavailableItem(items: readonly PharmacyTerminalOrderItemDto[]): boolean {
   return items.some((item) => item.fulfillmentStatus === 'unavailable')
 }

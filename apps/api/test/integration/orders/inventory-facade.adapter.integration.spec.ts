@@ -230,7 +230,6 @@ describe.skipIf(!postgresAvailable)('InventoryFacadeAdapter — integration (DTJ
     expect(await adapter.hasExpiredReservedBatch(orderId)).toBe(false)
   })
 
-  // DTJ-312 доработка — `findExpiredReservedItemIds` (1:1 запрос `hasExpiredReservedBatch`, но с `order_items.id` в проекции, см. JSDoc порта).
   it('findExpiredReservedItemIds — возвращает id позиции, чей резервированный лот истёк', async () => {
     const batchId = await seedBatch(-1, 10)
     const { orderId, itemId } = await seedOrderItemReferencingBatch(batchId)
