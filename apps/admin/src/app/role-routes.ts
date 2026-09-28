@@ -125,6 +125,10 @@ const PayoutSchedulePage: LazyExoticComponent<ComponentType<SectionPlaceholderPa
 const ReconciliationAlertsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
   import('@/features/finance/ui/reconciliation-alerts-page').then((m) => ({ default: m.ReconciliationAlertsPage })),
 )
+/** Та же схема совместимости без пропсов, что `EscrowLedgerPage` рядом. */
+const BillingInvoicesPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/finance/ui/billing-invoices-page').then((m) => ({ default: m.BillingInvoicesPage })),
+)
 
 function section(path: string, titleKey: string, icon: string): RouteConfig {
   return { path, titleKey, icon, Component: SectionPlaceholder }
@@ -147,6 +151,8 @@ const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
   { path: 'finance/escrow-ledger', titleKey: 'admin.nav.finance_escrow_ledger', icon: 'finance', Component: EscrowLedgerPage },
   { path: 'finance/payout-schedule', titleKey: 'admin.nav.finance_payout_schedule', icon: 'finance', Component: PayoutSchedulePage },
   { path: 'finance/reconciliation-alerts', titleKey: 'admin.nav.finance_reconciliation_alerts', icon: 'finance', Component: ReconciliationAlertsPage },
+  // Инвойсы cash_courier-комиссии, ручная отметка оплаты и снятие блокировки сети.
+  { path: 'finance/billing-invoices', titleKey: 'admin.nav.finance_billing_invoices', icon: 'finance', Component: BillingInvoicesPage },
   section('settings', 'admin.nav.settings', 'settings'),
 ]
 

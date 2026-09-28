@@ -1,7 +1,7 @@
 // Полнота словарей tj/ru/en для admin.finance.*/admin.nav.finance_* — тот же приём, что features/users/i18n-smoke.spec.ts.
 import { describe, expect, it } from 'vitest'
 import { useT, type Locale } from '@dorutj/i18n'
-import { PAYOUT_SCHEDULE_STATUS_VALUES } from '@dorutj/contracts'
+import { BILLING_INVOICE_STATUS_VALUES, PAYOUT_SCHEDULE_STATUS_VALUES } from '@dorutj/contracts'
 
 const LOCALES: readonly Locale[] = ['tj', 'ru', 'en']
 
@@ -48,6 +48,28 @@ const ADMIN_FINANCE_KEYS: readonly string[] = [
   'admin.finance.reconciliation_alerts.column.status',
   'admin.finance.reconciliation_alerts.badge_danger',
   'admin.finance.reconciliation_alerts.empty',
+  'admin.nav.finance_billing_invoices',
+  'admin.finance.billing_invoices.title',
+  'admin.finance.billing_invoices.filter.chain_id',
+  'admin.finance.billing_invoices.filter.status',
+  'admin.finance.billing_invoices.filter.status_all',
+  'admin.finance.billing_invoices.filter.apply',
+  'admin.finance.billing_invoices.filter.reset',
+  'admin.finance.billing_invoices.empty',
+  'admin.finance.billing_invoices.column.chain',
+  'admin.finance.billing_invoices.column.period',
+  'admin.finance.billing_invoices.column.total',
+  'admin.finance.billing_invoices.column.status',
+  'admin.finance.billing_invoices.column.due_at',
+  'admin.finance.billing_invoices.column.actions',
+  'admin.finance.billing_invoices.action.mark_paid',
+  'admin.finance.billing_invoices.action.lift_block',
+  'admin.finance.billing_invoices.mark_paid.conflict',
+  'admin.finance.billing_invoices.mark_paid.error',
+  'admin.finance.billing_invoices.lift_block.title',
+  'admin.finance.billing_invoices.lift_block.reason_label',
+  'admin.finance.billing_invoices.lift_block.confirm',
+  'admin.finance.billing_invoices.lift_block.error',
 ]
 
 const ESCROW_ENTRY_TYPES: readonly string[] = [
@@ -80,6 +102,13 @@ describe('admin/finance i18n — 3 локали, все ключи переве�
     const { t } = useT(locale)
     for (const status of PAYOUT_SCHEDULE_STATUS_VALUES) {
       expect(t(`admin.finance.payout_schedule.status.${status}`)).not.toContain(MISSING_KEY_MARKER)
+    }
+  })
+
+  it.each(LOCALES)('%s — все статусы billing_invoices переведены (DTJ-359)', (locale) => {
+    const { t } = useT(locale)
+    for (const status of BILLING_INVOICE_STATUS_VALUES) {
+      expect(t(`admin.finance.billing_invoices.status.${status}`)).not.toContain(MISSING_KEY_MARKER)
     }
   })
 })

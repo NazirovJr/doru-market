@@ -34,4 +34,7 @@ export const FAKE_PAYMENTS_FACADE_PORT: PaymentsFacadePort = {
       hasMore: false,
     }),
   findPayoutScheduleByOrder: () => Promise.resolve(null),
+  listBillingInvoices: () => Promise.resolve({ items: [], nextCursor: null, hasMore: false }),
+  getBillingInvoiceById: () => Promise.resolve(null),
+  markInvoicePaid: () => Promise.resolve('not_found'),
 }

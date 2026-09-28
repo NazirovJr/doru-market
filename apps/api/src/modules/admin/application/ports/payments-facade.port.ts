@@ -54,6 +54,29 @@ export interface PayoutScheduleEntryView {
   readonly paidAt: Date | null
 }
 
+export interface BillingInvoiceView {
+  readonly id: string
+  readonly chainId: string
+  readonly invoiceType: string
+  readonly status: string
+  readonly periodStart: Date
+  readonly periodEnd: Date
+  readonly subtotalDiram: number
+  readonly vatDiram: number
+  readonly totalDiram: number
+  readonly issuedAt: Date | null
+  readonly dueAt: Date | null
+  readonly paidAt: Date | null
+}
+
+export interface FindBillingInvoicesFilter {
+  readonly chainId?: string | undefined
+  readonly invoiceType?: string | undefined
+  readonly status?: string | undefined
+}
+
+export type MarkInvoicePaidOutcome = 'paid' | 'already_paid' | 'not_found' | 'invalid_status'
+
 export interface PaymentsFacadePort {
   /** Без пагинации — леджер одного заказа ограничен по размеру (DTJ-357 review). */
   findEscrowLedgerEntries(orderId: string): Promise<readonly EscrowLedgerEntryView[]>
@@ -64,4 +87,8 @@ export interface PaymentsFacadePort {
 
   // null для cash_courier.
   findPayoutScheduleByOrder(orderId: string): Promise<PayoutScheduleEntryView | null>
+
+  listBillingInvoices(filter: FindBillingInvoicesFilter, pagination: FinancePagination): Promise<FinancePage<BillingInvoiceView>>
+  getBillingInvoiceById(invoiceId: string): Promise<BillingInvoiceView | null>
+  markInvoicePaid(invoiceId: string, tx?: unknown): Promise<MarkInvoicePaidOutcome>
 }

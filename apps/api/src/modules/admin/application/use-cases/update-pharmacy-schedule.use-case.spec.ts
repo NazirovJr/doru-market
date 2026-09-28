@@ -15,7 +15,15 @@ function fakeDeps(
   const updateSchedule = vi.fn().mockResolvedValue(VIEW)
   const write = vi.fn().mockResolvedValue(undefined)
   return {
-    onboardingFacade: { findPharmacyAccountsAny: vi.fn(), getPharmacyChainId, getScheduleAndZone: vi.fn(), updateSchedule, updateDeliveryZone: vi.fn() },
+    onboardingFacade: {
+      findPharmacyAccountsAny: vi.fn(),
+      getPharmacyChainId,
+      getScheduleAndZone: vi.fn(),
+      updateSchedule,
+      updateDeliveryZone: vi.fn(),
+      liftInvoiceBlock: vi.fn(),
+      findChainNames: vi.fn(),
+    },
     auditLog: { write },
     updateSchedule,
     write,

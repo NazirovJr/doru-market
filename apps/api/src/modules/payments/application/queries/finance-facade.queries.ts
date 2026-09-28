@@ -2,7 +2,16 @@
 import { ValidationError } from '@dorutj/contracts'
 import type { EscrowLedgerRepository } from '../ports/escrow-ledger-repository.port.js'
 import type { PayoutScheduleRepository } from '../ports/payout-schedule-repository.port.js'
-import type { EscrowLedgerEntryDto, FinancePage, FinancePagination, FindPayoutScheduleFilter, PayoutScheduleEntryDto } from '../ports/payments-facade.port.js'
+import type { BillingInvoiceReportRow, PlatformBillingInvoiceRepository } from '../ports/platform-billing-invoice-repository.port.js'
+import type {
+  BillingInvoiceDto,
+  EscrowLedgerEntryDto,
+  FinancePage,
+  FinancePagination,
+  FindBillingInvoicesFilter,
+  FindPayoutScheduleFilter,
+  PayoutScheduleEntryDto,
+} from '../ports/payments-facade.port.js'
 
 // null для cash_courier — строки нет вовсе, не пустой результат.
 export async function findPayoutScheduleByOrder(repo: PayoutScheduleRepository, orderId: string): Promise<PayoutScheduleEntryDto | null> {
@@ -61,5 +70,31 @@ export async function findPayoutSchedule(
     })),
     nextCursor: page.nextCursor,
     hasMore: page.hasMore,
+  }
+}
+
+export async function listBillingInvoices(
+  repo: PlatformBillingInvoiceRepository,
+  filter: FindBillingInvoicesFilter,
+  pagination: FinancePagination,
+): Promise<FinancePage<BillingInvoiceDto>> {
+  const page = await repo.findAll({ filter, limit: pagination.limit, cursor: pagination.cursor })
+  return { items: page.items.map(toBillingInvoiceDto), nextCursor: page.nextCursor, hasMore: page.hasMore }
+}
+
+export function toBillingInvoiceDto(row: BillingInvoiceReportRow): BillingInvoiceDto {
+  return {
+    id: row.id,
+    chainId: row.chainId,
+    invoiceType: row.invoiceType,
+    status: row.status,
+    periodStart: row.periodStart,
+    periodEnd: row.periodEnd,
+    subtotalDiram: Number(row.subtotalDiram),
+    vatDiram: Number(row.vatDiram),
+    totalDiram: Number(row.totalDiram),
+    issuedAt: row.issuedAt,
+    dueAt: row.dueAt,
+    paidAt: row.paidAt,
   }
 }

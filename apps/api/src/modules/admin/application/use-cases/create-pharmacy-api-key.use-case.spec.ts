@@ -29,6 +29,8 @@ function fakeDeps(chainId: string | null): {
       getScheduleAndZone: vi.fn(),
       updateSchedule: vi.fn(),
       updateDeliveryZone: vi.fn(),
+      liftInvoiceBlock: vi.fn(),
+      findChainNames: vi.fn(),
     },
     inventoryFacade: {
       getInventorySummary: vi.fn(),

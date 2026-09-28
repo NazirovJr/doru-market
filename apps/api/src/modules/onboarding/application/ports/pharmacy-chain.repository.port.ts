@@ -28,8 +28,9 @@ export interface ListByStatusResult {
 }
 
 export interface PharmacyChainRepositoryPort {
-  findById(id: string): Promise<PharmacyChain | null>
+  // `tx` опционален — для атомарности с audit_log, без него прежнее поведение вне транзакции.
+  findById(id: string, tx?: unknown): Promise<PharmacyChain | null>
   findByTinInn(tinInn: string): Promise<PharmacyChain | null>
   listByStatus(filter: ListByStatusFilter): Promise<ListByStatusResult>
-  save(chain: PharmacyChain): Promise<void>
+  save(chain: PharmacyChain, tx?: unknown): Promise<void>
 }

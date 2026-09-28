@@ -55,6 +55,9 @@ function fakes(order: OrderAdminDetailView | null, timeline: OrderTimelineView |
       findEscrowLedgerEntries,
       findPayoutSchedule: vi.fn(),
       findPayoutScheduleByOrder,
+      listBillingInvoices: vi.fn(),
+      getBillingInvoiceById: vi.fn(),
+      markInvoicePaid: vi.fn(),
     },
     prescriptionsFacade: { getPrescriptionMetaByOrder },
     onboardingFacade: {
@@ -63,6 +66,8 @@ function fakes(order: OrderAdminDetailView | null, timeline: OrderTimelineView |
       getScheduleAndZone: vi.fn(),
       updateSchedule: vi.fn(),
       updateDeliveryZone: vi.fn(),
+      liftInvoiceBlock: vi.fn(),
+      findChainNames: vi.fn(),
     },
     getOrderDetail,
     getOrderTimeline,

@@ -32,6 +32,9 @@ function fakeInvoiceRepository(): { repository: PlatformBillingInvoiceRepository
     upsertDraft: vi.fn(),
     issue: vi.fn(),
     findByChain,
+    findById: vi.fn(),
+    findAll: vi.fn(),
+    markPaid: vi.fn(),
   }
   return { repository, findByChain }
 }

@@ -67,4 +67,7 @@ export interface OnboardingFacadePort {
   // Несуществующая аптека — NotFoundError (use case доходит сюда только после успешной policy-проверки владения).
   updateSchedule(pharmacyId: string, update: UpdatePharmacyScheduleInput, actor: { readonly id: string }): Promise<PharmacyScheduleView>
   updateDeliveryZone(pharmacyId: string, update: UpdateDeliveryZoneInput, actor: { readonly id: string }): Promise<PharmacyDeliveryZoneView>
+  // Позиционные аргументы (не объект-команда) — useExisting биндит порт напрямую на OnboardingFacade, сигнатуры должны совпадать дословно.
+  liftInvoiceBlock(chainId: string, actor: { readonly id: string }, tx?: unknown): Promise<void>
+  findChainNames(chainIds: readonly string[]): Promise<ReadonlyMap<string, string>>
 }
