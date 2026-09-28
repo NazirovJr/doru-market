@@ -133,7 +133,7 @@ import { PAYMENT_INVOICE_PORT } from './application/ports/payment-invoice.port.j
 // Односторонний импорт (orders → payments, НЕ forwardRef — см. JSDoc блока providers).
 import { PaymentsModule } from '@/modules/payments/payments.module.js'
 // DTJ-245 — снимает UnimplementedRefundFacadeAdapter (D-27, см. JSDoc блока providers ниже).
-import { PAYMENTS_FACADE, PaymentInvoiceAdapter, RefundFacadeAdapter } from '@/modules/payments/index.js'
+import { COMMISSION_RATE_RESOLVER, PaymentInvoiceAdapter, RefundFacadeAdapter } from '@/modules/payments/index.js'
 import { ORDERS_PAYMENTS_FACADE_PORT } from './application/ports/payments-facade.port.js'
 // DTJ-241 (SRS-PAY-041) — retry-payment живёт здесь (orders), не в payments, см. JSDoc блока providers.
 import { RetryPaymentUseCase } from './application/order-lifecycle/retry-payment.use-case.js'
@@ -500,7 +500,7 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     // оплаты, Rx-исключение (см. JSDoc импортов выше про null-адаптеры DELIVERY_FACADE_PORT/
     // PRESCRIPTIONS_FACADE_PORT).
     TENANCY_FACADE_PORT_PROVIDER,
-    { provide: ORDERS_PAYMENTS_FACADE_PORT, useExisting: PAYMENTS_FACADE },
+    { provide: ORDERS_PAYMENTS_FACADE_PORT, useExisting: COMMISSION_RATE_RESOLVER },
     USER_ADDRESS_FACADE_PORT_PROVIDER,
     DeliveryFacadeAdapter,
     { provide: DELIVERY_FACADE_PORT, useClass: DeliveryFacadeAdapter },

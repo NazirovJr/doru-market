@@ -84,8 +84,11 @@ function specificityTiers(input: ResolveActiveRateInput) {
   return tiers
 }
 
+/** Календарная дата в Asia/Dushanbe (D-19), тот же приём, что `delivery-pricing-rule.repository.ts::toDateString` — граница суток влияет на деньги. */
 function toDateOnly(date: Date): string {
-  return date.toISOString().slice(0, 10)
+  const DUSHANBE_UTC_OFFSET_HOURS = 5
+  const MS_PER_HOUR = 3_600_000
+  return new Date(date.getTime() + DUSHANBE_UTC_OFFSET_HOURS * MS_PER_HOUR).toISOString().slice(0, 10)
 }
 
 @Injectable()

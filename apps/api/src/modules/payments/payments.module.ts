@@ -204,7 +204,7 @@ import { AdjustLedgerUseCase } from './application/use-cases/adjust-ledger.use-c
 import { AdminPaymentOverrideController } from './presentation/admin-payment-override.controller.js'
 // DTJ-249 — HoldPayoutUseCase/PAYMENTS_FACADE (см. JSDoc блока providers выше).
 import { HoldPayoutUseCase } from './application/use-cases/hold-payout.use-case.js'
-import { PAYMENTS_FACADE, type PaymentsFacade } from './index.js'
+import { COMMISSION_RATE_RESOLVER, PAYMENTS_FACADE, type CommissionRateResolver, type PaymentsFacade } from './index.js'
 // DTJ-357 — read-методы PaymentsFacade вынесены отдельным файлом (C2, max-lines 300).
 import { findEscrowLedgerEntries, findPayoutSchedule, findPayoutScheduleByOrder, listCommissionRates, resolveCommissionRate, upsertCommissionRate } from './application/queries/finance-facade.queries.js'
 import { CLOCK, type Clock } from '@/shared-kernel/index.js'
@@ -439,6 +439,13 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
       }),
       inject: [PaymentsFacadeCommandPorts, PaymentsFacadeQueryPorts, CommissionRateFacadePorts],
     },
+    {
+      provide: COMMISSION_RATE_RESOLVER,
+      useFactory: (ports: CommissionRateFacadePorts): CommissionRateResolver => ({
+        resolveCommissionRate: (tenantId, chainId, category) => resolveCommissionRate(ports.repository, ports.clock, { tenantId, chainId, category }),
+      }),
+      inject: [CommissionRateFacadePorts],
+    },
     // DTJ-251 — см. JSDoc блока providers выше (нет вызывающего use case в ЭТОМ тикете, задел для DTJ-252).
     PLATFORM_BILLING_INVOICE_REPOSITORY_PROVIDER,
     // DTJ-252 — авто-блокировка сети + отчёты аптеке (см. JSDoc блока providers выше).
@@ -460,7 +467,7 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
   // DTJ-350 (EP-15, admin) — `PAYMENTS_FACADE` был забинжен (DTJ-249), но не экспортирован:
   // ничто вне `payments` ещё не потребляло его. `admin.module.ts` — первый внешний потребитель
   // (`useExisting` на свой узкий `PAYMENTS_FACADE_PORT`), гостевая правка одной строки.
-  exports: [PaymentInvoiceAdapter, RefundFacadeAdapter, PAYMENTS_FACADE],
+  exports: [PaymentInvoiceAdapter, RefundFacadeAdapter, PAYMENTS_FACADE, COMMISSION_RATE_RESOLVER],
 })
 export class PaymentsModule implements OnModuleDestroy {
   public constructor(@Inject(MOCK_BANK_AUTO_PAY_QUEUE) private readonly autoPayQueue: Queue<MockBankAutoPayJobData>) {}

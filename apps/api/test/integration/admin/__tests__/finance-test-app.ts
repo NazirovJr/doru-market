@@ -75,7 +75,6 @@ function applyTestEnv(): void {
     ListEscrowLedgerUseCase,
     ListPayoutScheduleUseCase,
     ListReconciliationAlertsUseCase,
-    // DTJ-358
     ListCommissionRatesUseCase,
     UpsertCommissionRateUseCase,
   ],
