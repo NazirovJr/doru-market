@@ -126,6 +126,11 @@ const ReconciliationAlertsPage: LazyExoticComponent<ComponentType<SectionPlaceho
   import('@/features/finance/ui/reconciliation-alerts-page').then((m) => ({ default: m.ReconciliationAlertsPage })),
 )
 
+/** DTJ-360 — та же схема совместимости без пропсов, что `AuditLogPage`; заменяет placeholder `settings`. */
+const PlatformSettingsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/platform-settings/ui/platform-settings-page').then((m) => ({ default: m.PlatformSettingsPage })),
+)
+
 function section(path: string, titleKey: string, icon: string): RouteConfig {
   return { path, titleKey, icon, Component: SectionPlaceholder }
 }
@@ -147,7 +152,8 @@ const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
   { path: 'finance/escrow-ledger', titleKey: 'admin.nav.finance_escrow_ledger', icon: 'finance', Component: EscrowLedgerPage },
   { path: 'finance/payout-schedule', titleKey: 'admin.nav.finance_payout_schedule', icon: 'finance', Component: PayoutSchedulePage },
   { path: 'finance/reconciliation-alerts', titleKey: 'admin.nav.finance_reconciliation_alerts', icon: 'finance', Component: ReconciliationAlertsPage },
-  section('settings', 'admin.nav.settings', 'settings'),
+  // DTJ-360 — заменяет placeholder `settings` реальным read-only экраном ENV-констант.
+  { path: 'settings', titleKey: 'admin.nav.settings', icon: 'settings', Component: PlatformSettingsPage },
 ]
 
 /** `pharmacy_admin`: Мои точки/Заказы/Сотрудники/Ключи 1С/Отчёты/Расписание. */
