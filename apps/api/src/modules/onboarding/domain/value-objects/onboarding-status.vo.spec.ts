@@ -22,7 +22,7 @@ const EXPECTED_ALLOWED: Readonly<Record<string, readonly string[]>> = {
   changes_requested: ['pending_review', 'rejected', 'terminated'],
   approved: ['active', 'terminated'],
   active: ['suspended', 'terminated'],
-  suspended: ['pending_review', 'terminated'],
+  suspended: ['pending_review', 'active', 'terminated'], // lift-block, см. PharmacyChain.liftInvoiceBlock
   rejected: [],
   terminated: [],
 }
@@ -71,6 +71,10 @@ describe('OnboardingStatus.isTransitionAllowed', () => {
 
   it('разрешён переход suspended -> pending_review (SRS-ADM-019, requestReactivation)', () => {
     expect(isTransitionAllowed('suspended', 'pending_review')).toBe(true)
+  })
+
+  it('разрешён переход suspended -> active (DTJ-359, liftInvoiceBlock)', () => {
+    expect(isTransitionAllowed('suspended', 'active')).toBe(true)
   })
 })
 

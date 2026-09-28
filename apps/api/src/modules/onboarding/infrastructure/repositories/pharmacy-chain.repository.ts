@@ -17,13 +17,15 @@ import type {
   PharmacyChainRepositoryPort,
 } from '@/modules/onboarding/application/ports/pharmacy-chain.repository.port.js'
 import { isOnboardingStatus } from '@/modules/onboarding/domain/value-objects/onboarding-status.vo.js'
+import { resolveDrizzleClient } from './drizzle-tx.util.js'
 
 @Injectable()
 export class DrizzlePharmacyChainRepository implements PharmacyChainRepositoryPort {
   constructor(@Inject(DRIZZLE_DB) private readonly db: DrizzleDb) {}
 
-  async findById(id: string): Promise<PharmacyChain | null> {
-    const rows = await this.db.select().from(pharmacyChains).where(eq(pharmacyChains.id, id)).limit(1)
+  async findById(id: string, tx?: unknown): Promise<PharmacyChain | null> {
+    const client = resolveDrizzleClient(this.db, tx)
+    const rows = await client.select().from(pharmacyChains).where(eq(pharmacyChains.id, id)).limit(1)
     const row = rows[0]
     if (row === undefined) {
       return null
@@ -79,9 +81,10 @@ export class DrizzlePharmacyChainRepository implements PharmacyChainRepositoryPo
     }
   }
 
-  async save(chain: PharmacyChain): Promise<void> {
+  async save(chain: PharmacyChain, tx?: unknown): Promise<void> {
+    const client = resolveDrizzleClient(this.db, tx)
     const row = chain.props
-    await this.db
+    await client
       .insert(pharmacyChains)
       .values(row)
       .onConflictDoUpdate({

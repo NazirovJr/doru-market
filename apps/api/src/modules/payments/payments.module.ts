@@ -206,9 +206,10 @@ import { AdminPaymentOverrideController } from './presentation/admin-payment-ove
 import { HoldPayoutUseCase } from './application/use-cases/hold-payout.use-case.js'
 import { PAYMENTS_FACADE, type PaymentsFacade } from './index.js'
 // DTJ-357 — read-методы PaymentsFacade вынесены отдельным файлом (C2, max-lines 300).
-import { findEscrowLedgerEntries, findPayoutSchedule, findPayoutScheduleByOrder } from './application/queries/finance-facade.queries.js'
+import { findEscrowLedgerEntries, findPayoutSchedule, findPayoutScheduleByOrder, listBillingInvoices, toBillingInvoiceDto } from './application/queries/finance-facade.queries.js'
 // DTJ-251 — PlatformBillingInvoiceRepository, задел для DTJ-252 (см. JSDoc блока providers выше).
 import { PLATFORM_BILLING_INVOICE_REPOSITORY_PROVIDER } from './infrastructure/repositories/platform-billing-invoice.repository.js'
+import { PLATFORM_BILLING_INVOICE_REPOSITORY, type PlatformBillingInvoiceRepository } from './application/ports/platform-billing-invoice-repository.port.js'
 // DTJ-252 — авто-блокировка сети за неоплаченный B2B-инвойс + отчёты аптеке (см. JSDoc блока providers выше).
 import { OnboardingModule } from '@/modules/onboarding/onboarding.module.js'
 import { ONBOARDING_FACADE_PORT_PROVIDER } from './infrastructure/adapters/onboarding-facade.adapter.js'
@@ -272,6 +273,16 @@ class PaymentsFacadeCommandPorts {
     @Inject(HoldPayoutUseCase) public readonly holdPayout: HoldPayoutUseCase,
     @Inject(RefundOrderUseCase) public readonly refundOrder: RefundOrderUseCase,
     @Inject(AdjustLedgerUseCase) public readonly adjustLedger: AdjustLedgerUseCase,
+  ) {}
+}
+
+/** Агрегирует read-репозитории PAYMENTS_FACADE в один параметр (иначе useFactory нёс бы 4, max-params ≤3). */
+@Injectable()
+class PaymentsFacadeReadRepos {
+  public constructor(
+    @Inject(ESCROW_LEDGER_REPOSITORY) public readonly escrowLedger: EscrowLedgerRepository,
+    @Inject(PAYOUT_SCHEDULE_REPOSITORY) public readonly payoutSchedule: PayoutScheduleRepository,
+    @Inject(PLATFORM_BILLING_INVOICE_REPOSITORY) public readonly billingInvoice: PlatformBillingInvoiceRepository,
   ) {}
 }
 
@@ -391,9 +402,10 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
     // DTJ-249 — заморозка выплаты по спору, первый провайдер PAYMENTS_FACADE (см. JSDoc блока providers выше).
     HoldPayoutUseCase,
     PaymentsFacadeCommandPorts,
+    PaymentsFacadeReadRepos,
     {
       provide: PAYMENTS_FACADE,
-      useFactory: (commands: PaymentsFacadeCommandPorts, escrowLedgerRepo: EscrowLedgerRepository, payoutScheduleRepo: PayoutScheduleRepository): PaymentsFacade => ({
+      useFactory: (commands: PaymentsFacadeCommandPorts, repos: PaymentsFacadeReadRepos): PaymentsFacade => ({
         holdPayout: (tenantId, orderId, disputeId) => commands.holdPayout.execute({ tenantId, orderId, disputeId }),
         refundFull: (tenantId, command) =>
           commands.refundOrder.execute({ tenantId, orderId: command.orderId, reason: command.reason }),
@@ -405,11 +417,17 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
             reason: command.reason,
             actorUserId: command.actorUserId,
           }),
-        findEscrowLedgerEntries: (orderId) => findEscrowLedgerEntries(escrowLedgerRepo, orderId),
-        findPayoutSchedule: (filter, pagination) => findPayoutSchedule(payoutScheduleRepo, filter, pagination),
-        findPayoutScheduleByOrder: (orderId) => findPayoutScheduleByOrder(payoutScheduleRepo, orderId),
+        findEscrowLedgerEntries: (orderId) => findEscrowLedgerEntries(repos.escrowLedger, orderId),
+        findPayoutSchedule: (filter, pagination) => findPayoutSchedule(repos.payoutSchedule, filter, pagination),
+        findPayoutScheduleByOrder: (orderId) => findPayoutScheduleByOrder(repos.payoutSchedule, orderId),
+        listBillingInvoices: (filter, pagination) => listBillingInvoices(repos.billingInvoice, filter, pagination),
+        getBillingInvoiceById: async (invoiceId) => {
+          const row = await repos.billingInvoice.findById(invoiceId)
+          return row === null ? null : toBillingInvoiceDto(row)
+        },
+        markInvoicePaid: (invoiceId, tx) => repos.billingInvoice.markPaid(invoiceId, tx),
       }),
-      inject: [PaymentsFacadeCommandPorts, ESCROW_LEDGER_REPOSITORY, PAYOUT_SCHEDULE_REPOSITORY],
+      inject: [PaymentsFacadeCommandPorts, PaymentsFacadeReadRepos],
     },
     // DTJ-251 — см. JSDoc блока providers выше (нет вызывающего use case в ЭТОМ тикете, задел для DTJ-252).
     PLATFORM_BILLING_INVOICE_REPOSITORY_PROVIDER,

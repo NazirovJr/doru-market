@@ -240,6 +240,13 @@ export class PharmacyChain {
     assertTransitionAllowed(this.status, 'pending_review')
     return new PharmacyChain({ ...this.props, status: 'pending_review' })
   }
+
+  /** `suspended → active`, минуя `pending_review` — снятие финансовой блокировки, не комплаенс-ревью. */
+  liftInvoiceBlock(actor: { readonly id: string }): PharmacyChain {
+    assertTransitionAllowed(this.status, 'active')
+    void actor
+    return new PharmacyChain({ ...this.props, status: 'active' })
+  }
 }
 
 // -------- Внутренние валидаторы --------

@@ -5,7 +5,18 @@ import type { OnboardingFacadePort, PharmacyAccountsAnyPage } from '../ports/onb
 
 function fakeFacade(page: PharmacyAccountsAnyPage): { facade: OnboardingFacadePort; findPharmacyAccountsAny: ReturnType<typeof vi.fn> } {
   const findPharmacyAccountsAny = vi.fn().mockResolvedValue(page)
-  return { facade: { findPharmacyAccountsAny, getPharmacyChainId: vi.fn(), getScheduleAndZone: vi.fn(), updateSchedule: vi.fn(), updateDeliveryZone: vi.fn() }, findPharmacyAccountsAny }
+  return {
+    facade: {
+      findPharmacyAccountsAny,
+      getPharmacyChainId: vi.fn(),
+      getScheduleAndZone: vi.fn(),
+      updateSchedule: vi.fn(),
+      updateDeliveryZone: vi.fn(),
+      liftInvoiceBlock: vi.fn(),
+      findChainNames: vi.fn(),
+    },
+    findPharmacyAccountsAny,
+  }
 }
 
 const EMPTY_PAGE: PharmacyAccountsAnyPage = { items: [], nextCursor: null, hasMore: false }

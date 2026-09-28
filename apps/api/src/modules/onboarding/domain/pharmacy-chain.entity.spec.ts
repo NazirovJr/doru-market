@@ -136,6 +136,18 @@ describe('PharmacyChain state machine', () => {
     const suspended = activeChain.suspend(ACTOR, 'unpaid_invoice')
     expect(suspended.requestReactivation().status).toBe('pending_review')
   })
+
+  // suspended → active (симметрично suspend()), минуя pending_review.
+  it('suspended → active (liftInvoiceBlock) — снятие блокировки после оплаты инвойса', () => {
+    const activeChain = PharmacyChain.restore({ ...PharmacyChain.create(newChainCommand()).props, status: 'active' })
+    const suspended = activeChain.suspend(ACTOR, 'unpaid_invoice')
+    expect(suspended.liftInvoiceBlock(ACTOR).status).toBe('active')
+  })
+
+  it('liftInvoiceBlock() из НЕ-suspended состояния бросает InvalidOnboardingTransitionError', () => {
+    const draft = PharmacyChain.create(newChainCommand())
+    expect(() => draft.liftInvoiceBlock(ACTOR)).toThrow(InvalidOnboardingTransitionError)
+  })
 })
 
 describe('PharmacyChain.updateApplication', () => {

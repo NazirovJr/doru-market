@@ -84,6 +84,9 @@ import { DrizzleExportJobsRepository } from './infrastructure/repositories/expor
 import { RequestReportExportDeps, RequestReportExportUseCase } from './application/use-cases/request-report-export.use-case.js'
 import { GetExportJobStatusUseCase } from './application/use-cases/get-export-job-status.use-case.js'
 import { ReportExportController } from './presentation/report-export.controller.js'
+import { ListBillingInvoicesUseCase } from './application/use-cases/list-billing-invoices.use-case.js'
+import { MarkInvoicePaidUseCase } from './application/use-cases/mark-invoice-paid.use-case.js'
+import { LiftInvoiceBlockUseCase } from './application/use-cases/lift-invoice-block.use-case.js'
 import { FeatureFlagsController } from './presentation/feature-flags.controller.js'
 import { TenantsController } from './presentation/tenants.controller.js'
 import { UsersAdminController } from './presentation/users-admin.controller.js'
@@ -94,6 +97,7 @@ import { PharmacyScheduleController } from './presentation/pharmacy-schedule.con
 import { OrdersAdminController } from './presentation/orders-admin.controller.js'
 import { PharmacyApiKeysController } from './presentation/pharmacy-api-keys.controller.js'
 import { PlatformSettingsController } from './presentation/platform-settings.controller.js'
+import { BillingInvoicesController } from './presentation/billing-invoices.controller.js'
 
 @Module({
   imports: [OnboardingModule, OrdersModule, PaymentsModule, AuthModule, TenancyModule, InventoryModule, DeliveryModule],
@@ -109,6 +113,7 @@ import { PlatformSettingsController } from './presentation/platform-settings.con
     PharmacyApiKeysController,
     PlatformSettingsController,
     ReportExportController,
+    BillingInvoicesController,
   ],
   providers: [
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },
@@ -167,6 +172,10 @@ import { PlatformSettingsController } from './presentation/platform-settings.con
     RequestReportExportDeps,
     RequestReportExportUseCase,
     GetExportJobStatusUseCase,
+    // Инвойсы cash_courier-комиссии (PAYMENTS_FACADE_PORT листинг/mark-paid, ONBOARDING_FACADE_PORT.liftInvoiceBlock).
+    ListBillingInvoicesUseCase,
+    MarkInvoicePaidUseCase,
+    LiftInvoiceBlockUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.

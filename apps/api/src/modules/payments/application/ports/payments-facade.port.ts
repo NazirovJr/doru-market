@@ -85,6 +85,29 @@ export interface FinancePagination {
   readonly cursor: FinanceCursor | null
 }
 
+export interface BillingInvoiceDto {
+  readonly id: string
+  readonly chainId: string
+  readonly invoiceType: string
+  readonly status: string
+  readonly periodStart: Date
+  readonly periodEnd: Date
+  readonly subtotalDiram: number
+  readonly vatDiram: number
+  readonly totalDiram: number
+  readonly issuedAt: Date | null
+  readonly dueAt: Date | null
+  readonly paidAt: Date | null
+}
+
+export interface FindBillingInvoicesFilter {
+  readonly chainId?: string | undefined
+  readonly invoiceType?: string | undefined
+  readonly status?: string | undefined
+}
+
+export type MarkInvoicePaidResult = 'paid' | 'already_paid' | 'not_found' | 'invalid_status'
+
 export interface PaymentsFacade {
   /**
    * Атомарно переводит `payout_schedule` заказа в `status='disputed'` (SRS-DOM-058), если она
@@ -106,4 +129,8 @@ export interface PaymentsFacade {
 
   // null для cash_courier/ещё не доставленного заказа.
   findPayoutScheduleByOrder(orderId: string): Promise<PayoutScheduleEntryDto | null>
+
+  listBillingInvoices(filter: FindBillingInvoicesFilter, pagination: FinancePagination): Promise<FinancePage<BillingInvoiceDto>>
+  getBillingInvoiceById(invoiceId: string): Promise<BillingInvoiceDto | null>
+  markInvoicePaid(invoiceId: string, tx?: unknown): Promise<MarkInvoicePaidResult>
 }

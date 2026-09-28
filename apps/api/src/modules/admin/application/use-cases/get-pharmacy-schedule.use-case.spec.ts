@@ -14,6 +14,8 @@ function fakeFacade(chainId: string | null, view: PharmacyScheduleAndZoneView | 
     getScheduleAndZone: vi.fn().mockResolvedValue(view),
     updateSchedule: vi.fn(),
     updateDeliveryZone: vi.fn(),
+    liftInvoiceBlock: vi.fn(),
+    findChainNames: vi.fn(),
   }
 }
 
