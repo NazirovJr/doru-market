@@ -220,4 +220,58 @@ describe('InventoryExcelImportController (DTJ-161, SRS-INV-014)', () => {
       controller.import(fakeRequest({ mode: 'append_update' }), makeClaims({ role: 'super_admin', pharmacyId: null })),
     ).rejects.toBeInstanceOf(HttpException)
   })
+
+  it('DTJ-441: сетевой pharmacy_admin (pharmacyId=null, chainId задан) без query pharmacyId получает 400, details.field="pharmacyId"', async () => {
+    const { controller } = makeController({ rows: makeRows(1), rejectedRows: [] })
+
+    let caught: HttpException | undefined
+    try {
+      await controller.import(fakeRequest({ mode: 'append_update' }), makeClaims({ pharmacyId: null, chainId: 'chain-excel' }))
+    } catch (error) {
+      caught = error as HttpException
+    }
+    expect(caught?.getStatus()).toBe(400)
+    const body = caught?.getResponse() as { error: { details?: { field?: string } } }
+    expect(body.error.details?.field).toBe('pharmacyId')
+  })
+
+  it('DTJ-441: сетевой pharmacy_admin с query pharmacyId своей сети — батчи создаются на выбранную аптеку', async () => {
+    const { controller, syncBatchRepository } = makeController({ rows: makeRows(1), rejectedRows: [] })
+    syncBatchRepository.seedPharmacyChainId('pharmacy-excel-center', 'chain-excel')
+
+    const result = await controller.import(
+      fakeRequest({ mode: 'append_update' }),
+      makeClaims({ pharmacyId: null, chainId: 'chain-excel' }),
+      'pharmacy-excel-center',
+    )
+
+    const batches = await syncBatchRepository.findBySourceUploadId(extractSourceUploadId(result))
+    expect(batches.every((b) => b.pharmacyId === 'pharmacy-excel-center')).toBe(true)
+  })
+
+  it('DTJ-441: сетевой pharmacy_admin с query pharmacyId ЧУЖОЙ сети получает 403', async () => {
+    const { controller, syncBatchRepository } = makeController({ rows: makeRows(1), rejectedRows: [] })
+    syncBatchRepository.seedPharmacyChainId('pharmacy-other-chain', 'chain-other')
+
+    let caught: HttpException | undefined
+    try {
+      await controller.import(
+        fakeRequest({ mode: 'append_update' }),
+        makeClaims({ pharmacyId: null, chainId: 'chain-excel' }),
+        'pharmacy-other-chain',
+      )
+    } catch (error) {
+      caught = error as HttpException
+    }
+    expect(caught?.getStatus()).toBe(403)
+  })
+
+  it('DTJ-441: pharmacy-привязанный pharmacy_admin игнорирует query pharmacyId — использует claims.pharmacyId', async () => {
+    const { controller, syncBatchRepository } = makeController({ rows: makeRows(1), rejectedRows: [] })
+
+    const result = await controller.import(fakeRequest({ mode: 'append_update' }), makeClaims(), 'someone-elses-pharmacy')
+
+    const batches = await syncBatchRepository.findBySourceUploadId(extractSourceUploadId(result))
+    expect(batches.every((b) => b.pharmacyId === 'PHARM-1')).toBe(true)
+  })
 })

@@ -42,10 +42,11 @@
  * посередине цикла оставит ПЕРВЫЕ K чанков персистированными, остальные — нет (риск
  * зафиксирован для координатора, не молчаливое упрощение).
  *
- * `pharmacyId` — из `claims.pharmacyId` (акт орган, не поле запроса — контракт тикета
- * не содержит `pharmacyId`, тот же приём, что `ManualEntryRequestSchema` DTJ-162).
- * `super_admin` без привязанной аптеки (`claims.pharmacyId===null`) получает
- * `400 VALIDATION_ERROR` — известное ограничение схемы контракта, не обходится молча.
+ * `pharmacyId` — из `claims.pharmacyId`, кроме сетевого `pharmacy_admin` (`pharmacyId===null`,
+ * привязан к `chainId`): тот выбирает аптеку сети query-параметром `?pharmacyId=`,
+ * принадлежность сети проверяется `findPharmacyChainId` — чужая сеть даёт `403` (не `404`,
+ * сетевой admin и так знает, что аптека существует). `super_admin` без аптеки и без сети
+ * получает `400 VALIDATION_ERROR` — известное ограничение схемы контракта, не обходится молча.
  *
  * **ДОПОЛНЕНО DTJ-164** (`persistParserErrorsContainerIfNeeded`, «Что сделать» п.1 того
  * тикета): если парсер отклонил хотя бы одну строку (`rejectedRows.length > 0`) — СВЕРХ N
@@ -58,7 +59,7 @@
  * контейнер уже терминален при создании, публикация была бы семантической ложью и обвалила
  * бы гипотетического будущего воркера на `IllegalBatchStatusTransitionError`).
  */
-import { Controller, HttpCode, HttpException, HttpStatus, Inject, Post, Req, UseGuards } from '@nestjs/common'
+import { Controller, HttpCode, HttpException, HttpStatus, Inject, Post, Query, Req, UseGuards } from '@nestjs/common'
 import { randomUUID } from 'node:crypto'
 import type { FastifyRequest } from 'fastify'
 // Side-effect type import: регистрирует module augmentation FastifyRequest.parts() из @fastify/multipart
@@ -116,8 +117,9 @@ export class InventoryExcelImportController {
   async import(
     @Req() request: FastifyRequest,
     @CurrentUser() claims: JwtClaims,
+    @Query('pharmacyId') pharmacyIdRaw?: string,
   ): Promise<unknown> {
-    const pharmacyId = requirePharmacyId(claims)
+    const pharmacyId = await this.resolvePharmacyId(claims, pharmacyIdRaw)
     const upload = await readMultipartUpload(request)
     const mode = parseMode(upload.mode)
     if (upload.fileBuffer === null) {
@@ -220,13 +222,24 @@ export class InventoryExcelImportController {
       })),
     )
   }
-}
 
-function requirePharmacyId(claims: JwtClaims): string {
-  if (claims.pharmacyId === null) {
-    throw validationError('pharmacyId', 'acting user has no associated pharmacy to import into')
+  /** См. JSDoc файла «pharmacyId». */
+  private async resolvePharmacyId(claims: JwtClaims, pharmacyIdRaw: string | undefined): Promise<string> {
+    if (claims.pharmacyId !== null) {
+      return claims.pharmacyId
+    }
+    if (claims.chainId === null) {
+      throw validationError('pharmacyId', 'acting user has no associated pharmacy to import into')
+    }
+    if (pharmacyIdRaw === undefined || pharmacyIdRaw.length === 0) {
+      throw validationError('pharmacyId', 'pharmacyId query parameter is required for chain-level pharmacy_admin')
+    }
+    const targetChainId = await this.syncBatchRepository.findPharmacyChainId(pharmacyIdRaw)
+    if (targetChainId !== claims.chainId) {
+      throw forbiddenError('pharmacy does not belong to the caller chain')
+    }
+    return pharmacyIdRaw
   }
-  return claims.pharmacyId
 }
 
 function parseMode(raw: string | null): InventoryExcelImportMode {
@@ -239,6 +252,10 @@ function parseMode(raw: string | null): InventoryExcelImportMode {
 
 function validationError(field: string, message: string): HttpException {
   return new HttpException(fail(ErrorCode.VALIDATION_ERROR, message, { field }), HttpStatus.BAD_REQUEST)
+}
+
+function forbiddenError(message: string): HttpException {
+  return new HttpException(fail(ErrorCode.FORBIDDEN, message), HttpStatus.FORBIDDEN)
 }
 
 /**

@@ -71,6 +71,8 @@ import { InventoryFacade } from './inventory.facade.js'
 import { CompositeInventoryMatcherService } from './application/services/composite-inventory-matcher.service.js'
 import { InventorySyncReportQueryService } from './application/services/inventory-sync-report-query.service.js'
 import { PersistInventorySyncBatchService } from './application/services/persist-inventory-sync-batch.service.js'
+// DTJ-441: мост apps/worker → IngestInventoryBatchWithMatchingUseCase (тот же use case, что REST-канал синхронно).
+import { ProcessInventorySyncBatchService } from './application/services/process-inventory-sync-batch.service.js'
 import { DetectStuckFullSyncSessionsUseCase } from './application/use-cases/detect-stuck-full-sync-sessions.use-case.js'
 import { FullSyncSessionWatchdogCron } from './infrastructure/jobs/full-sync-session-watchdog.cron.js'
 import { BullmqInventorySyncQueueAdapter } from './infrastructure/adapters/bullmq-inventory-sync-queue.adapter.js'
@@ -90,6 +92,7 @@ import { RotatePharmacyApiKeyUseCase } from './application/use-cases/rotate-phar
 import { SetPharmacyApiKeyMtlsUseCase } from './application/use-cases/set-pharmacy-api-key-mtls.use-case.js'
 import { RevokeExpiredRotatedKeyUseCase } from './application/use-cases/revoke-expired-rotated-key.use-case.js'
 import { RevokeExpiredRotatedKeyController } from './presentation/internal/revoke-expired-rotated-key.controller.js'
+import { ProcessInventorySyncBatchController } from './presentation/internal/process-inventory-sync-batch.controller.js'
 import { InternalServiceGuard } from './presentation/internal/internal-service.guard.js'
 import { XlsxExcelInventoryParserAdapter } from './infrastructure/adapters/xlsx-excel-inventory-parser.adapter.js'
 import { DrizzleCatalogMatchQueueReadAdapter } from './infrastructure/adapters/drizzle-catalog-match-queue-read.adapter.js'
@@ -136,6 +139,7 @@ import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/
     // DTJ-161: общий шаг «создать батч + raw items + outbox queued» — REST (DTJ-157) и
     // Excel-import (этот тикет), см. её JSDoc.
     PersistInventorySyncBatchService,
+    ProcessInventorySyncBatchService,
     DetectStuckFullSyncSessionsUseCase,
     FullSyncSessionWatchdogCron,
     BullmqInventorySyncQueueAdapter,
@@ -164,6 +168,7 @@ import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/
     InventoryExcelErrorReportController,
     InventoryListController,
     RevokeExpiredRotatedKeyController,
+    ProcessInventorySyncBatchController,
   ],
   exports: [
     PHARMACY_INVENTORY_REPOSITORY,
