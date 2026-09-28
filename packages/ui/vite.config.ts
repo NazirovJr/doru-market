@@ -45,7 +45,9 @@ export default defineConfig({
       formats: ['es'],
     },
     rollupOptions: {
-      external: ['react', 'react-dom', 'react/jsx-runtime'],
+      // maplibre-gl — как react/react-dom: peerDependency, иначе Rollup зашивает ~1.5MB в dist,
+      // консьюмер получает вторую копию библиотеки и теряет возможность мокать её в тестах.
+      external: ['react', 'react-dom', 'react/jsx-runtime', 'maplibre-gl', 'maplibre-gl/dist/maplibre-gl.css'],
       output: {
         // Rollup даёт CSS-чанкам хешированные имена на базе basename entry-чанка, который
         // случайно с ними совпал в графе модулей (не совпадает с `assetInfo.names`) — источник
