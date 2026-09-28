@@ -97,6 +97,7 @@ import { InternalServiceGuard } from './presentation/internal/internal-service.g
 import { XlsxExcelInventoryParserAdapter } from './infrastructure/adapters/xlsx-excel-inventory-parser.adapter.js'
 import { DrizzleCatalogMatchQueueReadAdapter } from './infrastructure/adapters/drizzle-catalog-match-queue-read.adapter.js'
 import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/in-memory-catalog-match-queue-read.adapter.js'
+import { InventoryBatchQueuedEventHandler } from './infrastructure/event-handlers/inventory-batch-queued.handler.js'
 
 @Module({
   imports: [AuthModule, RedisModule],
@@ -157,6 +158,8 @@ import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/
     DrizzleInventorySyncReportRepository,
     ListPharmacyInventoryUseCase,
     InventoryFacade,
+    // DTJ-441: недостающее звено outbox → inventory-sync-queue (см. её JSDoc) — самозарегистрируется в DomainEventHandlerRegistry.
+    InventoryBatchQueuedEventHandler,
   ],
   controllers: [
     InventoryBatchUpdateController,
