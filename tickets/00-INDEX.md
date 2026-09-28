@@ -379,6 +379,8 @@ domain/application/infrastructure/presentation конкретного модул
 | DTJ-439 | Реальный AnalogOfferLookupAdapter: аналоги с ценами и экономией вместо заглушки | EP-03 | infrastructure | M | DTJ-101, DTJ-385 | catalog analog-offer-lookup.adapter.ts; catalog.module.ts; inventory facade |
 | DTJ-440 | apps/web: путь покупки кликами — переход к товару, «В корзину», корзина в шапке, восстановление сессии, гео в поиске | EP-18 | frontend | M | DTJ-193, DTJ-436 | apps/web/src/features/search/**; features/analogs/**; pages/medicine/**; auth-store.ts |
 | DTJ-441 | Обработчик очереди inventory-sync в apps/worker и выбор аптеки для pharmacy_admin сети при импорте | EP-04 | infrastructure | M | DTJ-157, DTJ-160, DTJ-435 | apps/worker/src/jobs/inventory-sync-batch/**; inventory-excel-import.controller.ts; apps/pharmacy inventory-bulk |
+| DTJ-442 | Онбординг вживую: ZodValidationPipe ломает маршруты с :id, approve не активирует аптеку, скан лицензии не виден | EP-02 | presentation | M | — | onboarding presentation/controllers/**; review use case; apps/admin onboarding-verification/** |
+| DTJ-443 | AuthGuard учитывает отзыв сессии: access-токен отозванной семьи больше не принимается | EP-01 | presentation | S | — | auth.guard.ts; auth infrastructure (кэш) |
 
 ¹ `0008_i18n_overrides_review_status.sql` (DTJ-103) ещё не реализован, но это имя уже занято
 двумя другими миграциями (`0008_onboarding_foundation.sql`, `0008_user_telegram_identities.sql`) —
