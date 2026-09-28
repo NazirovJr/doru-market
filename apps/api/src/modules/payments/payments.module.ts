@@ -268,10 +268,13 @@ class PaymentProviderRegistry {
 
 @Injectable()
 class PaymentsFacadeCommandPorts {
+  // eslint-disable-next-line max-params -- NestJS DI: 4 use case-инъекции, тот же приём, что остальные конструкторы этого файла.
   public constructor(
     @Inject(HoldPayoutUseCase) public readonly holdPayout: HoldPayoutUseCase,
     @Inject(RefundOrderUseCase) public readonly refundOrder: RefundOrderUseCase,
     @Inject(AdjustLedgerUseCase) public readonly adjustLedger: AdjustLedgerUseCase,
+    // DTJ-356 — второй вход (admin-модуль) в уже существующий AdminPaymentOverrideUseCase (DTJ-246).
+    @Inject(AdminPaymentOverrideUseCase) public readonly adminPaymentOverride: AdminPaymentOverrideUseCase,
   ) {}
 }
 
@@ -405,6 +408,7 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
             reason: command.reason,
             actorUserId: command.actorUserId,
           }),
+        adminPaymentOverride: (command) => commands.adminPaymentOverride.execute(command),
         findEscrowLedgerEntries: (orderId) => findEscrowLedgerEntries(escrowLedgerRepo, orderId),
         findPayoutSchedule: (filter, pagination) => findPayoutSchedule(payoutScheduleRepo, filter, pagination),
         findPayoutScheduleByOrder: (orderId) => findPayoutScheduleByOrder(payoutScheduleRepo, orderId),

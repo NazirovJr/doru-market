@@ -76,6 +76,8 @@ import { ListPharmacyApiKeysUseCase } from './application/use-cases/list-pharmac
 import { RevokePharmacyApiKeyUseCase } from './application/use-cases/revoke-pharmacy-api-key.use-case.js'
 import { RotatePharmacyApiKeyUseCase } from './application/use-cases/rotate-pharmacy-api-key.use-case.js'
 import { SetPharmacyApiKeyMtlsUseCase } from './application/use-cases/set-pharmacy-api-key-mtls.use-case.js'
+import { AdminPaymentOverrideUseCase } from './application/use-cases/admin-payment-override.use-case.js'
+import { AdminForceCancelOrderUseCase } from './application/use-cases/admin-force-cancel-order.use-case.js'
 import { FeatureFlagsController } from './presentation/feature-flags.controller.js'
 import { TenantsController } from './presentation/tenants.controller.js'
 import { UsersAdminController } from './presentation/users-admin.controller.js'
@@ -85,6 +87,7 @@ import { FinanceLedgerController } from './presentation/finance-ledger.controlle
 import { PharmacyScheduleController } from './presentation/pharmacy-schedule.controller.js'
 import { OrdersAdminController } from './presentation/orders-admin.controller.js'
 import { PharmacyApiKeysController } from './presentation/pharmacy-api-keys.controller.js'
+import { OrdersAdminActionsController } from './presentation/orders-admin-actions.controller.js'
 
 @Module({
   imports: [OnboardingModule, OrdersModule, PaymentsModule, AuthModule, TenancyModule, InventoryModule, DeliveryModule],
@@ -98,6 +101,7 @@ import { PharmacyApiKeysController } from './presentation/pharmacy-api-keys.cont
     PharmacyScheduleController,
     OrdersAdminController,
     PharmacyApiKeysController,
+    OrdersAdminActionsController,
   ],
   providers: [
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },
@@ -147,6 +151,9 @@ import { PharmacyApiKeysController } from './presentation/pharmacy-api-keys.cont
     RevokePharmacyApiKeyUseCase,
     RotatePharmacyApiKeyUseCase,
     SetPharmacyApiKeyMtlsUseCase,
+    // DTJ-356 — payment-override/admin-force-cancel, UNIT_OF_WORK переиспользуется из AuthModule (тот же приём, что DeactivateStaffAccountUseCase/GrantPlatformRoleUseCase).
+    AdminPaymentOverrideUseCase,
+    AdminForceCancelOrderUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.

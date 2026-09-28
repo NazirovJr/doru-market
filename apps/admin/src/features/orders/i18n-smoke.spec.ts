@@ -64,6 +64,21 @@ const ADMIN_ORDERS_KEYS: readonly string[] = [
   'admin.order_detail.prescription.none',
   'admin.order_detail.prescription.show_image',
   'admin.order_detail.actions.placeholder',
+  // DTJ-356 — payment-override/force-cancel.
+  'admin.order_detail.section.actions',
+  'admin.order_detail.actions.reason_label',
+  'admin.order_detail.actions.reason_too_short',
+  'admin.order_detail.actions.payment_override.open',
+  'admin.order_detail.actions.payment_override.title',
+  'admin.order_detail.actions.payment_override.warning',
+  'admin.order_detail.actions.payment_override.tx_id_label',
+  'admin.order_detail.actions.payment_override.amount_label',
+  'admin.order_detail.actions.payment_override.paid_at_label',
+  'admin.order_detail.actions.payment_override.submit',
+  'admin.order_detail.actions.force_cancel.open',
+  'admin.order_detail.actions.force_cancel.title',
+  'admin.order_detail.actions.force_cancel.warning',
+  'admin.order_detail.actions.force_cancel.submit',
 ]
 
 const MISSING_KEY_MARKER = '[[missing:'

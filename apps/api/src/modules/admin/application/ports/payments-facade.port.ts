@@ -54,6 +54,23 @@ export interface PayoutScheduleEntryView {
   readonly paidAt: Date | null
 }
 
+// Зеркало реального PaymentsFacade.refundFull/adminPaymentOverride (useExisting: PAYMENTS_FACADE).
+export interface AdminRefundFullCommand {
+  readonly orderId: string
+  readonly reason: string
+}
+
+export interface AdminPaymentOverrideCommand {
+  readonly tenantId: string
+  readonly orderId: string
+  readonly txId: string
+  readonly amountDiram: bigint
+  readonly paidAt: Date
+  readonly reason: string
+  readonly actorUserId: string
+  readonly actorRole: string
+}
+
 export interface PaymentsFacadePort {
   /** Без пагинации — леджер одного заказа ограничен по размеру (DTJ-357 review). */
   findEscrowLedgerEntries(orderId: string): Promise<readonly EscrowLedgerEntryView[]>
@@ -64,4 +81,10 @@ export interface PaymentsFacadePort {
 
   // null для cash_courier.
   findPayoutScheduleByOrder(orderId: string): Promise<PayoutScheduleEntryView | null>
+
+  // Полный рефанд при force-cancel оплаченного заказа (RefundOrderUseCase, идемпотентен).
+  refundFull(tenantId: string, command: AdminRefundFullCommand): Promise<void>
+
+  // Делегация в уже существующий payments/AdminPaymentOverrideUseCase — не второй домен-путь.
+  adminPaymentOverride(command: AdminPaymentOverrideCommand): Promise<void>
 }

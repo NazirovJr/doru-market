@@ -34,4 +34,6 @@ export const FAKE_PAYMENTS_FACADE_PORT: PaymentsFacadePort = {
       hasMore: false,
     }),
   findPayoutScheduleByOrder: () => Promise.resolve(null),
+  refundFull: () => Promise.resolve(undefined),
+  adminPaymentOverride: () => Promise.resolve(undefined),
 }

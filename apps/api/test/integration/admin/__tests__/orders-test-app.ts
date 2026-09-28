@@ -22,6 +22,7 @@ import { AuditLogModule } from '@/common/audit/audit-log.module.js'
 import { IdempotencyModule } from '@/common/idempotency/idempotency.module.js'
 import { DomainEventsModule } from '@/common/events/domain-events.module.js'
 import { OrdersAdminController } from '@/modules/admin/presentation/orders-admin.controller.js'
+import { OrdersAdminActionsController } from '@/modules/admin/presentation/orders-admin-actions.controller.js'
 import { ORDERS_FACADE_PORT } from '@/modules/admin/application/ports/orders-facade.port.js'
 import { PAYMENTS_FACADE_PORT } from '@/modules/admin/application/ports/payments-facade.port.js'
 import { PRESCRIPTIONS_FACADE_PORT } from '@/modules/admin/application/ports/prescriptions-facade.port.js'
@@ -30,6 +31,8 @@ import { NullPrescriptionsFacadeAdapter } from '@/modules/admin/infrastructure/a
 import { ListOrdersAnyUseCase } from '@/modules/admin/application/use-cases/list-orders-any.use-case.js'
 import { ListOrdersOwnUseCase } from '@/modules/admin/application/use-cases/list-orders-own.use-case.js'
 import { GetOrderDetailAdminUseCase } from '@/modules/admin/application/use-cases/get-order-detail-admin.use-case.js'
+import { AdminPaymentOverrideUseCase } from '@/modules/admin/application/use-cases/admin-payment-override.use-case.js'
+import { AdminForceCancelOrderUseCase } from '@/modules/admin/application/use-cases/admin-force-cancel-order.use-case.js'
 import { SharedKernelModule } from '@/shared-kernel/shared-kernel.module.js'
 import { LoggerModule } from '@/common/logging/logger.module.js'
 import { TenantContext } from '@/common/context/tenant-context.js'
@@ -77,7 +80,7 @@ function applyTestEnv(): void {
 
 @Module({
   imports: [AuthModule, OrdersModule, PaymentsModule, OnboardingModule],
-  controllers: [OrdersAdminController],
+  controllers: [OrdersAdminController, OrdersAdminActionsController],
   providers: [
     { provide: ORDERS_FACADE_PORT, useExisting: ORDERS_FACADE },
     { provide: PAYMENTS_FACADE_PORT, useExisting: PAYMENTS_FACADE },
@@ -86,6 +89,9 @@ function applyTestEnv(): void {
     ListOrdersAnyUseCase,
     ListOrdersOwnUseCase,
     GetOrderDetailAdminUseCase,
+    // DTJ-356 — payment-override/admin-force-cancel.
+    AdminPaymentOverrideUseCase,
+    AdminForceCancelOrderUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- модуль тест-харнесса

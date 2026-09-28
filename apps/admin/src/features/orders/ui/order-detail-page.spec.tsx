@@ -68,12 +68,14 @@ describe('OrderDetailPage (DTJ-355/363)', () => {
     expect(screen.queryByTestId('order-detail-escrow-row')).not.toBeInTheDocument()
   })
 
-  it('DoD DTJ-363 — super_admin видит секцию действий (заготовка DTJ-356)', async () => {
+  it('DoD DTJ-356 — super_admin видит секцию действий (payment-override/force-cancel кнопки)', async () => {
     getCurrentRoleMock.mockReturnValue('super_admin')
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ data: BASE_DETAIL })))
     renderPage()
 
-    await waitFor(() => { expect(screen.getByTestId('order-detail-actions-placeholder')).toBeInTheDocument() })
+    await waitFor(() => { expect(screen.getByTestId('order-detail-actions')).toBeInTheDocument() })
+    expect(screen.getByTestId('open-payment-override-modal')).toBeInTheDocument()
+    expect(screen.getByTestId('open-force-cancel-modal')).toBeInTheDocument()
   })
 
   it('DoD DTJ-363 — pharmacy_admin: секция действий НЕ смонтирована (не CSS-скрытие)', async () => {
@@ -82,7 +84,7 @@ describe('OrderDetailPage (DTJ-355/363)', () => {
     renderPage()
 
     await waitFor(() => { expect(screen.getByTestId('order-detail-summary')).toBeInTheDocument() })
-    expect(screen.queryByTestId('order-detail-actions-placeholder')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('order-detail-actions')).not.toBeInTheDocument()
   })
 
   it('prescriptionMeta=null — показывает "рецепт не прикреплён", без кнопки показа изображения', async () => {
