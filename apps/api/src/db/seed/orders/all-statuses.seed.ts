@@ -29,7 +29,9 @@ const TICKET_ID_PREFIX = 'a0000000-0000-4000-8000-00000000'
 const DISPUTE_ID_PREFIX = 'b0000000-0000-4000-8000-00000000'
 
 const ID_SUFFIX_DIGITS = 4
-const ORDER_NUMBER_DIGITS = 6
+// OrderNumber VO (shared-kernel/domain/value-objects/order-number.vo.ts): формат ровно DTJ-{YYMMDD}-{seq5}, 16 символов.
+const ORDER_NUMBER_FAKE_DATE = '999999'
+const ORDER_NUMBER_SEQ_DIGITS = 5
 
 function idOf(prefix: string, n: number): string {
   return `${prefix}${String(n).padStart(ID_SUFFIX_DIGITS, '0')}`
@@ -53,7 +55,7 @@ const ORDER_SPECS: readonly OrderSpec[] = [
   { n: 4, status: 'processing', paymentMethod: 'alif_mobi', customerId: SEED_USERS.customer2.id, pharmacyId: SEED_PHARMACIES.oneCCenter.id, tenantId: SEED_TENANTS.neutral.id },
   { n: 5, status: 'picked_up', paymentMethod: 'alif_mobi', customerId: SEED_USERS.customer1.id, pharmacyId: SEED_PHARMACIES.excelCenter.id, tenantId: SEED_TENANTS.neutral.id },
   { n: 6, status: 'delivered', paymentMethod: 'alif_mobi', customerId: SEED_USERS.customer1.id, pharmacyId: SEED_PHARMACIES.oneCCenter.id, tenantId: SEED_TENANTS.neutral.id },
-  { n: 7, status: 'cancelled', paymentMethod: 'cash_courier', customerId: SEED_USERS.customer2.id, pharmacyId: SEED_PHARMACIES.excelCenter.id, tenantId: SEED_TENANTS.neutral.id, cancelReason: 'out_of_stock', cancelledBy: SEED_USERS.pharmacistOneC.id },
+  { n: 7, status: 'cancelled', paymentMethod: 'cash_courier', customerId: SEED_USERS.customer2.id, pharmacyId: SEED_PHARMACIES.excelCenter.id, tenantId: SEED_TENANTS.neutral.id, cancelReason: 'customer_changed_mind', cancelledBy: SEED_USERS.customer2.id },
   { n: 8, status: 'refunded', paymentMethod: 'alif_mobi', customerId: SEED_USERS.customer1.id, pharmacyId: SEED_PHARMACIES.oneCCenter.id, tenantId: SEED_TENANTS.neutral.id },
   { n: 9, status: 'return_in_progress', paymentMethod: 'alif_mobi', customerId: SEED_USERS.customer2.id, pharmacyId: SEED_PHARMACIES.excelCenter.id, tenantId: SEED_TENANTS.neutral.id },
   { n: 10, status: 'delivered', paymentMethod: 'alif_mobi', customerId: SEED_USERS.customer1.id, pharmacyId: SEED_PHARMACIES.oneCCenter.id, tenantId: SEED_TENANTS.neutral.id },
@@ -106,7 +108,7 @@ function buildOrderTimestamps(status: string): OrderTimestamps {
 
 async function insertOrder(db: NodePgDatabase, spec: OrderSpec, medicineId: string): Promise<void> {
   const orderId = idOf(ORDER_ID_PREFIX, spec.n)
-  const orderNumber = `SEED-${String(spec.n).padStart(ORDER_NUMBER_DIGITS, '0')}`
+  const orderNumber = `DTJ-${ORDER_NUMBER_FAKE_DATE}-${String(spec.n).padStart(ORDER_NUMBER_SEQ_DIGITS, '0')}`
   const checkoutAttemptId = idOf(CHECKOUT_ATTEMPT_ID_PREFIX, spec.n)
   const { processingStartedAt, pickedUpAt, deliveredAt } = buildOrderTimestamps(spec.status)
   const cancelReason = spec.cancelReason ?? null
