@@ -43,6 +43,7 @@ describe('AdminPaymentOverrideController (DTJ-246)', () => {
       reason: 'confirmed by phone',
       actorUserId: 'admin-1',
       actorRole: 'super_admin',
+      requestId: null,
     })
   })
 })

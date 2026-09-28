@@ -1,7 +1,5 @@
-// DTJ-356 — модалка payment-override. Поля txId/amountDiram/paidAt — банковское подтверждение,
-// которое реально требует домен (см. JSDoc admin-payment-override.use-case.ts на бэкенде):
-// SRS-ADM-032 называет только { reason }, но единственная существующая доменная мутация
-// (DTJ-246, AdminPaymentOverrideUseCase) без этих полей не выполнима.
+// Поля txId/amountDiram/paidAt — банковское подтверждение, которое реально требует домен
+// (существующая мутация AdminPaymentOverrideUseCase без них не выполнима).
 import { useState, type ReactElement } from 'react'
 import { useT } from '@dorutj/i18n'
 import { Button, Input, Modal } from '@dorutj/ui'

@@ -21,6 +21,7 @@ import {
   type AppendPaymentOverrideAuditInput,
   type AuditLogPort,
 } from '@/modules/payments/application/ports/audit-log.port.js'
+import { resolveDrizzleClient } from '../drizzle-tx.util.js'
 
 const PAYMENT_OVERRIDE_CATEGORY = 'payment_override'
 const ORDER_ENTITY_TYPE = 'order'
@@ -30,14 +31,16 @@ const WEBHOOK_EVENT_ENTITY_TYPE = 'payment_webhook_event'
 export class RawSqlAuditLogRepository implements AuditLogPort {
   public constructor(@Inject(DRIZZLE_DB) private readonly db: DrizzleDb) {}
 
-  public async appendPaymentOverride(input: AppendPaymentOverrideAuditInput): Promise<void> {
+  public async appendPaymentOverride(input: AppendPaymentOverrideAuditInput, tx?: unknown): Promise<void> {
     const entityId = input.entityId ?? randomUUID()
     const entityType = input.entityId === null ? WEBHOOK_EVENT_ENTITY_TYPE : ORDER_ENTITY_TYPE
-    await this.db.execute(sql`
-      INSERT INTO audit_log (category, entity_type, entity_id, action, metadata, tenant_id, reason, actor_user_id)
+    const client = resolveDrizzleClient(this.db, tx)
+    await client.execute(sql`
+      INSERT INTO audit_log (category, entity_type, entity_id, action, metadata, tenant_id, reason, actor_user_id, request_id)
       VALUES (
         ${PAYMENT_OVERRIDE_CATEGORY}, ${entityType}, ${entityId}, ${input.action},
-        ${JSON.stringify(input.metadata)}::jsonb, ${input.tenantId}, ${input.reason ?? null}, ${input.actorUserId ?? null}
+        ${JSON.stringify(input.metadata)}::jsonb, ${input.tenantId}, ${input.reason ?? null}, ${input.actorUserId ?? null},
+        ${input.requestId ?? null}
       )
     `)
   }

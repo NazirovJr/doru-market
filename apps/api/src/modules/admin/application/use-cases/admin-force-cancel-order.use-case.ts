@@ -1,5 +1,5 @@
-// Обёртка над существующим Order.cancel() — НЕ одноимённый доменный use case orders/payments.
-// audit.write() — последний шаг unitOfWork.run: бросит — cancel() ещё не закоммичен, откатится вместе с ним.
+// Обёртка над Order.cancel() (не одноимённый use case orders/payments). audit.write() — последний
+// шаг unitOfWork.run: бросит — cancel() ещё не закоммичен, откатится вместе с ним.
 import { Inject, Injectable } from '@nestjs/common'
 import {
   BusinessRuleViolationError,

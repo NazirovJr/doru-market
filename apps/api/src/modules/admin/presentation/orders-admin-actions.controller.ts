@@ -13,6 +13,7 @@ import {
 } from '@dorutj/contracts'
 import { HttpStatus } from '@/common/http/http-status.constants.js'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
+import { RequestContext } from '@/common/context/request-context.js'
 import { AuthGuard, CurrentUser, Roles, RolesGuard, type JwtClaims } from '@/modules/auth/index.js'
 import { AdminPaymentOverrideUseCase } from '../application/use-cases/admin-payment-override.use-case.js'
 import { AdminForceCancelOrderUseCase } from '../application/use-cases/admin-force-cancel-order.use-case.js'
@@ -42,7 +43,7 @@ export class OrdersAdminActionsController {
       amountDiram: body.amountDiram,
       paidAt: new Date(body.paidAt),
       actor: { userId: claims.sub, role: claims.role },
-      requestId: null,
+      requestId: RequestContext.get()?.requestId ?? null,
     })
     return ok(result)
   }
@@ -58,7 +59,7 @@ export class OrdersAdminActionsController {
       orderId: id,
       reason: body.reason,
       actor: { userId: claims.sub, role: claims.role },
-      requestId: null,
+      requestId: RequestContext.get()?.requestId ?? null,
     })
     return ok(result)
   }

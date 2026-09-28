@@ -69,6 +69,7 @@ export interface AdminPaymentOverrideCommand {
   readonly reason: string
   readonly actorUserId: string
   readonly actorRole: string
+  readonly requestId?: string | null
 }
 
 export interface PaymentsFacadePort {

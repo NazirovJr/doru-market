@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { NotFoundError, ValidationError } from '@dorutj/contracts'
 import type { OrderAdminDetailView, OrdersFacadePort } from '../ports/orders-facade.port.js'
 import type { PaymentsFacadePort } from '../ports/payments-facade.port.js'
-import type { AuditLogPort } from '@/common/audit/audit-log.port.js'
 import { AdminPaymentOverrideUseCase, type AdminPaymentOverrideCommand } from './admin-payment-override.use-case.js'
 
 const ACTOR = { userId: 'admin-1', role: 'super_admin' }
@@ -31,7 +30,7 @@ function baseCommand(overrides: Partial<AdminPaymentOverrideCommand> = {}): Admi
     amountDiram: 15_000n,
     paidAt: new Date('2026-09-27T11:00:00.000Z'),
     actor: ACTOR,
-    requestId: null,
+    requestId: 'req-1',
     ...overrides,
   }
 }
@@ -53,24 +52,21 @@ function buildHarness(params: { readonly order?: OrderAdminDetailView | null } =
     refundFull: vi.fn(),
     adminPaymentOverride: adminPaymentOverrideMock,
   }
-  const writeMock = vi.fn<AuditLogPort['write']>().mockResolvedValue(undefined)
-  const auditLog: AuditLogPort = { write: writeMock }
-  const useCase = new AdminPaymentOverrideUseCase(ordersFacade, paymentsFacade, auditLog)
-  return { useCase, getOrderDetailMock, adminPaymentOverrideMock, writeMock }
+  const useCase = new AdminPaymentOverrideUseCase(ordersFacade, paymentsFacade)
+  return { useCase, getOrderDetailMock, adminPaymentOverrideMock }
 }
 
-describe('AdminPaymentOverrideUseCase (DTJ-356, SRS-ADM-032) — обёртка над payments/AdminPaymentOverrideUseCase (DTJ-246)', () => {
-  it('AC1: reason короче 10 символов → ValidationError, ни override, ни audit не вызваны', async () => {
+describe('AdminPaymentOverrideUseCase (DTJ-356) — обёртка над payments/AdminPaymentOverrideUseCase (DTJ-246), второй вход, без второго audit', () => {
+  it('AC1: reason короче 10 символов → ValidationError, override не вызван', async () => {
     const h = buildHarness()
 
     await expect(h.useCase.execute(baseCommand({ reason: 'коротко' }))).rejects.toBeInstanceOf(ValidationError)
 
     expect(h.adminPaymentOverrideMock).not.toHaveBeenCalled()
-    expect(h.writeMock).not.toHaveBeenCalled()
   })
 
-  it('AC2 (частично, см. JSDoc use case про неатомарность): валидный override → paymentsFacade.adminPaymentOverride + audit_log(category=payment_override, statusFrom/statusTo/orderTotalDiram)', async () => {
-    const h = buildHarness({ order: makeOrder({ status: 'pending_payment', totalAmountDiram: 15_000 }) })
+  it('валидный override: резолвит tenantId кросс-тенантно и делегирует в PaymentsFacadePort.adminPaymentOverride с requestId', async () => {
+    const h = buildHarness({ order: makeOrder({ tenantId: 'tenant-1' }) })
 
     const result = await h.useCase.execute(baseCommand())
 
@@ -83,20 +79,12 @@ describe('AdminPaymentOverrideUseCase (DTJ-356, SRS-ADM-032) — обёртка 
       reason: baseCommand().reason,
       actorUserId: 'admin-1',
       actorRole: 'super_admin',
+      requestId: 'req-1',
     })
-    expect(h.writeMock).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({
-        category: 'payment_override',
-        entityType: 'order',
-        entityId: 'order-1',
-        action: 'admin_payment_override',
-        metadata: { before: { status: 'pending_payment' }, after: { status: 'paid_escrow' }, extra: { orderTotalDiram: 15_000 } },
-      }),
-    )
     expect(result).toEqual({ orderId: 'order-1', status: 'paid_escrow' })
   })
 
-  it('заказ не найден → NotFoundError, override не вызван', async () => {
+  it('заказ не найден (кросс-тенантно) → NotFoundError, override не вызван', async () => {
     const h = buildHarness({ order: null })
 
     await expect(h.useCase.execute(baseCommand())).rejects.toBeInstanceOf(NotFoundError)

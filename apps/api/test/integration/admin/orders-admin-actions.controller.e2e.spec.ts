@@ -89,6 +89,18 @@ describe.skipIf(!postgresAvailable)('OrdersAdminActionsController — Supertest 
     return id
   }
 
+  // audit_log.actor_user_id — FK на users.id: тесты, пишущие audit_log, обязаны сеять реального актора, не голый randomUUID().
+  async function seedSuperAdmin(tenantId: string): Promise<string> {
+    const id = randomUUID()
+    await pool.query(`INSERT INTO users (id, tenant_id, phone_number, role, is_active) VALUES ($1, $2, $3, 'super_admin', true)`, [
+      id,
+      tenantId,
+      `+99290${String(Math.floor(1_000_000 + Math.random() * 8_999_999))}`,
+    ])
+    createdUserIds.push(id)
+    return id
+  }
+
   interface SeedOrderParams {
     readonly tenantId: string
     readonly pharmacyId: string
@@ -171,12 +183,12 @@ describe.skipIf(!postgresAvailable)('OrdersAdminActionsController — Supertest 
     expect(audit.rows).toHaveLength(0)
   })
 
-  it('АС2 DTJ-356 — валидный payment-override: статус → paid_escrow, audit_log(category=payment_override) с before/after/orderTotalDiram', async () => {
+  it('АС2 DTJ-356 — валидный payment-override: статус → paid_escrow, audit_log(category=payment_override) с statusFrom/statusTo/orderTotalDiram', async () => {
     const tenantId = await seedTenant()
     const pharmacyId = await seedPharmacy()
     const customerId = await seedCustomer(tenantId)
     const orderId = await seedOrder({ tenantId, pharmacyId, customerId, status: 'pending_payment' })
-    const superAdminId = randomUUID()
+    const superAdminId = await seedSuperAdmin(tenantId)
     const superAdminToken = sign({ sub: superAdminId, role: 'super_admin', tenantId: null, pharmacyId: null, chainId: null })
 
     const res = await postPaymentOverride(superAdminToken, orderId, {
@@ -195,7 +207,7 @@ describe.skipIf(!postgresAvailable)('OrdersAdminActionsController — Supertest 
     )
     expect(audit.rows).toHaveLength(1)
     expect(audit.rows[0]?.actor_user_id).toBe(superAdminId)
-    expect(audit.rows[0]?.metadata).toMatchObject({ before: { status: 'pending_payment' }, after: { status: 'paid_escrow' } })
+    expect(audit.rows[0]?.metadata).toMatchObject({ statusFrom: 'pending_payment', statusTo: 'paid_escrow', orderTotalDiram: 10_000 })
   })
 
   it('АС3 DTJ-356 — admin-force-cancel на delivered-заказе → 422 BUSINESS_RULE_VIOLATION, статус не меняется, audit_log пуст', async () => {
@@ -220,7 +232,7 @@ describe.skipIf(!postgresAvailable)('OrdersAdminActionsController — Supertest 
     const pharmacyId = await seedPharmacy()
     const customerId = await seedCustomer(tenantId)
     const orderId = await seedOrder({ tenantId, pharmacyId, customerId, status: 'processing', paymentMethod: 'cash_courier' })
-    const superAdminId = randomUUID()
+    const superAdminId = await seedSuperAdmin(tenantId)
     const superAdminToken = sign({ sub: superAdminId, role: 'super_admin', tenantId: null, pharmacyId: null, chainId: null })
 
     const res = await postForceCancel(superAdminToken, orderId, { reason: 'обнаружена поддельная лицензия рецепта, инцидент INC-2050' })
