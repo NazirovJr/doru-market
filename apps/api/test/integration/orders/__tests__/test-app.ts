@@ -180,11 +180,14 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
     const { TenancyFacadeAdapter } = await import('@/modules/orders/infrastructure/adapters/tenancy-facade.adapter.js')
     const { TENANT_SETTINGS_REPOSITORY } = await import('@/modules/tenancy/index.js')
     const { DRIZZLE_DB } = await import('@/infrastructure/database/drizzle.provider.js')
+    // DTJ-358 — ORDERS_PAYMENTS_FACADE_PORT: 3-й (обязательный) конструкторский параметр адаптера.
+    const { ORDERS_PAYMENTS_FACADE_PORT } = await import('@/modules/orders/application/ports/payments-facade.port.js')
     builder.overrideProvider(TENANCY_FACADE_PORT).useFactory({
-      factory: (tenantSettingsRepository: unknown, db: unknown) => {
+      factory: (tenantSettingsRepository: unknown, db: unknown, paymentsFacade: unknown) => {
         const real = new TenancyFacadeAdapter(
           tenantSettingsRepository as ConstructorParameters<typeof TenancyFacadeAdapter>[0],
           db as ConstructorParameters<typeof TenancyFacadeAdapter>[1],
+          paymentsFacade as ConstructorParameters<typeof TenancyFacadeAdapter>[2],
         )
         return {
           resolveCommissionRate: real.resolveCommissionRate.bind(real),
@@ -195,7 +198,7 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
           getPartialFulfillmentConfirmationTimeoutMinutes: real.getPartialFulfillmentConfirmationTimeoutMinutes.bind(real),
         }
       },
-      inject: [TENANT_SETTINGS_REPOSITORY, DRIZZLE_DB],
+      inject: [TENANT_SETTINGS_REPOSITORY, DRIZZLE_DB, ORDERS_PAYMENTS_FACADE_PORT],
     })
   }
   const moduleRef = await builder.compile()

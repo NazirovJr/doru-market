@@ -255,6 +255,36 @@ describe.skipIf(!postgresAvailable)('CheckoutController — Supertest integratio
     expect(body.meta).toEqual({ excludedItems: [] })
   })
 
+  it('DTJ-358 — активная ставка platform_fee (тенант,otc) переопределяет покатегорийный дефолт 800bps, снэпшотится в order_items.commission_bps', async () => {
+    const priceDiram = 2_000
+    const med = await seedMedicine()
+    await seedInventory({ pharmacyId: pharmacyA, medicineId: med, quantity: 10, priceDiram })
+    const customerId = await seedCustomer(TENANT_A_ID)
+    const token = signCustomer(customerId, TENANT_A_ID)
+    const itemId = await seedCartItem({ customerId, tenantId: TENANT_A_ID, pharmacyId: pharmacyA, medicineId: med, quantity: 1 })
+    const rateId = randomUUID()
+    await pool.query(
+      `INSERT INTO platform_fee (id, tenant_id, chain_id, commission_category, commission_bps, effective_from, effective_to, created_by)
+       VALUES ($1, $2, NULL, 'otc', 750, CURRENT_DATE - INTERVAL '1 day', NULL, $3)`,
+      [rateId, TENANT_A_ID, customerId],
+    )
+
+    try {
+      const res = await checkoutRequest(token, randomUUID()).send({
+        cartItemIds: [itemId],
+        inlineAddress: { addressText: 'Dushanbe, Rudaki 1', latitude: 38.5598, longitude: 68.787 },
+        paymentMethod: 'cash_courier',
+      })
+
+      expect(res.status).toBe(200)
+      const orderId = (res.body as SuccessBody<CheckoutDataBody>).data.orders[0]?.orderId
+      const itemRows = await pool.query<{ commission_bps: number }>('SELECT commission_bps FROM order_items WHERE order_id = $1', [orderId])
+      expect(itemRows.rows[0]?.commission_bps).toBe(750)
+    } finally {
+      await pool.query('DELETE FROM platform_fee WHERE id = $1', [rateId])
+    }
+  })
+
   it('AC2 (composite) — частичный успех: 2 аптеки, одна в наличии, другая с quantity=0 → HTTP 200, data.orders И data.failedGroups непустые ОДНОВРЕМЕННО', async () => {
     const priceDiram = 1_400
     const medOk = await seedMedicine()

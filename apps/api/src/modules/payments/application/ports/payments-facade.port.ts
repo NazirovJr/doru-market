@@ -142,4 +142,6 @@ export interface PaymentsFacade {
 
   /** `NotFoundError`, если `command.id` задан, но строка `platform_fee` не найдена. */
   upsertCommissionRate(command: UpsertCommissionRateCommand): Promise<CommissionRateDto>
+
+  resolveCommissionRate(tenantId: string, chainId: string | null, category: string): Promise<number | null>
 }

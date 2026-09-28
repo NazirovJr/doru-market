@@ -1,5 +1,6 @@
 // DTJ-357 — read-методы PaymentsFacade, вынесены из payments.module.ts отдельным файлом (C2, max-lines 300).
 import { NotFoundError, ValidationError } from '@dorutj/contracts'
+import type { Clock } from '@/shared-kernel/index.js'
 import type { EscrowLedgerRepository } from '../ports/escrow-ledger-repository.port.js'
 import type { PayoutScheduleRepository } from '../ports/payout-schedule-repository.port.js'
 // DTJ-358 — commission-rates CRUD (platform_fee), добавлено этим же файлом (тот же приём, что read-методы выше).
@@ -107,4 +108,14 @@ export async function upsertCommissionRate(repo: CommissionRateRepository, comma
     throw new NotFoundError({ resource: 'commission_rate', id: command.id })
   }
   return toCommissionRateDto(updated)
+}
+
+export interface ResolveCommissionRateQuery {
+  readonly tenantId: string
+  readonly chainId: string | null
+  readonly category: string
+}
+
+export async function resolveCommissionRate(repo: CommissionRateRepository, clock: Clock, query: ResolveCommissionRateQuery): Promise<number | null> {
+  return repo.resolveActiveRate({ ...query, now: clock.now() })
 }

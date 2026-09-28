@@ -49,6 +49,13 @@ export interface UpdateCommissionRateInput extends CommissionRateWriteFields {
   readonly id: string
 }
 
+export interface ResolveActiveRateInput {
+  readonly tenantId: string
+  readonly chainId: string | null
+  readonly category: string
+  readonly now: Date
+}
+
 export interface CommissionRateRepository {
   findMany(input: FindCommissionRatesInput): Promise<FindCommissionRatesResult>
 
@@ -56,4 +63,7 @@ export interface CommissionRateRepository {
 
   /** `null` — строка `id` не найдена (use case маппит на `NotFoundError`). */
   update(input: UpdateCommissionRateInput): Promise<CommissionRateRow | null>
+
+  /** Специфичность D-03/SRS-DOM-160: (tenant,chain,category) > (tenant,chain) > (tenant,category) > (tenant) > `null` (нет строки — вызывающий код применяет покатегорийный дефолт). */
+  resolveActiveRate(input: ResolveActiveRateInput): Promise<number | null>
 }

@@ -16,7 +16,11 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { afterEach, beforeAll, afterAll, describe, expect, it } from 'vitest'
 import { DrizzleTenantSettingsRepository } from '@/modules/tenancy/infrastructure/repositories/tenant-settings.repository.js'
 import { TenancyFacadeAdapter } from '@/modules/orders/infrastructure/adapters/tenancy-facade.adapter.js'
+import type { OrdersPaymentsFacadePort } from '@/modules/orders/application/ports/payments-facade.port.js'
 import { COD_LIMIT_DEFAULT_DIRAM } from '@/modules/orders/domain/order-create-command.js'
+
+// DTJ-358 — этот файл проверяет только покатегорийный fallback; специфичность platform_fee — commission-rate.repository.integration.spec.ts.
+const STUB_PAYMENTS_FACADE: OrdersPaymentsFacadePort = { resolveCommissionRate: () => Promise.resolve(null) }
 
 const TEST_DATABASE_URL =
   process.env.ORDERS_TEST_DATABASE_URL ?? process.env.DATABASE_URL ?? 'postgres://test:test@localhost:5432/dorutj_test'
@@ -46,7 +50,7 @@ describe.skipIf(!postgresAvailable)('TenancyFacadeAdapter — integration (DTJ-2
   beforeAll(() => {
     pool = new Pool({ connectionString: TEST_DATABASE_URL })
     db = drizzle(pool)
-    adapter = new TenancyFacadeAdapter(new DrizzleTenantSettingsRepository(db), db)
+    adapter = new TenancyFacadeAdapter(new DrizzleTenantSettingsRepository(db), db, STUB_PAYMENTS_FACADE)
   })
 
   afterAll(async () => {
@@ -92,7 +96,7 @@ describe.skipIf(!postgresAvailable)('TenancyFacadeAdapter — integration (DTJ-2
     expect(new Set([rx, otc, parapharma]).size).toBe(3) // все три различны
   })
 
-  it('resolveCommissionRate — не зависит от chainId (специфичность (tenant,chain,category) недоступна, TODO(EP-10))', async () => {
+  it('resolveCommissionRate — фолбэк не зависит от chainId (нет активной строки platform_fee ни для одной специфичности, стаб)', async () => {
     await seedTenant()
     const withoutChain = await adapter.resolveCommissionRate(tenantId, null, 'otc')
     const withChain = await adapter.resolveCommissionRate(tenantId, 'some-chain', 'otc')

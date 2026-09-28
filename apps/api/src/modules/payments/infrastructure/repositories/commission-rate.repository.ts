@@ -1,6 +1,6 @@
 // DrizzleCommissionRateRepository (DTJ-358) — тот же keyset-приём (created_at DESC, id DESC, LIMIT+1), что DrizzlePayoutScheduleRepository.findSchedule.
 import { Inject, Injectable } from '@nestjs/common'
-import { and, desc, eq, lt, or } from 'drizzle-orm'
+import { and, desc, eq, gt, isNull, lt, lte, or } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { platformFee } from '@/db/schema/payments.js'
 import {
@@ -11,6 +11,7 @@ import {
   type FindCommissionRatesFilter,
   type FindCommissionRatesInput,
   type FindCommissionRatesResult,
+  type ResolveActiveRateInput,
   type UpdateCommissionRateInput,
 } from '@/modules/payments/application/ports/commission-rate-repository.port.js'
 
@@ -71,6 +72,22 @@ function findConditions(filter: FindCommissionRatesFilter, cursor: FindCommissio
   return conditions
 }
 
+// Специфичность D-03/SRS-DOM-160: chain-уровень пропускается, если chainId=null (независимая аптека/нейтральный тенант).
+function specificityTiers(input: ResolveActiveRateInput) {
+  const tiers = []
+  if (input.chainId !== null) {
+    tiers.push(and(eq(platformFee.tenantId, input.tenantId), eq(platformFee.chainId, input.chainId), eq(platformFee.commissionCategory, input.category)))
+    tiers.push(and(eq(platformFee.tenantId, input.tenantId), eq(platformFee.chainId, input.chainId), isNull(platformFee.commissionCategory)))
+  }
+  tiers.push(and(eq(platformFee.tenantId, input.tenantId), isNull(platformFee.chainId), eq(platformFee.commissionCategory, input.category)))
+  tiers.push(and(eq(platformFee.tenantId, input.tenantId), isNull(platformFee.chainId), isNull(platformFee.commissionCategory)))
+  return tiers
+}
+
+function toDateOnly(date: Date): string {
+  return date.toISOString().slice(0, 10)
+}
+
 @Injectable()
 export class DrizzleCommissionRateRepository implements CommissionRateRepository {
   public constructor(@Inject(DRIZZLE_DB) private readonly db: DrizzleDb) {}
@@ -126,6 +143,23 @@ export class DrizzleCommissionRateRepository implements CommissionRateRepository
       .returning(SELECTION)) as SelectionRow[]
     const row = rows[0]
     return row === undefined ? null : toRow(row)
+  }
+
+  /** 4 тира параллельно (no-await-in-loop) — `results.find` берёт первый по порядку специфичности, не по скорости ответа. */
+  public async resolveActiveRate(input: ResolveActiveRateInput): Promise<number | null> {
+    const nowDate = toDateOnly(input.now)
+    const results = await Promise.all(specificityTiers(input).map((tier) => this.queryTierRate(tier, nowDate)))
+    return results.find((rateBps) => rateBps !== null) ?? null
+  }
+
+  private async queryTierRate(tier: ReturnType<typeof and>, nowDate: string): Promise<number | null> {
+    const rows = await this.db
+      .select({ rateBps: platformFee.commissionBps })
+      .from(platformFee)
+      .where(and(tier, lte(platformFee.effectiveFrom, nowDate), or(isNull(platformFee.effectiveTo), gt(platformFee.effectiveTo, nowDate))))
+      .orderBy(desc(platformFee.effectiveFrom))
+      .limit(1)
+    return rows[0]?.rateBps ?? null
   }
 }
 
