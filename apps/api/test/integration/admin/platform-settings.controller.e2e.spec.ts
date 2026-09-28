@@ -7,14 +7,12 @@ import { Pool } from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { PLATFORM_SETTINGS_KEY_NAMES } from '@dorutj/contracts'
 import { JWT_SIGNER, type JwtClaims, type JwtSignerPort } from '@/modules/auth/index.js'
+import { AppConfigService } from '@/config/app-config.service.js'
 import { createTestApp, type TestApp } from './__tests__/platform-settings-test-app.js'
 
 const TEST_DATABASE_URL =
   process.env.ADMIN_TEST_DATABASE_URL ?? process.env.DATABASE_URL ?? 'postgres://test:test@localhost:5432/dorutj_test'
 const PROBE_TIMEOUT_MS = 1_500
-// Задано ПРЯМО (не `??=`) — отличается от дефолта схемы, проверяет чтение актуального ENV.
-const DISTINCTIVE_RATE_LIMIT_VALUE = '777'
-process.env.RATE_LIMIT_ANON_PER_MIN = DISTINCTIVE_RATE_LIMIT_VALUE
 
 async function isPostgresReachable(url: string): Promise<boolean> {
   const pool = new Pool({ connectionString: url, connectionTimeoutMillis: PROBE_TIMEOUT_MS })
@@ -48,6 +46,7 @@ describe.skipIf(!postgresAvailable)('PlatformSettingsController — Supertest in
   let app: INestApplication
   let httpServer: Server
   let jwtSigner: JwtSignerPort
+  let configService: AppConfigService
   let superAdminToken: string
   let pharmacyAdminToken: string
 
@@ -60,6 +59,7 @@ describe.skipIf(!postgresAvailable)('PlatformSettingsController — Supertest in
     app = ctx.app
     httpServer = ctx.httpServer
     jwtSigner = app.get<JwtSignerPort>(JWT_SIGNER)
+    configService = app.get(AppConfigService)
     superAdminToken = sign({ sub: randomUUID(), role: 'super_admin', tenantId: null, pharmacyId: null, chainId: null })
     pharmacyAdminToken = sign({ sub: randomUUID(), role: 'pharmacy_admin', tenantId: randomUUID(), pharmacyId: null, chainId: null })
   })
@@ -68,13 +68,16 @@ describe.skipIf(!postgresAvailable)('PlatformSettingsController — Supertest in
     await ctx.close()
   })
 
-  it('АС1 — GET /platform-settings → 200, RATE_LIMIT_ANON_PER_MIN совпадает с реальным ENV процесса', async () => {
+  it('АС1 — GET /platform-settings → 200, RATE_LIMIT_ANON_PER_MIN совпадает с живым AppConfigService этого же процесса', async () => {
     const res = await request(httpServer).get('/api/v1/platform-settings').set('Authorization', `Bearer ${superAdminToken}`)
 
     expect(res.status).toBe(200)
     const body = res.body as SuccessBody<readonly PlatformSettingBody[]>
     const entry = body.data.find((item) => item.key === 'RATE_LIMIT_ANON_PER_MIN')
-    expect(entry?.currentValue).toBe(DISTINCTIVE_RATE_LIMIT_VALUE)
+    // Не задаём ENV из спека: AppConfigModule резолвится один раз на весь shared-процесс
+    // интеграционных файлов (fileParallelism:false) — process.env после первого бутстрапа в
+    // процессе на уже собранный DynamicModule не влияет. Сравниваем с тем же AppConfigService.
+    expect(entry?.currentValue).toBe(String(configService.rateLimitAnonPerMin))
   })
 
   it('АС2 — КАЖДАЯ строка помечена requiresRedeploy: true, полный список PLATFORM_SETTINGS_KEYS без пропусков', async () => {
