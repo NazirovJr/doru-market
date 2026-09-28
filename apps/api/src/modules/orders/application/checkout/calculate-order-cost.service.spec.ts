@@ -1,16 +1,9 @@
-/**
- * `CalculateOrderCostService` (EP-09, DTJ-228) — unit-набор поверх моков `TenancyFacadePort`/
- * `DeliveryFacadePort`. Банковское округление НА КАЖДУЮ позицию (граничные `x.5` случаи) уже
- * покрыто `order-item.entity.spec.ts` (сервис ПЕРЕИСПОЛЬЗУЕТ `OrderItem.create()`, не
- * дублирует формулу, см. JSDoc сервиса) — здесь проверяется ТОЛЬКО собственная ответственность
- * сервиса: резолвинг `commissionBps` на позицию, независимость комиссии от `deliveryFee`
- * (SRS-DOM-009), и агрегация итогов.
- */
+// CalculateOrderCostService (DTJ-228/DTJ-358) — unit поверх мока DeliveryFacadePort; сервис читает commissionBps из уже резолвленной карты, сам в БД не ходит (см. JSDoc сервиса).
 import { randomUUID } from 'node:crypto'
 import { describe, expect, it, vi } from 'vitest'
 import { GeoPoint } from '@/shared-kernel/domain/value-objects/geo-point.vo.js'
 import type { DeliveryFacadePort } from '@/modules/orders/application/ports/delivery-facade.port.js'
-import type { TenancyFacadePort } from '@/modules/orders/application/ports/tenancy-facade.port.js'
+import type { CommissionCategory } from '@/modules/orders/application/ports/tenancy-facade.port.js'
 import {
   CalculateOrderCostService,
   type CalculateOrderCostInput,
@@ -40,29 +33,17 @@ function lineItem(overrides: Partial<OrderCostLineInput> = {}): OrderCostLineInp
 
 interface Harness {
   readonly service: CalculateOrderCostService
-  readonly resolveCommissionRate: ReturnType<typeof vi.fn<TenancyFacadePort['resolveCommissionRate']>>
   readonly calculateFee: ReturnType<typeof vi.fn<DeliveryFacadePort['calculateFee']>>
 }
 
-function makeHarness(commissionByCategory: Partial<Record<'rx' | 'otc', number>> = {}): Harness {
-  const resolveCommissionRate = vi
-    .fn<TenancyFacadePort['resolveCommissionRate']>()
-    .mockImplementation((_tenantId, _chainId, category) =>
-      Promise.resolve(commissionByCategory[category as 'rx' | 'otc'] ?? 0),
-    )
-  const tenancyFacade: TenancyFacadePort = {
-    resolveCommissionRate,
-    getCodLimitDiram: vi.fn(),
-    getEnabledPaymentMethods: vi.fn(),
-    getPickupSlaMinutes: vi.fn(),
-    getPickupSlaBufferMinutes: vi.fn(),
-    getPartialFulfillmentConfirmationTimeoutMinutes: vi.fn(),
-    getHandoverOtpMaxRegenerationsPerOrder: vi.fn(),
-    getHandoverOtpRegenerateMinIntervalSeconds: vi.fn(),
-  }
+function makeHarness(): Harness {
   const calculateFee = vi.fn<DeliveryFacadePort['calculateFee']>().mockResolvedValue(1_500n)
   const deliveryFacade: DeliveryFacadePort = { calculateFee }
-  return { service: new CalculateOrderCostService(tenancyFacade, deliveryFacade), resolveCommissionRate, calculateFee }
+  return { service: new CalculateOrderCostService(deliveryFacade), calculateFee }
+}
+
+function ratesByCategory(rates: Partial<Record<CommissionCategory, number>>): ReadonlyMap<CommissionCategory, number> {
+  return new Map(Object.entries(rates) as [CommissionCategory, number][])
 }
 
 function baseInput(overrides: Partial<CalculateOrderCostInput> = {}): CalculateOrderCostInput {
@@ -72,37 +53,44 @@ function baseInput(overrides: Partial<CalculateOrderCostInput> = {}): CalculateO
     items: [lineItem()],
     pharmacyGeoPoint: PHARMACY_GEO,
     deliveryGeoPoint: DELIVERY_GEO,
+    commissionRatesByCategory: ratesByCategory({ otc: 0 }),
     ...overrides,
   }
 }
 
-describe('CalculateOrderCostService (DTJ-228)', () => {
-  it('AC1 — 3 позиции с разными commissionBps несут СВОЙ platformFeeDiram (не общий на сумму); значения совпадают с реальными SRS-DOM-160 (rx=500/otc=800/parapharma=1200, TenancyFacadeAdapter.spec.ts)', async () => {
-    const { service, resolveCommissionRate } = makeHarness()
-    resolveCommissionRate.mockResolvedValueOnce(500).mockResolvedValueOnce(800).mockResolvedValueOnce(1200)
+describe('CalculateOrderCostService (DTJ-228/DTJ-358)', () => {
+  it('AC1 — позиции разных категорий несут СВОЙ platformFeeDiram (не общий на сумму) — берётся из своей записи карты', async () => {
+    const { service } = makeHarness()
     const items = [
-      lineItem({ medicineId: 'med-a', unitPriceDiram: 10_000n, quantity: 1 }),
-      lineItem({ medicineId: 'med-b', unitPriceDiram: 10_000n, quantity: 1 }),
-      lineItem({ medicineId: 'med-c', unitPriceDiram: 10_000n, quantity: 1 }),
+      lineItem({ medicineId: 'med-rx', unitPriceDiram: 10_000n, quantity: 1, isPrescriptionRequired: true }),
+      lineItem({ medicineId: 'med-otc', unitPriceDiram: 10_000n, quantity: 1, isPrescriptionRequired: false }),
     ]
-    const result = await service.calculate(baseInput({ items }))
+    const result = await service.calculate(baseInput({ items, commissionRatesByCategory: ratesByCategory({ rx: 500, otc: 800 }) }))
 
-    expect(result.items).toHaveLength(3)
+    expect(result.items).toHaveLength(2)
     const byMedicine = new Map(result.items.map((i) => [i.medicineId, i]))
-    expect(byMedicine.get('med-a')).toMatchObject({ commissionBps: 500, platformFeeDiram: 500n }) // 10000*500/10000
-    expect(byMedicine.get('med-b')).toMatchObject({ commissionBps: 800, platformFeeDiram: 800n })
-    expect(byMedicine.get('med-c')).toMatchObject({ commissionBps: 1200, platformFeeDiram: 1200n })
+    expect(byMedicine.get('med-rx')).toMatchObject({ commissionBps: 500, platformFeeDiram: 500n }) // 10000*500/10000
+    expect(byMedicine.get('med-otc')).toMatchObject({ commissionBps: 800, platformFeeDiram: 800n })
+  })
+
+  it('АС3 регресс-фикс DTJ-358 — категория без записи в карте бросает, не подставляет правдоподобное значение', async () => {
+    const { service } = makeHarness()
+    const items = [lineItem({ isPrescriptionRequired: true })] // 'rx', карта несёт только 'otc'
+    await expect(service.calculate(baseInput({ items, commissionRatesByCategory: ratesByCategory({ otc: 800 }) }))).rejects.toThrow(
+      /no pre-resolved commission rate/,
+    )
   })
 
   it('AC2 — мутация deliveryFee (через DeliveryFacadePort) НЕ влияет ни на одно platformFeeDiram', async () => {
-    const { service, calculateFee } = makeHarness({ otc: 500 })
+    const { service, calculateFee } = makeHarness()
     const items = [lineItem({ unitPriceDiram: 10_000n, quantity: 2 })] // itemsTotal=20000, commission 500bps→1000
+    const rates = ratesByCategory({ otc: 500 })
 
     calculateFee.mockResolvedValueOnce(1_500n)
-    const first = await service.calculate(baseInput({ items }))
+    const first = await service.calculate(baseInput({ items, commissionRatesByCategory: rates }))
 
     calculateFee.mockResolvedValueOnce(99_999n) // сильно другая доставка
-    const second = await service.calculate(baseInput({ items }))
+    const second = await service.calculate(baseInput({ items, commissionRatesByCategory: rates }))
 
     expect(first.items[0]?.platformFeeDiram).toBe(1_000n)
     expect(second.items[0]?.platformFeeDiram).toBe(1_000n)
@@ -113,38 +101,26 @@ describe('CalculateOrderCostService (DTJ-228)', () => {
   })
 
   it('itemsTotalDiram = Σ(unitPrice × quantity), totalAmountDiram = itemsTotal + deliveryFee', async () => {
-    const { service } = makeHarness({ otc: 500 })
+    const { service } = makeHarness()
     const items = [
       lineItem({ unitPriceDiram: 10_000n, quantity: 2 }), // 20000
       lineItem({ unitPriceDiram: 5_000n, quantity: 3 }), // 15000
     ]
-    const result = await service.calculate(baseInput({ items }))
+    const result = await service.calculate(baseInput({ items, commissionRatesByCategory: ratesByCategory({ otc: 500 }) }))
     expect(result.itemsTotalDiram).toBe(35_000n)
     expect(result.totalAmountDiram).toBe(35_000n + result.deliveryFeeDiram)
   })
 
-  it('isPrescriptionRequired=true резолвит категорию "rx", false — "otc"', async () => {
-    const { service, resolveCommissionRate } = makeHarness({ rx: 1000, otc: 300 })
-    const items = [
-      lineItem({ medicineId: 'rx-med', isPrescriptionRequired: true }),
-      lineItem({ medicineId: 'otc-med', isPrescriptionRequired: false }),
-    ]
-    await service.calculate(baseInput({ items }))
-
-    expect(resolveCommissionRate).toHaveBeenCalledWith(TENANT_ID, null, 'rx')
-    expect(resolveCommissionRate).toHaveBeenCalledWith(TENANT_ID, null, 'otc')
-  })
-
   it('pharmacyGeoPoint === null — DeliveryFacadePort.calculateFee НЕ вызывается, deliveryFeeDiram = 0', async () => {
-    const { service, calculateFee } = makeHarness({ otc: 500 })
-    const result = await service.calculate(baseInput({ pharmacyGeoPoint: null }))
+    const { service, calculateFee } = makeHarness()
+    const result = await service.calculate(baseInput({ pharmacyGeoPoint: null, commissionRatesByCategory: ratesByCategory({ otc: 500 }) }))
     expect(calculateFee).not.toHaveBeenCalled()
     expect(result.deliveryFeeDiram).toBe(0n)
   })
 
   it('deliveryGeoPoint === null — DeliveryFacadePort.calculateFee НЕ вызывается, deliveryFeeDiram = 0', async () => {
-    const { service, calculateFee } = makeHarness({ otc: 500 })
-    const result = await service.calculate(baseInput({ deliveryGeoPoint: null }))
+    const { service, calculateFee } = makeHarness()
+    const result = await service.calculate(baseInput({ deliveryGeoPoint: null, commissionRatesByCategory: ratesByCategory({ otc: 500 }) }))
     expect(calculateFee).not.toHaveBeenCalled()
     expect(result.deliveryFeeDiram).toBe(0n)
   })
