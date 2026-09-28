@@ -135,6 +135,11 @@ const PlatformSettingsPage: LazyExoticComponent<ComponentType<SectionPlaceholder
   import('@/features/platform-settings/ui/platform-settings-page').then((m) => ({ default: m.PlatformSettingsPage })),
 )
 
+/** DTJ-358 — та же схема совместимости без пропсов, что `EscrowLedgerPage` рядом. */
+const CommissionRatesPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/finance/ui/commission-rates-page').then((m) => ({ default: m.CommissionRatesPage })),
+)
+
 function section(path: string, titleKey: string, icon: string): RouteConfig {
   return { path, titleKey, icon, Component: SectionPlaceholder }
 }
@@ -158,6 +163,8 @@ const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
   { path: 'finance/reconciliation-alerts', titleKey: 'admin.nav.finance_reconciliation_alerts', icon: 'finance', Component: ReconciliationAlertsPage },
   // Инвойсы cash_courier-комиссии, ручная отметка оплаты и снятие блокировки сети.
   { path: 'finance/billing-invoices', titleKey: 'admin.nav.finance_billing_invoices', icon: 'finance', Component: BillingInvoicesPage },
+  // DTJ-358 — управление ставками комиссии (platform_fee CRUD), тот же раздел «Финансы».
+  { path: 'finance/commission-rates', titleKey: 'admin.nav.finance_commission_rates', icon: 'finance', Component: CommissionRatesPage },
   // DTJ-360 — заменяет placeholder `settings` реальным read-only экраном ENV-констант.
   { path: 'settings', titleKey: 'admin.nav.settings', icon: 'settings', Component: PlatformSettingsPage },
 ]

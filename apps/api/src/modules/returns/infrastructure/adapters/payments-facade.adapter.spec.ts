@@ -19,6 +19,9 @@ function buildHarness() {
     listBillingInvoices: vi.fn(),
     getBillingInvoiceById: vi.fn(),
     markInvoicePaid: vi.fn(),
+    listCommissionRates: vi.fn(),
+    upsertCommissionRate: vi.fn(),
+    resolveCommissionRate: vi.fn(),
   }
   const adapter = new PaymentsFacadeAdapter(paymentsFacade)
   return { adapter, refundFull, recordAdjustment, holdPayout }

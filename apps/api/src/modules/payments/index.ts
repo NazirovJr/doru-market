@@ -55,3 +55,10 @@ export { PaymentInvoiceAdapter } from './infrastructure/adapters/payment-invoice
  * токен) специально для `orders.module.ts` — тот же приём, что `PaymentInvoiceAdapter` выше.
  */
 export { RefundFacadeAdapter } from './infrastructure/adapters/refund-facade.adapter.js'
+
+// COMMISSION_RATE_RESOLVER (DTJ-358) — намеренно НЕ PAYMENTS_FACADE: тот транзитивно тянет RefundOrderUseCase -> OrdersFacadeAdapter -> ORDERS_FACADE, что вместе с TENANCY_FACADE_PORT замыкает orders<->payments в цикл DI (воспроизведено — Test.createTestingModule виснет без ошибки). Этот токен зависит только от репозитория platform_fee + CLOCK.
+export const COMMISSION_RATE_RESOLVER = Symbol.for('@dorutj/payments/commission-rate-resolver')
+
+export interface CommissionRateResolver {
+  resolveCommissionRate(tenantId: string, chainId: string | null, category: string): Promise<number | null>
+}

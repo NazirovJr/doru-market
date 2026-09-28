@@ -34,6 +34,8 @@ function buildHarness(options: { invoice?: BillingInvoiceView | null; liftInvoic
     listBillingInvoices: vi.fn(),
     getBillingInvoiceById: getBillingInvoiceByIdMock,
     markInvoicePaid: vi.fn(),
+    listCommissionRates: vi.fn(),
+    upsertCommissionRate: vi.fn(),
   }
   const liftInvoiceBlockMock =
     options.liftInvoiceBlockError === undefined

@@ -63,6 +63,8 @@ export function createFakeBillingInvoicePorts(seed: readonly FakeInvoiceSeed[]):
       invoices.set(invoiceId, { ...invoice, status: 'paid', paidAt: new Date('2026-09-15T00:00:00.000Z') })
       return Promise.resolve('paid')
     },
+    listCommissionRates: () => Promise.resolve({ items: [], nextCursor: null, hasMore: false }),
+    upsertCommissionRate: () => Promise.reject(new Error('not under test')),
   }
 
   const onboardingFacade: OnboardingFacadePort = {

@@ -8,6 +8,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { TenantSettingsRepositoryPort } from '@/modules/tenancy/index.js'
 import type { DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
+import type { OrdersPaymentsFacadePort } from '@/modules/orders/application/ports/payments-facade.port.js'
 import { TenancyFacadeAdapter } from './tenancy-facade.adapter.js'
 
 const TENANT_ID = '11111111-1111-4111-8111-111111111111'
@@ -18,12 +19,17 @@ function stubDrizzleDb(): DrizzleDb {
   return {} as DrizzleDb
 }
 
+/** `null` — нет активной строки `platform_fee`, тесты этого файла проверяют покатегорийный fallback (DTJ-358). */
+function stubPaymentsFacade(): OrdersPaymentsFacadePort {
+  return { resolveCommissionRate: vi.fn().mockResolvedValue(null) }
+}
+
 function makeAdapter(): TenancyFacadeAdapter {
   const repo: TenantSettingsRepositoryPort = {
     findByTenantId: vi.fn().mockResolvedValue(null),
     save: vi.fn(),
   }
-  return new TenancyFacadeAdapter(repo, stubDrizzleDb())
+  return new TenancyFacadeAdapter(repo, stubDrizzleDb(), stubPaymentsFacade())
 }
 
 describe('TenancyFacadeAdapter.resolveCommissionRate (SRS-DOM-160, решение CTO спор №1)', () => {
@@ -69,7 +75,7 @@ describe('TenancyFacadeAdapter.getPickupSlaMinutes (DTJ-301, SRS-PHT-008/030)', 
       findByTenantId: vi.fn().mockResolvedValue({ pickupSlaMinutes: 12 }),
       save: vi.fn(),
     }
-    const adapter = new TenancyFacadeAdapter(repo, stubDrizzleDb())
+    const adapter = new TenancyFacadeAdapter(repo, stubDrizzleDb(), stubPaymentsFacade())
     await expect(adapter.getPickupSlaMinutes(TENANT_ID)).resolves.toBe(12)
   })
 })
@@ -85,7 +91,7 @@ describe('TenancyFacadeAdapter.getPickupSlaBufferMinutes (DTJ-307, SRS-PHT-033)'
       findByTenantId: vi.fn().mockResolvedValue({ pickupSlaBufferMinutes: 3 }),
       save: vi.fn(),
     }
-    const adapter = new TenancyFacadeAdapter(repo, stubDrizzleDb())
+    const adapter = new TenancyFacadeAdapter(repo, stubDrizzleDb(), stubPaymentsFacade())
     await expect(adapter.getPickupSlaBufferMinutes(TENANT_ID)).resolves.toBe(3)
   })
 })

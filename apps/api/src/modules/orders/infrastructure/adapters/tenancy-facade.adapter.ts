@@ -18,11 +18,7 @@
  * дефолта, D-EP09-16 — только здесь вопрос не «можно ли», а «сколько», и выдуманное число
  * так же недопустимо, как выдуманное разрешение).
  *
- * Недоступной остаётся ТОЛЬКО цепочка специфичности `(tenant,chain,category) >
- * (tenant,chain) > (tenant,category) > (tenant) > global_default` (D-03) — таблицы
- * `commission_rates` (или `platform_fee`, как называл её текст DTJ-228 — проверено `grep -rl
- * platform_fee apps/api/src/db/schema`, таблицы НЕТ ни в одной миграции, EP-10 ещё не
- * приземлился) в схеме нет. `TODO(EP-10)` ниже — только эта часть, не покатегорийный дефолт.
+ * Цепочка специфичности (D-03) резолвится DTJ-358 через `ORDERS_PAYMENTS_FACADE_PORT` (`platform_fee`), покатегорийный дефолт ниже — fallback.
  *
  * `getCodLimitDiram`/`getEnabledPaymentMethods` — РЕАЛЬНЫЕ (DTJ-229, «Что сделать» §2/3):
  * `cod_limit_diram` уже есть в базовой схеме `tenant_settings` (D-EP09-5), читается по-настоящему.
@@ -40,6 +36,7 @@ import {
   type CommissionCategory,
   type TenancyFacadePort,
 } from '@/modules/orders/application/ports/tenancy-facade.port.js'
+import { ORDERS_PAYMENTS_FACADE_PORT, type OrdersPaymentsFacadePort } from '@/modules/orders/application/ports/payments-facade.port.js'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { tenantSettings } from '@/db/schema/tenants.js'
 
@@ -89,29 +86,18 @@ export class TenancyFacadeAdapter implements TenancyFacadePort {
     // `TenantSettings`/`TenantSettingsRepositoryPort` (модуль `tenancy`, чужой периметр) ради
     // ОДНОГО скалярного поля, читает колонку напрямую).
     @Inject(DRIZZLE_DB) private readonly db: DrizzleDb,
+    @Inject(ORDERS_PAYMENTS_FACADE_PORT) private readonly paymentsFacade: OrdersPaymentsFacadePort,
   ) {}
 
-  /**
-   * TODO(EP-10): подключить специфичность `(tenant,chain,category) > ... > global_default`
-   * (D-03) через `commission_rates`, когда таблица появится — ПОКАТЕГОРИЙНЫЙ уровень (эта
-   * реализация) уже не заглушка, а прямое чтение SRS-DOM-160, останется как fallback ПОД
-   * специфичностью, не будет выброшен целиком.
-   */
-  // async — не просто Promise<number>: throw ниже обязан стать rejected-промисом, не синхронным
-  // исключением из вызова метода (иначе caller-ы через .catch()/.then(null, ...), не await/try, не поймали бы).
-  // eslint-disable-next-line @typescript-eslint/require-await -- нет await внутри намеренно, async нужен только ради этой семантики
-  async resolveCommissionRate(_tenantId: string, _chainId: string | null, category: CommissionCategory): Promise<number> {
-    // Каст до `Record<string, number | undefined>` — тот же приём, что `resolveHttpStatus` в
-    // `common/filters/all-exceptions.filter.ts`: тип параметра ОБЪЯВЛЯЕТ `CommissionCategory`, но
-    // реальное значение может прийти в обход компилятора (легаси-вызов, `as` у чужого кода) —
-    // без каста индексация всегда дала бы `number` по типам, и защита ниже была бы мертва.
-    const bps = (DEFAULT_COMMISSION_BPS_BY_CATEGORY as Record<string, number | undefined>)[category]
-    if (bps === undefined) {
+  async resolveCommissionRate(tenantId: string, chainId: string | null, category: CommissionCategory): Promise<number> {
+    const categoryDefault = (DEFAULT_COMMISSION_BPS_BY_CATEGORY as Record<string, number | undefined>)[category]
+    if (categoryDefault === undefined) {
       throw new Error(
         `resolveCommissionRate: unrecognized commission category "${category}" — SRS-DOM-160 has no default for it, refusing to guess a money-affecting value.`,
       )
     }
-    return bps
+    const resolved = await this.paymentsFacade.resolveCommissionRate(tenantId, chainId, category)
+    return resolved ?? categoryDefault
   }
 
   async getCodLimitDiram(tenantId: string): Promise<bigint> {

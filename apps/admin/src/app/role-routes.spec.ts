@@ -18,12 +18,13 @@ const SUPER_ADMIN_PATHS = [
   'finance/payout-schedule',
   'finance/reconciliation-alerts',
   'finance/billing-invoices',
+  'finance/commission-rates',
   'settings',
 ]
 const PHARMACY_ADMIN_PATHS = ['my-pharmacies', 'my-orders', 'staff', 'integration-keys', 'reports', 'schedule']
 
 describe('getRoutesForRole', () => {
-  it('super_admin получает все 14 разделов админ-панели', () => {
+  it('super_admin получает все 15 разделов админ-панели', () => {
     const routes = getRoutesForRole('super_admin')
     expect(routes.map((r) => r.path)).toEqual(SUPER_ADMIN_PATHS)
   })

@@ -28,6 +28,8 @@ function buildHarness(page: FinancePage<BillingInvoiceView>, chainNames: Readonl
     listBillingInvoices: listBillingInvoicesMock,
     getBillingInvoiceById: vi.fn(),
     markInvoicePaid: vi.fn(),
+    listCommissionRates: vi.fn(),
+    upsertCommissionRate: vi.fn(),
   }
   const findChainNamesMock = vi.fn<OnboardingFacadePort['findChainNames']>().mockResolvedValue(chainNames)
   const onboardingFacade: OnboardingFacadePort = {

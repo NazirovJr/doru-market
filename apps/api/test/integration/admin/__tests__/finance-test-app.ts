@@ -13,10 +13,14 @@ import { ResponseInterceptor } from '@/common/http/interceptors/response.interce
 import { AuthModule } from '@/modules/auth/auth.module.js'
 import { JWT_SIGNER, type JwtSignerPort } from '@/modules/auth/index.js'
 import { FinanceLedgerController } from '@/modules/admin/presentation/finance-ledger.controller.js'
+// DTJ-358 — CommissionRatesController тот же `/finance` префикс, тот же фейковый PAYMENTS_FACADE_PORT (см. fake-payments-facade-port.ts).
+import { CommissionRatesController } from '@/modules/admin/presentation/commission-rates.controller.js'
 import { PAYMENTS_FACADE_PORT, type PaymentsFacadePort } from '@/modules/admin/application/ports/payments-facade.port.js'
 import { ListEscrowLedgerUseCase } from '@/modules/admin/application/use-cases/list-escrow-ledger.use-case.js'
 import { ListPayoutScheduleUseCase } from '@/modules/admin/application/use-cases/list-payout-schedule.use-case.js'
 import { ListReconciliationAlertsUseCase } from '@/modules/admin/application/use-cases/list-reconciliation-alerts.use-case.js'
+import { ListCommissionRatesUseCase } from '@/modules/admin/application/use-cases/list-commission-rates.use-case.js'
+import { UpsertCommissionRateUseCase } from '@/modules/admin/application/use-cases/upsert-commission-rate.use-case.js'
 import { AUDIT_LOG_QUERY_PORT, type AuditLogQueryPort } from '@/common/audit/audit-log-query.port.js'
 import { SharedKernelModule } from '@/shared-kernel/shared-kernel.module.js'
 import { LoggerModule } from '@/common/logging/logger.module.js'
@@ -64,13 +68,15 @@ function applyTestEnv(): void {
 
 @Module({
   imports: [AuthModule],
-  controllers: [FinanceLedgerController],
+  controllers: [FinanceLedgerController, CommissionRatesController],
   providers: [
     { provide: PAYMENTS_FACADE_PORT, useValue: FAKE_PAYMENTS_FACADE_PORT satisfies PaymentsFacadePort },
     { provide: AUDIT_LOG_QUERY_PORT, useValue: FAKE_AUDIT_LOG_QUERY_PORT satisfies AuditLogQueryPort },
     ListEscrowLedgerUseCase,
     ListPayoutScheduleUseCase,
     ListReconciliationAlertsUseCase,
+    ListCommissionRatesUseCase,
+    UpsertCommissionRateUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- модуль тест-харнесса

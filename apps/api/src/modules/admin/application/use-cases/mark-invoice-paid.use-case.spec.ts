@@ -45,6 +45,8 @@ function buildHarness(options: {
     listBillingInvoices: vi.fn(),
     getBillingInvoiceById: getBillingInvoiceByIdMock,
     markInvoicePaid: markInvoicePaidMock,
+    listCommissionRates: vi.fn(),
+    upsertCommissionRate: vi.fn(),
   }
   const auditWriteMock =
     options.auditWriteError === undefined

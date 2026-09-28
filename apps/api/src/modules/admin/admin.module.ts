@@ -65,6 +65,8 @@ import { ProvisionCourierForChainUseCase } from './application/use-cases/provisi
 import { ListEscrowLedgerUseCase } from './application/use-cases/list-escrow-ledger.use-case.js'
 import { ListPayoutScheduleUseCase } from './application/use-cases/list-payout-schedule.use-case.js'
 import { ListReconciliationAlertsUseCase } from './application/use-cases/list-reconciliation-alerts.use-case.js'
+import { ListCommissionRatesUseCase } from './application/use-cases/list-commission-rates.use-case.js'
+import { UpsertCommissionRateUseCase } from './application/use-cases/upsert-commission-rate.use-case.js'
 import { GetPharmacyScheduleUseCase } from './application/use-cases/get-pharmacy-schedule.use-case.js'
 import { UpdatePharmacyScheduleUseCase } from './application/use-cases/update-pharmacy-schedule.use-case.js'
 import { UpdateDeliveryZoneUseCase } from './application/use-cases/update-delivery-zone.use-case.js'
@@ -98,6 +100,7 @@ import { OrdersAdminController } from './presentation/orders-admin.controller.js
 import { PharmacyApiKeysController } from './presentation/pharmacy-api-keys.controller.js'
 import { PlatformSettingsController } from './presentation/platform-settings.controller.js'
 import { BillingInvoicesController } from './presentation/billing-invoices.controller.js'
+import { CommissionRatesController } from './presentation/commission-rates.controller.js'
 
 @Module({
   imports: [OnboardingModule, OrdersModule, PaymentsModule, AuthModule, TenancyModule, InventoryModule, DeliveryModule],
@@ -114,6 +117,7 @@ import { BillingInvoicesController } from './presentation/billing-invoices.contr
     PlatformSettingsController,
     ReportExportController,
     BillingInvoicesController,
+    CommissionRatesController,
   ],
   providers: [
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },
@@ -176,6 +180,9 @@ import { BillingInvoicesController } from './presentation/billing-invoices.contr
     ListBillingInvoicesUseCase,
     MarkInvoicePaidUseCase,
     LiftInvoiceBlockUseCase,
+    // DTJ-358 — commission-rates CRUD над platform_fee (уже существующая таблица EP-10), тот же PAYMENTS_FACADE_PORT.
+    ListCommissionRatesUseCase,
+    UpsertCommissionRateUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.

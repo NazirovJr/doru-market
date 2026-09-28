@@ -76,6 +76,35 @@ export interface FindBillingInvoicesFilter {
 }
 
 export type MarkInvoicePaidOutcome = 'paid' | 'already_paid' | 'not_found' | 'invalid_status'
+// DTJ-358 — CRUD platform_fee (D-03, SRS-DOM-160), 2 метода для admin (PAYMENTS_FACADE_PORT), @Roles('super_admin')-only.
+export interface CommissionRateView {
+  readonly id: string
+  readonly tenantId: string | null
+  readonly chainId: string | null
+  readonly category: string | null
+  readonly rateBps: number
+  readonly effectiveFrom: string
+  readonly effectiveTo: string | null
+  readonly createdBy: string
+  readonly createdAt: Date | null
+}
+
+export interface FindCommissionRatesFilter {
+  readonly tenantId?: string | undefined
+  readonly chainId?: string | undefined
+  readonly category?: string | undefined
+}
+
+export interface UpsertCommissionRateCommand {
+  readonly id?: string | undefined
+  readonly tenantId: string | null
+  readonly chainId: string | null
+  readonly category: string
+  readonly rateBps: number
+  readonly effectiveFrom: string
+  readonly effectiveTo: string | null
+  readonly actorUserId: string
+}
 
 export interface PaymentsFacadePort {
   /** Без пагинации — леджер одного заказа ограничен по размеру (DTJ-357 review). */
@@ -91,4 +120,8 @@ export interface PaymentsFacadePort {
   listBillingInvoices(filter: FindBillingInvoicesFilter, pagination: FinancePagination): Promise<FinancePage<BillingInvoiceView>>
   getBillingInvoiceById(invoiceId: string): Promise<BillingInvoiceView | null>
   markInvoicePaid(invoiceId: string, tx?: unknown): Promise<MarkInvoicePaidOutcome>
+  listCommissionRates(filter: FindCommissionRatesFilter, pagination: FinancePagination): Promise<FinancePage<CommissionRateView>>
+
+  /** `NotFoundError`, если `command.id` задан, но строка не найдена. */
+  upsertCommissionRate(command: UpsertCommissionRateCommand): Promise<CommissionRateView>
 }

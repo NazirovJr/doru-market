@@ -204,9 +204,13 @@ import { AdjustLedgerUseCase } from './application/use-cases/adjust-ledger.use-c
 import { AdminPaymentOverrideController } from './presentation/admin-payment-override.controller.js'
 // DTJ-249 — HoldPayoutUseCase/PAYMENTS_FACADE (см. JSDoc блока providers выше).
 import { HoldPayoutUseCase } from './application/use-cases/hold-payout.use-case.js'
-import { PAYMENTS_FACADE, type PaymentsFacade } from './index.js'
+import { COMMISSION_RATE_RESOLVER, PAYMENTS_FACADE, type CommissionRateResolver, type PaymentsFacade } from './index.js'
 // DTJ-357 — read-методы PaymentsFacade вынесены отдельным файлом (C2, max-lines 300).
-import { findEscrowLedgerEntries, findPayoutSchedule, findPayoutScheduleByOrder, listBillingInvoices, toBillingInvoiceDto } from './application/queries/finance-facade.queries.js'
+import { findEscrowLedgerEntries, findPayoutSchedule, findPayoutScheduleByOrder, listBillingInvoices, toBillingInvoiceDto, listCommissionRates, resolveCommissionRate, upsertCommissionRate } from './application/queries/finance-facade.queries.js'
+import { CLOCK, type Clock } from '@/shared-kernel/index.js'
+// DTJ-358 — commission-rates CRUD (platform_fee, уже существующая таблица EP-10).
+import { COMMISSION_RATE_REPOSITORY, type CommissionRateRepository } from './application/ports/commission-rate-repository.port.js'
+import { COMMISSION_RATE_REPOSITORY_PROVIDER } from './infrastructure/repositories/commission-rate.repository.js'
 // DTJ-251 — PlatformBillingInvoiceRepository, задел для DTJ-252 (см. JSDoc блока providers выше).
 import { PLATFORM_BILLING_INVOICE_REPOSITORY_PROVIDER } from './infrastructure/repositories/platform-billing-invoice.repository.js'
 import { PLATFORM_BILLING_INVOICE_REPOSITORY, type PlatformBillingInvoiceRepository } from './application/ports/platform-billing-invoice-repository.port.js'
@@ -283,6 +287,15 @@ class PaymentsFacadeReadRepos {
     @Inject(ESCROW_LEDGER_REPOSITORY) public readonly escrowLedger: EscrowLedgerRepository,
     @Inject(PAYOUT_SCHEDULE_REPOSITORY) public readonly payoutSchedule: PayoutScheduleRepository,
     @Inject(PLATFORM_BILLING_INVOICE_REPOSITORY) public readonly billingInvoice: PlatformBillingInvoiceRepository,
+  ) {}
+}
+
+// DTJ-358 — отдельный агрегатор: COMMISSION_RATE_RESOLVER зависит только от него, без графа команд (иначе цикл orders↔payments).
+@Injectable()
+class CommissionRateFacadePorts {
+  public constructor(
+    @Inject(COMMISSION_RATE_REPOSITORY) public readonly repository: CommissionRateRepository,
+    @Inject(CLOCK) public readonly clock: Clock,
   ) {}
 }
 
@@ -403,9 +416,11 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
     HoldPayoutUseCase,
     PaymentsFacadeCommandPorts,
     PaymentsFacadeReadRepos,
+    COMMISSION_RATE_REPOSITORY_PROVIDER,
+    CommissionRateFacadePorts,
     {
       provide: PAYMENTS_FACADE,
-      useFactory: (commands: PaymentsFacadeCommandPorts, repos: PaymentsFacadeReadRepos): PaymentsFacade => ({
+      useFactory: (commands: PaymentsFacadeCommandPorts, repos: PaymentsFacadeReadRepos, commissionPorts: CommissionRateFacadePorts): PaymentsFacade => ({
         holdPayout: (tenantId, orderId, disputeId) => commands.holdPayout.execute({ tenantId, orderId, disputeId }),
         refundFull: (tenantId, command) =>
           commands.refundOrder.execute({ tenantId, orderId: command.orderId, reason: command.reason }),
@@ -426,8 +441,19 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
           return row === null ? null : toBillingInvoiceDto(row)
         },
         markInvoicePaid: (invoiceId, tx) => repos.billingInvoice.markPaid(invoiceId, tx),
+        listCommissionRates: (filter, pagination) => listCommissionRates(commissionPorts.repository, filter, pagination),
+        upsertCommissionRate: (command) => upsertCommissionRate(commissionPorts.repository, command),
+        resolveCommissionRate: (tenantId, chainId, category) =>
+          resolveCommissionRate(commissionPorts.repository, commissionPorts.clock, { tenantId, chainId, category }),
       }),
-      inject: [PaymentsFacadeCommandPorts, PaymentsFacadeReadRepos],
+      inject: [PaymentsFacadeCommandPorts, PaymentsFacadeReadRepos, CommissionRateFacadePorts],
+    },
+    {
+      provide: COMMISSION_RATE_RESOLVER,
+      useFactory: (ports: CommissionRateFacadePorts): CommissionRateResolver => ({
+        resolveCommissionRate: (tenantId, chainId, category) => resolveCommissionRate(ports.repository, ports.clock, { tenantId, chainId, category }),
+      }),
+      inject: [CommissionRateFacadePorts],
     },
     // DTJ-251 — см. JSDoc блока providers выше (нет вызывающего use case в ЭТОМ тикете, задел для DTJ-252).
     PLATFORM_BILLING_INVOICE_REPOSITORY_PROVIDER,
@@ -450,7 +476,7 @@ function resolveBankWebhookVerifier(registry: BankWebhookVerifierRegistry, provi
   // DTJ-350 (EP-15, admin) — `PAYMENTS_FACADE` был забинжен (DTJ-249), но не экспортирован:
   // ничто вне `payments` ещё не потребляло его. `admin.module.ts` — первый внешний потребитель
   // (`useExisting` на свой узкий `PAYMENTS_FACADE_PORT`), гостевая правка одной строки.
-  exports: [PaymentInvoiceAdapter, RefundFacadeAdapter, PAYMENTS_FACADE],
+  exports: [PaymentInvoiceAdapter, RefundFacadeAdapter, PAYMENTS_FACADE, COMMISSION_RATE_RESOLVER],
 })
 export class PaymentsModule implements OnModuleDestroy {
   public constructor(@Inject(MOCK_BANK_AUTO_PAY_QUEUE) private readonly autoPayQueue: Queue<MockBankAutoPayJobData>) {}

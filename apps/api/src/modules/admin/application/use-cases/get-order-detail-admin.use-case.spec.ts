@@ -58,6 +58,8 @@ function fakes(order: OrderAdminDetailView | null, timeline: OrderTimelineView |
       listBillingInvoices: vi.fn(),
       getBillingInvoiceById: vi.fn(),
       markInvoicePaid: vi.fn(),
+      listCommissionRates: vi.fn(),
+      upsertCommissionRate: vi.fn(),
     },
     prescriptionsFacade: { getPrescriptionMetaByOrder },
     onboardingFacade: {
