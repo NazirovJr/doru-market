@@ -55,7 +55,7 @@ export function courierRowId(userId: string): string {
 }
 
 async function insertCouriers(db: NodePgDatabase): Promise<void> {
-  const courierUsers = Object.values(SEED_USERS).filter((u): u is SeedUser => u.role === COURIER_ROLE)
+  const courierUsers = Object.values(SEED_USERS).filter((u) => u.role === COURIER_ROLE)
   await Promise.all(
     courierUsers.map((user) =>
       db.execute(sql`
