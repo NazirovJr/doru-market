@@ -197,6 +197,11 @@ export class AppConfigService {
     return this.configService.get('EXCEL_IMPORT_MAX_ROWS', { infer: true })
   }
 
+  /** [DTJ-165, SRS-INV-017/018] Активный адаптер `CommerceMlParserPort` (`inventory.module.ts` DI-ветка). */
+  get commerceMlParserDriver(): EnvConfig['COMMERCE_ML_PARSER_DRIVER'] {
+    return this.configService.get('COMMERCE_ML_PARSER_DRIVER', { infer: true })
+  }
+
   get auditLogRetentionYears(): number {
     return this.configService.get('AUDIT_LOG_RETENTION_YEARS', { infer: true })
   }

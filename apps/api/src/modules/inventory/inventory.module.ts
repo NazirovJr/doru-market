@@ -94,6 +94,7 @@ import { InternalServiceGuard } from './presentation/internal/internal-service.g
 import { XlsxExcelInventoryParserAdapter } from './infrastructure/adapters/xlsx-excel-inventory-parser.adapter.js'
 import { DrizzleCatalogMatchQueueReadAdapter } from './infrastructure/adapters/drizzle-catalog-match-queue-read.adapter.js'
 import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/in-memory-catalog-match-queue-read.adapter.js'
+import { commerceMlParserProvider } from './infrastructure/adapters/commerce-ml-parser.factory.js'
 
 @Module({
   imports: [AuthModule, RedisModule],
@@ -122,6 +123,9 @@ import { InMemoryCatalogMatchQueueReadAdapter } from './infrastructure/adapters/
     // DTJ-163: узкий read-порт к catalog_match_queue (чужая таблица, см. JSDoc порта).
     { provide: CATALOG_MATCH_QUEUE_READ, useClass: DrizzleCatalogMatchQueueReadAdapter },
     InMemoryCatalogMatchQueueReadAdapter,
+    // DTJ-165: канал CommerceML 1С — порт+мок, R1 (см. JSDoc фабрики). Без HTTP-потребителя
+    // в R1 (тикет п.5 «Что сделать») — намеренная заготовка Provider Pattern (Charter §3.3).
+    commerceMlParserProvider,
     InMemoryPharmacyApiKeyVerificationAdapter,
     PharmacyApiKeyGuard,
     InMemoryPharmacyInventoryRepository,
