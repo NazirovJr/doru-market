@@ -50,11 +50,18 @@ function fakes(order: OrderAdminDetailView | null, timeline: OrderTimelineView |
   const getPrescriptionMetaByOrder = vi.fn().mockResolvedValue(null)
   const getPharmacyChainId = vi.fn().mockResolvedValue(null)
   return {
-    ordersFacade: { findOrdersAny: vi.fn(), getOrderDetail, getOrderTimeline },
+    ordersFacade: { findOrdersAny: vi.fn(), getOrderDetail, getOrderTimeline, cancel: vi.fn() },
     paymentsFacade: {
       findEscrowLedgerEntries,
       findPayoutSchedule: vi.fn(),
       findPayoutScheduleByOrder,
+      listBillingInvoices: vi.fn(),
+      getBillingInvoiceById: vi.fn(),
+      markInvoicePaid: vi.fn(),
+      listCommissionRates: vi.fn(),
+      upsertCommissionRate: vi.fn(),
+      refundFull: vi.fn(),
+      adminPaymentOverride: vi.fn(),
     },
     prescriptionsFacade: { getPrescriptionMetaByOrder },
     onboardingFacade: {
@@ -63,6 +70,8 @@ function fakes(order: OrderAdminDetailView | null, timeline: OrderTimelineView |
       getScheduleAndZone: vi.fn(),
       updateSchedule: vi.fn(),
       updateDeliveryZone: vi.fn(),
+      liftInvoiceBlock: vi.fn(),
+      findChainNames: vi.fn(),
     },
     getOrderDetail,
     getOrderTimeline,

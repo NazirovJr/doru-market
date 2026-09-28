@@ -26,6 +26,13 @@ function buildHarness() {
     findEscrowLedgerEntries: vi.fn(),
     findPayoutSchedule: findPayoutScheduleMock,
     findPayoutScheduleByOrder: vi.fn(),
+    listBillingInvoices: vi.fn(),
+    getBillingInvoiceById: vi.fn(),
+    markInvoicePaid: vi.fn(),
+    listCommissionRates: vi.fn(),
+    upsertCommissionRate: vi.fn(),
+    refundFull: vi.fn(),
+    adminPaymentOverride: vi.fn(),
   }
   const useCase = new ListPayoutScheduleUseCase(facade)
   return { useCase, findPayoutScheduleMock }

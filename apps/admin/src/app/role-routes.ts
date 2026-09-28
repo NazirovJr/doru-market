@@ -125,6 +125,20 @@ const PayoutSchedulePage: LazyExoticComponent<ComponentType<SectionPlaceholderPa
 const ReconciliationAlertsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
   import('@/features/finance/ui/reconciliation-alerts-page').then((m) => ({ default: m.ReconciliationAlertsPage })),
 )
+/** Та же схема совместимости без пропсов, что `EscrowLedgerPage` рядом. */
+const BillingInvoicesPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/finance/ui/billing-invoices-page').then((m) => ({ default: m.BillingInvoicesPage })),
+)
+
+/** DTJ-360 — та же схема совместимости без пропсов, что `AuditLogPage`; заменяет placeholder `settings`. */
+const PlatformSettingsPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/platform-settings/ui/platform-settings-page').then((m) => ({ default: m.PlatformSettingsPage })),
+)
+
+/** DTJ-358 — та же схема совместимости без пропсов, что `EscrowLedgerPage` рядом. */
+const CommissionRatesPage: LazyExoticComponent<ComponentType<SectionPlaceholderPageProps>> = lazy(() =>
+  import('@/features/finance/ui/commission-rates-page').then((m) => ({ default: m.CommissionRatesPage })),
+)
 
 function section(path: string, titleKey: string, icon: string): RouteConfig {
   return { path, titleKey, icon, Component: SectionPlaceholder }
@@ -147,7 +161,12 @@ const SUPER_ADMIN_ROUTES: readonly RouteConfig[] = [
   { path: 'finance/escrow-ledger', titleKey: 'admin.nav.finance_escrow_ledger', icon: 'finance', Component: EscrowLedgerPage },
   { path: 'finance/payout-schedule', titleKey: 'admin.nav.finance_payout_schedule', icon: 'finance', Component: PayoutSchedulePage },
   { path: 'finance/reconciliation-alerts', titleKey: 'admin.nav.finance_reconciliation_alerts', icon: 'finance', Component: ReconciliationAlertsPage },
-  section('settings', 'admin.nav.settings', 'settings'),
+  // Инвойсы cash_courier-комиссии, ручная отметка оплаты и снятие блокировки сети.
+  { path: 'finance/billing-invoices', titleKey: 'admin.nav.finance_billing_invoices', icon: 'finance', Component: BillingInvoicesPage },
+  // DTJ-358 — управление ставками комиссии (platform_fee CRUD), тот же раздел «Финансы».
+  { path: 'finance/commission-rates', titleKey: 'admin.nav.finance_commission_rates', icon: 'finance', Component: CommissionRatesPage },
+  // DTJ-360 — заменяет placeholder `settings` реальным read-only экраном ENV-констант.
+  { path: 'settings', titleKey: 'admin.nav.settings', icon: 'settings', Component: PlatformSettingsPage },
 ]
 
 /** `pharmacy_admin`: Мои точки/Заказы/Сотрудники/Ключи 1С/Отчёты/Расписание. */

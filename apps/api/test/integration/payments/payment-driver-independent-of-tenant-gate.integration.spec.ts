@@ -38,7 +38,12 @@ describe('AC3 DTJ-239 — PAYMENT_DRIVER не влияет на tenant_settings.
       // см. JSDoc `neverCalledRepository` выше про тот же принцип) читает DRIZZLE_DB напрямую —
       // стаб, никогда не разрешается.
       const neverCalledDb = {} as ConstructorParameters<typeof TenancyFacadeAdapter>[1]
-      const tenancyFacade = new TenancyFacadeAdapter(neverCalledRepository, neverCalledDb)
+      const neverCalledPaymentsFacade = {
+        resolveCommissionRate: () => {
+          throw new Error('unexpected call — this test never resolves a commission rate')
+        },
+      } as ConstructorParameters<typeof TenancyFacadeAdapter>[2]
+      const tenancyFacade = new TenancyFacadeAdapter(neverCalledRepository, neverCalledDb, neverCalledPaymentsFacade)
       const policy = new PaymentMethodEnabledPolicyService(tenancyFacade)
 
       await expect(policy.isEnabled('alif_mobi', 'tenant-1')).resolves.toBe(false)

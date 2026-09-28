@@ -281,7 +281,7 @@ function makeHarness(overrides: Partial<HarnessOverrides> = {}): Harness {
     new FixedClock(),
     new SequentialIdGenerator(),
     config,
-    new CalculateOrderCostService(tenancyFacade, deliveryFacade),
+    new CalculateOrderCostService(deliveryFacade),
     new ResolveBillingStrategyService(),
     new ResolveDeliveryAddressService(userAddressFacade),
     new ExcludeUnverifiedRxItemsService(prescriptionsFacade),

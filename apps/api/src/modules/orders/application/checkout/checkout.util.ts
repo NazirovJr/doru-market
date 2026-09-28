@@ -17,6 +17,7 @@ import type { CartItemRecord } from '@/modules/orders/application/cart/ports/car
 import type { CheckoutCommand } from './dto/checkout-command.dto.js'
 import type { CheckoutFailedGroupDto } from './dto/checkout-result.dto.js'
 import type { OrderCostLineInput, OrderCostResult } from './calculate-order-cost.service.js'
+import type { CommissionCategory, TenancyFacadePort } from '@/modules/orders/application/ports/tenancy-facade.port.js'
 import type { RxCheckItem } from './exclude-unverified-rx-items.service.js'
 import type { CodPolicyItemInput } from '@/modules/orders/application/policies/cod-policy.service.js'
 
@@ -93,6 +94,31 @@ export function buildItemCommands(input: BuildItemCommandsInput): OrderItemComma
  * что `buildItemCommands` (обе функции читают ОДИН и тот же `reservedLines`/`snapshots`,
  * независимо друг от друга — не общее мутируемое состояние, расхождения не может быть).
  */
+function resolveNeededCommissionCategories(group: PharmacyGroup, snapshots: ReadonlyMap<string, MedicineOrderSnapshot>): readonly CommissionCategory[] {
+  const categories = new Set<CommissionCategory>()
+  for (const item of group.items) {
+    categories.add(snapshots.get(item.medicineId)?.isPrescriptionRequired === true ? 'rx' : 'otc')
+  }
+  return [...categories]
+}
+
+/** Объект-параметр (C5, `max-params` ≤3). */
+export interface ResolveGroupCommissionRatesInput {
+  readonly tenancyFacade: TenancyFacadePort
+  readonly tenantId: string
+  readonly group: PharmacyGroup
+  readonly snapshots: ReadonlyMap<string, MedicineOrderSnapshot>
+}
+
+/** ДО `tx` группы (self-deadlock пула, см. JSDoc `checkout.use-case.ts::processGroup`) — одна `resolveCommissionRate` на КАЖДУЮ отличающуюся категорию группы, не на позицию. */
+export async function resolveCommissionRatesByCategory(input: ResolveGroupCommissionRatesInput): Promise<ReadonlyMap<CommissionCategory, number>> {
+  const categories = resolveNeededCommissionCategories(input.group, input.snapshots)
+  const entries = await Promise.all(
+    categories.map(async (category): Promise<readonly [CommissionCategory, number]> => [category, await input.tenancyFacade.resolveCommissionRate(input.tenantId, null, category)]),
+  )
+  return new Map(entries)
+}
+
 export function buildCostInputItems(
   group: PharmacyGroup,
   reservedLines: readonly ReservedStockLine[],

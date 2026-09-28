@@ -67,9 +67,26 @@ export interface OrderTimelineView {
   readonly updatedAt: Date
 }
 
+// Order.cancel() принимает только канонический OrderCancelReason-enum — свободный текст super_admin уходит в audit_log.reason.
+export const ADMIN_FORCE_CANCEL_ORDER_REASON = 'fraud_or_safety_force_cancel' as const
+
+export interface AdminForceCancelActor {
+  readonly kind: 'user'
+  readonly userId: string
+}
+
+export interface AdminForceCancelCommand {
+  readonly tenantId: string
+  readonly reason: typeof ADMIN_FORCE_CANCEL_ORDER_REASON
+  readonly actor: AdminForceCancelActor
+  readonly now: Date
+}
+
 export interface OrdersFacadePort {
   findOrdersAny(filter: OrdersAnyFilter, pagination: OrdersPagination): Promise<OrdersAnyPage>
   // Несуществующий orderId — null, не throw.
   getOrderDetail(orderId: string): Promise<OrderAdminDetailView | null>
   getOrderTimeline(orderId: string): Promise<OrderTimelineView | null>
+  // Зеркало реального OrdersFacade.cancel (useExisting на тот же класс) — tx для атомарности с audit.write.
+  cancel(orderId: string, cmd: AdminForceCancelCommand, tx?: unknown): Promise<void>
 }

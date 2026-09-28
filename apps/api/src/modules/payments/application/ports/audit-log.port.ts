@@ -26,8 +26,11 @@ export interface AppendPaymentOverrideAuditInput {
   /** DTJ-246 — обязателен для `AdminPaymentOverrideUseCase` (валидируется ДО вызова порта). */
   readonly reason?: string
   readonly actorUserId?: string
+  readonly requestId?: string | null
 }
 
 export interface AuditLogPort {
-  appendPaymentOverride(input: AppendPaymentOverrideAuditInput): Promise<void>
+  // DTJ-356 — `tx` опционален: `AdminPaymentOverrideUseCase` пишет ЭТУ запись внутри той же
+  // транзакции, что `markPaidEscrow`/`EscrowLedger.append` (сбой записи откатывает всё).
+  appendPaymentOverride(input: AppendPaymentOverrideAuditInput, tx?: unknown): Promise<void>
 }

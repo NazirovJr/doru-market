@@ -35,11 +35,15 @@ export const CHAIN_STATUSES_ALLOWING_PHARMACY_ACTIVE = ['approved', 'active'] as
  *
  *   draft → pending_review → changes_requested ↔ pending_review
  *         → approved → active → suspended → pending_review [reactivation]
+ *                                          ↳ active [lift-block]
  *         → rejected (терминально, но DTJ-064 п.3 переиспользует заявку
  *           rejected → draft при повторной подаче — это операция
  *           SubmitChainApplicationUseCase, не доменный переход цепочки)
  *         → terminated (терминально НАВСЕГДА)
  *         * → terminated (из ЛЮБОГО состояния, по решению super_admin)
+ *
+ * `suspended → active` — снятие блокировки сразу в active, минуя pending_review: причина блокировки
+ * финансовая (неоплаченный инвойс), не комплаенс-нарушение, второй цикл ревью избыточен.
  */
 const ALLOWED_TRANSITIONS: Readonly<Record<OnboardingStatus, readonly OnboardingStatus[]>> = {
   draft: ['pending_review', 'terminated'],
@@ -47,7 +51,7 @@ const ALLOWED_TRANSITIONS: Readonly<Record<OnboardingStatus, readonly Onboarding
   changes_requested: ['pending_review', 'rejected', 'terminated'],
   approved: ['active', 'terminated'],
   active: ['suspended', 'terminated'],
-  suspended: ['pending_review', 'terminated'],
+  suspended: ['pending_review', 'active', 'terminated'],
   rejected: [], // терминально (повторная подача обрабатывается use case'ом, не цепочкой)
   terminated: [], // терминально НАВСЕГДА
 }

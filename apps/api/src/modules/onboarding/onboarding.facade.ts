@@ -231,4 +231,18 @@ export class OnboardingFacade {
   ): Promise<readonly OnboardingReviewDurationStat[]> {
     return this.reviewLogRepository.getReviewDurationStats(tenantId, period)
   }
+
+  /** Обратный переход `suspendChainForUnpaidInvoice` — `tx` опционален, для атомарности с audit_log. */
+  async liftInvoiceBlock(chainId: string, actor: { readonly id: string }, tx?: unknown): Promise<void> {
+    const chain = await this.pharmacyChainRepository.findById(chainId, tx)
+    if (chain === null) {
+      throw new NotFoundError({ chainId })
+    }
+    await this.pharmacyChainRepository.save(chain.liftInvoiceBlock(actor), tx)
+  }
+
+  /** Батч-имена сетей, тот же приём, что `getPharmacyNames` выше. */
+  async findChainNames(chainIds: readonly string[]): Promise<ReadonlyMap<string, string>> {
+    return this.resolveChainNames(chainIds)
+  }
 }

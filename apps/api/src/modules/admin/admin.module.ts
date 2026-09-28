@@ -65,6 +65,8 @@ import { ProvisionCourierForChainUseCase } from './application/use-cases/provisi
 import { ListEscrowLedgerUseCase } from './application/use-cases/list-escrow-ledger.use-case.js'
 import { ListPayoutScheduleUseCase } from './application/use-cases/list-payout-schedule.use-case.js'
 import { ListReconciliationAlertsUseCase } from './application/use-cases/list-reconciliation-alerts.use-case.js'
+import { ListCommissionRatesUseCase } from './application/use-cases/list-commission-rates.use-case.js'
+import { UpsertCommissionRateUseCase } from './application/use-cases/upsert-commission-rate.use-case.js'
 import { GetPharmacyScheduleUseCase } from './application/use-cases/get-pharmacy-schedule.use-case.js'
 import { UpdatePharmacyScheduleUseCase } from './application/use-cases/update-pharmacy-schedule.use-case.js'
 import { UpdateDeliveryZoneUseCase } from './application/use-cases/update-delivery-zone.use-case.js'
@@ -76,6 +78,19 @@ import { ListPharmacyApiKeysUseCase } from './application/use-cases/list-pharmac
 import { RevokePharmacyApiKeyUseCase } from './application/use-cases/revoke-pharmacy-api-key.use-case.js'
 import { RotatePharmacyApiKeyUseCase } from './application/use-cases/rotate-pharmacy-api-key.use-case.js'
 import { SetPharmacyApiKeyMtlsUseCase } from './application/use-cases/set-pharmacy-api-key-mtls.use-case.js'
+import { GetPlatformSettingsUseCase } from './application/use-cases/get-platform-settings.use-case.js'
+import { REPORT_EXPORT_RENDERER, REPORT_EXPORT_QUEUE, EXPORT_JOBS_REPOSITORY } from './application/ports/report-export.port.js'
+import { ReportExportRendererAdapter } from './infrastructure/adapters/report-export-renderer.adapter.js'
+import { BullmqReportExportQueueAdapter } from './infrastructure/adapters/bullmq-report-export-queue.adapter.js'
+import { DrizzleExportJobsRepository } from './infrastructure/repositories/export-jobs.repository.js'
+import { RequestReportExportDeps, RequestReportExportUseCase } from './application/use-cases/request-report-export.use-case.js'
+import { GetExportJobStatusUseCase } from './application/use-cases/get-export-job-status.use-case.js'
+import { ReportExportController } from './presentation/report-export.controller.js'
+import { ListBillingInvoicesUseCase } from './application/use-cases/list-billing-invoices.use-case.js'
+import { MarkInvoicePaidUseCase } from './application/use-cases/mark-invoice-paid.use-case.js'
+import { LiftInvoiceBlockUseCase } from './application/use-cases/lift-invoice-block.use-case.js'
+import { AdminPaymentOverrideUseCase } from './application/use-cases/admin-payment-override.use-case.js'
+import { AdminForceCancelOrderUseCase } from './application/use-cases/admin-force-cancel-order.use-case.js'
 import { FeatureFlagsController } from './presentation/feature-flags.controller.js'
 import { TenantsController } from './presentation/tenants.controller.js'
 import { UsersAdminController } from './presentation/users-admin.controller.js'
@@ -85,6 +100,10 @@ import { FinanceLedgerController } from './presentation/finance-ledger.controlle
 import { PharmacyScheduleController } from './presentation/pharmacy-schedule.controller.js'
 import { OrdersAdminController } from './presentation/orders-admin.controller.js'
 import { PharmacyApiKeysController } from './presentation/pharmacy-api-keys.controller.js'
+import { PlatformSettingsController } from './presentation/platform-settings.controller.js'
+import { BillingInvoicesController } from './presentation/billing-invoices.controller.js'
+import { CommissionRatesController } from './presentation/commission-rates.controller.js'
+import { OrdersAdminActionsController } from './presentation/orders-admin-actions.controller.js'
 
 @Module({
   imports: [OnboardingModule, OrdersModule, PaymentsModule, AuthModule, TenancyModule, InventoryModule, DeliveryModule],
@@ -98,6 +117,11 @@ import { PharmacyApiKeysController } from './presentation/pharmacy-api-keys.cont
     PharmacyScheduleController,
     OrdersAdminController,
     PharmacyApiKeysController,
+    PlatformSettingsController,
+    ReportExportController,
+    BillingInvoicesController,
+    CommissionRatesController,
+    OrdersAdminActionsController,
   ],
   providers: [
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },
@@ -147,6 +171,25 @@ import { PharmacyApiKeysController } from './presentation/pharmacy-api-keys.cont
     RevokePharmacyApiKeyUseCase,
     RotatePharmacyApiKeyUseCase,
     SetPharmacyApiKeyMtlsUseCase,
+    // DTJ-360 — read-only ENV-константы, только AppConfigService (@Global(), без своего провайдера здесь).
+    GetPlatformSettingsUseCase,
+    // DTJ-361 — инфраструктура экспорта отчётов (sync CSV/XLSX + асинхронная джоба).
+    { provide: REPORT_EXPORT_RENDERER, useClass: ReportExportRendererAdapter },
+    { provide: REPORT_EXPORT_QUEUE, useClass: BullmqReportExportQueueAdapter },
+    { provide: EXPORT_JOBS_REPOSITORY, useClass: DrizzleExportJobsRepository },
+    RequestReportExportDeps,
+    RequestReportExportUseCase,
+    GetExportJobStatusUseCase,
+    // Инвойсы cash_courier-комиссии (PAYMENTS_FACADE_PORT листинг/mark-paid, ONBOARDING_FACADE_PORT.liftInvoiceBlock).
+    ListBillingInvoicesUseCase,
+    MarkInvoicePaidUseCase,
+    LiftInvoiceBlockUseCase,
+    // DTJ-358 — commission-rates CRUD над platform_fee (уже существующая таблица EP-10), тот же PAYMENTS_FACADE_PORT.
+    ListCommissionRatesUseCase,
+    UpsertCommissionRateUseCase,
+    // DTJ-356 — payment-override/admin-force-cancel, UNIT_OF_WORK переиспользуется из AuthModule (тот же приём, что DeactivateStaffAccountUseCase/GrantPlatformRoleUseCase).
+    AdminPaymentOverrideUseCase,
+    AdminForceCancelOrderUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.

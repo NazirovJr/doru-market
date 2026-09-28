@@ -34,4 +34,23 @@ export const FAKE_PAYMENTS_FACADE_PORT: PaymentsFacadePort = {
       hasMore: false,
     }),
   findPayoutScheduleByOrder: () => Promise.resolve(null),
+  listBillingInvoices: () => Promise.resolve({ items: [], nextCursor: null, hasMore: false }),
+  getBillingInvoiceById: () => Promise.resolve(null),
+  markInvoicePaid: () => Promise.resolve('not_found'),
+  // DTJ-358 — не под тестом в finance-ledger.controller.e2e.spec.ts, см. commission-rates.controller.e2e.spec.ts.
+  listCommissionRates: () => Promise.resolve({ items: [], nextCursor: null, hasMore: false }),
+  upsertCommissionRate: (command) =>
+    Promise.resolve({
+      id: command.id ?? 'commission-rate-1',
+      tenantId: command.tenantId,
+      chainId: command.chainId,
+      category: command.category,
+      rateBps: command.rateBps,
+      effectiveFrom: command.effectiveFrom,
+      effectiveTo: command.effectiveTo,
+      createdBy: command.actorUserId,
+      createdAt: new Date('2026-09-27T00:00:00.000Z'),
+    }),
+  refundFull: () => Promise.resolve(undefined),
+  adminPaymentOverride: () => Promise.resolve(undefined),
 }

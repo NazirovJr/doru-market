@@ -230,6 +230,11 @@ export enum ErrorCode {
 
   // ---- Доменные: notification_preferences ----
   CRITICAL_CATEGORY_CANNOT_BE_DISABLED = 'CRITICAL_CATEGORY_CANNOT_BE_DISABLED', // 422
+
+  // ---- Доменные: EP-05 inventory, канал CommerceML 1С (DTJ-165) — структурная ошибка
+  // файла (нет корневого тега), ДО построчного разбора, тот же класс, что
+  // EXCEL_TEMPLATE_HEADER_MISMATCH выше. ----
+  COMMERCE_ML_MALFORMED_XML = 'COMMERCE_ML_MALFORMED_XML', // 400, SRS-INV-018
 }
 
 /** HTTP-статус для каждого `ErrorCode` (`AllExceptionsFilter`, DTJ-018 — единственный фильтр приложения). */
@@ -370,4 +375,6 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   [ErrorCode.INVALID_TEMPLATE_SUBJECT_CHANNEL]: 400,
 
   [ErrorCode.CRITICAL_CATEGORY_CANNOT_BE_DISABLED]: 422,
+
+  [ErrorCode.COMMERCE_ML_MALFORMED_XML]: 400,
 }

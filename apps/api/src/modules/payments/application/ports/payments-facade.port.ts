@@ -19,6 +19,9 @@
  * `tenantId` — осознанное расширение ради консистентности модуля, зафиксировано явно (отчёт
  * сдачи DTJ-249).
  */
+import type { AdminPaymentOverrideCommand } from '../use-cases/admin-payment-override.use-case.js'
+
+export type { AdminPaymentOverrideCommand }
 
 /** Результат `holdPayout` (SRS-DOM-105/SRS-DISP-002) — см. JSDoc `HoldPayoutUseCase`. */
 export interface HoldPayoutResult {
@@ -85,6 +88,60 @@ export interface FinancePagination {
   readonly cursor: FinanceCursor | null
 }
 
+export interface BillingInvoiceDto {
+  readonly id: string
+  readonly chainId: string
+  readonly invoiceType: string
+  readonly status: string
+  readonly periodStart: Date
+  readonly periodEnd: Date
+  readonly subtotalDiram: number
+  readonly vatDiram: number
+  readonly totalDiram: number
+  readonly issuedAt: Date | null
+  readonly dueAt: Date | null
+  readonly paidAt: Date | null
+}
+
+export interface FindBillingInvoicesFilter {
+  readonly chainId?: string | undefined
+  readonly invoiceType?: string | undefined
+  readonly status?: string | undefined
+}
+
+export type MarkInvoicePaidResult = 'paid' | 'already_paid' | 'not_found' | 'invalid_status'
+
+// DTJ-358 — CRUD-обёртка над platform_fee (D-03, SRS-DOM-160), см. JSDoc payments.module.ts про PaymentsFacadeQueryPorts.
+export interface CommissionRateDto {
+  readonly id: string
+  readonly tenantId: string | null
+  readonly chainId: string | null
+  readonly category: string | null
+  readonly rateBps: number
+  readonly effectiveFrom: string
+  readonly effectiveTo: string | null
+  readonly createdBy: string
+  readonly createdAt: Date | null
+}
+
+export interface FindCommissionRatesFilter {
+  readonly tenantId?: string | undefined
+  readonly chainId?: string | undefined
+  readonly category?: string | undefined
+}
+
+export interface UpsertCommissionRateCommand {
+  /** Присутствует только для PATCH (обновление существующей строки). */
+  readonly id?: string | undefined
+  readonly tenantId: string | null
+  readonly chainId: string | null
+  readonly category: string
+  readonly rateBps: number
+  readonly effectiveFrom: string
+  readonly effectiveTo: string | null
+  readonly actorUserId: string
+}
+
 export interface PaymentsFacade {
   /**
    * Атомарно переводит `payout_schedule` заказа в `status='disputed'` (SRS-DOM-058), если она
@@ -92,6 +149,11 @@ export interface PaymentsFacade {
    * `{ alreadyPaid: true }` (см. `HoldPayoutResult`).
    */
   holdPayout(tenantId: string, orderId: string, disputeId: string): Promise<HoldPayoutResult>
+
+  /** DTJ-356 — второй ВХОД (роут `admin`-модуля) в уже существующий `AdminPaymentOverrideUseCase`
+   * (DTJ-246, EP-10): та же единственная точка вызова `Order.markPaidEscrow()` (SRS-PAY-018),
+   * не новый доменный путь. */
+  adminPaymentOverride(command: AdminPaymentOverrideCommand): Promise<void>
 
   /** Полный возврат без отмены заказа — тонкая обёртка над `RefundOrderUseCase`, идемпотентна. */
   refundFull(tenantId: string, command: RefundOrderFullCommand): Promise<void>
@@ -106,4 +168,15 @@ export interface PaymentsFacade {
 
   // null для cash_courier/ещё не доставленного заказа.
   findPayoutScheduleByOrder(orderId: string): Promise<PayoutScheduleEntryDto | null>
+
+  listBillingInvoices(filter: FindBillingInvoicesFilter, pagination: FinancePagination): Promise<FinancePage<BillingInvoiceDto>>
+  getBillingInvoiceById(invoiceId: string): Promise<BillingInvoiceDto | null>
+  markInvoicePaid(invoiceId: string, tx?: unknown): Promise<MarkInvoicePaidResult>
+
+  listCommissionRates(filter: FindCommissionRatesFilter, pagination: FinancePagination): Promise<FinancePage<CommissionRateDto>>
+
+  /** `NotFoundError`, если `command.id` задан, но строка `platform_fee` не найдена. */
+  upsertCommissionRate(command: UpsertCommissionRateCommand): Promise<CommissionRateDto>
+
+  resolveCommissionRate(tenantId: string, chainId: string | null, category: string): Promise<number | null>
 }

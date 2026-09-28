@@ -1,14 +1,16 @@
 // Общий READ-ONLY экран super_admin (полный доступ) и pharmacy_admin (своя сеть) — секция действий условно НЕ монтируется, не CSS-скрытие.
-import { type ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import { useParams } from 'react-router'
 import { formatMoney, useT } from '@dorutj/i18n'
-import { Badge, OrderTimeline, type OrderTimelineStep } from '@dorutj/ui'
+import { Badge, Button, OrderTimeline, type OrderTimelineStep } from '@dorutj/ui'
 import type { OrderAdminEscrowLedgerEntryDto, OrderDetailAdminDto } from '@dorutj/contracts'
 import { useLocale } from '@/shared/config/locale-provider'
 import { ADMIN_LOCALE } from '@/shared/config/locale'
 import { getCurrentRole } from '@/shared/auth/current-role'
 import { useOrderDetailAdmin } from '../api/use-orders-admin'
 import { ORDER_STATUS_BADGE_TONE } from './order-status.constants'
+import { PaymentOverrideModal } from './payment-override-modal'
+import { ForceCancelModal } from './force-cancel-modal'
 
 function formatSomoni(diram: number): string {
   return formatMoney(diram, ADMIN_LOCALE)
@@ -34,7 +36,7 @@ export const OrderDetailPage = (): ReactElement => {
           <PayoutSection order={query.data} />
           <PrescriptionSection order={query.data} />
           {/* DTJ-356 — payment-override/force-cancel, ТОЛЬКО super_admin. Компонент не монтируется вовсе для остальных ролей (не CSS-скрытие). */}
-          {role === 'super_admin' ? <OrderAdminActionsPlaceholder /> : null}
+          {role === 'super_admin' ? <OrderAdminActionsSection orderId={query.data.id} /> : null}
         </>
       ) : null}
     </section>
@@ -194,13 +196,22 @@ const PrescriptionSection = ({ order }: { readonly order: OrderDetailAdminDto })
   )
 }
 
-// TODO(DTJ-356): payment-override/force-cancel как кнопки действий над заказом.
-const OrderAdminActionsPlaceholder = (): ReactElement => {
+const OrderAdminActionsSection = ({ orderId }: { readonly orderId: string }): ReactElement => {
   const { locale } = useLocale()
   const { t } = useT(locale)
+  const [openModal, setOpenModal] = useState<'payment_override' | 'force_cancel' | null>(null)
+
   return (
-    <section data-testid="order-detail-actions-placeholder">
-      <p>{t('admin.order_detail.actions.placeholder')}</p>
+    <section data-testid="order-detail-actions">
+      <h2>{t('admin.order_detail.section.actions')}</h2>
+      <Button variant="danger" onClick={() => { setOpenModal('payment_override') }} data-testid="open-payment-override-modal">
+        {t('admin.order_detail.actions.payment_override.open')}
+      </Button>
+      <Button variant="danger" onClick={() => { setOpenModal('force_cancel') }} data-testid="open-force-cancel-modal">
+        {t('admin.order_detail.actions.force_cancel.open')}
+      </Button>
+      <PaymentOverrideModal orderId={orderId} isOpen={openModal === 'payment_override'} onClose={() => { setOpenModal(null) }} />
+      <ForceCancelModal orderId={orderId} isOpen={openModal === 'force_cancel'} onClose={() => { setOpenModal(null) }} />
     </section>
   )
 }

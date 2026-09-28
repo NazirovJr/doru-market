@@ -1,10 +1,11 @@
 /**
- * Unit-тесты `AdminPaymentOverrideUseCase` (EP-10, DTJ-246) — все порты замоканы.
+ * Unit-тесты `AdminPaymentOverrideUseCase` (EP-10, DTJ-246; атомарность audit — DTJ-356) —
+ * все порты замоканы.
  */
 import { describe, expect, it, vi } from 'vitest'
-import { ForbiddenError, ValidationError } from '@dorutj/contracts'
+import { ForbiddenError, NotFoundError, ValidationError } from '@dorutj/contracts'
 import type { EscrowLedgerRepository } from '@/modules/payments/application/ports/escrow-ledger-repository.port.js'
-import type { PaymentsOrdersPort, PaymentsUnitOfWorkTx } from '@/modules/payments/application/ports/orders-facade.port.js'
+import type { PaymentsOrderSnapshot, PaymentsOrdersPort, PaymentsUnitOfWorkTx } from '@/modules/payments/application/ports/orders-facade.port.js'
 import type { PaymentsUnitOfWorkPort } from '@/modules/payments/application/ports/payments-unit-of-work.port.js'
 import type { AuditLogPort } from '@/modules/payments/application/ports/audit-log.port.js'
 import { AdminPaymentOverrideUseCase, type AdminPaymentOverrideCommand } from './admin-payment-override.use-case.js'
@@ -21,13 +22,31 @@ function baseCommand(overrides: Partial<AdminPaymentOverrideCommand> = {}): Admi
     reason: 'confirmed by bank support over phone, call ref #12345',
     actorUserId: 'admin-1',
     actorRole: 'super_admin',
+    requestId: 'req-1',
     ...overrides,
   }
 }
 
-function buildHarness() {
+function baseOrder(overrides: Partial<PaymentsOrderSnapshot> = {}): PaymentsOrderSnapshot {
+  return {
+    id: 'order-1',
+    tenantId: 'tenant-1',
+    pharmacyId: 'pharmacy-1',
+    status: 'pending_payment',
+    paymentMethod: 'alif_mobi',
+    totalAmountDiram: 15_000n,
+    pharmacyChainId: null,
+    items: [],
+    billingStrategy: 'single_invoice',
+    ...overrides,
+  }
+}
+
+function buildHarness(params: { readonly order?: PaymentsOrderSnapshot | null } = {}) {
+  const order = params.order === undefined ? baseOrder() : params.order
+  const getOrderById = vi.fn<PaymentsOrdersPort['getOrderById']>().mockResolvedValue(order)
   const markPaidEscrow = vi.fn<PaymentsOrdersPort['markPaidEscrow']>().mockResolvedValue(undefined)
-  const ordersPort = { getOrderById: vi.fn(), markPaidEscrow, cancel: vi.fn() }
+  const ordersPort = { getOrderById, markPaidEscrow, cancel: vi.fn() }
   const append = vi.fn<EscrowLedgerRepository['append']>().mockResolvedValue(undefined)
   const ledgerRepository = { append } as unknown as EscrowLedgerRepository
   const appendPaymentOverride = vi.fn<AuditLogPort['appendPaymentOverride']>().mockResolvedValue(undefined)
@@ -35,11 +54,11 @@ function buildHarness() {
   const unitOfWork: PaymentsUnitOfWorkPort = { run: (cb) => cb(TX_MARKER) }
 
   const useCase = new AdminPaymentOverrideUseCase(ordersPort, ledgerRepository, auditLog, unitOfWork)
-  return { useCase, markPaidEscrow, append, appendPaymentOverride }
+  return { useCase, getOrderById, markPaidEscrow, append, appendPaymentOverride }
 }
 
-describe('AdminPaymentOverrideUseCase (DTJ-246)', () => {
-  it('AC1: валидный super_admin с reason → markPaidEscrow + escrow_ledger(hold_created) + audit_log(payment_override)', async () => {
+describe('AdminPaymentOverrideUseCase (DTJ-246, атомарность audit — DTJ-356)', () => {
+  it('AC1: валидный super_admin с reason → markPaidEscrow + escrow_ledger(hold_created) + audit_log(payment_override), все с ОДНИМ tx', async () => {
     const h = buildHarness()
 
     await h.useCase.execute(baseCommand())
@@ -50,8 +69,13 @@ describe('AdminPaymentOverrideUseCase (DTJ-246)', () => {
       TX_MARKER,
     )
     expect(h.appendPaymentOverride).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({ tenantId: 'tenant-1', entityId: 'order-1', action: 'admin_payment_override', actorUserId: 'admin-1' }),
+      expect.objectContaining({ tenantId: 'tenant-1', entityId: 'order-1', action: 'admin_payment_override', actorUserId: 'admin-1', requestId: 'req-1' }),
+      TX_MARKER,
     )
+    const auditInput = h.appendPaymentOverride.mock.calls[0]?.[0] as unknown as {
+      readonly metadata: { statusFrom: string; statusTo: string; orderTotalDiram: number }
+    }
+    expect(auditInput.metadata).toMatchObject({ statusFrom: 'pending_payment', statusTo: 'paid_escrow', orderTotalDiram: 15_000 })
   })
 
   it('AC2: reason пустой → ValidationError, транзакция НЕ начата (unitOfWork/markPaidEscrow не вызваны)', async () => {
@@ -73,11 +97,22 @@ describe('AdminPaymentOverrideUseCase (DTJ-246)', () => {
     expect(h.appendPaymentOverride).not.toHaveBeenCalled()
   })
 
-  it('DoD: audit_log пишется ПОСЛЕ успешной транзакции (не до неё) — вызовы происходят в правильном порядке', async () => {
+  it('заказ не найден → NotFoundError, markPaidEscrow НЕ вызывается', async () => {
+    const h = buildHarness({ order: null })
+
+    await expect(h.useCase.execute(baseCommand())).rejects.toBeInstanceOf(NotFoundError)
+    expect(h.markPaidEscrow).not.toHaveBeenCalled()
+  })
+
+  it('порядок вызовов внутри unitOfWork: markPaidEscrow → ledger.append → audit (последним, но в ТОЙ ЖЕ транзакции)', async () => {
     const h = buildHarness()
     const callOrder: string[] = []
     h.markPaidEscrow.mockImplementation(() => {
       callOrder.push('markPaidEscrow')
+      return Promise.resolve()
+    })
+    h.append.mockImplementation(() => {
+      callOrder.push('ledgerAppend')
       return Promise.resolve()
     })
     h.appendPaymentOverride.mockImplementation(() => {
@@ -87,6 +122,15 @@ describe('AdminPaymentOverrideUseCase (DTJ-246)', () => {
 
     await h.useCase.execute(baseCommand())
 
-    expect(callOrder).toEqual(['markPaidEscrow', 'auditLog'])
+    expect(callOrder).toEqual(['markPaidEscrow', 'ledgerAppend', 'auditLog'])
+  })
+
+  it('DTJ-356: AuditLogPort.appendPaymentOverride бросает → execute() пробрасывает ошибку (unitOfWork откатывает markPaidEscrow/ledger вместе с ней, не тихий успех)', async () => {
+    const h = buildHarness()
+    h.appendPaymentOverride.mockRejectedValue(new Error('audit db down'))
+
+    await expect(h.useCase.execute(baseCommand())).rejects.toThrow('audit db down')
+
+    expect(h.markPaidEscrow).toHaveBeenCalledOnce()
   })
 })

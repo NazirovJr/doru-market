@@ -75,11 +75,36 @@ export interface PlatformBillingInvoiceRepository {
    * `PayoutScheduleRepository.findByPharmacy` (DTJ-252).
    */
   findByChain(input: FindInvoicesByChainInput): Promise<FindInvoicesByChainResult>
+
+  /** Одна строка по `id`, для резолва `chainId` по инвойсу. Несуществующий id — `null`. */
+  findById(invoiceId: string): Promise<BillingInvoiceReportRow | null>
+
+  /** Кросс-сетевая страница — `chainId` в `filter` опционален (в отличие от `findByChain`, где обязателен). */
+  findAll(input: FindAllInvoicesInput): Promise<FindInvoicesByChainResult>
+
+  /** `issued|overdue → paid`, не check-then-write. Возвращает исход, не бросает — вызывающий код решает HTTP-код. */
+  markPaid(invoiceId: string, tx?: unknown): Promise<MarkInvoicePaidOutcome>
+}
+
+export type MarkInvoicePaidOutcome = 'paid' | 'already_paid' | 'not_found' | 'invalid_status'
+
+/** Вход `findAll` — объект-параметр (C5, `max-params` ≤3). */
+export interface FindAllInvoicesFilter {
+  readonly chainId?: string | undefined
+  readonly invoiceType?: string | undefined
+  readonly status?: string | undefined
+}
+
+export interface FindAllInvoicesInput {
+  readonly filter: FindAllInvoicesFilter
+  readonly limit: number
+  readonly cursor: BillingInvoiceCursor | null
 }
 
 /** Строка отчёта `findByChain` (DTJ-252). */
 export interface BillingInvoiceReportRow {
   readonly id: string
+  readonly chainId: string
   readonly invoiceType: string
   readonly status: string
   readonly periodStart: Date

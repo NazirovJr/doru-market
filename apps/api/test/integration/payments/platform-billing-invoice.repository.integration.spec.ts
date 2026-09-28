@@ -137,4 +137,54 @@ describe.skipIf(!postgresAvailable)('PlatformBillingInvoiceRepository — integr
     const rows = await pool.query<{ vat_diram: string }>('SELECT vat_diram FROM platform_billing_invoices WHERE id = $1', [draft.id])
     expect(rows.rows[0]?.vat_diram).toBe('7000') // не перезаписано вторым вызовом
   })
+
+  // findAll/findById/markPaid (admin).
+  it('findAll: filter[chainId] находит инвойс, findById возвращает ту же строку по id', async () => {
+    const { periodStart, periodEnd } = period(6)
+    await repository.upsertDraft({ chainId, periodStart, periodEnd, additionalSubtotalDiram: 2_000n })
+    await trackCreatedInvoiceId()
+    const draft = await repository.findDraftForPeriod(chainId, periodStart)
+    if (draft === null) throw new Error('setup: draft not found')
+
+    const page = await repository.findAll({ filter: { chainId }, limit: 50, cursor: null })
+    const byId = await repository.findById(draft.id)
+
+    expect(page.items.some((item) => item.id === draft.id)).toBe(true)
+    expect(byId).toMatchObject({ id: draft.id, chainId, status: 'draft' })
+    expect(await repository.findById(randomUUID())).toBeNull()
+  })
+
+  it('markPaid: issued → paid; повторный вызов на уже paid → already_paid, paidAt не меняется', async () => {
+    const { periodStart, periodEnd } = period(7)
+    await repository.upsertDraft({ chainId, periodStart, periodEnd, additionalSubtotalDiram: 3_000n })
+    await trackCreatedInvoiceId()
+    const draft = await repository.findDraftForPeriod(chainId, periodStart)
+    if (draft === null) throw new Error('setup: draft not found')
+    await repository.issue({ invoiceId: draft.id, issuedAt: new Date(), dueAt: new Date(), vatDiram: 0n, totalDiram: 3_000n })
+
+    const firstOutcome = await repository.markPaid(draft.id)
+    const firstPaidAt = (await repository.findById(draft.id))?.paidAt
+
+    const secondOutcome = await repository.markPaid(draft.id)
+    const secondPaidAt = (await repository.findById(draft.id))?.paidAt
+
+    expect(firstOutcome).toBe('paid')
+    expect(secondOutcome).toBe('already_paid')
+    expect(secondPaidAt).toEqual(firstPaidAt)
+  })
+
+  it('markPaid: инвойс в draft (ещё не выставлен) → invalid_status, статус не меняется', async () => {
+    const { periodStart, periodEnd } = period(8)
+    await repository.upsertDraft({ chainId, periodStart, periodEnd, additionalSubtotalDiram: 500n })
+    await trackCreatedInvoiceId()
+    const draft = await repository.findDraftForPeriod(chainId, periodStart)
+    if (draft === null) throw new Error('setup: draft not found')
+
+    expect(await repository.markPaid(draft.id)).toBe('invalid_status')
+    expect((await repository.findById(draft.id))?.status).toBe('draft')
+  })
+
+  it('markPaid: несуществующий id → not_found', async () => {
+    expect(await repository.markPaid(randomUUID())).toBe('not_found')
+  })
 })

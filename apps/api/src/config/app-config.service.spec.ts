@@ -47,6 +47,7 @@ const BASE_ENV: EnvConfig = {
   RATE_LIMIT_ANON_PER_MIN: 100,
   RATE_LIMIT_USER_PER_MIN: 300,
   RATE_LIMIT_1C_BATCH_PER_MIN: 20,
+  COMMERCE_ML_PARSER_DRIVER: 'mock',
 }
 
 describe('AppConfigService', () => {

@@ -4,21 +4,18 @@
  * подтвердил оплату по телефону поддержки, вебхук технически не дошёл. Использует ТЕ ЖЕ
  * доменные операции, что DTJ-242 шаг 5 (`order.markPaidEscrow` + `EscrowLedger.append(hold_
  * created)`, ОДНА транзакция), но БЕЗ HMAC — заменена ролью (`super_admin`) + обязательным
- * `reason`.
+ * `reason`. Второй вход (`admin`-роут, DTJ-356) — тот же use case, не второй домен-путь.
  *
  * Роль-проверка — ДВА рубежа (C12/defense-in-depth): presentation-guard (`@Roles('super_admin')`,
  * `admin-payment-override.controller.ts`) — ОСНОВНОЙ; `actorRole` в команде — ВТОРОЙ, на случай
  * прямого вызова use case в обход presentation (тестовый сценарий AC3 тикета, буквальный текст:
  * «вызывается напрямую в обход presentation-guard»). Дублирование НАМЕРЕННОЕ, не забытая правка.
  *
- * `audit_log` — ОБЯЗАТЕЛЕН для КАЖДОГО вызова (DoD тикета: «нет пути выполнения без неё») —
- * пишется ПОСЛЕ успешной транзакции (та же граница, что `LatePaymentRefundService.
- * createSystemAutoTicketBestEffort`, DTJ-243 — административное событие, не денежный факт,
- * сбой записи audit_log НЕ должен откатывать уже совершённый override, но алерт дежурному
- * гарантирует, что событие не останется незамеченным даже при сбое audit_log).
+ * `audit_log` — ПЕРЕСМОТРЕНО (DTJ-356): запись теперь ВНУТРИ транзакции markPaidEscrow/ledger —
+ * сбой откатывает всё (была best-effort после коммита, заменено сознательно по решению координатора).
  */
 import { Inject, Injectable, Logger } from '@nestjs/common'
-import { ForbiddenError, ValidationError } from '@dorutj/contracts'
+import { ForbiddenError, NotFoundError, ValidationError } from '@dorutj/contracts'
 import {
   ESCROW_LEDGER_REPOSITORY,
   type EscrowLedgerRepository,
@@ -38,6 +35,7 @@ import { Money } from '@/shared-kernel/domain/value-objects/money.vo.js'
 
 const SUPER_ADMIN_ROLE = 'super_admin'
 const OVERRIDE_ACTION = 'admin_payment_override'
+const TARGET_STATUS = 'paid_escrow'
 
 export interface AdminPaymentOverrideCommand {
   readonly tenantId: string
@@ -48,6 +46,7 @@ export interface AdminPaymentOverrideCommand {
   readonly reason: string
   readonly actorUserId: string
   readonly actorRole: string
+  readonly requestId?: string | null
 }
 
 @Injectable()
@@ -70,20 +69,16 @@ export class AdminPaymentOverrideUseCase {
       throw new ValidationError('AdminPaymentOverrideUseCase requires a non-empty reason', { orderId: cmd.orderId })
     }
 
-    await this.unitOfWork.run((tx) => this.applyOverride(cmd, tx))
-
-    await this.auditLog.appendPaymentOverride({
-      tenantId: cmd.tenantId,
-      entityId: cmd.orderId,
-      action: OVERRIDE_ACTION,
-      metadata: { orderId: cmd.orderId, amountDiram: cmd.amountDiram.toString(), txId: cmd.txId },
-      reason: cmd.reason,
-      actorUserId: cmd.actorUserId,
-    })
+    await this.unitOfWork.run((tx) => this.applyOverrideAndAudit(cmd, tx))
     this.alertOnCall(cmd)
   }
 
-  private async applyOverride(cmd: AdminPaymentOverrideCommand, tx: PaymentsUnitOfWorkTx): Promise<void> {
+  private async applyOverrideAndAudit(cmd: AdminPaymentOverrideCommand, tx: PaymentsUnitOfWorkTx): Promise<void> {
+    const order = await this.ordersPort.getOrderById(cmd.tenantId, cmd.orderId, tx)
+    if (order === null) {
+      throw new NotFoundError({ resource: 'order', orderId: cmd.orderId })
+    }
+    const statusFrom = order.status
     await this.ordersPort.markPaidEscrow(cmd.tenantId, cmd.orderId, cmd.txId, cmd.paidAt, tx)
     await this.ledgerRepository.append(
       EscrowLedgerEntry.create({
@@ -95,6 +90,25 @@ export class AdminPaymentOverrideUseCase {
         reason: null,
         actorUserId: null,
       }),
+      tx,
+    )
+    await this.auditLog.appendPaymentOverride(
+      {
+        tenantId: cmd.tenantId,
+        entityId: cmd.orderId,
+        action: OVERRIDE_ACTION,
+        metadata: {
+          orderId: cmd.orderId,
+          amountDiram: cmd.amountDiram.toString(),
+          txId: cmd.txId,
+          statusFrom,
+          statusTo: TARGET_STATUS,
+          orderTotalDiram: Number(order.totalAmountDiram),
+        },
+        reason: cmd.reason,
+        actorUserId: cmd.actorUserId,
+        requestId: cmd.requestId ?? null,
+      },
       tx,
     )
   }

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ToastProvider } from '@dorutj/ui'
 import { TopAnalogsPage } from './top-analogs-page'
 
 vi.mock('@/shared/auth/current-role', () => ({ getCurrentTenantId: () => 'tenant-1' }))
@@ -10,11 +11,14 @@ function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status })
 }
 
+// страница теперь рендерит ReportExportButton (useToast()) — обёрнута ToastProvider.
 function renderPage(): void {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
     <QueryClientProvider client={queryClient}>
-      <TopAnalogsPage />
+      <ToastProvider closeButtonLabel="close">
+        <TopAnalogsPage />
+      </ToastProvider>
     </QueryClientProvider>,
   )
 }

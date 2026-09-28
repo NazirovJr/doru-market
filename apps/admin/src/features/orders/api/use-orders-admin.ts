@@ -1,9 +1,14 @@
 // Бэкенд ждёт bracket-ключи (filter[orderNumber]/filter[status]/…) — маппинг camelCase→bracket только здесь (тот же приём, что use-pharmacy-accounts.ts).
 import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router'
-import { useQuery, type UseQueryResult } from '@tanstack/react-query'
-import type { OrderAdminSummaryDto, OrderDetailAdminDto } from '@dorutj/contracts'
-import { httpGetJson, httpGetJsonWithMeta, type HttpError, type QueryParams } from '@/shared/api/http-client'
+import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query'
+import type {
+  AdminForceCancelOrderResultDto,
+  AdminPaymentOverrideResultDto,
+  OrderAdminSummaryDto,
+  OrderDetailAdminDto,
+} from '@dorutj/contracts'
+import { httpGetJson, httpGetJsonWithMeta, httpPostJson, type HttpError, type QueryParams } from '@/shared/api/http-client'
 
 const ORDERS_PATH = '/api/v1/admin/orders'
 const DEFAULT_LIMIT = 50
@@ -218,6 +223,38 @@ export function useOwnOrdersAdminFilters(): UseOwnOrdersAdminFiltersResult {
   }, [searchParams, setSearchParams])
 
   return { filters, setStatus, setSlaBreached, resetFilters }
+}
+
+// DTJ-356 — payment-override/admin-force-cancel, инвалидируют карточку заказа при успехе.
+export interface AdminPaymentOverrideInput {
+  readonly reason: string
+  readonly txId: string
+  readonly amountDiram: string
+  readonly paidAt: string
+}
+
+export function useAdminPaymentOverride(
+  orderId: string,
+): UseMutationResult<AdminPaymentOverrideResultDto, HttpError, AdminPaymentOverrideInput> {
+  const queryClient = useQueryClient()
+  return useMutation<AdminPaymentOverrideResultDto, HttpError, AdminPaymentOverrideInput>({
+    mutationFn: (input) => httpPostJson<AdminPaymentOverrideResultDto>(`${ORDERS_PATH}/${orderId}/payment-override`, input),
+    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: orderDetailAdminQueryKey(orderId) }) },
+  })
+}
+
+export interface AdminForceCancelOrderInput {
+  readonly reason: string
+}
+
+export function useAdminForceCancelOrder(
+  orderId: string,
+): UseMutationResult<AdminForceCancelOrderResultDto, HttpError, AdminForceCancelOrderInput> {
+  const queryClient = useQueryClient()
+  return useMutation<AdminForceCancelOrderResultDto, HttpError, AdminForceCancelOrderInput>({
+    mutationFn: (input) => httpPostJson<AdminForceCancelOrderResultDto>(`${ORDERS_PATH}/${orderId}/admin-force-cancel`, input),
+    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: orderDetailAdminQueryKey(orderId) }) },
+  })
 }
 
 export type { HttpError }

@@ -3,12 +3,20 @@ import { type ReactElement } from 'react'
 import { useT, type TranslateFunction } from '@dorutj/i18n'
 import { useLocale } from '@/shared/config/locale-provider'
 import { getCurrentTenantId } from '@/shared/auth/current-role'
+import { ReportExportButton } from '@/shared/ui/report-export-button'
 import { useFunnelPeriod, type FunnelPeriodMode } from '../api/use-funnel'
 import { useOnboardingFunnel, type OnboardingFunnelData } from '../api/use-onboarding-funnel'
 
 const PERIOD_MODES: readonly FunnelPeriodMode[] = ['week', 'month']
 const HOURS_FRACTION_DIGITS = 1
 const DECISION_ORDER = ['approved', 'rejected'] as const
+const DAYS_PER_MONTH_APPROX = 30
+const DAYS_PER_WEEK = 7
+
+// week/month ≤31 дня — экспорт всегда синхронный.
+function periodModeToDays(mode: FunnelPeriodMode): number {
+  return mode === 'week' ? DAYS_PER_WEEK : DAYS_PER_MONTH_APPROX
+}
 
 export const OnboardingFunnelPage = (): ReactElement => {
   const { locale } = useLocale()
@@ -21,7 +29,21 @@ export const OnboardingFunnelPage = (): ReactElement => {
     <section data-testid="onboarding-funnel-page">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>{t('admin.onboarding_funnel.title')}</h1>
-        <PeriodTabs mode={mode} onChange={setMode} t={t} />
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <PeriodTabs mode={mode} onChange={setMode} t={t} />
+          <ReportExportButton
+            reportType="onboarding-funnel"
+            periodDays={periodModeToDays(mode)}
+            params={{ tenantId: tenantId ?? '', period }}
+            rows={(query.data ?? []) as unknown as readonly Record<string, unknown>[]}
+            columns={[
+              { key: 'decision', header: t('admin.onboarding_funnel.column.decision') },
+              { key: 'averageDurationHours', header: t('admin.onboarding_funnel.column.average_duration_hours') },
+              { key: 'count', header: t('admin.onboarding_funnel.column.count') },
+            ]}
+            fileBaseName="onboarding-funnel"
+          />
+        </div>
       </div>
       {query.isLoading ? <p role="status">{t('admin.onboarding_funnel.loading')}</p> : null}
       {query.error !== null ? <p role="alert">{t('admin.onboarding_funnel.error')}</p> : null}
