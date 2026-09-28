@@ -76,6 +76,13 @@ import { ListPharmacyApiKeysUseCase } from './application/use-cases/list-pharmac
 import { RevokePharmacyApiKeyUseCase } from './application/use-cases/revoke-pharmacy-api-key.use-case.js'
 import { RotatePharmacyApiKeyUseCase } from './application/use-cases/rotate-pharmacy-api-key.use-case.js'
 import { SetPharmacyApiKeyMtlsUseCase } from './application/use-cases/set-pharmacy-api-key-mtls.use-case.js'
+import { REPORT_EXPORT_RENDERER, REPORT_EXPORT_QUEUE, EXPORT_JOBS_REPOSITORY } from './application/ports/report-export.port.js'
+import { ReportExportRendererAdapter } from './infrastructure/adapters/report-export-renderer.adapter.js'
+import { BullmqReportExportQueueAdapter } from './infrastructure/adapters/bullmq-report-export-queue.adapter.js'
+import { DrizzleExportJobsRepository } from './infrastructure/repositories/export-jobs.repository.js'
+import { RequestReportExportDeps, RequestReportExportUseCase } from './application/use-cases/request-report-export.use-case.js'
+import { GetExportJobStatusUseCase } from './application/use-cases/get-export-job-status.use-case.js'
+import { ReportExportController } from './presentation/report-export.controller.js'
 import { FeatureFlagsController } from './presentation/feature-flags.controller.js'
 import { TenantsController } from './presentation/tenants.controller.js'
 import { UsersAdminController } from './presentation/users-admin.controller.js'
@@ -98,6 +105,7 @@ import { PharmacyApiKeysController } from './presentation/pharmacy-api-keys.cont
     PharmacyScheduleController,
     OrdersAdminController,
     PharmacyApiKeysController,
+    ReportExportController,
   ],
   providers: [
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },
@@ -147,6 +155,13 @@ import { PharmacyApiKeysController } from './presentation/pharmacy-api-keys.cont
     RevokePharmacyApiKeyUseCase,
     RotatePharmacyApiKeyUseCase,
     SetPharmacyApiKeyMtlsUseCase,
+    // DTJ-361 — инфраструктура экспорта отчётов (sync CSV/XLSX + асинхронная джоба).
+    { provide: REPORT_EXPORT_RENDERER, useClass: ReportExportRendererAdapter },
+    { provide: REPORT_EXPORT_QUEUE, useClass: BullmqReportExportQueueAdapter },
+    { provide: EXPORT_JOBS_REPOSITORY, useClass: DrizzleExportJobsRepository },
+    RequestReportExportDeps,
+    RequestReportExportUseCase,
+    GetExportJobStatusUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.

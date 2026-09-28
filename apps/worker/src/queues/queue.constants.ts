@@ -35,4 +35,6 @@ export const QUEUE_NAMES = {
   DELIVERY_OFFER_TIMEOUT: 'delivery-offer-timeout',
   /** Producer — apps/api `modules/delivery/infrastructure/jobs/courier-depart-sla-watchdog.processor.ts` (`COURIER_DEPART_SLA_WATCHDOG_QUEUE_NAME`, своя копия строки). Consumer — `jobs/delivery/courier-depart-sla-watchdog.job.ts`. */
   COURIER_DEPART_SLA_WATCHDOG: 'courier-depart-sla-watchdog',
+  /** DTJ-361 (EP-15). Producer — apps/api `modules/admin/infrastructure/adapters/bullmq-report-export-queue.adapter.ts` (`REPORT_EXPORT_QUEUE_NAME`, своя копия строки). Consumer — `jobs/report-export/generate-report-export.job.ts`. */
+  REPORT_EXPORT: 'report-export',
 } as const

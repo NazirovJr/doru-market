@@ -391,6 +391,12 @@
       "when": 1700000660000,
       "tag": "0062_delivery_assignment_proof_photo",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "when": 1700000670000,
+      "tag": "0063_export_jobs",
+      "breakpoints": true
     }
   ]
 }

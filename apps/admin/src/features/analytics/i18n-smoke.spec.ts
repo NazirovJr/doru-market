@@ -60,6 +60,16 @@ const ADMIN_ONBOARDING_FUNNEL_KEYS: readonly string[] = [
   'admin.onboarding_funnel.decision.rejected',
   'admin.onboarding_funnel.hours',
   'admin.onboarding_funnel.count',
+  'admin.onboarding_funnel.column.decision',
+  'admin.onboarding_funnel.column.average_duration_hours',
+  'admin.onboarding_funnel.column.count',
+]
+
+const ADMIN_REPORT_EXPORT_KEYS: readonly string[] = [
+  'admin.report_export.button.csv',
+  'admin.report_export.button.xlsx',
+  'admin.report_export.processing',
+  'admin.report_export.error',
 ]
 
 const MISSING_KEY_MARKER = '[[missing:'
@@ -95,6 +105,15 @@ describe('admin/analytics (onboarding funnel, DTJ-384) i18n — 3 локали, 
   it.each(LOCALES)('%s — все ключи admin.onboarding_funnel.*/admin.nav.onboarding_funnel без [[missing: ...]]', (locale) => {
     const { t } = useT(locale)
     for (const key of ADMIN_ONBOARDING_FUNNEL_KEYS) {
+      expect(t(key)).not.toContain(MISSING_KEY_MARKER)
+    }
+  })
+})
+
+describe('admin/shared (report export button, DTJ-361) i18n — 3 локали, все ключи переведены', () => {
+  it.each(LOCALES)('%s — все ключи admin.report_export.* без [[missing: ...]]', (locale) => {
+    const { t } = useT(locale)
+    for (const key of ADMIN_REPORT_EXPORT_KEYS) {
       expect(t(key)).not.toContain(MISSING_KEY_MARKER)
     }
   })
