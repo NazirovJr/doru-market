@@ -76,7 +76,7 @@ import { CATALOG_FACADE_PORT, type CatalogFacadePort, type MedicineOrderSnapshot
 import { ONBOARDING_FACADE_PORT, type OnboardingFacadePort } from '@/modules/orders/application/ports/onboarding-facade.port.js'
 import { INVENTORY_FACADE_PORT, type InventoryFacadePort, type ReservedStockLine } from '@/modules/orders/application/ports/inventory-facade.port.js'
 import { PAYMENT_INVOICE_PORT, type PaymentInvoicePort } from '@/modules/orders/application/ports/payment-invoice.port.js'
-import { TENANCY_FACADE_PORT, type TenancyFacadePort } from '@/modules/orders/application/ports/tenancy-facade.port.js'
+import { TENANCY_FACADE_PORT, type CommissionCategory, type TenancyFacadePort } from '@/modules/orders/application/ports/tenancy-facade.port.js'
 import { ORDER_REPOSITORY_PORT, type OrderRepositoryPort, type OrderUnitOfWorkTx } from '@/modules/orders/application/ports/order-repository.port.js'
 import { ORDERS_UNIT_OF_WORK, type OrdersUnitOfWorkPort } from '@/modules/orders/application/ports/unit-of-work.port.js'
 import { ORDERS_OUTBOX, type OrdersOutboxPort } from '@/modules/orders/application/ports/orders-outbox.port.js'
@@ -105,6 +105,7 @@ import {
   buildOrderCreateCommand,
   collectFailedGroups,
   extractCreatedOrders,
+  resolveCommissionRatesByCategory,
   toDushanbeYYMMDD,
   toRxCheckItems,
   withTimeout,
@@ -339,11 +340,13 @@ export class CheckoutUseCase {
    * из `reserveResult.value` (`InventoryFacadePort.reserveStock`, race-free лот) ниже, не
    * отсюда (см. JSDoc `buildItemCommands`). Вынос ДО `tx` не меняет свежесть данных
    * (запрашивается непосредственно перед открытием транзакции той же группы, как и раньше).
+   * Тот же дефект повторно (DTJ-358) — `resolveCommissionRatesByCategory` ниже вынесена сюда же по той же причине.
    */
   private async processGroup(input: ProcessGroupInput): Promise<GroupOutcome> {
     const { group } = input
     try {
       const snapshots = await this.catalogFacade.getMedicineSnapshot(group.items.map((item) => item.medicineId))
+      const commissionRatesByCategory = await resolveCommissionRatesByCategory({ tenancyFacade: this.tenancyFacade, tenantId: input.cmd.tenantId, group, snapshots })
       return await this.unitOfWork.run<GroupOutcome>(async (tx) => {
         const reserveResult = await this.inventoryFacade.reserveStock(
           group.pharmacyId,
@@ -358,7 +361,7 @@ export class CheckoutUseCase {
             details: { medicineId: reserveResult.error.medicineId },
           }
         }
-        const order = await this.createAndSaveOrder({ ...input, snapshots, reservedLines: reserveResult.value, tx })
+        const order = await this.createAndSaveOrder({ ...input, snapshots, reservedLines: reserveResult.value, tx }, commissionRatesByCategory)
         return { kind: 'created', order }
       })
     } catch (error) {
@@ -369,7 +372,7 @@ export class CheckoutUseCase {
     }
   }
 
-  private async createAndSaveOrder(input: CreateOrderInput): Promise<Order> {
+  private async createAndSaveOrder(input: CreateOrderInput, commissionRatesByCategory: ReadonlyMap<CommissionCategory, number>): Promise<Order> {
     const { group, cmd, address, billingStrategy, codLimitDiram, snapshots, reservedLines, tx } = input
     const now = this.clock.now()
     const cost = await this.calculateOrderCost.calculate({
@@ -381,6 +384,7 @@ export class CheckoutUseCase {
       items: buildCostInputItems(group, reservedLines, snapshots),
       pharmacyGeoPoint: null,
       deliveryGeoPoint: address.geoPoint,
+      commissionRatesByCategory,
     })
     // DTJ-231 (SRS-ORD-023), поправка CTO волна 6 — ПОСЛЕ расчёта актуальной суммы, ДО
     // Order.create(): ожидание резолвится ключом `group.pharmacyId` (ПО ГРУППАМ, не одно число

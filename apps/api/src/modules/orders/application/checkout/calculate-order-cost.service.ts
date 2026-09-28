@@ -9,7 +9,8 @@
  * оркестрирует, домен только валидирует уже посчитанное).
  *
  * **Разделение ответственности (D-EP09-34, решение CTO, `reports/EP09-CTO-BRIEF.md`):** этот
- * сервис резолвит `commissionBps` НА КАЖДУЮ позицию через `TenancyFacadePort`; САМО округление
+ * сервис берёт `commissionBps` НА КАЖДУЮ позицию из уже резолвленной карты (DTJ-358 —
+ * резолвинг вынесен вызывающим ДО транзакции, см. `CalculateOrderCostInput`); САМО округление
  * (`platformFeeDiram`) выполняет `OrderItem.create()` (`domain/order-item.entity.ts`,
  * `bankersRoundDivide` — целочисленное round-half-to-even на `bigint`, DTJ-221). Этот сервис
  * ПЕРЕИСПОЛЬЗУЕТ `OrderItem.create()` для превью суммы комиссии (правило 12 AGENTS.md — не
@@ -38,11 +39,7 @@ import {
   DELIVERY_FACADE_PORT,
   type DeliveryFacadePort,
 } from '@/modules/orders/application/ports/delivery-facade.port.js'
-import {
-  TENANCY_FACADE_PORT,
-  type CommissionCategory,
-  type TenancyFacadePort,
-} from '@/modules/orders/application/ports/tenancy-facade.port.js'
+import type { CommissionCategory } from '@/modules/orders/application/ports/tenancy-facade.port.js'
 
 const ZERO_DIRAM = 0n
 /** Плейсхолдер, не участвующий в формуле округления — см. JSDoc файла. */
@@ -85,6 +82,8 @@ export interface CalculateOrderCostInput {
    * вызывается, `deliveryFeeDiram` резолвится в `0`.
    */
   readonly deliveryGeoPoint: GeoPoint | null
+  /** DTJ-358 регресс-фикс — резолвлено `CheckoutUseCase.processGroup` ДО tx группы (self-deadlock пула, см. её JSDoc); сервис в БД сам не ходит. */
+  readonly commissionRatesByCategory: ReadonlyMap<CommissionCategory, number>
 }
 
 export interface OrderCostResult {
@@ -96,17 +95,12 @@ export interface OrderCostResult {
 
 @Injectable()
 export class CalculateOrderCostService {
-  constructor(
-    @Inject(TENANCY_FACADE_PORT) private readonly tenancyFacade: TenancyFacadePort,
-    @Inject(DELIVERY_FACADE_PORT) private readonly deliveryFacade: DeliveryFacadePort,
-  ) {}
+  constructor(@Inject(DELIVERY_FACADE_PORT) private readonly deliveryFacade: DeliveryFacadePort) {}
 
   async calculate(input: CalculateOrderCostInput): Promise<OrderCostResult> {
     const itemsTotalDiram = input.items.reduce((sum, item) => sum + item.unitPriceDiram * BigInt(item.quantity), ZERO_DIRAM)
-    const [items, deliveryFeeDiram] = await Promise.all([
-      this.calculateLines(input),
-      this.resolveDeliveryFee(input, itemsTotalDiram),
-    ])
+    const items = this.calculateLines(input)
+    const deliveryFeeDiram = await this.resolveDeliveryFee(input, itemsTotalDiram)
     return {
       items,
       itemsTotalDiram,
@@ -115,23 +109,24 @@ export class CalculateOrderCostService {
     }
   }
 
-  /** SRS-ORD-021/022 — резолвинг `commissionBps` на КАЖДУЮ позицию (не батч: порт per-category). */
-  private async calculateLines(input: CalculateOrderCostInput): Promise<readonly OrderCostLineResult[]> {
-    return Promise.all(
-      input.items.map(async (item): Promise<OrderCostLineResult> => {
-        const category = toCommissionCategory(item.isPrescriptionRequired)
-        const commissionBps = await this.tenancyFacade.resolveCommissionRate(input.tenantId, input.chainId, category)
-        const preview = OrderItem.create({
-          id: PREVIEW_PLACEHOLDER,
-          medicineId: item.medicineId,
-          unitPrice: Money.fromDiram(item.unitPriceDiram),
-          quantity: item.quantity,
-          commissionBps,
-          inventoryBatchId: PREVIEW_PLACEHOLDER,
-        })
-        return { medicineId: item.medicineId, commissionBps, platformFeeDiram: preview.platformFeeDiram }
-      }),
-    )
+  /** SRS-ORD-021/022 — `commissionBps` на КАЖДУЮ позицию, из уже резолвленной карты (см. JSDoc `commissionRatesByCategory`). */
+  private calculateLines(input: CalculateOrderCostInput): readonly OrderCostLineResult[] {
+    return input.items.map((item): OrderCostLineResult => {
+      const category = toCommissionCategory(item.isPrescriptionRequired)
+      const commissionBps = input.commissionRatesByCategory.get(category)
+      if (commissionBps === undefined) {
+        throw new Error(`calculateLines: no pre-resolved commission rate for category "${category}" — caller must resolve all needed categories before calling calculate()`)
+      }
+      const preview = OrderItem.create({
+        id: PREVIEW_PLACEHOLDER,
+        medicineId: item.medicineId,
+        unitPrice: Money.fromDiram(item.unitPriceDiram),
+        quantity: item.quantity,
+        commissionBps,
+        inventoryBatchId: PREVIEW_PLACEHOLDER,
+      })
+      return { medicineId: item.medicineId, commissionBps, platformFeeDiram: preview.platformFeeDiram }
+    })
   }
 
   /**

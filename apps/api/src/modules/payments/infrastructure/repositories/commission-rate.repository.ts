@@ -1,6 +1,6 @@
 // DrizzleCommissionRateRepository (DTJ-358) — тот же keyset-приём (created_at DESC, id DESC, LIMIT+1), что DrizzlePayoutScheduleRepository.findSchedule.
 import { Inject, Injectable } from '@nestjs/common'
-import { and, desc, eq, gt, isNull, lt, lte, or } from 'drizzle-orm'
+import { and, desc, eq, lt, or, sql } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { platformFee } from '@/db/schema/payments.js'
 import {
@@ -72,18 +72,6 @@ function findConditions(filter: FindCommissionRatesFilter, cursor: FindCommissio
   return conditions
 }
 
-// Специфичность D-03/SRS-DOM-160: chain-уровень пропускается, если chainId=null (независимая аптека/нейтральный тенант).
-function specificityTiers(input: ResolveActiveRateInput) {
-  const tiers = []
-  if (input.chainId !== null) {
-    tiers.push(and(eq(platformFee.tenantId, input.tenantId), eq(platformFee.chainId, input.chainId), eq(platformFee.commissionCategory, input.category)))
-    tiers.push(and(eq(platformFee.tenantId, input.tenantId), eq(platformFee.chainId, input.chainId), isNull(platformFee.commissionCategory)))
-  }
-  tiers.push(and(eq(platformFee.tenantId, input.tenantId), isNull(platformFee.chainId), eq(platformFee.commissionCategory, input.category)))
-  tiers.push(and(eq(platformFee.tenantId, input.tenantId), isNull(platformFee.chainId), isNull(platformFee.commissionCategory)))
-  return tiers
-}
-
 /** Календарная дата в Asia/Dushanbe (D-19), тот же приём, что `delivery-pricing-rule.repository.ts::toDateString` — граница суток влияет на деньги. */
 function toDateOnly(date: Date): string {
   const DUSHANBE_UTC_OFFSET_HOURS = 5
@@ -148,22 +136,48 @@ export class DrizzleCommissionRateRepository implements CommissionRateRepository
     return row === undefined ? null : toRow(row)
   }
 
-  /** 4 тира параллельно (no-await-in-loop) — `results.find` берёт первый по порядку специфичности, не по скорости ответа. */
+  /** ОДИН round-trip (не 4 параллельных, DTJ-358 регресс-фикс пула) — `chain_id = NULL` в SQL сам гасит тиры 1/2, когда `chainId` не задан, ветвление не нужно. */
   public async resolveActiveRate(input: ResolveActiveRateInput): Promise<number | null> {
     const nowDate = toDateOnly(input.now)
-    const results = await Promise.all(specificityTiers(input).map((tier) => this.queryTierRate(tier, nowDate)))
-    return results.find((rateBps) => rateBps !== null) ?? null
-  }
-
-  private async queryTierRate(tier: ReturnType<typeof and>, nowDate: string): Promise<number | null> {
-    const rows = await this.db
-      .select({ rateBps: platformFee.commissionBps })
-      .from(platformFee)
-      .where(and(tier, lte(platformFee.effectiveFrom, nowDate), or(isNull(platformFee.effectiveTo), gt(platformFee.effectiveTo, nowDate))))
-      .orderBy(desc(platformFee.effectiveFrom))
-      .limit(1)
+    const { tenantId, chainId, category } = input
+    const result = await this.db.execute(sql`
+      SELECT commission_bps AS "rateBps" FROM (
+        SELECT commission_bps, 1 AS specificity, effective_from FROM platform_fee
+          WHERE tenant_id = ${tenantId} AND chain_id = ${chainId} AND commission_category = ${category}
+            AND effective_from <= ${nowDate} AND (effective_to IS NULL OR effective_to > ${nowDate})
+        UNION ALL
+        SELECT commission_bps, 2, effective_from FROM platform_fee
+          WHERE tenant_id = ${tenantId} AND chain_id = ${chainId} AND commission_category IS NULL
+            AND effective_from <= ${nowDate} AND (effective_to IS NULL OR effective_to > ${nowDate})
+        UNION ALL
+        SELECT commission_bps, 3, effective_from FROM platform_fee
+          WHERE tenant_id = ${tenantId} AND chain_id IS NULL AND commission_category = ${category}
+            AND effective_from <= ${nowDate} AND (effective_to IS NULL OR effective_to > ${nowDate})
+        UNION ALL
+        SELECT commission_bps, 4, effective_from FROM platform_fee
+          WHERE tenant_id = ${tenantId} AND chain_id IS NULL AND commission_category IS NULL
+            AND effective_from <= ${nowDate} AND (effective_to IS NULL OR effective_to > ${nowDate})
+      ) tiers
+      ORDER BY specificity ASC, effective_from DESC
+      LIMIT 1
+    `)
+    const rows = extractRateRows(result)
     return rows[0]?.rateBps ?? null
   }
+}
+
+/** `db.execute()` возвращает массив либо `{rows: [...]}` в зависимости от драйвера — тот же приём, что `drizzle-inventory-sync-batch.repository.ts::extractSessionRows`. */
+function extractRateRows(result: unknown): readonly { rateBps: number }[] {
+  if (Array.isArray(result)) {
+    return result as { rateBps: number }[]
+  }
+  if (result !== null && typeof result === 'object' && 'rows' in result) {
+    const rows: unknown = (result as Record<string, unknown>).rows
+    if (Array.isArray(rows)) {
+      return rows as { rateBps: number }[]
+    }
+  }
+  return []
 }
 
 export const COMMISSION_RATE_REPOSITORY_PROVIDER = {
