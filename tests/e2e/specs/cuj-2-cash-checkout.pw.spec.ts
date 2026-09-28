@@ -1,13 +1,4 @@
-/**
- * CUJ-2' — заказ с оплатой наличными (DTJ-419, `docs/spec/30-ux-screens-and-flows.md` §4).
- * Без `E2E_BASE_URL`/`E2E_WEB_URL` — `test.skip` (как `smoke/web-opens.pw.spec.ts`).
- *
- * Расхождения реализации со спекой/тикетом (детали — отчёт сдачи, ДОПУЩЕНИЯ): (1) спека §4
- * строка 490 пишет «paid_escrow», код (D-25, `checkout.use-case.ts`) — `confirmed`, тест проверяет
- * код; (2) гость на `/checkout` видит инлайн-гейт, не редирект (route-guard'а в проекте нет);
- * (3) гостевая корзина не мёржится в авторизованную (`merge-guest-cart.use-case.ts` без вызывающих
- * мест) — товары добавляются ПОСЛЕ логина.
- */
+// CUJ-2' — заказ с оплатой наличными (DTJ-419). Без `E2E_BASE_URL`/`E2E_WEB_URL` — `test.skip`.
 import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '@playwright/test'
 import { SEED_ANALOG_CLUSTER, SEED_PHARMACIES, E2E_FRESH_PHONE_PREFIX } from '@dorutj/testing-kit'
@@ -27,7 +18,6 @@ const WEB_URL_RAW = process.env.E2E_WEB_URL
 const BASE_URL_RAW = process.env.E2E_BASE_URL
 const TICKET_PHONE_DIGITS = '19'
 
-/** Сужение до `string` — только для `exactOptionalPropertyTypes`, `test.skip` ниже уже гарантирует значение. */
 function baseUrl(): string {
   if (BASE_URL_RAW === undefined) throw new Error('E2E_BASE_URL не задан')
   return BASE_URL_RAW
@@ -38,8 +28,7 @@ function webUrl(): string {
   return WEB_URL_RAW
 }
 
-// Смещение от времени, не счётчик с 0 — иначе повторный прогон бьёт в `OTP_REQUEST_RATE_LIMITED`
-// для уже использованных номеров (обнаружено живым прогоном).
+// Смещение от времени — иначе повторный прогон бьёт в `OTP_REQUEST_RATE_LIMITED`.
 let freshPhoneCounter = Date.now() % 900
 function nextFreshPhone(): string {
   freshPhoneCounter += 1
@@ -51,8 +40,7 @@ function wrongOtpCode(correctCode: string): string {
   return correctCode === '000000' ? '111111' : '000000'
 }
 
-/** Чистит ячейку перед вводом — иначе повтор ТОГО ЖЕ кода не меняет DOM-значение, React не видит
- *  `onChange`, авто-submit не срабатывает (заметно живым прогоном). */
+// Чистит ячейку перед вводом — иначе повтор того же кода не меняет DOM-значение, `onChange` не летит.
 async function fillOtpCode(page: Page, code: string): Promise<void> {
   const cells = page.locator('[data-testid="code-step"] input')
   for (let i = 0; i < code.length; i += 1) {
@@ -92,7 +80,6 @@ test.describe('CUJ-2: заказ с оплатой наличными', () => {
     test.skip(WEB_URL_RAW === undefined, 'нужен E2E_WEB_URL — живой стенд apps/web')
 
     await page.goto(`${webUrl()}/checkout`)
-    // Реальный гейт — инлайн-блок, не редирект (см. JSDoc файла).
     await expect(page.getByTestId('checkout-unauthenticated')).toBeVisible()
     await page.getByTestId('checkout-login-cta').click()
     await expect(page).toHaveURL(/\/login/)
@@ -105,7 +92,6 @@ test.describe('CUJ-2: заказ с оплатой наличными', () => {
     const code = await getOtpFromMockSms(phone, { baseUrl: baseUrl() })
     await fillOtpCode(page, code)
 
-    // `goLogin` не прокидывает `?intent=` — landing после логина на `/`, не назад на `/checkout`.
     await expect(page).not.toHaveURL(/\/login/)
   })
 
@@ -128,8 +114,7 @@ test.describe('CUJ-2: заказ с оплатой наличными', () => {
     }
     const result = await createOrderViaApi(request, { accessToken: session.accessToken, idempotencyKey: randomUUID(), input })
 
-    // Живой стенд: 422 COD_LIMIT_EXCEEDED — минимальная цена каталога (70000) выше
-    // `tenant_settings.cod_limit_diram` (50000) для любой позиции, вне периметра тикета (БЛОКЕРЫ).
+    // Живой стенд: см. отчёт сдачи/коммит — 422 COD_LIMIT_EXCEEDED, вне периметра тикета.
     expect(result.status, JSON.stringify(result.body)).toBe(200)
     const body = result.body as { data: { orders: readonly { status: string }[] } }
     expect(body.data.orders).toHaveLength(1)

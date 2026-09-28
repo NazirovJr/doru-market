@@ -1,15 +1,9 @@
 import type { Page } from '@playwright/test'
 import type { ApiSession } from './login-via-api.js'
 
-/**
- * Сажает результат `loginViaApi()` в `apps/web` без прогона формы логина (для сценариев, где
- * предмет проверки — не сам `/login`). `accessToken` в `auth-store.ts` — только в памяти
- * (`partialize` исключает его из `localStorage`), а `hydrate()` при старте НЕ РЕАЛИЗОВАН нигде
- * (см. отчёт сдачи) — просто положить `refreshToken` недостаточно. Обход: `zustand/persist` по
- * умолчанию сливает ВЕСЬ объект из `localStorage` поверх состояния при гидратации, не только то,
- * что `partialize` сам туда написал бы — `accessToken` в сохранённом JSON восстановится как
- * обычное поле. `page.addInitScript` пишет `localStorage` до создания стора.
- */
+// Сажает результат `loginViaApi()` в `apps/web` без прогона формы логина. `accessToken` в
+// `auth-store.ts` персистится только через это: `zustand/persist` при гидратации сливает ВЕСЬ
+// объект `localStorage` поверх состояния (не только то, что `partialize` сам туда пишет).
 const AUTH_STORAGE_KEY = 'dorutj.auth'
 const ZUSTAND_PERSIST_DEFAULT_VERSION = 0
 

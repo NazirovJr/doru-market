@@ -1,8 +1,6 @@
 import type { APIRequestContext } from '@playwright/test'
 
-// API-хелперы корзины/checkout (DTJ-419) — в обход UI, т.к. `checkout-result-section.tsx` не
-// рендерит `order.status` текстом и клиентский мьютекс двойного клика (`submitLockRef`) гасит
-// второй сетевой запрос раньше, чем до сервера долетит второй `Idempotency-Key`.
+// API-хелперы корзины/checkout (DTJ-419) — в обход UI, там негде наблюдать нужные инварианты.
 
 interface MedicineSearchItem {
   readonly medicineId: string
@@ -82,9 +80,7 @@ export const DUSHANBE_DEMO_ADDRESS: CreateOrderApiInput['inlineAddress'] = {
   longitude: 68.787,
 }
 
-// То же, что `createOrderViaApi`, но через `fetch` — `APIRequestContext` на практике сериализует
-// два `.post()` внутри одного `Promise.all` (живым прогоном: оба получали один кэшированный ответ
-// вместо 409 у одного из них), независимые `fetch` реально гонятся одновременно.
+// То же, что `createOrderViaApi`, но через `fetch` — нужна для настоящей гонки двух запросов.
 export async function createOrderViaFetch(baseUrl: string, call: CreateOrderCall): Promise<CreateOrderApiResult> {
   const response = await fetch(`${baseUrl}/api/v1/orders`, {
     method: 'POST',
