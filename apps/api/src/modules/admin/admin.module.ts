@@ -89,6 +89,8 @@ import { ReportExportController } from './presentation/report-export.controller.
 import { ListBillingInvoicesUseCase } from './application/use-cases/list-billing-invoices.use-case.js'
 import { MarkInvoicePaidUseCase } from './application/use-cases/mark-invoice-paid.use-case.js'
 import { LiftInvoiceBlockUseCase } from './application/use-cases/lift-invoice-block.use-case.js'
+import { AdminPaymentOverrideUseCase } from './application/use-cases/admin-payment-override.use-case.js'
+import { AdminForceCancelOrderUseCase } from './application/use-cases/admin-force-cancel-order.use-case.js'
 import { FeatureFlagsController } from './presentation/feature-flags.controller.js'
 import { TenantsController } from './presentation/tenants.controller.js'
 import { UsersAdminController } from './presentation/users-admin.controller.js'
@@ -101,6 +103,7 @@ import { PharmacyApiKeysController } from './presentation/pharmacy-api-keys.cont
 import { PlatformSettingsController } from './presentation/platform-settings.controller.js'
 import { BillingInvoicesController } from './presentation/billing-invoices.controller.js'
 import { CommissionRatesController } from './presentation/commission-rates.controller.js'
+import { OrdersAdminActionsController } from './presentation/orders-admin-actions.controller.js'
 
 @Module({
   imports: [OnboardingModule, OrdersModule, PaymentsModule, AuthModule, TenancyModule, InventoryModule, DeliveryModule],
@@ -118,6 +121,7 @@ import { CommissionRatesController } from './presentation/commission-rates.contr
     ReportExportController,
     BillingInvoicesController,
     CommissionRatesController,
+    OrdersAdminActionsController,
   ],
   providers: [
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },
@@ -183,6 +187,9 @@ import { CommissionRatesController } from './presentation/commission-rates.contr
     // DTJ-358 — commission-rates CRUD над platform_fee (уже существующая таблица EP-10), тот же PAYMENTS_FACADE_PORT.
     ListCommissionRatesUseCase,
     UpsertCommissionRateUseCase,
+    // DTJ-356 — payment-override/admin-force-cancel, UNIT_OF_WORK переиспользуется из AuthModule (тот же приём, что DeactivateStaffAccountUseCase/GrantPlatformRoleUseCase).
+    AdminPaymentOverrideUseCase,
+    AdminForceCancelOrderUseCase,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS-модуль: пустое тело класса — его контракт, вся конфигурация в декораторе @Module(...) выше.

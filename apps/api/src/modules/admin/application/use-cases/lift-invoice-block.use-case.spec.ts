@@ -31,6 +31,8 @@ function buildHarness(options: { invoice?: BillingInvoiceView | null; liftInvoic
     findEscrowLedgerEntries: vi.fn(),
     findPayoutSchedule: vi.fn(),
     findPayoutScheduleByOrder: vi.fn(),
+    refundFull: vi.fn(),
+    adminPaymentOverride: vi.fn(),
     listBillingInvoices: vi.fn(),
     getBillingInvoiceById: getBillingInvoiceByIdMock,
     markInvoicePaid: vi.fn(),

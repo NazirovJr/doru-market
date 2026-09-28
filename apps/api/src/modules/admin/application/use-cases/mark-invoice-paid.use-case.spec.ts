@@ -42,6 +42,8 @@ function buildHarness(options: {
     findEscrowLedgerEntries: vi.fn(),
     findPayoutSchedule: vi.fn(),
     findPayoutScheduleByOrder: vi.fn(),
+    refundFull: vi.fn(),
+    adminPaymentOverride: vi.fn(),
     listBillingInvoices: vi.fn(),
     getBillingInvoiceById: getBillingInvoiceByIdMock,
     markInvoicePaid: markInvoicePaidMock,

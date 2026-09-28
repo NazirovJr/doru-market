@@ -51,4 +51,6 @@ export const FAKE_PAYMENTS_FACADE_PORT: PaymentsFacadePort = {
       createdBy: command.actorUserId,
       createdAt: new Date('2026-09-27T00:00:00.000Z'),
     }),
+  refundFull: () => Promise.resolve(undefined),
+  adminPaymentOverride: () => Promise.resolve(undefined),
 }

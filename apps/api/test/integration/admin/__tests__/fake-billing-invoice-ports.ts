@@ -65,6 +65,8 @@ export function createFakeBillingInvoicePorts(seed: readonly FakeInvoiceSeed[]):
     },
     listCommissionRates: () => Promise.resolve({ items: [], nextCursor: null, hasMore: false }),
     upsertCommissionRate: () => Promise.reject(new Error('not under test')),
+    refundFull: () => Promise.reject(new Error('not under test')),
+    adminPaymentOverride: () => Promise.reject(new Error('not under test')),
   }
 
   const onboardingFacade: OnboardingFacadePort = {

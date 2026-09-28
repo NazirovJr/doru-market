@@ -25,6 +25,8 @@ function buildHarness(page: FinancePage<BillingInvoiceView>, chainNames: Readonl
     findEscrowLedgerEntries: vi.fn(),
     findPayoutSchedule: vi.fn(),
     findPayoutScheduleByOrder: vi.fn(),
+    refundFull: vi.fn(),
+    adminPaymentOverride: vi.fn(),
     listBillingInvoices: listBillingInvoicesMock,
     getBillingInvoiceById: vi.fn(),
     markInvoicePaid: vi.fn(),

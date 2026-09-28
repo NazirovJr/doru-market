@@ -106,6 +106,24 @@ export interface UpsertCommissionRateCommand {
   readonly actorUserId: string
 }
 
+// Зеркало реального PaymentsFacade.refundFull/adminPaymentOverride (useExisting: PAYMENTS_FACADE).
+export interface AdminRefundFullCommand {
+  readonly orderId: string
+  readonly reason: string
+}
+
+export interface AdminPaymentOverrideCommand {
+  readonly tenantId: string
+  readonly orderId: string
+  readonly txId: string
+  readonly amountDiram: bigint
+  readonly paidAt: Date
+  readonly reason: string
+  readonly actorUserId: string
+  readonly actorRole: string
+  readonly requestId?: string | null
+}
+
 export interface PaymentsFacadePort {
   /** Без пагинации — леджер одного заказа ограничен по размеру (DTJ-357 review). */
   findEscrowLedgerEntries(orderId: string): Promise<readonly EscrowLedgerEntryView[]>
@@ -124,4 +142,9 @@ export interface PaymentsFacadePort {
 
   /** `NotFoundError`, если `command.id` задан, но строка не найдена. */
   upsertCommissionRate(command: UpsertCommissionRateCommand): Promise<CommissionRateView>
+  // Полный рефанд при force-cancel оплаченного заказа (RefundOrderUseCase, идемпотентен).
+  refundFull(tenantId: string, command: AdminRefundFullCommand): Promise<void>
+
+  // Делегация в уже существующий payments/AdminPaymentOverrideUseCase — не второй домен-путь.
+  adminPaymentOverride(command: AdminPaymentOverrideCommand): Promise<void>
 }

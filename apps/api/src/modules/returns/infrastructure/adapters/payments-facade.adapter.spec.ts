@@ -22,6 +22,7 @@ function buildHarness() {
     listCommissionRates: vi.fn(),
     upsertCommissionRate: vi.fn(),
     resolveCommissionRate: vi.fn(),
+    adminPaymentOverride: vi.fn(),
   }
   const adapter = new PaymentsFacadeAdapter(paymentsFacade)
   return { adapter, refundFull, recordAdjustment, holdPayout }

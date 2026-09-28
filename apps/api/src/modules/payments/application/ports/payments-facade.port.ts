@@ -19,6 +19,9 @@
  * `tenantId` — осознанное расширение ради консистентности модуля, зафиксировано явно (отчёт
  * сдачи DTJ-249).
  */
+import type { AdminPaymentOverrideCommand } from '../use-cases/admin-payment-override.use-case.js'
+
+export type { AdminPaymentOverrideCommand }
 
 /** Результат `holdPayout` (SRS-DOM-105/SRS-DISP-002) — см. JSDoc `HoldPayoutUseCase`. */
 export interface HoldPayoutResult {
@@ -146,6 +149,11 @@ export interface PaymentsFacade {
    * `{ alreadyPaid: true }` (см. `HoldPayoutResult`).
    */
   holdPayout(tenantId: string, orderId: string, disputeId: string): Promise<HoldPayoutResult>
+
+  /** DTJ-356 — второй ВХОД (роут `admin`-модуля) в уже существующий `AdminPaymentOverrideUseCase`
+   * (DTJ-246, EP-10): та же единственная точка вызова `Order.markPaidEscrow()` (SRS-PAY-018),
+   * не новый доменный путь. */
+  adminPaymentOverride(command: AdminPaymentOverrideCommand): Promise<void>
 
   /** Полный возврат без отмены заказа — тонкая обёртка над `RefundOrderUseCase`, идемпотентна. */
   refundFull(tenantId: string, command: RefundOrderFullCommand): Promise<void>

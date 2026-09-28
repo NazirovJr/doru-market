@@ -5,7 +5,7 @@ import type { OrdersAnyPage, OrdersFacadePort } from '../ports/orders-facade.por
 
 function fakeFacade(page: OrdersAnyPage): { facade: OrdersFacadePort; findOrdersAny: ReturnType<typeof vi.fn> } {
   const findOrdersAny = vi.fn().mockResolvedValue(page)
-  return { facade: { findOrdersAny, getOrderDetail: vi.fn(), getOrderTimeline: vi.fn() }, findOrdersAny }
+  return { facade: { findOrdersAny, getOrderDetail: vi.fn(), getOrderTimeline: vi.fn(), cancel: vi.fn() }, findOrdersAny }
 }
 
 const EMPTY_PAGE: OrdersAnyPage = { items: [], nextCursor: null, hasMore: false }

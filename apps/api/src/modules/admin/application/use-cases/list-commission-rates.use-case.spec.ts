@@ -26,6 +26,8 @@ function buildHarness() {
     findEscrowLedgerEntries: vi.fn(),
     findPayoutSchedule: vi.fn(),
     findPayoutScheduleByOrder: vi.fn(),
+    refundFull: vi.fn(),
+    adminPaymentOverride: vi.fn(),
     listCommissionRates: listCommissionRatesMock,
     upsertCommissionRate: vi.fn(),
     listBillingInvoices: vi.fn(),

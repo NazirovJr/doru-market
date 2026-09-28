@@ -27,6 +27,8 @@ function buildHarness() {
     markInvoicePaid: vi.fn(),
     listCommissionRates: vi.fn(),
     upsertCommissionRate: vi.fn(),
+    refundFull: vi.fn(),
+    adminPaymentOverride: vi.fn(),
   }
   const useCase = new ListEscrowLedgerUseCase(facade)
   return { useCase, findEscrowLedgerEntriesMock }

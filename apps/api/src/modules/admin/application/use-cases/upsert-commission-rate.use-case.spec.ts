@@ -33,6 +33,8 @@ function buildHarness(upsertCommissionRateMock: PaymentsFacadePort['upsertCommis
     listBillingInvoices: throwIfCalled('listBillingInvoices'),
     getBillingInvoiceById: throwIfCalled('getBillingInvoiceById'),
     markInvoicePaid: throwIfCalled('markInvoicePaid'),
+    refundFull: throwIfCalled('refundFull'),
+    adminPaymentOverride: throwIfCalled('adminPaymentOverride'),
   }
   return new UpsertCommissionRateUseCase(facade)
 }

@@ -31,6 +31,8 @@ function buildHarness() {
     markInvoicePaid: vi.fn(),
     listCommissionRates: vi.fn(),
     upsertCommissionRate: vi.fn(),
+    refundFull: vi.fn(),
+    adminPaymentOverride: vi.fn(),
   }
   const useCase = new ListPayoutScheduleUseCase(facade)
   return { useCase, findPayoutScheduleMock }

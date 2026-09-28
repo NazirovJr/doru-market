@@ -13,6 +13,7 @@ import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
 import { Idempotent } from '@/common/http/decorators/idempotent.decorator.js'
 import { AuthGuard, CurrentUser, Roles, RolesGuard, type JwtClaims } from '@/modules/auth/index.js'
 import { TenantContext } from '@/common/context/tenant-context.js'
+import { RequestContext } from '@/common/context/request-context.js'
 import { AdminPaymentOverrideUseCase } from '@/modules/payments/application/use-cases/admin-payment-override.use-case.js'
 
 const AdminPaymentOverrideRequestSchema = z.object({
@@ -48,6 +49,7 @@ export class AdminPaymentOverrideController {
       reason: body.reason,
       actorUserId: claims.sub,
       actorRole: claims.role,
+      requestId: RequestContext.get()?.requestId ?? null,
     })
     return ok({ orderId: body.orderId })
   }
