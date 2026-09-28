@@ -1,0 +1,25 @@
+{
+  "index.html": {
+    "file": "assets/entry.js",
+    "isEntry": true,
+    "dynamicImports": ["src/pages/home/home-page.tsx", "src/pages/admin/branding-page.tsx"],
+    "css": ["assets/entry.css"]
+  },
+  "src/pages/home/home-page.tsx": {
+    "file": "assets/home-page.js",
+    "imports": ["index.html", "_shared-vendor.js", "_font-asset.js"]
+  },
+  "_shared-vendor.js": {
+    "file": "assets/shared-vendor.js",
+    "imports": ["index.html"]
+  },
+  "_font-asset.js": {
+    "file": "assets/brand-font.woff2",
+    "imports": ["index.html"]
+  },
+  "src/pages/admin/branding-page.tsx": {
+    "file": "assets/branding-page.js",
+    "isDynamicEntry": true,
+    "imports": ["index.html", "_shared-vendor.js"]
+  }
+}
