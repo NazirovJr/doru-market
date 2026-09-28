@@ -9,6 +9,7 @@ import type { RevokePharmacyApiKeyUseCase } from './application/use-cases/revoke
 import type { RotatePharmacyApiKeyUseCase } from './application/use-cases/rotate-pharmacy-api-key.use-case.js'
 import type { SetPharmacyApiKeyMtlsUseCase } from './application/use-cases/set-pharmacy-api-key-mtls.use-case.js'
 import type { RevokeExpiredRotatedKeyUseCase } from './application/use-cases/revoke-expired-rotated-key.use-case.js'
+import type { DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 
 // Мок — отдельная переменная (не repository.method) — @typescript-eslint/unbound-method.
 function fakeRepository(activePharmacyIds: readonly string[]): {
@@ -47,6 +48,7 @@ function facadeWith(syncBatchRepository: InventorySyncBatchRepository): Inventor
     {} as RotatePharmacyApiKeyUseCase,
     {} as SetPharmacyApiKeyMtlsUseCase,
     {} as RevokeExpiredRotatedKeyUseCase,
+    {} as DrizzleDb, // DTJ-439: getOffersForMedicines — не используется этими тестами.
   )
 }
 

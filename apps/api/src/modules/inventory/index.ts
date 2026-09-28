@@ -1,1 +1,1 @@
-export { InventoryFacade, type InventorySummary } from './inventory.facade.js'
+export { InventoryFacade, type InventorySummary, type AnalogOfferBatchInput } from './inventory.facade.js'
