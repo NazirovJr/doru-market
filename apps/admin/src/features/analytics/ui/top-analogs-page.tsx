@@ -4,8 +4,17 @@ import { useT, toIntlLocale, type TranslateFunction } from '@dorutj/i18n'
 import { useLocale } from '@/shared/config/locale-provider'
 import { ADMIN_LOCALE } from '@/shared/config/locale'
 import { getCurrentTenantId } from '@/shared/auth/current-role'
+import { ReportExportButton } from '@/shared/ui/report-export-button'
 import { useFunnelPeriod, type FunnelPeriodMode } from '../api/use-funnel'
 import { useTopAnalogs, type TopAnalogsData } from '../api/use-top-analogs'
+
+const DAYS_PER_MONTH_APPROX = 30
+const DAYS_PER_WEEK = 7
+
+// week/month ≤31 дня — экспорт всегда синхронный.
+function periodModeToDays(mode: FunnelPeriodMode): number {
+  return mode === 'week' ? DAYS_PER_WEEK : DAYS_PER_MONTH_APPROX
+}
 
 const DIRAM_PER_SOMONI = 100
 const PERCENT_FRACTION_DIGITS = 0
@@ -38,7 +47,22 @@ export const TopAnalogsPage = (): ReactElement => {
     <section data-testid="top-analogs-page">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>{t('admin.top_analogs.title')}</h1>
-        <PeriodTabs mode={mode} onChange={setMode} t={t} />
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <PeriodTabs mode={mode} onChange={setMode} t={t} />
+          <ReportExportButton
+            reportType="top-analogs"
+            periodDays={periodModeToDays(mode)}
+            params={{ tenantId: tenantId ?? '', period }}
+            rows={(query.data ?? []) as unknown as readonly Record<string, unknown>[]}
+            columns={[
+              { key: 'medicineName', header: t('admin.top_analogs.column.medicine') },
+              { key: 'avgSavingsDiram', header: t('admin.top_analogs.column.avg_savings') },
+              { key: 'timesShown', header: t('admin.top_analogs.column.times_shown') },
+              { key: 'conversionToOrder', header: t('admin.top_analogs.column.conversion') },
+            ]}
+            fileBaseName="top-analogs"
+          />
+        </div>
       </div>
       {query.isLoading ? <p role="status">{t('admin.top_analogs.loading')}</p> : null}
       {query.error !== null ? <p role="alert">{t('admin.top_analogs.error')}</p> : null}

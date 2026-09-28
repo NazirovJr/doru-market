@@ -374,3 +374,6 @@ export const courierPayoutBatchStatusEnum = pgEnum('courier_payout_batch_status'
   'paid',
   'failed',
 ])
+
+export const exportJobFormatEnum = pgEnum('export_job_format', ['csv', 'xlsx'])
+export const exportJobStatusEnum = pgEnum('export_job_status', ['processing', 'ready', 'failed'])
