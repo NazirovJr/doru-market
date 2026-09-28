@@ -1,15 +1,6 @@
-/**
- * Интеграционный тест `AnalogOfferLookupAdapter`/`InventoryFacade.getOffersForMedicines`
- * (DTJ-439) — РЕАЛЬНЫЙ Postgres, критерии приёмки 1/2 буквально + `AnalogOfferLookupPort`
- * контракт (сортировка по цене, только медикаменты с офферами В РАДИУСЕ).
- *
- * `InventoryFacade` сконструирован напрямую (`new`), без `NestApplication` — тот же приём,
- * что `postgres-search.adapter.integration.spec.ts` для `PostgresSearchProvider`. Остальные
- * зависимости фасада (`PHARMACY_INVENTORY_REPOSITORY`, use case'ы ключей 1С) этому методу не
- * нужны — заглушки `{} as ...`.
- *
- * @see tickets/ep03-catalog-analogs/DTJ-439.md
- */
+// Интеграционный тест getOffersForMedicines (DTJ-439) — реальный Postgres, AC1/AC2 буквально.
+// InventoryFacade сконструирован напрямую (new, как postgres-search.adapter.integration.spec.ts),
+// неиспользуемые зависимости фасада — заглушки `{} as ...`.
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { Pool } from 'pg'
@@ -114,8 +105,7 @@ describe.skipIf(!postgresAvailable || !migratorAvailable)('InventoryFacade.getOf
     )
   }
 
-  // Офферный запрос facade не читает tenants/pharmacy_chains.tenant_id (порт не передаёт
-  // tenantId, см. JSDoc AnalogOfferLookupInput) — тенанта не сеем, он не нужен.
+  // Офферный запрос facade не читает tenants (порт не передаёт tenantId) — не сеем его.
   async function seedBaseFixtures(): Promise<void> {
     await pool.query(
       `INSERT INTO categories (slug, name_tj, name_ru, name_en, commission_category, sort_order, is_active)
@@ -191,8 +181,7 @@ describe.skipIf(!postgresAvailable || !migratorAvailable)('InventoryFacade.getOf
     const [genericOffer] = genericOffers
     expect(referenceOffer).toMatchObject({ priceDiram: 3000, pharmacyId: PHARMACY_IN_RADIUS })
     expect(genericOffer).toMatchObject({ priceDiram: 1800 })
-    // savings — DTJ-385 (computeAnalogSavingsDiram), вне этого адаптера — проверяем, что
-    // разница цен сида совпадает с ожидаемой экономией.
+    // savings считает computeAnalogSavingsDiram (DTJ-385, вне этого адаптера) — сверяем разницу цен сида.
     const savingsDiram = (referenceOffer?.priceDiram ?? 0) - (genericOffer?.priceDiram ?? 0)
     expect(savingsDiram).toBe(1200)
   })
