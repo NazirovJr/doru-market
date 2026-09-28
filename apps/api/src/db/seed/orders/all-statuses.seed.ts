@@ -1,7 +1,7 @@
 // Seed заказов во всех статусах order_status (DTJ-435) с согласованными payment_operations/escrow_ledger/payout_schedule/delivery_assignments,
 // плюс ≥1 нетерминальный и каждый терминальный return_status/dispute_status. cash_courier заказы без escrow/payout — как GetOrderDetailAdminUseCase.
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { sql } from 'drizzle-orm'
+import { sql, type SQL } from 'drizzle-orm'
 import { SEED_PHARMACIES, SEED_TENANTS, SEED_USERS } from '@dorutj/testing-kit'
 import { courierRowId } from '../users/contract-users.seed.js'
 
@@ -28,8 +28,11 @@ const RETURN_ID_PREFIX = '90000000-0000-4000-8000-00000000'
 const TICKET_ID_PREFIX = 'a0000000-0000-4000-8000-00000000'
 const DISPUTE_ID_PREFIX = 'b0000000-0000-4000-8000-00000000'
 
+const ID_SUFFIX_DIGITS = 4
+const ORDER_NUMBER_DIGITS = 6
+
 function idOf(prefix: string, n: number): string {
-  return `${prefix}${String(n).padStart(4, '0')}`
+  return `${prefix}${String(n).padStart(ID_SUFFIX_DIGITS, '0')}`
 }
 
 interface OrderSpec {
@@ -81,13 +84,31 @@ async function resolveInventoryId(db: NodePgDatabase, pharmacyId: string, medici
   return result.rows[0]?.id ?? null
 }
 
+/** Статусы, достигнутые ПОСЛЕ сборки заказа (processing_started_at уже проставлен). */
+const STATUSES_AFTER_PROCESSING_STARTED = new Set(['processing', 'picked_up', 'delivered', 'refunded', 'return_in_progress'])
+/** Статусы, достигнутые ПОСЛЕ вручения курьеру (delivered_at уже проставлен). */
+const STATUSES_AFTER_DELIVERED = new Set(['delivered', 'refunded', 'return_in_progress'])
+
+interface OrderTimestamps {
+  readonly processingStartedAt: SQL
+  readonly pickedUpAt: SQL
+  readonly deliveredAt: SQL
+}
+
+function buildOrderTimestamps(status: string): OrderTimestamps {
+  const NULL = sql`NULL`
+  return {
+    processingStartedAt: STATUSES_AFTER_PROCESSING_STARTED.has(status) ? sql`NOW() - interval '3 hours'` : NULL,
+    pickedUpAt: STATUSES_PICKED_UP_OR_LATER.has(status) ? sql`NOW() - interval '2 hours'` : NULL,
+    deliveredAt: STATUSES_AFTER_DELIVERED.has(status) ? sql`NOW() - interval '1 hour'` : NULL,
+  }
+}
+
 async function insertOrder(db: NodePgDatabase, spec: OrderSpec, medicineId: string): Promise<void> {
   const orderId = idOf(ORDER_ID_PREFIX, spec.n)
-  const orderNumber = `SEED-${String(spec.n).padStart(6, '0')}`
+  const orderNumber = `SEED-${String(spec.n).padStart(ORDER_NUMBER_DIGITS, '0')}`
   const checkoutAttemptId = idOf(CHECKOUT_ATTEMPT_ID_PREFIX, spec.n)
-  const processingStartedAt = spec.status === 'processing' || spec.status === 'picked_up' || spec.status === 'delivered' || spec.status === 'refunded' || spec.status === 'return_in_progress' ? sql`NOW() - interval '3 hours'` : sql`NULL`
-  const pickedUpAt = STATUSES_PICKED_UP_OR_LATER.has(spec.status) ? sql`NOW() - interval '2 hours'` : sql`NULL`
-  const deliveredAt = spec.status === 'delivered' || spec.status === 'refunded' || spec.status === 'return_in_progress' ? sql`NOW() - interval '1 hour'` : sql`NULL`
+  const { processingStartedAt, pickedUpAt, deliveredAt } = buildOrderTimestamps(spec.status)
   const cancelReason = spec.cancelReason ?? null
   const cancelledBy = spec.cancelledBy ?? null
 
@@ -112,30 +133,18 @@ async function insertOrder(db: NodePgDatabase, spec: OrderSpec, medicineId: stri
   `)
 }
 
-async function insertPaymentAndEscrow(db: NodePgDatabase, spec: OrderSpec): Promise<void> {
-  if (spec.paymentMethod !== 'alif_mobi') return
-  const orderId = idOf(ORDER_ID_PREFIX, spec.n)
-  const totalDiram = GROSS_DIRAM
-
-  if (spec.status === 'pending_payment') {
-    await db.execute(sql`
-      INSERT INTO payment_operations (id, order_id, operation_type, idempotency_key, provider, status, amount_diram, expires_at)
-      VALUES (${idOf(PAYMENT_OP_ID_PREFIX, spec.n)}, ${orderId}, 'create_bill', ${`seed-create-bill-${spec.n}`}, 'alif_mobi', 'pending', ${totalDiram}, NOW() + interval '15 minutes')
-      ON CONFLICT (id) DO NOTHING;
-    `)
-    return
-  }
-
+async function insertPendingPaymentOperation(db: NodePgDatabase, spec: OrderSpec, orderId: string): Promise<void> {
   await db.execute(sql`
-    INSERT INTO payment_operations (id, order_id, operation_type, idempotency_key, provider, status, amount_diram)
-    VALUES (${idOf(PAYMENT_OP_ID_PREFIX, spec.n)}, ${orderId}, 'payment_confirmed', ${`seed-payment-confirmed-${spec.n}`}, 'alif_mobi', 'succeeded', ${totalDiram})
+    INSERT INTO payment_operations (id, order_id, operation_type, idempotency_key, provider, status, amount_diram, expires_at)
+    VALUES (${idOf(PAYMENT_OP_ID_PREFIX, spec.n)}, ${orderId}, 'create_bill', ${`seed-create-bill-${String(spec.n)}`}, 'alif_mobi', 'pending', ${GROSS_DIRAM}, NOW() + interval '15 minutes')
     ON CONFLICT (id) DO NOTHING;
   `)
+}
 
-  if (!STATUSES_WITH_HOLD.has(spec.status)) return
+async function insertEscrowAndPayout(db: NodePgDatabase, spec: OrderSpec, orderId: string): Promise<void> {
   await db.execute(sql`
     INSERT INTO escrow_ledger (id, order_id, entry_type, direction, amount_diram)
-    VALUES (${idOf(ESCROW_ID_PREFIX, spec.n * 10 + 1)}, ${orderId}, 'hold_created', 'debit', ${totalDiram})
+    VALUES (${idOf(ESCROW_ID_PREFIX, spec.n * 10 + 1)}, ${orderId}, 'hold_created', 'debit', ${GROSS_DIRAM})
     ON CONFLICT (id) DO NOTHING;
   `)
 
@@ -155,17 +164,40 @@ async function insertPaymentAndEscrow(db: NodePgDatabase, spec: OrderSpec): Prom
     `)
   }
   if (spec.status === 'refunded') {
-    await db.execute(sql`
-      INSERT INTO escrow_ledger (id, order_id, entry_type, direction, amount_diram)
-      VALUES (${idOf(ESCROW_ID_PREFIX, spec.n * 10 + 2)}, ${orderId}, 'refunded_to_customer', 'credit', ${totalDiram})
-      ON CONFLICT (id) DO NOTHING;
-    `)
-    await db.execute(sql`
-      INSERT INTO payment_operations (id, order_id, operation_type, idempotency_key, provider, status, amount_diram)
-      VALUES (${idOf(PAYMENT_OP_ID_PREFIX, spec.n * 10 + 2)}, ${orderId}, 'refund_confirmed', ${`seed-refund-confirmed-${spec.n}`}, 'alif_mobi', 'succeeded', ${totalDiram})
-      ON CONFLICT (id) DO NOTHING;
-    `)
+    await insertRefundEntries(db, spec, orderId)
   }
+}
+
+async function insertRefundEntries(db: NodePgDatabase, spec: OrderSpec, orderId: string): Promise<void> {
+  await db.execute(sql`
+    INSERT INTO escrow_ledger (id, order_id, entry_type, direction, amount_diram)
+    VALUES (${idOf(ESCROW_ID_PREFIX, spec.n * 10 + 2)}, ${orderId}, 'refunded_to_customer', 'credit', ${GROSS_DIRAM})
+    ON CONFLICT (id) DO NOTHING;
+  `)
+  await db.execute(sql`
+    INSERT INTO payment_operations (id, order_id, operation_type, idempotency_key, provider, status, amount_diram)
+    VALUES (${idOf(PAYMENT_OP_ID_PREFIX, spec.n * 10 + 2)}, ${orderId}, 'refund_confirmed', ${`seed-refund-confirmed-${String(spec.n)}`}, 'alif_mobi', 'succeeded', ${GROSS_DIRAM})
+    ON CONFLICT (id) DO NOTHING;
+  `)
+}
+
+async function insertPaymentAndEscrow(db: NodePgDatabase, spec: OrderSpec): Promise<void> {
+  if (spec.paymentMethod !== 'alif_mobi') return
+  const orderId = idOf(ORDER_ID_PREFIX, spec.n)
+
+  if (spec.status === 'pending_payment') {
+    await insertPendingPaymentOperation(db, spec, orderId)
+    return
+  }
+
+  await db.execute(sql`
+    INSERT INTO payment_operations (id, order_id, operation_type, idempotency_key, provider, status, amount_diram)
+    VALUES (${idOf(PAYMENT_OP_ID_PREFIX, spec.n)}, ${orderId}, 'payment_confirmed', ${`seed-payment-confirmed-${String(spec.n)}`}, 'alif_mobi', 'succeeded', ${GROSS_DIRAM})
+    ON CONFLICT (id) DO NOTHING;
+  `)
+
+  if (!STATUSES_WITH_HOLD.has(spec.status)) return
+  await insertEscrowAndPayout(db, spec, orderId)
 }
 
 async function insertDeliveryAssignment(db: NodePgDatabase, spec: OrderSpec): Promise<void> {

@@ -6,6 +6,7 @@ import { SEED_ANALOG_CLUSTER, SEED_PHARMACIES } from '@dorutj/testing-kit'
 
 const EXPIRES_AT_FAR = '2027-12-31'
 const INVENTORY_ID_PREFIX = '30000000-0000-4000-8000-0000000000'
+const BATCH_NUMBER_DIGITS = 4
 
 function inventoryId(n: number): string {
   return `${INVENTORY_ID_PREFIX}${String(n).padStart(2, '0')}`
@@ -27,23 +28,41 @@ const OTHER_MEDICINES: readonly string[] = [
   'Цитрамон П Sandoz',
 ]
 
+const CLUSTER_PHARMACY_PRICE_STEP_DIRAM = 5000
+const CLUSTER_REFERENCE_BASE_PRICE_DIRAM = 120000
+const CLUSTER_REFERENCE_QUANTITY = 50
+const CLUSTER_GENERIC_BASE_PRICE_DIRAM = 70000
+const CLUSTER_GENERIC_INDEX_STEP_DIRAM = 3000
+const CLUSTER_GENERIC_QUANTITY = 60
+
 function buildAnalogClusterStock(): readonly StockLine[] {
   const targets = [SEED_PHARMACIES.oneCCenter.id, SEED_PHARMACIES.excelCenter.id]
   const lines: StockLine[] = []
   for (const [idx, pharmacyId] of targets.entries()) {
-    const priceStepDiram = idx * 5000
-    lines.push({ tradeName: SEED_ANALOG_CLUSTER.referenceTradeName, pharmacyId, priceDiram: 120000 + priceStepDiram, quantity: 50 })
+    const priceStepDiram = idx * CLUSTER_PHARMACY_PRICE_STEP_DIRAM
+    lines.push({
+      tradeName: SEED_ANALOG_CLUSTER.referenceTradeName,
+      pharmacyId,
+      priceDiram: CLUSTER_REFERENCE_BASE_PRICE_DIRAM + priceStepDiram,
+      quantity: CLUSTER_REFERENCE_QUANTITY,
+    })
     for (const [genIdx, genericName] of SEED_ANALOG_CLUSTER.genericTradeNames.entries()) {
       lines.push({
         tradeName: genericName,
         pharmacyId,
-        priceDiram: 70000 + genIdx * 3000 + priceStepDiram,
-        quantity: 60,
+        priceDiram: CLUSTER_GENERIC_BASE_PRICE_DIRAM + genIdx * CLUSTER_GENERIC_INDEX_STEP_DIRAM + priceStepDiram,
+        quantity: CLUSTER_GENERIC_QUANTITY,
       })
     }
   }
   return lines
 }
+
+const OTHER_MEDICINE_BASE_PRICE_DIRAM = 80000
+const OTHER_MEDICINE_INDEX_STEP_DIRAM = 15000
+const OTHER_PHARMACY_PRICE_STEP_DIRAM = 2500
+const OTHER_BASE_QUANTITY = 20
+const OTHER_PHARMACY_QUANTITY_STEP = 5
 
 function buildOtherStock(): readonly StockLine[] {
   const pharmacyIds = [
@@ -54,9 +73,14 @@ function buildOtherStock(): readonly StockLine[] {
   ]
   const lines: StockLine[] = []
   for (const [medIdx, tradeName] of OTHER_MEDICINES.entries()) {
-    const basePriceDiram = 80000 + medIdx * 15000
+    const basePriceDiram = OTHER_MEDICINE_BASE_PRICE_DIRAM + medIdx * OTHER_MEDICINE_INDEX_STEP_DIRAM
     for (const [pharmIdx, pharmacyId] of pharmacyIds.entries()) {
-      lines.push({ tradeName, pharmacyId, priceDiram: basePriceDiram + pharmIdx * 2500, quantity: 20 + pharmIdx * 5 })
+      lines.push({
+        tradeName,
+        pharmacyId,
+        priceDiram: basePriceDiram + pharmIdx * OTHER_PHARMACY_PRICE_STEP_DIRAM,
+        quantity: OTHER_BASE_QUANTITY + pharmIdx * OTHER_PHARMACY_QUANTITY_STEP,
+      })
     }
   }
   return lines
@@ -86,7 +110,7 @@ export async function seedContractInventory(db: NodePgDatabase): Promise<void> {
         throw new Error(`[db:seed] medicine not found in catalog for inventory seed: "${line.tradeName}"`)
       }
       const n = idx + 1
-      const batchNumber = `SEED-${String(n).padStart(4, '0')}`
+      const batchNumber = `SEED-${String(n).padStart(BATCH_NUMBER_DIGITS, '0')}`
       return db.execute(sql`
         INSERT INTO pharmacy_inventory (id, pharmacy_id, medicine_id, price, quantity, expires_at, batch_number)
         VALUES (${inventoryId(n)}, ${line.pharmacyId}, ${medicineId}, ${line.priceDiram}, ${line.quantity}, ${EXPIRES_AT_FAR}, ${batchNumber})
