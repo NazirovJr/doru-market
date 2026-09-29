@@ -11,7 +11,9 @@
  *   5. Cross-tenant check: `claims.tenantId === resolvedTenantId` (SRS-API-045).
  *      `super_admin` (tenantId === null) исключён — может работать межтенантно.
  *      Несовпадение → `403 CROSS_TENANT_ACCESS_DENIED`.
- *   6. Успех — заполняет `request['authClaims']` (для `@CurrentUser()`) и
+ *   6. Сессия токена отозвана (logout, logout-all, reuse refresh) → `401 TOKEN_INVALID`;
+ *      статус — из Redis-кэша, БД только при промахе.
+ *   7. Успех — заполняет `request['authClaims']` (для `@CurrentUser()`) и
  *      пробрасывает в `RequestContext` через DI-плагин (DTJ-001 §«RequestContext»).
  *
  * RBAC (роль) проверяет `RolesGuard` ПОСЛЕ `AuthGuard` (`@UseGuards(AuthGuard,
@@ -30,6 +32,7 @@ import { PUBLIC_METADATA_KEY } from '@/common/decorators/public.decorator.js'
 import { TenantContext } from '@/common/context/tenant-context.js'
 import { RequestContext } from '@/common/context/request-context.js'
 import { JWT_SIGNER, type JwtClaims, type JwtSignerPort } from '@/modules/auth/application/ports/jwt-signer.port.js'
+import { SessionStatusService } from '@/modules/auth/application/services/session-status.service.js'
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -41,9 +44,10 @@ export class AuthGuard implements CanActivate {
   constructor(
     @Inject(Reflector) private readonly reflector: Reflector,
     @Inject(JWT_SIGNER) private readonly jwtSigner: JwtSignerPort,
+    @Inject(SessionStatusService) private readonly sessionStatus: SessionStatusService,
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(PUBLIC_METADATA_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -72,10 +76,10 @@ export class AuthGuard implements CanActivate {
     return this.verifyAndAttach(request, token)
   }
 
-  private verifyAndAttach(
+  private async verifyAndAttach(
     request: { authClaims?: JwtClaims },
     token: string,
-  ): boolean {
+  ): Promise<boolean> {
     const result = this.jwtSigner.verify(token)
     if (!result.ok) {
       const code = result.error.code
@@ -94,6 +98,12 @@ export class AuthGuard implements CanActivate {
     const claims = result.value
 
     this.assertCrossTenantAccess(claims)
+    if (await this.sessionStatus.isRevoked(claims.sessionId)) {
+      throw new UnauthorizedException({
+        code: ErrorCode.TOKEN_INVALID,
+        message: 'session revoked',
+      })
+    }
 
     // eslint-disable-next-line no-param-reassign -- request — это объект, выданный Fastify, прямая мутация отражения claims (SRS-API-024); переписывать через return невозможно, т.к. контракт canActivate — boolean.
     request.authClaims = claims
