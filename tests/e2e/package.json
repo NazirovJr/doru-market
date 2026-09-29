@@ -11,6 +11,7 @@
     "test:smoke": "E2E_REQUIRE_API=true playwright test smoke"
   },
   "devDependencies": {
+    "@dorutj/testing-kit": "workspace:*",
     "@playwright/test": "^1.62.1",
     "@types/node": "^24.13.3",
     "typescript": "^5.9.3",

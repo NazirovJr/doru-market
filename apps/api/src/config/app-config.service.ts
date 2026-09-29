@@ -67,6 +67,10 @@ export class AppConfigService {
     return !this.isProduction && this.configService.get('DEV_FIXED_OTP', { infer: true }) === 'true'
   }
 
+  get e2eTestEndpoints(): boolean {
+    return !this.isProduction && this.configService.get('E2E_TEST_ENDPOINTS', { infer: true }) === 'true'
+  }
+
   // [DTJ-023] Окна rate-limit OTP-запросов (SRS-API-019).
   get otpRequestCooldownSeconds(): number {
     return this.configService.get('OTP_REQUEST_COOLDOWN_SECONDS', { infer: true })
