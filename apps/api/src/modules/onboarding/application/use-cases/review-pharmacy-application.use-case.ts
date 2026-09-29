@@ -63,6 +63,7 @@ export class ReviewPharmacyApplicationUseCase {
       await this.pharmacyVerificationRepository.save({
         ...existing,
         verificationStatus: 'verified',
+        checklistSnapshot: input.checklist,
         reviewedBy: input.actorId,
         reviewedAt: now,
       })

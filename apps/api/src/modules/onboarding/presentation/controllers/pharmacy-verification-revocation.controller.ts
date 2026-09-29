@@ -5,11 +5,10 @@
 import { Body, Controller, HttpCode, HttpStatus, Inject, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
 import { RevokeVerificationRequestSchema, ok, type RevokeVerificationRequest } from '@dorutj/contracts'
-import { AuthGuard, Roles, RolesGuard } from '@/modules/auth/index.js'
+import { AuthGuard, CurrentUser, Roles, RolesGuard, type JwtClaims } from '@/modules/auth/index.js'
 import { RevokeVerificationUseCase } from '@/modules/onboarding/application/use-cases/revoke-verification.use-case.js'
 
 const ID_PARSE_UUID = new ParseUUIDPipe({ version: '4' })
-const SYSTEM_ACTOR_ID = '00000000-0000-0000-0000-000000000000'
 
 @Controller({ path: 'pharmacy-verifications', version: '1' })
 @UseGuards(AuthGuard, RolesGuard)
@@ -24,10 +23,11 @@ export class PharmacyVerificationRevocationController {
   async revoke(
     @Param('id', ID_PARSE_UUID) id: string,
     @Body(new ZodValidationPipe(RevokeVerificationRequestSchema)) body: RevokeVerificationRequest,
+    @CurrentUser() claims: JwtClaims,
   ): Promise<unknown> {
     const result = await this.revokeVerification.execute({
       verificationId: id,
-      actorId: SYSTEM_ACTOR_ID,
+      actorId: claims.sub,
       reason: body.reason,
     })
     return ok(result)
