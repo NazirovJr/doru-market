@@ -44,7 +44,7 @@ function makeSettings(overrides: Partial<PaymentsTenantSettings> = {}): Payments
 
 function buildHarness() {
   const markProcessed = vi.fn<ProcessedEventsPort['markProcessed']>().mockResolvedValue(true)
-  const processedEvents = { markProcessed }
+  const processedEvents = { markProcessed, isProcessed: vi.fn().mockResolvedValue(false) }
   const getOrderById = vi.fn<PaymentsOrdersPort['getOrderById']>().mockResolvedValue(makeOrder())
   const ordersPort = { getOrderById, markPaidEscrow: vi.fn(), cancel: vi.fn() }
   const append = vi.fn<EscrowLedgerRepository['append']>().mockResolvedValue(undefined)

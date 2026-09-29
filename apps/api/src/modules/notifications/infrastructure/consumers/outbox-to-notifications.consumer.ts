@@ -3,7 +3,6 @@ import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common'
 import { isKnownUserRole, NOTIFICATION_EVENT_MATRIX, type UserRole } from '@dorutj/contracts'
 import type { DomainEventEnvelope } from '@dorutj/contracts'
 import { DomainEventHandlerRegistry, type DomainEventHandler } from '@/common/events/domain-event-handler.js'
-import { PROCESSED_EVENTS_PORT, type ProcessedEventsPort } from '@/common/events/processed-events.port.js'
 import { DispatchNotificationUseCase } from '@/modules/notifications/application/use-cases/dispatch-notification.use-case.js'
 
 export const NOTIFICATIONS_DISPATCH_CONSUMER_NAME = 'notifications.dispatch'
@@ -20,7 +19,6 @@ export class OutboxToNotificationsConsumer implements DomainEventHandler, OnModu
   public readonly eventTypes: readonly string[] = NOTIFICATION_EVENT_MATRIX.map((entry) => entry.eventType)
 
   public constructor(
-    @Inject(PROCESSED_EVENTS_PORT) private readonly processedEvents: ProcessedEventsPort,
     @Inject(DispatchNotificationUseCase) private readonly dispatchNotification: DispatchNotificationUseCase,
     @Inject(DomainEventHandlerRegistry) private readonly registry: DomainEventHandlerRegistry,
   ) {}
@@ -33,12 +31,6 @@ export class OutboxToNotificationsConsumer implements DomainEventHandler, OnModu
     const entry = NOTIFICATION_EVENT_MATRIX.find((candidate) => candidate.eventType === envelope.eventType)
     if (entry === undefined) {
       return // недостижимо в проде: роутер уже фильтрует по eventTypes, но defensive.
-    }
-
-    const isNew = await this.processedEvents.markProcessed(NOTIFICATIONS_DISPATCH_CONSUMER_NAME, envelope.eventId)
-    if (!isNew) {
-      this.logger.debug(`outbox-to-notifications: event_id=${envelope.eventId} уже обработан — пропущена (SRS-DOM-152).`)
-      return
     }
 
     const payload = envelope.payload as OutboxNotificationPayload
