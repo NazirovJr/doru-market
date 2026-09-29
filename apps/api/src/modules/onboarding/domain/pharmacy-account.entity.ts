@@ -184,9 +184,15 @@ export class PharmacyAccount {
   /** Обновление полей заявки в `draft` или `rejected`. */
   updateApplication(update: AccountUpdate): PharmacyAccount {
     assertUpdatableStatus(this.status)
+    const merged = mergeAccountUpdate(this.props, update)
+    if (update.is24_7 !== undefined) {
+      assertScheduleConsistency({ isOpen247: merged.is24_7, openingTime: merged.openingTime, closingTime: merged.closingTime })
+    }
     return new PharmacyAccount({
       ...this.props,
-      ...mergeAccountUpdate(this.props, update),
+      ...merged,
+      openingTime: merged.is24_7 ? null : merged.openingTime,
+      closingTime: merged.is24_7 ? null : merged.closingTime,
       submittedAt: null,
     })
   }
