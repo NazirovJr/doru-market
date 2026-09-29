@@ -6,6 +6,7 @@ import { useState, type ReactElement } from 'react'
 import { useParams } from 'react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { httpRequest } from '@/shared/api/http-client'
+import { PharmacyVerificationDetailView } from './pharmacy-verification-detail'
 
 const CHECKLIST_ITEMS = [
   'inn_matches_documents',
@@ -47,6 +48,7 @@ export const OnboardingApplicationDetailPage = (): ReactElement => {
   return (
     <section className="onboarding-application-detail" data-testid="onboarding-application-detail">
       <h2>Заявка {id}</h2>
+      {subjectType === 'pharmacy-accounts' ? <PharmacyVerificationDetailView id={id} /> : null}
       <fieldset>
         <legend>Чек-лист</legend>
         {CHECKLIST_ITEMS.map((item) => (

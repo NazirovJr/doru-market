@@ -5,7 +5,7 @@
  * Тела: `approve` — `{ checklist: Record<string,boolean>, notes?: string }`,
  * остальные — `{ reason: string }` (обязательное).
  */
-import { Body, Controller, Inject, Param, ParseUUIDPipe, Post, UseGuards, UsePipes } from '@nestjs/common'
+import { Body, Controller, HttpCode, HttpStatus, Inject, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
 import {
   ApproveVerificationRequestSchema,
@@ -38,10 +38,10 @@ export class PharmacyVerificationDecisionsController {
   // -------- chain decisions --------
 
   @Post('pharmacy-chains/:id/approve')
-  @UsePipes(new ZodValidationPipe(ApproveVerificationRequestSchema))
+  @HttpCode(HttpStatus.OK)
   async approveChain(
     @Param('id', ID_PARSE_UUID) id: string,
-    @Body() body: ApproveVerificationRequest,
+    @Body(new ZodValidationPipe(ApproveVerificationRequestSchema)) body: ApproveVerificationRequest,
   ): Promise<unknown> {
     const result = await this.reviewChainApplication.approve({
       chainId: id,
@@ -53,10 +53,10 @@ export class PharmacyVerificationDecisionsController {
   }
 
   @Post('pharmacy-chains/:id/request-changes')
-  @UsePipes(new ZodValidationPipe(RequestChangesVerificationRequestSchema))
+  @HttpCode(HttpStatus.OK)
   async requestChangesChain(
     @Param('id', ID_PARSE_UUID) id: string,
-    @Body() body: RequestChangesVerificationRequest,
+    @Body(new ZodValidationPipe(RequestChangesVerificationRequestSchema)) body: RequestChangesVerificationRequest,
   ): Promise<unknown> {
     const result = await this.reviewChainApplication.requestChanges({
       chainId: id,
@@ -67,10 +67,10 @@ export class PharmacyVerificationDecisionsController {
   }
 
   @Post('pharmacy-chains/:id/reject')
-  @UsePipes(new ZodValidationPipe(RejectVerificationRequestSchema))
+  @HttpCode(HttpStatus.OK)
   async rejectChain(
     @Param('id', ID_PARSE_UUID) id: string,
-    @Body() body: RejectVerificationRequest,
+    @Body(new ZodValidationPipe(RejectVerificationRequestSchema)) body: RejectVerificationRequest,
   ): Promise<unknown> {
     const result = await this.reviewChainApplication.reject({
       chainId: id,
@@ -81,10 +81,10 @@ export class PharmacyVerificationDecisionsController {
   }
 
   @Post('pharmacy-chains/:id/terminate')
-  @UsePipes(new ZodValidationPipe(TerminateVerificationRequestSchema))
+  @HttpCode(HttpStatus.OK)
   async terminateChain(
     @Param('id', ID_PARSE_UUID) id: string,
-    @Body() body: TerminateVerificationRequest,
+    @Body(new ZodValidationPipe(TerminateVerificationRequestSchema)) body: TerminateVerificationRequest,
   ): Promise<unknown> {
     const result = await this.reviewChainApplication.terminate({
       chainId: id,
@@ -97,10 +97,10 @@ export class PharmacyVerificationDecisionsController {
   // -------- pharmacy decisions --------
 
   @Post('pharmacy-accounts/:id/approve')
-  @UsePipes(new ZodValidationPipe(ApproveVerificationRequestSchema))
+  @HttpCode(HttpStatus.OK)
   async approvePharmacy(
     @Param('id', ID_PARSE_UUID) id: string,
-    @Body() body: ApproveVerificationRequest,
+    @Body(new ZodValidationPipe(ApproveVerificationRequestSchema)) body: ApproveVerificationRequest,
   ): Promise<unknown> {
     const result = await this.reviewPharmacyApplication.approve({
       pharmacyId: id,
@@ -112,10 +112,10 @@ export class PharmacyVerificationDecisionsController {
   }
 
   @Post('pharmacy-accounts/:id/request-changes')
-  @UsePipes(new ZodValidationPipe(RequestChangesVerificationRequestSchema))
+  @HttpCode(HttpStatus.OK)
   async requestChangesPharmacy(
     @Param('id', ID_PARSE_UUID) id: string,
-    @Body() body: RequestChangesVerificationRequest,
+    @Body(new ZodValidationPipe(RequestChangesVerificationRequestSchema)) body: RequestChangesVerificationRequest,
   ): Promise<unknown> {
     const result = await this.reviewPharmacyApplication.requestChanges({
       pharmacyId: id,
@@ -126,10 +126,10 @@ export class PharmacyVerificationDecisionsController {
   }
 
   @Post('pharmacy-accounts/:id/reject')
-  @UsePipes(new ZodValidationPipe(RejectVerificationRequestSchema))
+  @HttpCode(HttpStatus.OK)
   async rejectPharmacy(
     @Param('id', ID_PARSE_UUID) id: string,
-    @Body() body: RejectVerificationRequest,
+    @Body(new ZodValidationPipe(RejectVerificationRequestSchema)) body: RejectVerificationRequest,
   ): Promise<unknown> {
     const result = await this.reviewPharmacyApplication.reject({
       pharmacyId: id,
@@ -140,10 +140,10 @@ export class PharmacyVerificationDecisionsController {
   }
 
   @Post('pharmacy-accounts/:id/terminate')
-  @UsePipes(new ZodValidationPipe(TerminateVerificationRequestSchema))
+  @HttpCode(HttpStatus.OK)
   async terminatePharmacy(
     @Param('id', ID_PARSE_UUID) id: string,
-    @Body() body: TerminateVerificationRequest,
+    @Body(new ZodValidationPipe(TerminateVerificationRequestSchema)) body: TerminateVerificationRequest,
   ): Promise<unknown> {
     const result = await this.reviewPharmacyApplication.terminate({
       pharmacyId: id,

@@ -73,7 +73,11 @@ export class SubmitPharmacyApplicationUseCase {
       licenseNumber: input.licenseNumber,
       licenseExpiryDate: input.licenseExpiryDate,
     }
-    const account = PharmacyAccount.create(cmd)
+    // create() не принимает скан и ФИО ответственного — без updateApplication они терялись при сохранении.
+    const account = PharmacyAccount.create(cmd).updateApplication({
+      licenseScanUrl: input.licenseScanUrl,
+      pharmacistInChargeName: input.pharmacistInChargeName,
+    })
     await this.pharmacyAccountRepository.save(account)
     return { id: account.id, chainId: account.chainId, status: account.status }
   }

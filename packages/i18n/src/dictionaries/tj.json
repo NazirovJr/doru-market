@@ -988,5 +988,18 @@
   "admin.platform_settings.key.cart_hold_ttl_seconds": "Мӯҳлати нигоҳдории мусодираи мулоими сабад, сония",
   "admin.platform_settings.key.excel_import_max_rows": "Ҳадди сатрҳо дар файли воридоти захира",
   "admin.platform_settings.key.bank_invoice_validity_minutes": "Мӯҳлати амали ҳисобномаи бонкӣ барои пардохт, дақиқа",
-  "admin.platform_settings.key.api_key_rotation_grace_period_hours": "Давраи гузаришии калиди кӯҳнаи 1С баъд аз иваз, соат"
+  "admin.platform_settings.key.api_key_rotation_grace_period_hours": "Давраи гузаришии калиди кӯҳнаи 1С баъд аз иваз, соат",
+  "admin.onboarding_detail.loading": "Боркунии дархост…",
+  "admin.onboarding_detail.error": "Дархостро бор кардан муяссар нашуд",
+  "admin.onboarding_detail.section": "Маълумоти дархост",
+  "admin.onboarding_detail.name": "Ном",
+  "admin.onboarding_detail.address": "Суроға",
+  "admin.onboarding_detail.phone": "Телефон",
+  "admin.onboarding_detail.license_number": "Рақами литсензия",
+  "admin.onboarding_detail.license_expiry": "Литсензия эътибор дорад то",
+  "admin.onboarding_detail.pharmacist": "Дорусози масъул",
+  "admin.onboarding_detail.status": "Ҳолат",
+  "admin.onboarding_detail.scan_title": "Нусхаи литсензия",
+  "admin.onboarding_detail.scan_missing": "Нусхаи литсензия замима нашудааст",
+  "admin.onboarding_detail.scan_alt": "Пешнамоиши нусхаи литсензия"
 }

@@ -988,5 +988,18 @@
   "admin.platform_settings.key.cart_hold_ttl_seconds": "Cart soft-hold time to live, sec",
   "admin.platform_settings.key.excel_import_max_rows": "Maximum rows in an inventory import file",
   "admin.platform_settings.key.bank_invoice_validity_minutes": "Bank payment invoice validity period, min",
-  "admin.platform_settings.key.api_key_rotation_grace_period_hours": "1C key grace period after rotation, hours"
+  "admin.platform_settings.key.api_key_rotation_grace_period_hours": "1C key grace period after rotation, hours",
+  "admin.onboarding_detail.loading": "Loading application…",
+  "admin.onboarding_detail.error": "Failed to load the application",
+  "admin.onboarding_detail.section": "Application details",
+  "admin.onboarding_detail.name": "Name",
+  "admin.onboarding_detail.address": "Address",
+  "admin.onboarding_detail.phone": "Phone",
+  "admin.onboarding_detail.license_number": "License number",
+  "admin.onboarding_detail.license_expiry": "License valid until",
+  "admin.onboarding_detail.pharmacist": "Pharmacist in charge",
+  "admin.onboarding_detail.status": "Status",
+  "admin.onboarding_detail.scan_title": "License scan",
+  "admin.onboarding_detail.scan_missing": "No license scan attached",
+  "admin.onboarding_detail.scan_alt": "License scan preview"
 }

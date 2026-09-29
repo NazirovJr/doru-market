@@ -22,7 +22,7 @@ interface QueueResponse {
 }
 
 export const OnboardingQueuePage = (): ReactElement => {
-  const [subjectType, setSubjectType] = useState<SubjectType>('pharmacy-chains')
+  const [subjectType, setSubjectType] = useState<SubjectType>('pharmacy-accounts')
   const queue = useQuery({
     queryKey: ['onboarding-queue', subjectType],
     queryFn: async (): Promise<readonly QueueItem[]> => {

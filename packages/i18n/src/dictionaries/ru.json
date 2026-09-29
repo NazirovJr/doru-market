@@ -988,5 +988,18 @@
   "admin.platform_settings.key.cart_hold_ttl_seconds": "Время жизни мягкого резерва корзины, сек",
   "admin.platform_settings.key.excel_import_max_rows": "Максимум строк в файле импорта остатков",
   "admin.platform_settings.key.bank_invoice_validity_minutes": "Срок действия банковского счёта на оплату, мин",
-  "admin.platform_settings.key.api_key_rotation_grace_period_hours": "Грейс-период старого ключа 1С после ротации, ч"
+  "admin.platform_settings.key.api_key_rotation_grace_period_hours": "Грейс-период старого ключа 1С после ротации, ч",
+  "admin.onboarding_detail.loading": "Загрузка заявки…",
+  "admin.onboarding_detail.error": "Не удалось загрузить заявку",
+  "admin.onboarding_detail.section": "Данные заявки",
+  "admin.onboarding_detail.name": "Название",
+  "admin.onboarding_detail.address": "Адрес",
+  "admin.onboarding_detail.phone": "Телефон",
+  "admin.onboarding_detail.license_number": "Номер лицензии",
+  "admin.onboarding_detail.license_expiry": "Лицензия действует до",
+  "admin.onboarding_detail.pharmacist": "Ответственный фармацевт",
+  "admin.onboarding_detail.status": "Статус",
+  "admin.onboarding_detail.scan_title": "Скан лицензии",
+  "admin.onboarding_detail.scan_missing": "Скан лицензии не приложен",
+  "admin.onboarding_detail.scan_alt": "Предпросмотр скана лицензии"
 }

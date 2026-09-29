@@ -3,16 +3,18 @@
  * `super_admin` для заявок `pending_review`. Защищён `@Roles('super_admin')` +
  * permission `pharmacy-accounts:approve`.
  */
-import { Controller, Get, Inject, Query, UseGuards } from '@nestjs/common'
+import { Controller, Get, Inject, Param, ParseUUIDPipe, Query, UseGuards } from '@nestjs/common'
 import { ok } from '@dorutj/contracts'
 import { AuthGuard, Roles, RolesGuard } from '@/modules/auth/index.js'
 import {
   ListPendingVerificationsUseCase,
   type ListVerificationsInput,
 } from '@/modules/onboarding/application/use-cases/list-pending-verifications.use-case.js'
+import { GetPharmacyVerificationDetailUseCase } from '@/modules/onboarding/application/use-cases/get-pharmacy-verification-detail.use-case.js'
 
 const DEFAULT_LIMIT = 20
 const DEFAULT_OFFSET = 0
+const ID_PARSE_UUID = new ParseUUIDPipe({ version: '4' })
 
 @Controller({ path: 'admin/verifications', version: '1' })
 @UseGuards(AuthGuard, RolesGuard)
@@ -20,7 +22,10 @@ const DEFAULT_OFFSET = 0
 export class PharmacyVerificationQueueController {
   // Явный @Inject: esbuild (vitest) не эмитит `design:paramtypes` — см. DTJ-001,
   // тот же приём, что и в `CategoriesController`.
-  constructor(@Inject(ListPendingVerificationsUseCase) private readonly listPendingVerifications: ListPendingVerificationsUseCase) {}
+  constructor(
+    @Inject(ListPendingVerificationsUseCase) private readonly listPendingVerifications: ListPendingVerificationsUseCase,
+    @Inject(GetPharmacyVerificationDetailUseCase) private readonly getPharmacyVerificationDetail: GetPharmacyVerificationDetailUseCase,
+  ) {}
 
   @Get('pharmacy-chains')
   async listChains(
@@ -52,6 +57,11 @@ export class PharmacyVerificationQueueController {
     }
     const result = await this.listPendingVerifications.execute(input)
     return ok(result)
+  }
+
+  @Get('pharmacy-accounts/:id')
+  async pharmacyDetail(@Param('id', ID_PARSE_UUID) id: string): Promise<unknown> {
+    return ok(await this.getPharmacyVerificationDetail.execute({ pharmacyId: id }))
   }
 }
 
