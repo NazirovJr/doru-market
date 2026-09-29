@@ -14,7 +14,6 @@ import type {
 export class OrdersCancellationAdapter implements OrdersCancellationPort {
   public constructor(@Inject(PHARMACY_ORDERS_CANCELLATION) private readonly orders: PharmacyOrdersCancellation) {}
 
-  // Свободный текст причины пишется в журнал онбординга; в заказе причина — канонический enum.
   public async forceCancelIncomplete(pharmacyId: string, _reason: string): Promise<ForceCancelResult> {
     return this.cancel(pharmacyId, 'all')
   }

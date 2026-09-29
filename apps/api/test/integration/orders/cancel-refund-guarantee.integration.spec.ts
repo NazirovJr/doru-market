@@ -9,6 +9,7 @@ import { orders } from '@/db/schema/orders.js'
 import { outbox } from '@/db/schema/outbox.schema.js'
 import { escrowLedger, paymentOperations } from '@/db/schema/payments.js'
 import { RefundOnOrderCancelledDomainEventHandler } from '@/modules/orders/application/order-lifecycle/refund-on-order-cancelled.domain-event-handler.js'
+import { AdminForceCancelOrderUseCase } from '@/modules/admin/application/use-cases/admin-force-cancel-order.use-case.js'
 import { SystemCancelOrderUseCase } from '@/modules/orders/application/order-lifecycle/system-cancel-order.use-case.js'
 import { CancelPharmacyIncompleteOrdersUseCase } from '@/modules/orders/application/order-lifecycle/cancel-pharmacy-incomplete-orders.use-case.js'
 import { PAYMENT_PROVIDER_TOKEN, type PaymentProvider } from '@/modules/payments/application/ports/payment-provider.port.js'
@@ -38,6 +39,7 @@ describe.skipIf(!postgresAvailable)('Отмена заказа: рефанд д�
   let app: TestingModule
   let provider: PaymentProvider
   let systemCancel: SystemCancelOrderUseCase
+  let adminForceCancel: AdminForceCancelOrderUseCase
   let cancelPharmacyOrders: CancelPharmacyIncompleteOrdersUseCase
   let handler: RefundOnOrderCancelledDomainEventHandler
 
@@ -51,6 +53,7 @@ describe.skipIf(!postgresAvailable)('Отмена заказа: рефанд д�
     app = await bootAppModule()
     provider = app.get<PaymentProvider>(PAYMENT_PROVIDER_TOKEN, { strict: false })
     systemCancel = app.get(SystemCancelOrderUseCase, { strict: false })
+    adminForceCancel = app.get(AdminForceCancelOrderUseCase, { strict: false })
     cancelPharmacyOrders = app.get(CancelPharmacyIncompleteOrdersUseCase, { strict: false })
     handler = app.get(RefundOnOrderCancelledDomainEventHandler, { strict: false })
   }, 60_000)
@@ -174,6 +177,27 @@ describe.skipIf(!postgresAvailable)('Отмена заказа: рефанд д�
 
     expect(result).toEqual({ cancelledOrderIds: [orderId], failedOrderIds: [] })
     expect(await refundRows()).toBe(0)
+    await handler.handle(await cancelledEnvelope())
+    expect(await refundRows()).toBe(1)
+  })
+
+  it('ручная отмена админом: отмена, audit и событие в одной транзакции, склад возвращён, при сбое банка рефанд доводится обработчиком', async () => {
+    await seedPaidOrder()
+    const adminId = await seedUser(db, tenantId, 'super_admin')
+    failNextRefunds(1)
+
+    const result = await adminForceCancel.execute({
+      orderId,
+      reason: 'обнаружена поддельная лицензия, инцидент INC-2044',
+      actor: { userId: adminId, role: 'super_admin' },
+      requestId: null,
+    })
+
+    expect(result).toEqual({ orderId, status: 'cancelled', refundIssued: false })
+    const audit = await pool.query('SELECT 1 FROM audit_log WHERE entity_id = $1 AND category = $2', [orderId, 'force_cancel_order'])
+    expect(audit.rowCount).toBe(1)
+    const stock = await pool.query<{ quantity: number }>('SELECT quantity FROM pharmacy_inventory WHERE medicine_id = $1', [medicineId])
+    expect(stock.rows[0]?.quantity).toBe(6)
     await handler.handle(await cancelledEnvelope())
     expect(await refundRows()).toBe(1)
   })

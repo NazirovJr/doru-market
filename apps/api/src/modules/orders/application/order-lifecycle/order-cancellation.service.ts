@@ -1,22 +1,21 @@
 import { Inject, Injectable } from '@nestjs/common'
 import type { Logger } from 'pino'
 import { isErr } from '@dorutj/domain-kernel'
-import type { OrderPaymentMethod, OrderStatus } from '@dorutj/contracts'
+import { NotFoundError, type OrderPaymentMethod, type OrderStatus } from '@dorutj/contracts'
 import { PINO_LOGGER } from '@/common/logging/pino-logger.token.js'
 import { OrdersFacade } from '@/modules/orders/application/orders.facade.js'
 import { INVENTORY_FACADE_PORT, type InventoryFacadePort } from '@/modules/orders/application/ports/inventory-facade.port.js'
 import { ORDERS_OUTBOX, type OrdersOutboxPort } from '@/modules/orders/application/ports/orders-outbox.port.js'
 import { REFUND_FACADE_PORT, type RefundFacadePort } from '@/modules/orders/application/ports/refund-facade.port.js'
-import { ORDERS_UNIT_OF_WORK, type OrdersUnitOfWorkPort } from '@/modules/orders/application/ports/unit-of-work.port.js'
-import type { Order } from '@/modules/orders/domain/order.entity.js'
+import { ORDERS_UNIT_OF_WORK, type OrdersUnitOfWorkPort, type OrderUnitOfWorkTx } from '@/modules/orders/application/ports/unit-of-work.port.js'
 import type { OrderCancelActor, OrderCancelReason } from '@/modules/orders/domain/order-domain-event.js'
 
 // Статусы, в которых деньги (non-cash) уже захвачены в эскроу (D-25).
 const ESCROW_CAPTURED_STATUSES = new Set<OrderStatus>(['paid_escrow', 'processing'])
 
 export interface CancelWithRefundInput {
-  /** Заказ до отмены: статус и способ оплаты определяют, нужен ли рефанд. */
-  readonly order: Order
+  readonly tenantId: string
+  readonly orderId: string
   readonly reason: OrderCancelReason
   readonly actor: OrderCancelActor
   readonly now: Date
@@ -47,34 +46,33 @@ export class OrderCancellationService {
   ) {}
 
   public async cancel(input: CancelWithRefundInput): Promise<CancelWithRefundResult> {
-    const { order, reason, actor, now } = input
-    const refundRequired = isRefundRequired(order.status, order.paymentMethod)
-    const releaseItems = order.items.map((item) => ({ inventoryBatchId: item.inventoryBatchId, quantity: item.quantity }))
-
-    await this.unitOfWork.run(async (tx) => {
-      await this.ordersFacade.cancel(order.id, { tenantId: order.tenantId, reason, actor, now }, tx)
-      await this.inventoryFacade.releaseStock(releaseItems, tx)
-      await this.outbox.appendAll(
-        order.tenantId,
-        [
-          {
-            type: 'OrderCancelledEvent',
-            orderId: order.id,
-            reason,
-            cancelledBy: actor.kind === 'user' ? actor.userId : null,
-            at: now,
-            refundRequired,
-          },
-        ],
-        tx,
-      )
-    })
-
-    const refundIssued = refundRequired && (await this.tryRefund(order.id, reason))
+    const { refundRequired } = await this.unitOfWork.run((tx) => this.cancelInTransaction(input, tx))
+    const refundIssued = refundRequired && (await this.settleRefund(input.orderId, input.reason))
     return { refundRequired, refundIssued }
   }
 
-  private async tryRefund(orderId: string, reason: OrderCancelReason): Promise<boolean> {
+  public async cancelInTransaction(input: CancelWithRefundInput, tx: OrderUnitOfWorkTx): Promise<{ readonly refundRequired: boolean }> {
+    const { tenantId, orderId, reason, actor, now } = input
+    const order = await this.ordersFacade.getOrderById(tenantId, orderId, tx)
+    if (order === null) {
+      throw new NotFoundError({ resource: 'order', orderId })
+    }
+    const refundRequired = isRefundRequired(order.status, order.paymentMethod)
+    await this.ordersFacade.cancel(orderId, { tenantId, reason, actor, now }, tx)
+    await this.inventoryFacade.releaseStock(
+      order.items.map((item) => ({ inventoryBatchId: item.inventoryBatchId, quantity: item.quantity })),
+      tx,
+    )
+    await this.outbox.appendAll(
+      tenantId,
+      [{ type: 'OrderCancelledEvent', orderId, reason, cancelledBy: actor.kind === 'user' ? actor.userId : null, at: now, refundRequired }],
+      tx,
+    )
+    return { refundRequired }
+  }
+
+  /** true — рефанд прошёл сразу; сбой не бросается: рефанд доведёт обработчик события отмены. */
+  public async settleRefund(orderId: string, reason: OrderCancelReason): Promise<boolean> {
     try {
       const result = await this.refundFacade.refundFull(orderId, reason)
       if (!isErr(result)) return true

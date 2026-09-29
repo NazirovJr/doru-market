@@ -80,7 +80,8 @@ export class SystemCancelOrderUseCase {
     }
 
     const { refundIssued } = await this.cancellation.cancel({
-      order,
+      tenantId: cmd.tenantId,
+      orderId: cmd.orderId,
       reason: cmd.reason,
       actor: { kind: 'system' },
       now: this.clock.now(),

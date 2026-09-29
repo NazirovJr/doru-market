@@ -122,7 +122,7 @@ import { ORDER_NUMBER_GENERATOR } from '@/shared-kernel/application/ports/order-
 import { RedisOrderNumberGeneratorAdapter } from './infrastructure/adapters/redis-order-number-generator.adapter.js'
 import { REFUND_FACADE_PORT } from './application/ports/refund-facade.port.js'
 import { OrdersFacade } from './application/orders.facade.js'
-import { ORDERS_FACADE, PHARMACY_ORDERS_CANCELLATION } from './index.js'
+import { ORDERS_FACADE, ORDER_CANCELLATION, PHARMACY_ORDERS_CANCELLATION } from './index.js'
 import { CancelOrderUseCase } from './application/order-lifecycle/cancel-order.use-case.js'
 import type { Result } from '@dorutj/domain-kernel'
 // DTJ-227 (checkout) — снимает 4 null-адаптера ниже (D-EP09-19) и добавляет оркестрацию.
@@ -522,6 +522,7 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     // (OrdersFacade/INVENTORY_FACADE_PORT/REFUND_FACADE_PORT/CLOCK), новых DI-токенов не требует.
     SystemCancelOrderUseCase,
     OrderCancellationService,
+    { provide: ORDER_CANCELLATION, useExisting: OrderCancellationService },
     RefundOnOrderCancelledDomainEventHandler,
     CancelPharmacyIncompleteOrdersUseCase,
     { provide: PHARMACY_ORDERS_CANCELLATION, useExisting: CancelPharmacyIncompleteOrdersUseCase },
@@ -561,7 +562,7 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
   // вызова из auth»). Оба токена — единственный легальный межмодульный путь (`02-CLEAN-
   // ARCHITECTURE-AND-CODE.md` §1.2), тот же приём, что `exports: [OnboardingFacade]` в
   // `onboarding.module.ts`.
-  exports: [ORDERS_FACADE, OrdersFacade, PHARMACY_ORDERS_CANCELLATION],
+  exports: [ORDERS_FACADE, OrdersFacade, PHARMACY_ORDERS_CANCELLATION, ORDER_CANCELLATION],
 })
 // NestJS module marker class: Nest требует класс-носитель декоратора @Module, providers
 // регистрируются декоратором, а не телом класса — правило ниже не ловит реальную проблему,

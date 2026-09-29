@@ -53,9 +53,10 @@ export class CancelOrderUseCase {
   ) {}
 
   async execute(cmd: CancelOrderCommand): Promise<CancelOrderResult> {
-    const order = await this.findAuthorizedOrder(cmd.orderId, cmd.actor)
+    await this.findAuthorizedOrder(cmd.orderId, cmd.actor)
     const { refundIssued } = await this.cancellation.cancel({
-      order,
+      tenantId: cmd.actor.tenantId,
+      orderId: cmd.orderId,
       reason: cmd.reason,
       actor: { kind: 'user', userId: cmd.actor.userId },
       now: this.clock.now(),
