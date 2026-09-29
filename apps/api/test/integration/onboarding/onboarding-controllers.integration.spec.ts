@@ -65,9 +65,11 @@ describe.skipIf(!postgresAvailable)('Контроллеры онбординга
   let pharmacyAdminToken: string
   const chainIds: string[] = []
 
-  function sign(role: 'super_admin' | 'pharmacy_admin'): string {
+  const superAdminId = randomUUID()
+
+  function sign(role: 'super_admin' | 'pharmacy_admin', sub = randomUUID()): string {
     const signer = app.get<JwtSignerPort>(JWT_SIGNER)
-    return signer.sign({ sub: randomUUID(), role, tenantId: null, pharmacyId: null, chainId: null, sessionId: randomUUID() })
+    return signer.sign({ sub, role, tenantId: null, pharmacyId: null, chainId: null, sessionId: randomUUID() })
   }
 
   async function seedChain(status: string): Promise<string> {
@@ -125,7 +127,7 @@ describe.skipIf(!postgresAvailable)('Контроллеры онбординга
     ctx = await createTestApp()
     app = ctx.app
     httpServer = ctx.httpServer
-    superAdminToken = sign('super_admin')
+    superAdminToken = sign('super_admin', superAdminId)
     pharmacyAdminToken = sign('pharmacy_admin')
   })
 
@@ -199,8 +201,16 @@ describe.skipIf(!postgresAvailable)('Контроллеры онбординга
       expect(response.status).toBe(HTTP_OK)
       expect((response.body as DataBody<StatusBody>).data.status).toBe('active')
       expect(await dbStatus(id)).toBe('active')
-      const log = await pool.query('SELECT 1 FROM onboarding_review_log WHERE pharmacy_id = $1 AND action = $2', [id, 'approve'])
-      expect(log.rowCount).toBe(1)
+      const log = await pool.query<{ actor_user_id: string }>(
+        'SELECT actor_user_id FROM onboarding_review_log WHERE pharmacy_id = $1 AND action = $2',
+        [id, 'approve'],
+      )
+      expect(log.rows.map((row) => row.actor_user_id)).toEqual([superAdminId])
+      const verification = await pool.query<{ reviewed_by: string; verification_status: string }>(
+        'SELECT reviewed_by, verification_status FROM pharmacy_verification WHERE pharmacy_id = $1',
+        [id],
+      )
+      expect(verification.rows).toEqual([{ reviewed_by: superAdminId, verification_status: 'verified' }])
     })
 
     it('оставляет approved, пока сеть не одобрена (инвариант родительской сети)', async () => {
@@ -344,6 +354,123 @@ describe.skipIf(!postgresAvailable)('Контроллеры онбординга
         .send({ reason: 'approved by mistake' })
       expect(response.status).toBe(HTTP_OK)
       expect(await dbStatus(id)).toBe('suspended')
+      const rows = await pool.query<{ verification_status: string; revoked_by: string }>(
+        'SELECT verification_status, revoked_by FROM pharmacy_verification WHERE pharmacy_id = $1',
+        [id],
+      )
+      expect(rows.rows).toEqual([{ verification_status: 'revoked', revoked_by: superAdminId }])
+    })
+  })
+
+  describe('одобрение сети активирует ранее одобренные точки', () => {
+    it('точка approved → active после approve сети', async () => {
+      const chainId = await seedChain('pending_review')
+      const id = await createPendingApplication(chainId)
+      await decide(id, 'approve', { checklist: FULL_CHECKLIST })
+      expect(await dbStatus(id)).toBe('approved')
+      const response = await request(httpServer)
+        .post(`/api/v1/admin/verifications/pharmacy-chains/${chainId}/approve`)
+        .set('Authorization', `Bearer ${superAdminToken}`)
+        .send({ checklist: FULL_CHECKLIST })
+      expect(response.status).toBe(HTTP_OK)
+      expect(await dbStatus(id)).toBe('active')
+    })
+  })
+
+  describe('очередь модерации', () => {
+    interface QueueBody {
+      readonly items: readonly { readonly id: string; readonly status: string; readonly submittedAt: string | null }[]
+      readonly nextCursor: string | null
+      readonly hasMore: boolean
+    }
+
+    function getQueue(query: string): request.Test {
+      return request(httpServer).get(`/api/v1/admin/verifications/pharmacy-accounts?${query}`).set('Authorization', `Bearer ${superAdminToken}`)
+    }
+
+    it('старые заявки первыми, курсор проходит всю очередь без потерь и дублей', async () => {
+      const chainId = await seedChain('active')
+      const submitted: string[] = []
+      for (let i = 0; i < 3; i += 1) {
+        submitted.push(await createPendingApplication(chainId))
+      }
+      const seen: { id: string; submittedAt: string | null }[] = []
+      let cursor: string | null = null
+      do {
+        const response: request.Response = await getQueue(`status=pending_review&limit=2${cursor === null ? '' : `&cursor=${cursor}`}`)
+        expect(response.status).toBe(HTTP_OK)
+        const page = (response.body as DataBody<QueueBody>).data
+        expect(page.items.length).toBeLessThanOrEqual(2)
+        seen.push(...page.items)
+        cursor = page.nextCursor
+      } while (cursor !== null)
+      expect(new Set(seen.map((item) => item.id)).size).toBe(seen.length)
+      expect(seen.filter((item) => submitted.includes(item.id)).map((item) => item.id)).toEqual(submitted)
+      const times = seen.map((item) => Date.parse(item.submittedAt ?? ''))
+      expect(times.every((time, index) => index === 0 || time >= (times[index - 1] ?? 0))).toBe(true)
+    })
+
+    it('фильтр по статусу: одобренная заявка в pending_review не попадает', async () => {
+      const id = await createPendingApplication(await seedChain('active'))
+      await decide(id, 'approve', { checklist: FULL_CHECKLIST })
+      const pending = (await getQueue('status=pending_review&limit=100')).body as DataBody<QueueBody>
+      expect(pending.data.items.some((item) => item.id === id)).toBe(false)
+      const active = (await getQueue('status=active&limit=100')).body as DataBody<QueueBody>
+      expect(active.data.items.find((item) => item.id === id)?.submittedAt).not.toBeNull()
+    })
+
+    it('битый курсор и limit вне диапазона — 400', async () => {
+      expect((await getQueue('cursor=not-a-cursor')).status).toBe(400)
+      expect((await getQueue('limit=101')).status).toBe(400)
+    })
+  })
+
+  describe('заявка сохраняет все поля', () => {
+    async function dbRow(id: string): Promise<Record<string, unknown> | undefined> {
+      const result = await pool.query('SELECT * FROM pharmacies WHERE id = $1', [id])
+      return result.rows[0] as Record<string, unknown> | undefined
+    }
+
+    it('isOpen247=true, ориентир, орган и дата выдачи лицензии доходят до БД', async () => {
+      const id = await createApplication(await seedChain('active'), {
+        isOpen247: true,
+        landmarkTj: 'near the bazaar',
+        licenseIssuingAuthority: 'Ministry of Health',
+        licenseIssueDate: '2024-03-01',
+      })
+      const row = await dbRow(id)
+      expect(row?.is_24_7).toBe(true)
+      expect(row?.landmark_tj).toBe('near the bazaar')
+      expect(row?.license_issuing_authority).toBe('Ministry of Health')
+      expect(String(row?.license_issue_date)).toContain('2024')
+    })
+
+    it('расписание с временем работы сохраняется, при 24/7 время обнуляется', async () => {
+      const scheduled = await dbRow(await createApplication(await seedChain('active'), { isOpen247: false, openingTime: '08:00', closingTime: '20:00' }))
+      expect(scheduled?.is_24_7).toBe(false)
+      expect(String(scheduled?.opening_time)).toContain('08:00')
+      const always = await dbRow(await createApplication(await seedChain('active'), { isOpen247: true, openingTime: '08:00', closingTime: '20:00' }))
+      expect(always?.opening_time).toBeNull()
+    })
+
+    it('не 24/7 с одним временем — ошибка валидации, заявка не создана', async () => {
+      const response = await request(httpServer)
+        .post('/api/v1/pharmacy-accounts')
+        .send({
+          chainId: await seedChain('active'),
+          name: 'DTJ-442 pharmacy',
+          addressText: 'Dushanbe, Test st. 1',
+          latitude: 38.5598,
+          longitude: 68.787,
+          phone: '+992900000442',
+          isOpen247: false,
+          openingTime: '08:00',
+          licenseNumber: 'DTJ442-x',
+          licenseExpiryDate: '2030-01-01',
+          pharmacistInChargeName: 'Tester T.',
+        })
+      expect(response.status).toBeGreaterThanOrEqual(400)
+      expect(response.status).toBeLessThan(500)
     })
   })
 
