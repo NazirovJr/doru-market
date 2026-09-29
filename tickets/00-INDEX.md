@@ -386,6 +386,7 @@ domain/application/infrastructure/presentation конкретного модул
 | DTJ-446 | Заглушки → реальные адаптеры: доставка возврата и отмена заказов при приостановке аптеки | EP-11 | infrastructure | M | DTJ-273, DTJ-071, DTJ-315 | returns/onboarding adapters |
 | DTJ-447 | Реальный IP клиента в auth: OTP/verify/refresh/telegram вместо заглушки 0.0.0.0 | EP-01 | presentation | S | DTJ-023, DTJ-432 | auth controllers; common/http |
 | DTJ-448 | Защита кэша поиска от штампеда не отдаёт 500 | EP-06 | infrastructure | S | DTJ-187 | catalog/infrastructure/cache/** |
+| DTJ-449 | Описание счёта банку из бренда тенанта вместо «DoruTJ order N» | EP-07 | application | S | DTJ-059, DTJ-231 | checkout.use-case.ts; retry-payment.use-case.ts |
 
 ¹ `0008_i18n_overrides_review_status.sql` (DTJ-103) ещё не реализован, но это имя уже занято
 двумя другими миграциями (`0008_onboarding_foundation.sql`, `0008_user_telegram_identities.sql`) —
