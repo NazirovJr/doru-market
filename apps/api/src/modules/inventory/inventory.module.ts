@@ -39,6 +39,7 @@
 import { Module } from '@nestjs/common'
 import { AuthModule } from '@/modules/auth/auth.module.js'
 import { RedisModule } from '@/infrastructure/redis/redis.module.js'
+import { DomainEventsModule } from '@/common/events/domain-events.module.js'
 import { PHARMACY_INVENTORY_REPOSITORY } from './application/ports/pharmacy-inventory.repository.port.js'
 import { INVENTORY_SYNC_BATCH_REPOSITORY } from './application/ports/inventory-sync-batch.repository.port.js'
 import { PHARMACY_SKU_MAPPING_REPOSITORY } from './application/ports/pharmacy-sku-mapping.repository.port.js'
@@ -101,7 +102,8 @@ import { commerceMlParserProvider } from './infrastructure/adapters/commerce-ml-
 import { InventoryBatchQueuedEventHandler } from './infrastructure/event-handlers/inventory-batch-queued.handler.js'
 
 @Module({
-  imports: [AuthModule, RedisModule],
+  // Явно, хотя модуль глобальный: InventoryBatchQueuedEventHandler нужен реестр и в стендах, собирающих модуль без AppModule.
+  imports: [AuthModule, RedisModule, DomainEventsModule],
   providers: [
     // Волна 5, блок C: все шесть портов ниже — Drizzle/Redis, не InMemory
     // (см. addendum в JSDoc модуля выше). `InMemory*`-классы остаются
