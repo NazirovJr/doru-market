@@ -1,36 +1,28 @@
-import { useCallback, useState, type ReactElement } from 'react'
+import { useCallback, useMemo, useState, type ReactElement } from 'react'
 import { useSearchParams } from 'react-router'
-import type { BboxCoordinates } from '@dorutj/contracts'
+import type { BboxCoordinates, PharmacyMapPinDto } from '@dorutj/contracts'
 import { useT, type TranslateFunction } from '@dorutj/i18n'
+import { IconButton, MapView, type BBox, type MapPoint } from '@dorutj/ui'
 import { useLocale } from '@/shared/config/locale-provider'
 import type { HttpError } from '@/shared/api/http-client'
-import { MapView } from '@/features/pharmacy-map/ui/map-view'
 import { usePharmacyMapPins } from '@/features/pharmacy-map/api/use-pharmacy-map-pins'
+import { PharmacyPinPopup } from '@/features/pharmacy-map/ui/pharmacy-pin-popup'
 
-/**
- * `map-page.tsx` (DTJ-199, `SRS-CAT-052`/`053`/`054`).
- *
- * Экран `/map`: держит текущий `bbox` в состоянии, запрашивает пины через
- * `usePharmacyMapPins` (DTJ-197 бэкенд) и передаёт их в готовый `MapView` (DTJ-198). `MapView`
- * сам подписан на `use-map-viewport` и зовёт `onViewportChange` ОДИН раз на жест (debounce уже
- * внутри, здесь достаточно положить новый `bbox` в state — второй debounce не нужен).
- *
- * Карта остаётся смонтированной и интерактивной ВО ВСЕХ состояниях (загрузка/ошибка/пустой
- * результат) — баннер поверх неё, а не замена на белый экран/спиннер на весь экран (критерий
- * приёмки тикета: "не белым экраном и не бесконечным лоадером"). Так пользователь может
- * приблизить карту прямо из состояния "bbox слишком большой", не обновляя страницу.
- *
- * `medicineId` — необязательный query-параметр (`?medicineId=<uuid>`), переход "показать на
- * карте" с карточки товара (`SRS-CAT-052`); без него пины несут только статические данные аптеки.
- */
+// MapView домен-агностичен: маппинг PharmacyMapPinDto -> MapPoint и попап выбранной аптеки
+// (панель снизу, не встроенный попап карты) — ответственность этой страницы, не компонента.
 
-const DEFAULT_MAP_CENTER = { lon: 68.787, lat: 38.5598 } // Душанбе — тот же дефолт, что и pharmacy-application-form.tsx
+const DEFAULT_MAP_CENTER = { lat: 38.5598, lng: 68.787 } // Душанбе
 const DEFAULT_MAP_ZOOM = 12
-const DEFAULT_MAP_MIN_ZOOM = 9
-// Стартовый bbox ДО первого moveend/zoomend (MapView зовёт onViewportChange только на реальный
-// жест) — площадь ~416 км², заведомо меньше лимита SRS-CAT-054 (2500 км²).
 const DEFAULT_MAP_BBOX: BboxCoordinates = { lonMin: 68.65, latMin: 38.48, lonMax: 68.92, latMax: 38.64 }
 const MAX_MAP_PINS_PER_RESPONSE = 500
+
+function toBboxCoordinates(bbox: BBox): BboxCoordinates {
+  return { lonMin: bbox.west, latMin: bbox.south, lonMax: bbox.east, latMax: bbox.north }
+}
+
+function pinToMapPoint(pin: PharmacyMapPinDto): MapPoint {
+  return { id: pin.pharmacyId, lat: pin.lat, lng: pin.lon, label: pin.name, meta: pin }
+}
 
 function isBboxTooLargeError(error: HttpError): boolean {
   if (error.code !== 'VALIDATION_ERROR') {
@@ -99,6 +91,22 @@ const MapPageBanner = ({ isInitialLoading, error, pinsCount, t, onRetry }: MapPa
   return null
 }
 
+interface SelectedPharmacyPanelProps {
+  readonly pin: PharmacyMapPinDto
+  readonly t: TranslateFunction
+  readonly onClose: () => void
+}
+
+const SelectedPharmacyPanel = ({ pin, t, onClose }: SelectedPharmacyPanelProps): ReactElement => (
+  <div
+    data-testid="map-page-selected-pharmacy"
+    className="absolute inset-x-0 bottom-0 flex items-start justify-between gap-2 bg-surface p-2 shadow-md"
+  >
+    <PharmacyPinPopup pin={pin} />
+    <IconButton aria-label={t('common.close')} icon={<span aria-hidden="true">×</span>} onClick={onClose} />
+  </div>
+)
+
 const MapPage = (): ReactElement => {
   const { locale } = useLocale()
   const { t } = useT(locale)
@@ -106,10 +114,11 @@ const MapPage = (): ReactElement => {
   const medicineId = searchParams.get('medicineId') ?? undefined
 
   const [bbox, setBbox] = useState<BboxCoordinates>(DEFAULT_MAP_BBOX)
+  const [selectedPharmacyId, setSelectedPharmacyId] = useState<string | null>(null)
   const query = usePharmacyMapPins({ bbox, medicineId })
 
-  const handleViewportChange = useCallback((nextBbox: BboxCoordinates): void => {
-    setBbox(nextBbox)
+  const handleViewportChange = useCallback((nextBbox: BBox): void => {
+    setBbox(toBboxCoordinates(nextBbox))
   }, [])
 
   const handleRetry = useCallback((): void => {
@@ -117,6 +126,8 @@ const MapPage = (): ReactElement => {
   }, [query])
 
   const pins = query.data ?? []
+  const points = useMemo(() => pins.map(pinToMapPoint), [pins])
+  const selectedPin = pins.find((pin) => pin.pharmacyId === selectedPharmacyId) ?? null
   // `isPending` без данных вообще (в т.ч. из placeholderData) — самая первая загрузка страницы;
   // на панорамирование/зум `placeholderData: keepPreviousData` держит старые пины на экране.
   const isInitialLoading = query.isPending
@@ -124,11 +135,18 @@ const MapPage = (): ReactElement => {
   return (
     <section className="relative h-[70vh] w-full" data-testid="map-page">
       <MapView
+        points={points}
         center={DEFAULT_MAP_CENTER}
         zoom={DEFAULT_MAP_ZOOM}
-        minZoom={DEFAULT_MAP_MIN_ZOOM}
-        pins={pins}
+        mode="full"
+        tileStyleUrl={import.meta.env.VITE_TILESERVER_URL}
+        onSelect={setSelectedPharmacyId}
         onViewportChange={handleViewportChange}
+        unavailableSlot={
+          <div role="status" data-testid="map-view-unavailable" className="flex h-full w-full items-center justify-center bg-surface p-4 text-center text-sm text-ink-muted">
+            {t('map.unavailable')}
+          </div>
+        }
       />
       <MapPageBanner
         isInitialLoading={isInitialLoading}
@@ -137,6 +155,15 @@ const MapPage = (): ReactElement => {
         t={t}
         onRetry={handleRetry}
       />
+      {selectedPin !== null ? (
+        <SelectedPharmacyPanel
+          pin={selectedPin}
+          t={t}
+          onClose={() => {
+            setSelectedPharmacyId(null)
+          }}
+        />
+      ) : null}
     </section>
   )
 }

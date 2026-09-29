@@ -7,46 +7,66 @@ import { LocaleProvider } from '@/shared/config/locale-provider'
 import { getClientEnv } from '@/shared/config/env'
 import MapPage from './map-page'
 
-/**
- * `map-page.spec.tsx` (DTJ-199).
- *
- * `maplibre-gl` мокается тем же способом, что и `features/pharmacy-map/ui/map-view.spec.tsx`
- * (`vi.hoisted` + `vi.mock`) — реальный WebGL-рендер недоступен в jsdom. Сеть мокается через
- * `vi.stubGlobal('fetch', ...)`, как в `shared/api/http-client.spec.ts` (тот же слой `httpGetJson`
- * → `httpRequestJson` → `fetch`, второй способ ходить в сеть не заводим).
- *
- * Тесты проверяют ПОВЕДЕНИЕ экрана (какое состояние показано и что реально ушло в fetch), а не
- * факт монтирования компонента.
- */
+// Мок maplibre-gl — тот же приём, что в packages/ui/.../map-view.spec.tsx (addSource/addLayer/
+// getSource#setData, GeoJSON-источник вместо Marker). Сеть — через vi.stubGlobal('fetch', ...).
 
-type Handler = (...args: unknown[]) => void
+type GenericHandler = (...args: unknown[]) => void
 
-const { MockMap, MockMarker, MockPopup, createdMaps, createdMarkers } = vi.hoisted(() => {
-  interface MockMapOptions {
-    readonly container: HTMLElement
+const { MockMap, createdMaps, setDataCalls } = vi.hoisted(() => {
+  interface MockSource {
+    setData: (data: unknown) => void
   }
 
   const maps: InstanceType<typeof MapImpl>[] = []
-  const markers: InstanceType<typeof MarkerImpl>[] = []
+  const setDataCallsList: unknown[] = []
 
   class MapImpl {
-    private readonly handlers = new Map<string, Set<Handler>>()
+    private readonly genericHandlers = new Map<string, Set<GenericHandler>>()
+    private readonly layerHandlers = new Map<string, Set<GenericHandler>>()
+    private readonly sources = new Map<string, MockSource>()
+    private readonly layers = new Set<string>()
+    private readonly canvas = { style: { cursor: '' } }
     private bounds = { west: 68.65, south: 38.48, east: 68.92, north: 38.64 }
 
-    constructor(_options: MockMapOptions) {
+    constructor(_options: Record<string, unknown>) {
       maps.push(this)
     }
 
-    on(event: string, handler: Handler): this {
-      const set = this.handlers.get(event) ?? new Set<Handler>()
-      set.add(handler)
-      this.handlers.set(event, set)
+    on(event: string, second: GenericHandler | string, third?: GenericHandler): this {
+      if (typeof second === 'string') {
+        const key = `${event}:${second}`
+        const set = this.layerHandlers.get(key) ?? new Set<GenericHandler>()
+        if (third !== undefined) {
+          set.add(third)
+        }
+        this.layerHandlers.set(key, set)
+        return this
+      }
+      const set = this.genericHandlers.get(event) ?? new Set<GenericHandler>()
+      set.add(second)
+      this.genericHandlers.set(event, set)
       return this
     }
 
-    off(event: string, handler: Handler): this {
-      this.handlers.get(event)?.delete(handler)
+    off(event: string, second: GenericHandler | string, third?: GenericHandler): this {
+      if (typeof second === 'string') {
+        this.layerHandlers.get(`${event}:${second}`)?.delete(third!)
+        return this
+      }
+      this.genericHandlers.get(event)?.delete(second)
       return this
+    }
+
+    fire(event: string): void {
+      this.genericHandlers.get(event)?.forEach((handler) => {
+        handler()
+      })
+    }
+
+    fireLayerEvent(event: string, layerId: string, eventArg: unknown): void {
+      this.layerHandlers.get(`${event}:${layerId}`)?.forEach((handler) => {
+        handler(eventArg)
+      })
     }
 
     getBounds(): { getWest: () => number; getSouth: () => number; getEast: () => number; getNorth: () => number } {
@@ -63,34 +83,35 @@ const { MockMap, MockMarker, MockPopup, createdMaps, createdMarkers } = vi.hoist
       this.bounds = next
     }
 
-    remove(): void {
-      // намеренно пусто
+    getCanvas(): { style: { cursor: string } } {
+      return this.canvas
     }
 
-    fire(event: string): void {
-      this.handlers.get(event)?.forEach((handler) => {
-        handler()
+    addSource(id: string): void {
+      const setDataSpy = vi.fn((data: unknown) => {
+        setDataCallsList.push(data)
       })
-    }
-  }
-
-  class MarkerImpl {
-    public readonly element = document.createElement('div')
-
-    constructor(_options?: { readonly color?: string }) {
-      markers.push(this)
+      this.sources.set(id, { setData: setDataSpy })
     }
 
-    setLngLat(): this {
-      return this
+    getSource(id: string): MockSource | undefined {
+      return this.sources.get(id)
     }
 
-    addTo(): this {
-      return this
+    removeSource(id: string): void {
+      this.sources.delete(id)
     }
 
-    getElement(): HTMLElement {
-      return this.element
+    addLayer(layer: { readonly id: string }): void {
+      this.layers.add(layer.id)
+    }
+
+    getLayer(id: string): true | undefined {
+      return this.layers.has(id) ? true : undefined
+    }
+
+    removeLayer(id: string): void {
+      this.layers.delete(id)
     }
 
     remove(): void {
@@ -98,30 +119,13 @@ const { MockMap, MockMarker, MockPopup, createdMaps, createdMarkers } = vi.hoist
     }
   }
 
-  class PopupImpl {
-    setLngLat(): this {
-      return this
-    }
-
-    setDOMContent(): this {
-      return this
-    }
-
-    addTo(): this {
-      return this
-    }
-
-    on(): this {
-      return this
-    }
-  }
-
-  return { MockMap: MapImpl, MockMarker: MarkerImpl, MockPopup: PopupImpl, createdMaps: maps, createdMarkers: markers }
+  return { MockMap: MapImpl, createdMaps: maps, setDataCalls: setDataCallsList }
 })
 
-vi.mock('maplibre-gl', () => ({ Map: MockMap, Marker: MockMarker, Popup: MockPopup }))
+vi.mock('maplibre-gl', () => ({ Map: MockMap }))
 vi.mock('maplibre-gl/dist/maplibre-gl.css', () => ({}))
 
+const POINT_LAYER_ID = 'dorutj-map-view-unclustered-point'
 const mapApiUrl = `${getClientEnv().apiBaseUrl}/api/v1/pharmacies/map`
 const DEBOUNCE_MS = 400
 
@@ -152,11 +156,17 @@ function renderMapPage(initialEntry = '/map'): ReturnType<typeof render> {
   )
 }
 
+function getLastMap(): InstanceType<typeof MockMap> {
+  const map = createdMaps[createdMaps.length - 1]
+  expect(map).toBeDefined()
+  return map!
+}
+
 async function waitForInitialMap(): Promise<InstanceType<typeof MockMap>> {
   await waitFor(() => {
     expect(createdMaps.length).toBeGreaterThan(0)
   })
-  const map = createdMaps[createdMaps.length - 1]!
+  const map = getLastMap()
   act(() => {
     map.fire('load')
   })
@@ -166,7 +176,7 @@ async function waitForInitialMap(): Promise<InstanceType<typeof MockMap>> {
 beforeEach(() => {
   vi.stubEnv('VITE_TILESERVER_URL', 'http://localhost:8080/styles/basic/style.json')
   createdMaps.length = 0
-  createdMarkers.length = 0
+  setDataCalls.length = 0
 })
 
 afterEach(() => {
@@ -176,7 +186,7 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-describe('MapPage (DTJ-199)', () => {
+describe('MapPage (DTJ-199/DTJ-409)', () => {
   it('1. загрузка — карта смонтирована сразу, баннер загрузки виден до ответа API', async () => {
     let resolveFetch: (response: Response) => void = () => undefined
     stubFetchOnce(
@@ -246,7 +256,7 @@ describe('MapPage (DTJ-199)', () => {
     expect(screen.queryByTestId('map-page-retry')).not.toBeInTheDocument()
   })
 
-  it('5. успешная отрисовка пинов — маркеры соответствуют ответу API, баннер не показан', async () => {
+  it('5. успешная отрисовка пинов — источник карты получает точки из ответа API, баннер не показан', async () => {
     const pin = {
       pharmacyId: '11111111-1111-1111-1111-111111111111',
       name: 'Аптека №1',
@@ -262,14 +272,15 @@ describe('MapPage (DTJ-199)', () => {
     await waitForInitialMap()
 
     await waitFor(() => {
-      expect(createdMarkers).toHaveLength(1)
+      const lastCall = setDataCalls[setDataCalls.length - 1] as { features: readonly unknown[] } | undefined
+      expect(lastCall?.features).toHaveLength(1)
     })
     expect(screen.queryByTestId('map-page-empty')).not.toBeInTheDocument()
     expect(screen.queryByTestId('map-page-error')).not.toBeInTheDocument()
     expect(screen.queryByTestId('map-page-loading')).not.toBeInTheDocument()
   })
 
-  it('6. панорамирование карты — новый запрос уходит с новым bbox (через debounce use-map-viewport)', async () => {
+  it('6. панорамирование карты — новый запрос уходит с новым bbox (через debounce внутри MapView)', async () => {
     const fetchMock = stubFetchOnce(() => Promise.resolve(jsonResponse({ data: [] })))
 
     renderMapPage()
@@ -286,7 +297,7 @@ describe('MapPage (DTJ-199)', () => {
       map.fire('moveend')
     })
 
-    // Дебаунс use-map-viewport (400мс) — реальное время, а не fake timers: смешивать
+    // Дебаунс внутри `MapView` (400мс) — реальное время, а не fake timers: смешивать
     // vi.useFakeTimers с testing-library waitFor на уровне целой страницы ненадёжно.
     await waitFor(
       () => {
@@ -309,5 +320,37 @@ describe('MapPage (DTJ-199)', () => {
     })
     const [url] = fetchMock.mock.calls[0] ?? []
     expect(url).toContain('medicineId=22222222-2222-2222-2222-222222222222')
+  })
+
+  it('8. клик по пину открывает панель выбранной аптеки снизу, закрытие панели её скрывает', async () => {
+    const pin = {
+      pharmacyId: '11111111-1111-1111-1111-111111111111',
+      name: 'Аптека №1',
+      lat: 38.55,
+      lon: 68.78,
+      isOpenNow: true,
+      is24x7: false,
+      offer: { priceDiram: 12550, stockQuantity: 7, lastSyncedAt: '2026-08-30T10:00:00Z', isStale: false },
+    }
+    stubFetchOnce(() => Promise.resolve(jsonResponse({ data: [pin] })))
+
+    renderMapPage()
+    const map = await waitForInitialMap()
+    await waitFor(() => {
+      const lastCall = setDataCalls[setDataCalls.length - 1] as { features: readonly unknown[] } | undefined
+      expect(lastCall?.features).toHaveLength(1)
+    })
+
+    act(() => {
+      map.fireLayerEvent('click', POINT_LAYER_ID, { features: [{ properties: { id: pin.pharmacyId } }] })
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('map-page-selected-pharmacy')).toBeInTheDocument()
+    })
+    expect(screen.getByText(pin.name)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Пӯшидан' }))
+    expect(screen.queryByTestId('map-page-selected-pharmacy')).not.toBeInTheDocument()
   })
 })

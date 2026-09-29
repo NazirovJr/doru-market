@@ -129,3 +129,7 @@ export { FileDropzone, validateFile } from './file-dropzone/file-dropzone'
 
 export type { AudioAlertPlayerProps, UseAudioAlertPlayerResult } from './audio-alert-player/audio-alert-player'
 export { AudioAlertPlayer, useAudioAlertPlayer } from './audio-alert-player/audio-alert-player'
+
+// DTJ-409 — MapView (обёртка MapLibre GL JS, домен-агностичная карта точек с кластеризацией).
+export type { BBox, GeoPoint, MapPoint, MapViewMode, MapViewProps } from './map-view/map-view'
+export { MapView } from './map-view/map-view'
