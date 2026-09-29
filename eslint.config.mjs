@@ -351,6 +351,39 @@ export default tseslint.config(
     },
   },
 
+  /* ---------- Запрет хардкода бренда: имя берётся из i18n (`brand.name`) или брендинга тенанта ---------- */
+  // Регистр важен: пакеты `@dorutj/*` и ключи `dorutj.*` — не бренд, поэтому без флага `i`.
+  {
+    name: 'dorutj/no-hardcoded-brand',
+    files: ['**/*.{ts,tsx,js,jsx,mjs,cjs}'],
+    ignores: [
+      'packages/i18n/**',
+      '**/*.spec.{ts,tsx}',
+      '**/*.test.{ts,tsx}',
+      // Селектор правила сам содержит литерал бренда.
+      'eslint.config.mjs',
+      // Демо-данные сидов: бренд White-Label тенанта — содержимое строки БД, а не UI-код.
+      'apps/api/src/db/seed/**',
+      // Название платформы в OpenAPI-спеке и Swagger-странице — техническая документация API.
+      'apps/api/src/common/openapi/openapi.builder.ts',
+      'apps/api/src/common/openapi/openapi.module.ts',
+      // Служебный маркер сгенерированной колонки, не пользовательская строка.
+      'apps/api/src/db/schema/substances.ts',
+      // Токен User-Agent мобильного приложения — протокольная константа.
+      'apps/api/src/modules/auth/presentation/controllers/otp-verify.controller.ts',
+      // TODO(DTJ-436): описание счёта в банк должно строиться из брендинга тенанта, а не литерала.
+      'apps/api/src/modules/orders/application/checkout/checkout.use-case.ts',
+      'apps/api/src/modules/orders/application/order-lifecycle/retry-payment.use-case.ts',
+    ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        { selector: 'Literal[value=/DoruTJ|Sifat|Oson/]', message: 'Имя бренда — только из i18n (brand.name) или брендинга тенанта, не литерал.' },
+        { selector: 'TemplateElement[value.raw=/DoruTJ|Sifat|Oson/]', message: 'Имя бренда — только из i18n (brand.name) или брендинга тенанта, не литерал.' },
+      ],
+    },
+  },
+
   /* ---------- Конфигурационные файлы ---------- */
   {
     name: 'dorutj/configs',
