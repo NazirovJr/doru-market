@@ -2,6 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router'
+import { ToastProvider } from '@dorutj/ui'
+import { useT } from '@dorutj/i18n'
+import { useGeoStore } from '@/shared/geo/geo-store'
 import { LocaleProvider } from '@/shared/config/locale-provider'
 import { getClientEnv } from '@/shared/config/env'
 import SearchResultsPage from './search-results-page'
@@ -61,11 +64,14 @@ function renderSearchPage(initialEntry: string): ReturnType<typeof render> {
   return render(
     <QueryClientProvider client={queryClient}>
       <LocaleProvider>
-        <MemoryRouter initialEntries={[initialEntry]}>
-          <Routes>
-            <Route path="/search" element={<SearchResultsPage />} />
-          </Routes>
-        </MemoryRouter>
+        <ToastProvider closeButtonLabel="x">
+          <MemoryRouter initialEntries={[initialEntry]}>
+            <Routes>
+              <Route path="/search" element={<SearchResultsPage />} />
+              <Route path="/medicines/:id" element={<p data-testid="medicine-route" />} />
+            </Routes>
+          </MemoryRouter>
+        </ToastProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   )
@@ -73,6 +79,8 @@ function renderSearchPage(initialEntry: string): ReturnType<typeof render> {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  useGeoStore.setState({ status: 'idle', coords: null })
+  window.localStorage.clear()
 })
 
 describe('SearchResultsPage (DTJ-193)', () => {
@@ -156,7 +164,7 @@ describe('SearchResultsPage (DTJ-193)', () => {
     await waitFor(() => {
       expect(screen.getAllByTestId('search-result-card')).toHaveLength(2)
     })
-    expect(screen.getAllByTestId('search-result-rx-badge')).toHaveLength(1)
+    expect(screen.getAllByTestId('medicine-card-rx-badge')).toHaveLength(1)
   })
 
   it('7. пагинация — кнопка "Загрузить ещё" видна при hasMore, дозагружает вторую страницу курсором', async () => {
@@ -207,5 +215,79 @@ describe('SearchResultsPage (DTJ-193)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('search-bar-input')).toHaveValue('старый запрос')
     })
+  })
+})
+
+describe('SearchResultsPage — путь покупки (DTJ-440)', () => {
+  const { t } = useT('tj')
+
+  it('10. клик по карточке ведёт на /medicines/:id', async () => {
+    stubFetch(() => Promise.resolve(jsonResponse({ data: [resultItem('otc')] })))
+
+    renderSearchPage('/search?text=аспирин')
+    fireEvent.click(await screen.findByRole('button', { name: 'Товар otc' }))
+
+    expect(await screen.findByTestId('medicine-route')).toBeInTheDocument()
+  })
+
+  it('11. «В корзину» шлёт POST /cart/items с medicineId/pharmacyId и не открывает карточку', async () => {
+    const fetchMock = stubFetch((url) =>
+      Promise.resolve(
+        url.includes('/cart/items')
+          ? jsonResponse({ data: { id: 'ci1', cartId: 'c1', medicineId: 'otc', pharmacyId: 'ph1', quantity: 1, addedAt: 'x' } }, 201)
+          : jsonResponse({ data: [resultItem('otc')] }),
+      ),
+    )
+
+    renderSearchPage('/search?text=аспирин')
+    fireEvent.click(await screen.findByRole('button', { name: t('cart.add_item_cta') }))
+
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([url]) => url.endsWith('/api/v1/cart/items'))).toBe(true)
+    })
+    const addCall = fetchMock.mock.calls.find(([url]) => url.endsWith('/api/v1/cart/items'))
+    expect(JSON.parse(addCall?.[1]?.body as string)).toEqual({ medicineId: 'otc', pharmacyId: 'ph1', quantity: 1 })
+    expect(await screen.findByText(t('cart.added_toast'))).toBeInTheDocument()
+    expect(screen.queryByTestId('medicine-route')).not.toBeInTheDocument()
+  })
+
+  it('12. геолокация разрешена — lat/lon уходят в поиск, позиция без предложений рядом приглушена', async () => {
+    vi.stubGlobal('navigator', {
+      geolocation: {
+        getCurrentPosition: (onSuccess: (position: unknown) => void) => {
+          onSuccess({ coords: { latitude: 38.5598, longitude: 68.787 } })
+        },
+      },
+    })
+    const fetchMock = stubFetch(() => Promise.resolve(jsonResponse({ data: [resultItem('otc'), resultItem('no-offer')] })))
+
+    renderSearchPage('/search?text=аспирин')
+    fireEvent.click(await screen.findByRole('button', { name: t('catalog.geo.request_cta') }))
+
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([url]) => url.includes('lat=38.56') && url.includes('lon=68.787'))).toBe(true)
+    })
+    await waitFor(() => {
+      const cards = screen.getAllByTestId('search-result-card')
+      expect(cards.find((card) => card.dataset.medicineId === 'no-offer')).toHaveClass('opacity-60')
+    })
+    expect(screen.getAllByTestId('search-result-card').find((card) => card.dataset.medicineId === 'otc')).not.toHaveClass('opacity-60')
+  })
+
+  it('13. геолокация запрещена — понятное сообщение, поиск работает без координат', async () => {
+    vi.stubGlobal('navigator', {
+      geolocation: {
+        getCurrentPosition: (_onSuccess: unknown, onError: (error: unknown) => void) => {
+          onError({ code: 1 })
+        },
+      },
+    })
+    const fetchMock = stubFetch(() => Promise.resolve(jsonResponse({ data: [resultItem('otc')] })))
+
+    renderSearchPage('/search?text=аспирин')
+    fireEvent.click(await screen.findByRole('button', { name: t('catalog.geo.request_cta') }))
+
+    expect(await screen.findByText(t('catalog.geo.denied'))).toBeInTheDocument()
+    expect(fetchMock.mock.calls.every(([url]) => !url.includes('lat='))).toBe(true)
   })
 })

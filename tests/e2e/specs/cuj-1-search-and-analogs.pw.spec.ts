@@ -1,19 +1,15 @@
-// CUJ-1 — поиск и аналоги (гость, DTJ-418). Пропуск без стенда — как в smoke/web-opens.pw.spec.ts.
-// Расхождения с текстом тикета (детали — отчёт сдачи): нет кнопки «В корзину» на /search и
-// /medicines/:id (добавляем через прямой POST /cart/items); из результатов поиска нет перехода
-// на карточку товара (навигация по URL); GET /medicines/search не шлёт lat/lon (SRS-CAT-045
-// недостижим через UI).
+// CUJ-1 — поиск, аналоги и путь покупки кликами (гость). Пропуск без стенда — как в smoke/web-opens.pw.spec.ts.
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { test, expect, type APIRequestContext, type Page } from '@playwright/test'
-import { SEED_ANALOG_CLUSTER } from '@dorutj/testing-kit'
+import { test, expect, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import { SEED_ANALOG_CLUSTER, SEED_USERS } from '@dorutj/testing-kit'
 import { runAxeCheck } from '../helpers/axe-check.js'
+import { loginViaApi } from '../helpers/login-via-api.js'
 
 const webUrl = process.env.E2E_WEB_URL
 const apiBaseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
 
-// Опечатка «е»→«и» под SEED_ANALOG_CLUSTER (innName='Парацетамол') — в тексте тикета «цытрамон»/
-// «Цитрамон», но этого препарата нет в кластере аналогов на этом стенде.
+// Опечатка «е»→«и» под SEED_ANALOG_CLUSTER (innName='Парацетамол').
 const TYPO_QUERY = 'парацитамол'
 
 const ruDictionaryPath = fileURLToPath(new URL('../../../packages/i18n/src/dictionaries/ru.json', import.meta.url))
@@ -22,6 +18,7 @@ const CANONICAL_NO_RESULTS_RU = ruDictionary['catalog.search.no_results']
 
 interface SearchOffer {
   readonly pharmacyId: string
+  readonly pharmacyName: string
   readonly priceDiram: number
 }
 interface SearchItem {
@@ -42,6 +39,21 @@ async function switchToRuLocale(page: Page): Promise<void> {
   const pill = page.locator('[data-testid="language-switcher-placeholder"] button', { hasText: 'RU' })
   await pill.click()
   await expect(pill).toHaveAttribute('aria-pressed', 'true')
+}
+
+// Главная → поиск → клик по результату с точным названием → карточка товара; без прямых URL.
+async function openMedicineViaSearch(page: Page, tradeName: string): Promise<void> {
+  await page.goto(webUrl!)
+  await page.locator('[data-testid="search-bar-input"]').fill(tradeName)
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(/\/search\?text=/)
+  await page.getByRole('button', { name: tradeName, exact: true }).click()
+  await expect(page).toHaveURL(/\/medicines\//)
+  await expect(page.getByRole('heading', { name: tradeName })).toBeVisible()
+}
+
+function offerRowOf(page: Page, pharmacyName: string): Locator {
+  return page.locator('[data-testid="pharmacy-offer-row"]', { hasText: pharmacyName })
 }
 
 test.describe('CUJ-1: поиск и аналоги (SRS-CAT-024/027/030/038/045/077, гость)', () => {
@@ -65,70 +77,51 @@ test.describe('CUJ-1: поиск и аналоги (SRS-CAT-024/027/030/038/045/
     await runAxeCheck(page)
   })
 
-  test('CUJ-1: приглушённое отображение позиций без предложений рядом (SRS-CAT-045)', async ({ request }) => {
-    const farAway = await request.get(`${apiBaseUrl}/api/v1/medicines/search`, {
-      params: { text: SEED_ANALOG_CLUSTER.innName, lat: '0', lon: '0', radiusMeters: '1000' },
-    })
-    expect(farAway.ok()).toBe(true)
-    const items = ((await farAway.json()) as { data: readonly SearchItem[] }).data
-    expect(items.some((item) => item.cheapestOffer === null), 'бэкенд отдаёт cheapestOffer:null для удалённой точки').toBe(true)
-
-    test.skip(true, 'apps/web/src/features/search/api/search-results.api.ts не передаёт lat/lon — ветка cheapestOffer:null недостижима через реальный UI')
-  })
-
-  test('CUJ-1: axe check on medicine page (analogs block, neutral state)', async ({ page, request }) => {
-    const items = await searchByText(request, SEED_ANALOG_CLUSTER.referenceTradeName)
-    const reference = items.find((item) => item.tradeName === SEED_ANALOG_CLUSTER.referenceTradeName)
-    expect(reference, `referenceTradeName "${SEED_ANALOG_CLUSTER.referenceTradeName}" не найден в каталоге стенда`).toBeDefined()
-
-    await page.goto(`${webUrl!}/medicines/${reference!.medicineId}`)
+  test('CUJ-1: axe check on medicine page (analogs block)', async ({ page }) => {
+    await openMedicineViaSearch(page, SEED_ANALOG_CLUSTER.referenceTradeName)
     await expect(page.locator('[data-testid="analogs-block"]')).toBeVisible()
     await expect(page.locator('[data-testid="analogs-disclaimer"]')).not.toBeEmpty()
 
     await runAxeCheck(page)
   })
 
-  test('CUJ-1: analog banner shows correct savings for reference/generic pair', async ({ page, request }) => {
-    const items = await searchByText(request, SEED_ANALOG_CLUSTER.referenceTradeName)
-    const reference = items.find((item) => item.tradeName === SEED_ANALOG_CLUSTER.referenceTradeName)
-    expect(reference, `referenceTradeName "${SEED_ANALOG_CLUSTER.referenceTradeName}" не найден в каталоге стенда`).toBeDefined()
+  test('CUJ-1: analog banner shows savings for reference/generic pair, analog can be added to cart', async ({ page }) => {
+    await openMedicineViaSearch(page, SEED_ANALOG_CLUSTER.referenceTradeName)
 
-    // NullAnalogOfferLookupAdapter (catalog.module.ts:139, TODO(DTJ-101→DTJ-160)) — items всегда [].
-    // Известный дефект, координатор заводит DTJ-439 (подтверждено сообщением координатора).
-    test.skip(true, 'DTJ-439: ANALOG_OFFER_LOOKUP_PORT = NullAnalogOfferLookupAdapter — SavingsBanner недостижим на этом стенде')
-
-    await page.goto(`${webUrl!}/medicines/${reference!.medicineId}`)
     await expect(page.locator('[data-testid="analogs-savings-banner"]')).toBeVisible()
+    const analog = page.locator('[data-testid="analog-card"]').first()
+    await analog.getByRole('button').click()
+    await page.locator('[data-testid="header-cart-link"]').click()
+    await expect(page).toHaveURL(/\/cart$/)
+    await expect(page.locator('[data-testid="cart-item-row"]')).toHaveCount(1)
   })
 
-  test('CUJ-1: adding generic to cart creates soft reservation visible in /cart', async ({ page, request }) => {
-    const items = await searchByText(request, SEED_ANALOG_CLUSTER.genericTradeNames[0])
-    const generic = items.find((item) => item.tradeName === SEED_ANALOG_CLUSTER.genericTradeNames[0])
-    expect(generic, `generic "${SEED_ANALOG_CLUSTER.genericTradeNames[0]}" не найден в каталоге стенда`).toBeDefined()
-    expect(generic!.cheapestOffer, 'дженерик обязан иметь оффер в сиде').not.toBeNull()
+  test('CUJ-1: гость проходит путь покупки кликами — поиск, карточка, «В корзину», иконка корзины, /cart', async ({ page, request }) => {
+    const tradeName = SEED_ANALOG_CLUSTER.genericTradeNames[0]
+    const generic = (await searchByText(request, tradeName)).find((item) => item.tradeName === tradeName)
+    expect(generic?.cheapestOffer, 'дженерик обязан иметь оффер в сиде').toBeTruthy()
     const offer = generic!.cheapestOffer!
 
-    const addResponse = await request.post(`${apiBaseUrl}/api/v1/cart/items`, {
-      data: { medicineId: generic!.medicineId, pharmacyId: offer.pharmacyId, quantity: 1 },
-    })
-    expect(addResponse.ok(), 'POST /api/v1/cart/items (AddCartItemUseCase, SRS-ORD-005)').toBe(true)
-    const sessionToken = addResponse.headers()['x-cart-session-token']
-    expect(sessionToken, 'сервер обязан выдать X-Cart-Session-Token гостю').toBeTruthy()
+    await openMedicineViaSearch(page, tradeName)
+    await offerRowOf(page, offer.pharmacyName).getByRole('button').click()
+    await expect(page.locator('[data-testid="header-cart-count"]')).toHaveText('1')
+    await page.locator('[data-testid="header-cart-link"]').click()
 
-    // Гостевой токен корзины — тот же localStorage-ключ, что cart-session-store.ts.
-    await page.goto(webUrl!)
-    await page.evaluate((token) => {
-      localStorage.setItem('dorutj.cart-session', JSON.stringify({ state: { sessionToken: token }, version: 0 }))
-    }, sessionToken)
-    await page.goto(`${webUrl!}/cart`)
-
+    await expect(page).toHaveURL(/\/cart$/)
     const cartItem = page.locator('[data-testid="cart-item-row"]')
     await expect(cartItem).toBeVisible()
-    await expect(cartItem.locator('[data-testid="cart-item-medicine-name"]')).toHaveText(generic!.tradeName)
-    const expectedSomoni = (offer.priceDiram / 100).toFixed(2)
-    await expect(cartItem.locator('[data-testid="cart-item-price"]')).toContainText(expectedSomoni)
+    await expect(cartItem.locator('[data-testid="cart-item-medicine-name"]')).toHaveText(tradeName)
+    await expect(cartItem.locator('[data-testid="cart-item-price"]')).toContainText((offer.priceDiram / 100).toFixed(2))
 
     await runAxeCheck(page)
+  })
+
+  test('CUJ-1: «В корзину» доступна прямо в результатах поиска', async ({ page }) => {
+    await page.goto(webUrl!)
+    await page.locator('[data-testid="search-bar-input"]').fill(SEED_ANALOG_CLUSTER.genericTradeNames[1])
+    await page.keyboard.press('Enter')
+    await page.locator('[data-testid="search-result-card"]').first().getByRole('button', { name: /.+/ }).last().click()
+    await expect(page.locator('[data-testid="header-cart-count"]')).toHaveText('1')
   })
 
   test('CUJ-1: search with no results shows canonical empty state, not generic error', async ({ page }) => {
@@ -142,5 +135,52 @@ test.describe('CUJ-1: поиск и аналоги (SRS-CAT-024/027/030/038/045/
     await expect(page.locator('[data-testid="search-results-error"]')).toHaveCount(0)
 
     await runAxeCheck(page)
+  })
+})
+
+test.describe('CUJ-1: геолокация в поиске (SRS-CAT-045)', () => {
+  test.skip(webUrl === undefined, 'запускается только с E2E_WEB_URL=<адрес поднятого apps/web>')
+  // Точка вне зоны любой аптеки сида: ни у одной позиции нет остатка рядом.
+  test.use({ geolocation: { latitude: 0, longitude: 0 }, permissions: ['geolocation'] })
+
+  test('CUJ-1: приглушённое отображение позиций без предложений рядом', async ({ page }) => {
+    await page.goto(`${webUrl!}/search?text=${encodeURIComponent(SEED_ANALOG_CLUSTER.innName)}`)
+
+    await expect(page.locator('[data-testid="nearby-status"]')).toHaveAttribute('data-status', 'granted')
+    const dimmed = page.locator('[data-testid="search-result-card"].opacity-60')
+    await expect(dimmed.first()).toBeVisible()
+    await expect(dimmed.first().locator('[data-testid="medicine-card-no-stock"]')).toBeVisible()
+  })
+})
+
+test.describe('CUJ-1: восстановление сессии после перезагрузки (DTJ-440)', () => {
+  test.skip(webUrl === undefined, 'запускается только с E2E_WEB_URL=<адрес поднятого apps/web>')
+
+  test('CUJ-1: вошедший пользователь после перезагрузки остаётся вошедшим, корзина его', async ({ page, request }) => {
+    const tradeName = SEED_ANALOG_CLUSTER.genericTradeNames[0]
+    const generic = (await searchByText(request, tradeName)).find((item) => item.tradeName === tradeName)
+    expect(generic?.cheapestOffer, 'дженерик обязан иметь оффер в сиде').toBeTruthy()
+    const session = await loginViaApi(SEED_USERS.customer1.phone)
+    const added = await request.post(`${apiBaseUrl}/api/v1/cart/items`, {
+      headers: { authorization: `Bearer ${session.accessToken}` },
+      data: { medicineId: generic!.medicineId, pharmacyId: generic!.cheapestOffer!.pharmacyId, quantity: 1 },
+    })
+    expect(added.ok(), 'POST /api/v1/cart/items от имени customer1').toBe(true)
+
+    // Как после реального входа: access-токен в памяти, в localStorage — только refresh и user.
+    await page.goto(webUrl!)
+    await page.evaluate(
+      ([key, value]) => {
+        window.localStorage.setItem(key, value)
+      },
+      ['dorutj.auth', JSON.stringify({ state: { refreshToken: session.refreshToken, user: session.user }, version: 0 })] as const,
+    )
+
+    const itemRow = page.locator('[data-testid="cart-item-row"]', { hasText: tradeName }).first()
+    await page.goto(`${webUrl!}/cart`)
+    await expect(itemRow).toBeVisible()
+    // Повторная перезагрузка: ротированный refresh-токен из первой обязан был сохраниться.
+    await page.reload()
+    await expect(itemRow).toBeVisible()
   })
 })

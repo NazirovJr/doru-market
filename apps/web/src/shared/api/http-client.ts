@@ -186,6 +186,13 @@ function refreshAccessTokenOnce(): Promise<boolean> {
   return inFlightRefresh
 }
 
+export async function restoreSession(): Promise<void> {
+  const { refreshToken, accessToken } = useAuthStore.getState()
+  if (refreshToken !== null && accessToken === null) {
+    await refreshAccessTokenOnce()
+  }
+}
+
 async function requestWithAuthRetry(
   path: string,
   init: HttpClientOptions,

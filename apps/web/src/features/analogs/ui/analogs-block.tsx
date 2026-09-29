@@ -1,15 +1,14 @@
 import type { ReactElement } from 'react'
+import { SavingsBadge, Skeleton } from '@dorutj/ui'
 import { useT, type Locale, type TranslateFunction } from '@dorutj/i18n'
 import { useLocale } from '@/shared/config/locale-provider'
 import { useAnalogsQuery, type AnalogsDataDto, type UseAnalogsQueryGeo } from '../api/use-analogs-query'
 import { AnalogCard } from './analog-card'
-import { AnalogCardSkeleton } from './analog-card-skeleton'
-import { SavingsBanner } from './savings-banner'
 
 /**
  * `analogs-block.tsx` (DTJ-104, `SRS-CAT-036..040`, `TC-CAT-013..016`).
  *
- * Композиция: `SavingsBanner`/нейтральный заголовок (по серверному `titleKey`, компонент это
+ * Композиция: `SavingsBadge`/нейтральный заголовок (по серверному `titleKey`, компонент это
  * условие не пересчитывает — DTJ-104 п.3), список `AnalogCard[]`, дисклеймер.
  *
  * **Дисклеймер рендерится ВСЕГДА, включая ПУСТОЙ `items`** (решение CTO по этому тикету,
@@ -36,12 +35,13 @@ export interface AnalogsBlockProps {
   readonly medicineId: string
   readonly geo?: UseAnalogsQueryGeo | undefined
   readonly radiusMeters?: number | undefined
+  readonly onAddToCart: (medicineId: string, pharmacyId: string) => void
 }
 
 const AnalogsBlockSkeleton = (): ReactElement => (
   <div data-testid="analogs-block-skeleton" className="flex flex-col gap-2">
     {SKELETON_KEYS.map((key) => (
-      <AnalogCardSkeleton key={key} />
+      <Skeleton key={key} variant="card" />
     ))}
   </div>
 )
@@ -55,7 +55,11 @@ interface AnalogsBlockHeaderProps {
 /** `savingsDiram !== null` — узкая type-guard проверка типа TS, НЕ пересчёт бизнес-правила (см. JSDoc файла). */
 const AnalogsBlockHeader = ({ data, locale, t }: AnalogsBlockHeaderProps): ReactElement => {
   if (data.titleKey === TITLE_KEY_SAVINGS && data.savingsDiram !== null) {
-    return <SavingsBanner savingsDiram={data.savingsDiram} locale={locale} t={t} />
+    return (
+      <div data-testid="analogs-savings-banner" role="status">
+        <SavingsBadge savingsDiram={data.savingsDiram} locale={locale} t={t} />
+      </div>
+    )
   }
   return (
     <h2 data-testid="analogs-block-neutral-title" className="text-sm font-semibold text-ink">
@@ -68,16 +72,17 @@ interface AnalogsBlockContentProps {
   readonly data: AnalogsDataDto
   readonly locale: Locale
   readonly t: TranslateFunction
+  readonly onAddToCart: (medicineId: string, pharmacyId: string) => void
 }
 
-const AnalogsBlockContent = ({ data, locale, t }: AnalogsBlockContentProps): ReactElement => (
+const AnalogsBlockContent = ({ data, locale, t, onAddToCart }: AnalogsBlockContentProps): ReactElement => (
   <section data-testid="analogs-block" className="flex flex-col gap-3">
     <AnalogsBlockHeader data={data} locale={locale} t={t} />
     {data.items.length > 0 ? (
       <ul className="flex flex-col gap-2" data-testid="analogs-block-list">
         {data.items.map((item) => (
           <li key={item.medicineId}>
-            <AnalogCard item={item} locale={locale} t={t} />
+            <AnalogCard item={item} locale={locale} t={t} onAddToCart={onAddToCart} />
           </li>
         ))}
       </ul>
@@ -89,7 +94,7 @@ const AnalogsBlockContent = ({ data, locale, t }: AnalogsBlockContentProps): Rea
   </section>
 )
 
-export const AnalogsBlock = ({ medicineId, geo, radiusMeters }: AnalogsBlockProps): ReactElement | null => {
+export const AnalogsBlock = ({ medicineId, geo, radiusMeters, onAddToCart }: AnalogsBlockProps): ReactElement | null => {
   const { locale } = useLocale()
   const { t } = useT(locale)
   const query = useAnalogsQuery({ medicineId, geo, radiusMeters })
@@ -106,5 +111,5 @@ export const AnalogsBlock = ({ medicineId, geo, radiusMeters }: AnalogsBlockProp
     return null
   }
 
-  return <AnalogsBlockContent data={query.data} locale={locale} t={t} />
+  return <AnalogsBlockContent data={query.data} locale={locale} t={t} onAddToCart={onAddToCart} />
 }

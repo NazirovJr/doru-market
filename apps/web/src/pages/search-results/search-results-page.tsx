@@ -22,10 +22,14 @@
  * `ready` (список + кнопка «Загрузить ещё» при `hasNextPage`, курсорная пагинация DTJ-190).
  */
 import { useCallback, type ReactElement } from 'react'
-import { useSearchParams } from 'react-router'
-import { useT, type TranslateFunction } from '@dorutj/i18n'
+import { useNavigate, useSearchParams } from 'react-router'
+import { Button } from '@dorutj/ui'
+import { useT, type Locale, type TranslateFunction } from '@dorutj/i18n'
 import type { SearchResultItemDto } from '@dorutj/contracts'
 import { useLocale } from '@/shared/config/locale-provider'
+import { useUserGeo } from '@/shared/geo/use-user-geo'
+import { useAddToCart, type AddToCart } from '@/features/cart/model/use-add-to-cart'
+import { NearbyControl } from '@/features/search/ui/nearby-control'
 import { SearchBar } from '@/features/search/ui/search-bar'
 import { SearchResultCard } from '@/features/search/ui/search-result-card'
 import { useSearchResults, type UseSearchResultsResult } from '@/features/search/model/use-search-results'
@@ -83,14 +87,9 @@ const SearchResultsStatusBanner = ({ status, t, onRetry }: StatusBannerProps): R
     return (
       <div role="alert" data-testid="search-results-error" className="flex flex-col items-center gap-2 p-4 text-center text-sm text-ink">
         <p>{t('ux.error.generic_500')}</p>
-        <button
-          type="button"
-          data-testid="search-results-retry"
-          onClick={onRetry}
-          className="rounded-md bg-brand-primary px-3 py-1 font-semibold text-white"
-        >
+        <Button data-testid="search-results-retry" onClick={onRetry}>
           {t('ux.action.retry')}
-        </button>
+        </Button>
       </div>
     )
   }
@@ -109,28 +108,45 @@ interface SearchResultsListProps {
   readonly hasNextPage: boolean
   readonly isFetchingNextPage: boolean
   readonly onLoadMore: () => void
+  readonly locale: Locale
   readonly t: TranslateFunction
+  readonly isGeoActive: boolean
+  readonly onOpen: (medicineId: string) => void
+  readonly onAddToCart: AddToCart
 }
 
-const SearchResultsList = ({ items, hasNextPage, isFetchingNextPage, onLoadMore, t }: SearchResultsListProps): ReactElement => (
+const SearchResultsList = ({
+  items,
+  hasNextPage,
+  isFetchingNextPage,
+  onLoadMore,
+  locale,
+  t,
+  isGeoActive,
+  onOpen,
+  onAddToCart,
+}: SearchResultsListProps): ReactElement => (
   <div data-testid="search-results-list">
     <ul className="flex flex-col gap-3">
       {items.map((item) => (
         <li key={item.medicineId}>
-          <SearchResultCard item={item} t={t} />
+          <SearchResultCard
+            item={item}
+            locale={locale}
+            t={t}
+            dimmed={isGeoActive && item.cheapestOffer === null}
+            onOpen={onOpen}
+            onAddToCart={onAddToCart}
+          />
         </li>
       ))}
     </ul>
     {hasNextPage ? (
-      <button
-        type="button"
-        data-testid="search-results-load-more"
-        onClick={onLoadMore}
-        disabled={isFetchingNextPage}
-        className="mt-3 w-full rounded-md border border-line py-2 text-sm font-medium text-ink disabled:opacity-50"
-      >
-        {t('catalog.search.load_more')}
-      </button>
+      <div className="mt-3">
+        <Button variant="secondary" data-testid="search-results-load-more" onClick={onLoadMore} loading={isFetchingNextPage}>
+          {t('catalog.search.load_more')}
+        </Button>
+      </div>
     ) : null}
   </div>
 )
@@ -138,10 +154,13 @@ const SearchResultsList = ({ items, hasNextPage, isFetchingNextPage, onLoadMore,
 const SearchResultsPage = (): ReactElement => {
   const { locale } = useLocale()
   const { t } = useT(locale)
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const text = (searchParams.get(TEXT_PARAM) ?? '').trim()
 
-  const result = useSearchResults(text)
+  const geo = useUserGeo()
+  const result = useSearchResults(text, geo.coords)
+  const addToCart = useAddToCart()
   const status = resolveSearchResultsStatus(text.length > 0, result)
 
   const handleRetry = useCallback(() => {
@@ -152,9 +171,17 @@ const SearchResultsPage = (): ReactElement => {
     result.fetchNextPage()
   }, [result])
 
+  const handleOpen = useCallback(
+    (medicineId: string) => {
+      void navigate(`/medicines/${medicineId}`)
+    },
+    [navigate],
+  )
+
   return (
     <section className="flex flex-col gap-4" data-testid="search-results-page">
       <SearchBar initialQuery={text} />
+      <NearbyControl status={geo.status} onRequest={geo.request} t={t} />
       <SearchResultsStatusBanner status={status} t={t} onRetry={handleRetry} />
       {status === 'ready' ? (
         <SearchResultsList
@@ -162,7 +189,11 @@ const SearchResultsPage = (): ReactElement => {
           hasNextPage={result.hasNextPage}
           isFetchingNextPage={result.isFetchingNextPage}
           onLoadMore={handleLoadMore}
+          locale={locale}
           t={t}
+          isGeoActive={geo.coords !== null}
+          onOpen={handleOpen}
+          onAddToCart={addToCart}
         />
       ) : null}
     </section>

@@ -40,8 +40,9 @@ export interface MedicineCardProps {
   readonly innName: string
   readonly dosageForm: string
   readonly dosageStrength: string
-  readonly manufacturerName: string
-  readonly priceDiram: number
+  readonly manufacturerName?: string
+  /** Не задана — цена не рисуется (предложения нет либо цена выведена в `children`). */
+  readonly priceDiram?: number
   readonly controlCategory: MedicineCardControlCategory
   readonly inStock: boolean
   /** Уже отформатированная строка расстояния («1.2 км») — см. JSDoc модуля. */
@@ -87,7 +88,7 @@ export const MedicineCard = ({
               {tradeName}
             </p>
             <p style={{ margin: 0, fontSize: 'var(--font-size-xs)', color: 'var(--brand-text-muted)' }}>
-              {innName} · {dosageForm} {dosageStrength} · {manufacturerName}
+              {[innName, `${dosageForm} ${dosageStrength}`, manufacturerName].filter(Boolean).join(' · ')}
             </p>
           </div>
           {controlCategory !== 'none' && (
@@ -108,14 +109,16 @@ export const MedicineCard = ({
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-          <PriceTag amountDiram={priceDiram} locale={locale} />
-          {distanceLabel !== undefined && (
-            <span data-testid="medicine-card-distance" style={{ fontSize: 'var(--font-size-xs)', color: 'var(--brand-text-muted)' }}>
-              {distanceLabel}
-            </span>
-          )}
-        </div>
+        {(priceDiram !== undefined || distanceLabel !== undefined) && (
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+            {priceDiram !== undefined && <PriceTag amountDiram={priceDiram} locale={locale} />}
+            {distanceLabel !== undefined && (
+              <span data-testid="medicine-card-distance" style={{ fontSize: 'var(--font-size-xs)', color: 'var(--brand-text-muted)' }}>
+                {distanceLabel}
+              </span>
+            )}
+          </div>
+        )}
 
         {!inStock && (
           <p data-testid="medicine-card-no-stock" style={{ margin: 0, fontSize: 'var(--font-size-xs)', color: 'var(--brand-text-muted)' }}>
