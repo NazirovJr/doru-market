@@ -34,7 +34,8 @@ describe('buildCorsOptions — ответы @fastify/cors для браузер�
 
   async function buildApp(): Promise<FastifyInstance> {
     const app = Fastify()
-    await app.register(cors, buildCorsOptions(fakeConfig()))
+    // @fastify/cors резолвится в другую копию fastify — тот же приём, что в main.ts.
+    await app.register(cors as unknown as Parameters<FastifyInstance['register']>[0], buildCorsOptions(fakeConfig()))
     app.get('/ping', () => ({ ok: true }))
     return app
   }
