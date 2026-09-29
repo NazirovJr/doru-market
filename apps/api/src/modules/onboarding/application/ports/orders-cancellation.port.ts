@@ -1,7 +1,6 @@
 /**
  * `OrdersCancellationPort` (DTJ-071) — application-уровень контракта
- * принудительной отмены незавершённых заказов. Временная null-реализация
- * (NullOrdersCancellationAdapter) — реальный адаптер подключается в EP-10.
+ * принудительной отмены незавершённых заказов; реализует `OrdersCancellationAdapter`.
  */
 export const ORDERS_CANCELLATION = Symbol.for('@dorutj/onboarding/orders-cancellation')
 

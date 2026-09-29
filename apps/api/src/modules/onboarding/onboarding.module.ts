@@ -23,7 +23,7 @@ import { DrizzlePharmacyChainRepository } from './infrastructure/repositories/ph
 import { DrizzlePharmacyAccountRepository } from './infrastructure/repositories/pharmacy-account.repository.js'
 import { DrizzleOnboardingReviewLogRepository } from './infrastructure/repositories/onboarding-review-log.repository.js'
 import { PharmacyChainStatusAdapter } from './infrastructure/adapters/pharmacy-chain-status.adapter.js'
-import { NullOrdersCancellationAdapter } from './infrastructure/adapters/null-orders-cancellation.adapter.js'
+import { OrdersCancellationAdapter } from './infrastructure/adapters/orders-cancellation.adapter.js'
 import { LocalObjectStorageAdapter } from './infrastructure/adapters/local-object-storage.adapter.js'
 import { StubOtpAdapter } from './infrastructure/adapters/otp.adapter.js'
 import { OnboardingFacade } from './onboarding.facade.js'
@@ -64,7 +64,7 @@ import { PharmacyAccountsAdminController } from './presentation/controllers/phar
     { provide: OBJECT_STORAGE, useClass: LocalObjectStorageAdapter },
     { provide: OTP_PORT, useClass: StubOtpAdapter },
     { provide: PHARMACY_CHAIN_STATUS, useClass: PharmacyChainStatusAdapter },
-    { provide: ORDERS_CANCELLATION, useClass: NullOrdersCancellationAdapter },
+    { provide: ORDERS_CANCELLATION, useClass: OrdersCancellationAdapter },
     SubmitChainApplicationUseCase,
     VerifyChainContactPhoneUseCase,
     SubmitPharmacyApplicationUseCase,

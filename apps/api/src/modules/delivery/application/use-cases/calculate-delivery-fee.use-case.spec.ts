@@ -196,3 +196,35 @@ describe('CalculateDeliveryFeeUseCase — SRS-DELIV-048', () => {
     expect(fee).toBe(feeExplicitDay)
   })
 })
+
+describe('CalculateDeliveryFeeUseCase.executeForReturn', () => {
+  const returnInput = { pharmacyGeoPoint: PHARMACY, customerGeoPoint: CUSTOMER_INSIDE, tenantId: TENANT_ID }
+
+  it('игнорирует бесплатный порог и минимальную сумму: тариф рейса положителен', async () => {
+    const { useCase } = makeUseCase({
+      rules: new Map([['zone:zone-1', rule({ freeDeliveryThresholdDiram: 100n, minOrderAmountDiram: 999999n })]]),
+    })
+    expect(await useCase.executeForReturn(returnInput)).toBeGreaterThan(1000n)
+  })
+
+  it('совпадает с обычной доставкой, когда порог и минимум не срабатывают', async () => {
+    const { useCase } = makeUseCase({})
+    expect(await useCase.executeForReturn(returnInput)).toBe(await useCase.execute(baseInput()))
+  })
+
+  it('ночная надбавка применяется', async () => {
+    const { useCase } = makeUseCase({
+      rules: new Map([['zone:zone-1', rule({ nightTariffStartTime: '22:00', nightTariffEndTime: '06:00', nightTariffExtraDiram: 500n })]]),
+    })
+    const night = await useCase.executeForReturn({ ...returnInput, atMoment: NIGHT_MOMENT })
+    const day = await useCase.executeForReturn({ ...returnInput, atMoment: NOW })
+    expect(night).toBe(day + 500n)
+  })
+
+  it('точка вне зон -> DeliveryZoneNotCoveredError', async () => {
+    const { useCase } = makeUseCase({})
+    await expect(useCase.executeForReturn({ ...returnInput, customerGeoPoint: CUSTOMER_OUTSIDE })).rejects.toBeInstanceOf(
+      DeliveryZoneNotCoveredError,
+    )
+  })
+})

@@ -18,19 +18,15 @@ import {
   type ProvisionCourierInput,
   type CourierProvisionSnapshot,
 } from './use-cases/provision-courier.use-case.js'
+import { ReturnTripService, type ReturnCourierAssignment, type ReturnTripInput } from './services/return-trip.service.js'
 
-export type { CalculateDeliveryFeeInput, ProvisionCourierInput, CourierProvisionSnapshot }
+export type { CalculateDeliveryFeeInput, ProvisionCourierInput, CourierProvisionSnapshot, ReturnCourierAssignment, ReturnTripInput }
 
 export interface CreateDeliveryAssignmentInput {
   readonly id: string
   readonly orderId: string
   readonly landmarkText: string | null
   readonly requiresColdChain: boolean
-}
-
-export interface ReturnCourierAssignment {
-  readonly courierId: string
-  readonly etaMinutes: number | null
 }
 
 export interface ReassignDeliveryInput {
@@ -42,13 +38,14 @@ export interface ReassignDeliveryInput {
 
 @Injectable()
 export class DeliveryFacade {
-  // eslint-disable-next-line max-params -- 5 DI-инъекций, конструктор NestJS.
+  // eslint-disable-next-line max-params -- 6 DI-инъекций, конструктор NestJS.
   public constructor(
     @Inject(DELIVERY_ASSIGNMENT_REPOSITORY) private readonly assignments: DeliveryAssignmentRepositoryPort,
     @Inject(COURIER_REPOSITORY) private readonly couriers: CourierRepositoryPort,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(CalculateDeliveryFeeUseCase) private readonly calculateFee: CalculateDeliveryFeeUseCase,
     @Inject(ProvisionCourierUseCase) private readonly provisionCourierUseCase: ProvisionCourierUseCase,
+    @Inject(ReturnTripService) private readonly returnTrip: ReturnTripService,
   ) {}
 
   public async createAssignment(input: CreateDeliveryAssignmentInput): Promise<DeliveryAssignmentSnapshot> {
@@ -107,9 +104,13 @@ export class DeliveryFacade {
     return this.provisionCourierUseCase.execute(input)
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await -- async — контракт порта
-  public async assignReturnCourier(_tenantId: string, _returnId: string): Promise<ReturnCourierAssignment | null> {
-    return null
+  public async calculateReturnFee(input: ReturnTripInput): Promise<bigint> {
+    return this.returnTrip.calculateReturnFee(input)
+  }
+
+  /** Подбор ближайшего подходящего курьера для обратного рейса; назначение не создаётся — курьера подтверждает диспетчер. */
+  public async suggestReturnCourier(input: ReturnTripInput): Promise<ReturnCourierAssignment | null> {
+    return this.returnTrip.suggestReturnCourier(input)
   }
 
   private async getAssignmentOrThrow(assignmentId: string): Promise<DeliveryAssignment> {

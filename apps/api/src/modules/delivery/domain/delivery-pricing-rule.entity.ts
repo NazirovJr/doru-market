@@ -74,6 +74,11 @@ export class DeliveryPricingRule {
     if (threshold !== null && itemsTotalDiram.isGreaterThanOrEqual(threshold)) {
       return Money.fromDiram(ZERO_DIRAM)
     }
+    return this.computeTripFee(distanceKm, isNightTariff)
+  }
+
+  /** Без порога бесплатной доставки и минимальной суммы: компенсация курьеру за рейс не зависит от суммы заказа. */
+  computeTripFee(distanceKm: number, isNightTariff: boolean): Money {
     const distanceFeeDiram = BigInt(Math.round(Number(this.props.ratePerKmDiram.diram) * distanceKm))
     let fee = this.props.baseRateDiram.add(Money.fromDiram(distanceFeeDiram))
     if (isNightTariff) {

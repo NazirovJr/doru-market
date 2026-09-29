@@ -46,3 +46,10 @@ export {
   type PartialFulfillmentRefundCommand,
 } from './application/ports/refund-facade.port.js'
 export { type OrderCancelReason } from './domain/order-domain-event.js'
+
+/** Узкий порт массовой отмены незавершённых заказов аптеки (потребитель — `onboarding`, приостановка аптеки). */
+export const PHARMACY_ORDERS_CANCELLATION = Symbol.for('@dorutj/orders/pharmacy-orders-cancellation')
+export type {
+  CancelPharmacyIncompleteOrdersUseCase as PharmacyOrdersCancellation,
+  CancelPharmacyIncompleteOrdersResult as PharmacyOrdersCancellationResult,
+} from './application/order-lifecycle/cancel-pharmacy-incomplete-orders.use-case.js'

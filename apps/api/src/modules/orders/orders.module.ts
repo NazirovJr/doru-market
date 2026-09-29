@@ -122,7 +122,7 @@ import { ORDER_NUMBER_GENERATOR } from '@/shared-kernel/application/ports/order-
 import { RedisOrderNumberGeneratorAdapter } from './infrastructure/adapters/redis-order-number-generator.adapter.js'
 import { REFUND_FACADE_PORT } from './application/ports/refund-facade.port.js'
 import { OrdersFacade } from './application/orders.facade.js'
-import { ORDERS_FACADE } from './index.js'
+import { ORDERS_FACADE, PHARMACY_ORDERS_CANCELLATION } from './index.js'
 import { CancelOrderUseCase } from './application/order-lifecycle/cancel-order.use-case.js'
 import type { Result } from '@dorutj/domain-kernel'
 // DTJ-227 (checkout) — снимает 4 null-адаптера ниже (D-EP09-19) и добавляет оркестрацию.
@@ -187,6 +187,7 @@ import { CheckoutController } from './presentation/checkout/checkout.controller.
 // (см. JSDoc `system-cancel-order.use-case.ts` «МОСТ МЕЖДУ ПРОЦЕССАМИ»). Новые файлы,
 // providers/controllers дополнены строками — существующие не тронуты (D-27).
 import { SystemCancelOrderUseCase } from './application/order-lifecycle/system-cancel-order.use-case.js'
+import { CancelPharmacyIncompleteOrdersUseCase } from './application/order-lifecycle/cancel-pharmacy-incomplete-orders.use-case.js'
 import { InternalServiceGuard } from './presentation/internal/internal-service.guard.js'
 import { SystemCancelOrderController } from './presentation/internal/system-cancel-order.controller.js'
 // DTJ-301 (EP-12, модуль 24 «Терминал фармацевта») — очередь/accept/reclaim. Новых портов не
@@ -518,6 +519,8 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     // DTJ-253/254 (EP-10) — SystemCancelOrderUseCase переиспользует ТЕ ЖЕ провайдеры выше
     // (OrdersFacade/INVENTORY_FACADE_PORT/REFUND_FACADE_PORT/CLOCK), новых DI-токенов не требует.
     SystemCancelOrderUseCase,
+    CancelPharmacyIncompleteOrdersUseCase,
+    { provide: PHARMACY_ORDERS_CANCELLATION, useExisting: CancelPharmacyIncompleteOrdersUseCase },
     InternalServiceGuard,
     // DTJ-301 (EP-12, модуль 24) — очередь/accept/reclaim терминала фармацевта (см. JSDoc импортов выше).
     GetOrderQueueUseCase,
@@ -554,7 +557,7 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
   // вызова из auth»). Оба токена — единственный легальный межмодульный путь (`02-CLEAN-
   // ARCHITECTURE-AND-CODE.md` §1.2), тот же приём, что `exports: [OnboardingFacade]` в
   // `onboarding.module.ts`.
-  exports: [ORDERS_FACADE, OrdersFacade],
+  exports: [ORDERS_FACADE, OrdersFacade, PHARMACY_ORDERS_CANCELLATION],
 })
 // NestJS module marker class: Nest требует класс-носитель декоратора @Module, providers
 // регистрируются декоратором, а не телом класса — правило ниже не ловит реальную проблему,
