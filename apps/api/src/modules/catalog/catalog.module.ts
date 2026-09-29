@@ -6,6 +6,9 @@
  * Сейчас модуль пуст — скелет для подключения в корневой `AppModule` последующими тикетами.
  */
 import { Module } from '@nestjs/common'
+// DTJ-439: офферы аналогов (аптека/цена/остаток) принадлежат inventory — импорт модуля
+// для DI-резолва InventoryFacade в AnalogOfferLookupAdapter.
+import { InventoryModule } from '@/modules/inventory/inventory.module.js'
 import { MedicinesController } from './presentation/controllers/medicines.controller.js'
 import { CategoriesController } from './presentation/controllers/categories.controller.js'
 // DTJ-197: контроллер карты аптек, первый потребитель GetPharmacyMapPinsUseCase (DTJ-196).
@@ -37,9 +40,9 @@ import { DosageFormNormalizerService } from './application/services/dosage-form-
 import { ResolveMedicineByCompositeUseCase } from './application/use-cases/resolve-medicine-by-composite.use-case.js'
 import { ANALOG_CANDIDATES_REPOSITORY } from './application/ports/analog-candidates.port.js'
 import { AnalogCandidatesAdapter } from './infrastructure/adapters/analog-candidates.adapter.js'
-// DTJ-101: порт офферов аналогов + Null-адаптер (временная заглушка, см. TODO в adapter).
+// DTJ-439: порт офферов аналогов — реальный адаптер поверх InventoryFacade (заменил Null-адаптер DTJ-101).
 import { ANALOG_OFFER_LOOKUP_PORT } from './application/ports/analog-offer-lookup.port.js'
-import { NullAnalogOfferLookupAdapter } from './infrastructure/adapters/analog-offer-lookup.adapter.js'
+import { AnalogOfferLookupAdapter } from './infrastructure/adapters/analog-offer-lookup.adapter.js'
 // DTJ-101: оркестратор подбора аналогов.
 import { FindAnalogsUseCase } from './application/use-cases/find-analogs.use-case.js'
 // DTJ-096: новые use cases и фасад
@@ -116,6 +119,8 @@ import { AnalogsController } from './presentation/controllers/analogs.controller
 const MS_PER_SECOND = 1000
 
 @Module({
+  // DTJ-439: InventoryFacade (DI-резолв AnalogOfferLookupAdapter) — единственный import модуля.
+  imports: [InventoryModule],
   providers: [
     // Волна 5, блок B: единственная продакшен-реализация — Drizzle, читает `medicines`/
     // `medicine_substances`/`categories` (см. комментарий у импорта выше и
@@ -133,10 +138,8 @@ const MS_PER_SECOND = 1000
     // + фильтрам видимости/безопасности. Первый рубеж защиты перед тяжёлым
     // доменным решением AnalogEquivalenceService.isAnalog() (DTJ-099).
     { provide: ANALOG_CANDIDATES_REPOSITORY, useClass: AnalogCandidatesAdapter },
-    // DTJ-101: временная заглушка `NullAnalogOfferLookupAdapter` возвращает пустой
-    // `Map` офферов. После появления `InventoryFacade.getStockAndPriceBatch` (EP-05)
-    // или согласования ADR на прямой SQL-путь — заменить `useClass` без правок use case.
-    { provide: ANALOG_OFFER_LOOKUP_PORT, useClass: NullAnalogOfferLookupAdapter },
+    // DTJ-439: реальная реализация — делегирует InventoryFacade.getOffersForMedicines.
+    { provide: ANALOG_OFFER_LOOKUP_PORT, useClass: AnalogOfferLookupAdapter },
     InMemoryMedicineReadRepository,
     InMemoryCategoriesReadRepository,
     PostgresMedicineReadRepository,
@@ -144,7 +147,7 @@ const MS_PER_SECOND = 1000
     CatalogRepositoryAdapter,
     FuzzyMedicineMatcherAdapter,
     AnalogCandidatesAdapter,
-    NullAnalogOfferLookupAdapter,
+    AnalogOfferLookupAdapter,
     DosageFormNormalizerService,
     ResolveMedicineByCompositeUseCase,
     GetMedicineByIdUseCase,
