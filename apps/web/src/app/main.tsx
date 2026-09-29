@@ -5,6 +5,7 @@ import { RouterProvider } from 'react-router'
 import { queryClient } from '@/app/providers/query-client'
 import { LocaleProvider } from '@/shared/config/locale-provider'
 import { router } from '@/app/router'
+import { bootstrapBranding } from '@/app/bootstrap-branding'
 import '@/app/styles.css'
 
 const rootElement = document.getElementById('root')
@@ -12,12 +13,14 @@ if (rootElement === null) {
   throw new Error('Корневой DOM-узел #root не найден — проверь apps/web/index.html')
 }
 
-createRoot(rootElement).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <LocaleProvider>
-        <RouterProvider router={router} />
-      </LocaleProvider>
-    </QueryClientProvider>
-  </StrictMode>,
-)
+void bootstrapBranding().then(() => {
+  createRoot(rootElement).render(
+    <StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <LocaleProvider>
+          <RouterProvider router={router} />
+        </LocaleProvider>
+      </QueryClientProvider>
+    </StrictMode>,
+  )
+})

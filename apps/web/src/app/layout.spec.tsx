@@ -5,7 +5,7 @@ import { AppLayout } from '@/app/layout'
 import { LocaleProvider } from '@/shared/config/locale-provider'
 
 describe('AppLayout (smoke)', () => {
-  it('рендерится с плейсхолдерами бренда/языка без падений', () => {
+  it('рендерится с брендом и переключателем языка без падений', () => {
     const router = createMemoryRouter(
       [
         {
@@ -23,7 +23,7 @@ describe('AppLayout (smoke)', () => {
 
     render(<RouterProvider router={router} />)
 
-    expect(screen.getByTestId('brand-placeholder')).toHaveTextContent('[ Бренд ]')
+    expect(screen.getByTestId('brand-name')).toHaveTextContent('DoruTJ')
     expect(screen.getByTestId('language-switcher-placeholder')).toBeInTheDocument()
     expect(screen.getByTestId('child')).toHaveTextContent('ok')
   })

@@ -1,11 +1,11 @@
 @import 'tailwindcss';
 
-/* Временные @theme-токены оболочки (DTJ-434) — тот же приём, что apps/pharmacy/src/app/styles.css. */
-@theme {
-  --color-surface: #ffffff;
-  --color-ink: #0f172a;
-  --color-ink-muted: #64748b;
-  --color-line: #e2e8f0;
+/* Оболочка читает токены бренда `--brand-*` — рантайм-брендинг тенанта меняет их без пересборки. */
+@theme inline {
+  --color-surface: var(--brand-surface);
+  --color-ink: var(--brand-text);
+  --color-ink-muted: var(--brand-text-muted);
+  --color-line: var(--brand-border);
 }
 
 body {

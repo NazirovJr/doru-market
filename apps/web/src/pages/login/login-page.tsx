@@ -1,6 +1,7 @@
 import { useReducer, useCallback, type ReactElement } from 'react'
 import { useNavigate } from 'react-router'
 import { useT } from '@dorutj/i18n'
+import { useTenantBranding } from '@dorutj/ui'
 import { useLocale } from '@/shared/config/locale-provider'
 import { PhoneStep } from '@/features/auth/ui/phone-step'
 import { CodeStep } from '@/features/auth/ui/code-step'
@@ -38,6 +39,7 @@ import {
 const LoginPage = (): ReactElement => {
   const { locale } = useLocale()
   const { t } = useT(locale)
+  const brandName = useTenantBranding()?.brandName ?? t('brand.name')
   const navigate = useNavigate()
   const [state, dispatch] = useReducer(loginFlowReducer, initialState)
 
@@ -80,7 +82,7 @@ const LoginPage = (): ReactElement => {
               Кнопка рендерится всегда; вне TWA она disabled с hint. */}
           <div className="mx-auto flex w-full max-w-sm items-center gap-2 text-xs text-ink-muted">
             <span className="h-px flex-1 bg-line" />
-            <span>{t('brand.name')}</span>
+            <span>{brandName}</span>
             <span className="h-px flex-1 bg-line" />
           </div>
           <TelegramStep onSuccess={handleTelegramSuccess} />
