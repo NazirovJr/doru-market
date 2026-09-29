@@ -381,6 +381,9 @@ domain/application/infrastructure/presentation конкретного модул
 | DTJ-441 | Обработчик очереди inventory-sync в apps/worker и выбор аптеки для pharmacy_admin сети при импорте | EP-04 | infrastructure | M | DTJ-157, DTJ-160, DTJ-435 | apps/worker/src/jobs/inventory-sync-batch/**; inventory-excel-import.controller.ts; apps/pharmacy inventory-bulk |
 | DTJ-442 | Онбординг вживую: ZodValidationPipe ломает маршруты с :id, approve не активирует аптеку, скан лицензии не виден | EP-02 | presentation | M | — | onboarding presentation/controllers/**; review use case; apps/admin onboarding-verification/** |
 | DTJ-443 | AuthGuard учитывает отзыв сессии: access-токен отозванной семьи больше не принимается | EP-01 | presentation | S | — | auth.guard.ts; auth infrastructure (кэш) |
+| DTJ-444 | Межтенантная изоляция создания персонала: POST /staff-accounts проверяет сеть actor'а | EP-15 | application | S | DTJ-030, DTJ-364 | staff-account.policy.ts; create-staff-account.use-case.ts |
+| DTJ-445 | Прод-образ apps/api собирается и применяет миграции | EP-01 | infra | M | DTJ-001, DTJ-412 | infra/docker/Dockerfile.api; docker-entrypoint.sh |
+| DTJ-446 | Заглушки → реальные адаптеры: доставка возврата и отмена заказов при приостановке аптеки | EP-11 | infrastructure | M | DTJ-273, DTJ-071, DTJ-315 | returns/onboarding adapters |
 
 ¹ `0008_i18n_overrides_review_status.sql` (DTJ-103) ещё не реализован, но это имя уже занято
 двумя другими миграциями (`0008_onboarding_foundation.sql`, `0008_user_telegram_identities.sql`) —
