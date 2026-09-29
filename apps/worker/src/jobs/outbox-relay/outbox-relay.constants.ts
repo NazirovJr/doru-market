@@ -10,6 +10,12 @@ export const OUTBOX_POLL_INTERVAL_MS = 2000
 /** Размер порции `OutboxReaderPort.claimPending()` за один тик. ASSUMPTION. */
 export const OUTBOX_RELAY_BATCH_LIMIT = 100
 
+/** Попытки job'а domain-events: без них сбой обработчика (банк недоступен) терял событие с первой ошибки. */
+export const DOMAIN_EVENT_JOB_ATTEMPTS = 10
+
+/** База экспоненциального backoff между попытками (5с, 10с, 20с ... ~40 мин до последней). */
+export const DOMAIN_EVENT_RETRY_BACKOFF_MS = 5000
+
 /** Внутренняя служебная очередь BullMQ, тикающая релей — НЕ очередь доменных событий. */
 export const OUTBOX_RELAY_QUEUE_NAME = 'outbox-relay'
 

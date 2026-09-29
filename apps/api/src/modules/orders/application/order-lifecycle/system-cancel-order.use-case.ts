@@ -9,10 +9,8 @@
  * проверку владения». Раздельные use case'ы — не дублирование бизнес-правила, а разделение ДВУХ
  * разных вопросов: «может ли ЭТОТ АКТОР отменить ЭТОТ заказ» (человек, `OrderPolicy`) и «легален
  * ли ЭТОТ ПЕРЕХОД» (state machine, `order.state-machine.ts`, ЕДИНСТВЕННЫЙ источник истины для
- * ОБОИХ use case'ов — не продублирован). Остальная оркестрация (release stock, рефанд-если-нужен)
- * ЦЕЛИКОМ переиспользует ТЕ ЖЕ порты (`InventoryFacadePort`/`RefundFacadePort`) и ТУ ЖЕ формулу
- * `isRefundRequired` (D-25), что `CancelOrderUseCase` — см. JSDoc `isSystemRefundRequired` ниже
- * про причину, почему формула здесь СВОЯ копия, а не импорт приватной функции соседнего файла.
+ * ОБОИХ use case'ов — не продублирован). Отмена, release stock и рефанд-если-нужен — общий
+ * `OrderCancellationService` (одна формула `isRefundRequired`, D-25, гарантия доведения рефанда).
  *
  * МОСТ МЕЖДУ ПРОЦЕССАМИ (ключевое архитектурное решение этого файла, зафиксировано в отчёте
  * сдачи DTJ-253 как `assumptions`): тикеты DTJ-253/254 пишут `PaymentsOrdersPort.cancel(...)`
@@ -40,19 +38,12 @@
  */
 import { Inject, Injectable } from '@nestjs/common'
 import type { Logger } from 'pino'
-import { isErr } from '@dorutj/domain-kernel'
-import { NotFoundError, PaymentProviderUnavailableError, type OrderPaymentMethod, type OrderStatus } from '@dorutj/contracts'
+import { NotFoundError, type OrderStatus } from '@dorutj/contracts'
 import { PINO_LOGGER } from '@/common/logging/pino-logger.token.js'
 import { CLOCK, type Clock } from '@/shared-kernel/application/ports/clock.port.js'
 import { OrdersFacade } from '@/modules/orders/application/orders.facade.js'
-import {
-  INVENTORY_FACADE_PORT,
-  type InventoryFacadePort,
-  type ReleaseStockItemCommand,
-} from '@/modules/orders/application/ports/inventory-facade.port.js'
-import { REFUND_FACADE_PORT, type RefundFacadePort } from '@/modules/orders/application/ports/refund-facade.port.js'
-import type { Order } from '@/modules/orders/domain/order.entity.js'
 import type { OrderCancelReason } from '@/modules/orders/domain/order-domain-event.js'
+import { OrderCancellationService } from './order-cancellation.service.js'
 
 export interface SystemCancelOrderCommand {
   readonly tenantId: string
@@ -68,33 +59,12 @@ export interface SystemCancelOrderResult {
   readonly refundIssued: boolean
 }
 
-/** Статусы, из которых деньги (non-cash) реально захвачены в эскроу к моменту отмены (D-25).
- * ЗЕРКАЛО `ESCROW_CAPTURED_STATUSES` (`cancel-order.use-case.ts`, EP-09) — НЕ импорт приватной
- * (не экспортированной) константы соседнего модуля/тикета: копия формулы через границу
- * `files_owned` — тот же класс необходимого дублирования, что `EscrowLedgerImbalanceMetric`
- * (apps/api ↔ apps/worker, DTJ-247) — источник D-25 стабилен (архитектурное решение, не
- * реализационная деталь), риск расхождения копий низкий, а альтернатива (экспорт приватной
- * функции ИЗ чужого `files_owned` этим тикетом) нарушала бы правило 7 AGENTS.md сильнее. */
-const ESCROW_CAPTURED_STATUSES = new Set<OrderStatus>(['paid_escrow', 'processing'])
-
-function isSystemRefundRequired(preStatus: OrderStatus, paymentMethod: OrderPaymentMethod): boolean {
-  if (paymentMethod === 'cash_courier') {
-    return false
-  }
-  return ESCROW_CAPTURED_STATUSES.has(preStatus)
-}
-
-function toReleaseItems(order: Order): readonly ReleaseStockItemCommand[] {
-  return order.items.map((item) => ({ inventoryBatchId: item.inventoryBatchId, quantity: item.quantity }))
-}
-
 @Injectable()
 export class SystemCancelOrderUseCase {
-  // eslint-disable-next-line max-params -- 3 порта (OrdersFacade/InventoryFacadePort/RefundFacadePort) + Clock + PINO_LOGGER — идентичный состав `CancelOrderUseCase` (см. её JSDoc про explicit @Inject/esbuild DTJ-001), минус OrderPolicy (не читает).
+  // eslint-disable-next-line max-params -- конструктор NestJS с DI-инъекциями (явный @Inject на каждой, DTJ-001).
   constructor(
     @Inject(OrdersFacade) private readonly ordersFacade: OrdersFacade,
-    @Inject(INVENTORY_FACADE_PORT) private readonly inventoryFacade: InventoryFacadePort,
-    @Inject(REFUND_FACADE_PORT) private readonly refundFacade: RefundFacadePort,
+    @Inject(OrderCancellationService) private readonly cancellation: OrderCancellationService,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(PINO_LOGGER) private readonly logger: Logger,
   ) {}
@@ -109,35 +79,15 @@ export class SystemCancelOrderUseCase {
       return { orderId: cmd.orderId, status: 'skipped', refundIssued: false }
     }
 
-    const refundRequired = isSystemRefundRequired(order.status, order.paymentMethod)
-    const releaseItems = toReleaseItems(order)
-
-    await this.ordersFacade.cancel(cmd.orderId, {
-      tenantId: cmd.tenantId,
+    const { refundIssued } = await this.cancellation.cancel({
+      order,
       reason: cmd.reason,
       actor: { kind: 'system' },
       now: this.clock.now(),
     })
 
-    // ВСЕГДА, независимо от денежной ветки (SRS-ORD-029/032..036, тот же порядок, что
-    // `CancelOrderUseCase`) — до рефанда: склад не должен держать резерв уже отменённого заказа.
-    await this.inventoryFacade.releaseStock(releaseItems)
-    if (refundRequired) {
-      await this.refundOrThrow(cmd.orderId, cmd.reason)
-    }
-
-    this.logger.info(
-      { orderId: cmd.orderId, reason: cmd.reason, refundIssued: refundRequired },
-      'order_system_cancelled',
-    )
-    return { orderId: cmd.orderId, status: 'cancelled', refundIssued: refundRequired }
-  }
-
-  private async refundOrThrow(orderId: string, reason: OrderCancelReason): Promise<void> {
-    const result = await this.refundFacade.refundFull(orderId, reason)
-    if (isErr(result)) {
-      throw new PaymentProviderUnavailableError({ orderId, cause: result.error })
-    }
+    this.logger.info({ orderId: cmd.orderId, reason: cmd.reason, refundIssued }, 'order_system_cancelled')
+    return { orderId: cmd.orderId, status: 'cancelled', refundIssued }
   }
 
   private logSkipped(cmd: SystemCancelOrderCommand, actualStatus: OrderStatus): void {

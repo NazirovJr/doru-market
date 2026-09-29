@@ -108,7 +108,6 @@ export class DeliveryFacade {
     return this.returnTrip.calculateReturnFee(input)
   }
 
-  /** Подбор ближайшего подходящего курьера для обратного рейса; назначение не создаётся — курьера подтверждает диспетчер. */
   public async suggestReturnCourier(input: ReturnTripInput): Promise<ReturnCourierAssignment | null> {
     return this.returnTrip.suggestReturnCourier(input)
   }

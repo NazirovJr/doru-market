@@ -188,6 +188,8 @@ import { CheckoutController } from './presentation/checkout/checkout.controller.
 // providers/controllers дополнены строками — существующие не тронуты (D-27).
 import { SystemCancelOrderUseCase } from './application/order-lifecycle/system-cancel-order.use-case.js'
 import { CancelPharmacyIncompleteOrdersUseCase } from './application/order-lifecycle/cancel-pharmacy-incomplete-orders.use-case.js'
+import { OrderCancellationService } from './application/order-lifecycle/order-cancellation.service.js'
+import { RefundOnOrderCancelledDomainEventHandler } from './application/order-lifecycle/refund-on-order-cancelled.domain-event-handler.js'
 import { InternalServiceGuard } from './presentation/internal/internal-service.guard.js'
 import { SystemCancelOrderController } from './presentation/internal/system-cancel-order.controller.js'
 // DTJ-301 (EP-12, модуль 24 «Терминал фармацевта») — очередь/accept/reclaim. Новых портов не
@@ -519,6 +521,8 @@ export class UnimplementedPrescriptionsFacadeAdapter implements PrescriptionsFac
     // DTJ-253/254 (EP-10) — SystemCancelOrderUseCase переиспользует ТЕ ЖЕ провайдеры выше
     // (OrdersFacade/INVENTORY_FACADE_PORT/REFUND_FACADE_PORT/CLOCK), новых DI-токенов не требует.
     SystemCancelOrderUseCase,
+    OrderCancellationService,
+    RefundOnOrderCancelledDomainEventHandler,
     CancelPharmacyIncompleteOrdersUseCase,
     { provide: PHARMACY_ORDERS_CANCELLATION, useExisting: CancelPharmacyIncompleteOrdersUseCase },
     InternalServiceGuard,

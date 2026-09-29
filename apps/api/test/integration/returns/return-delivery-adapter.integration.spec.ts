@@ -1,7 +1,3 @@
-/**
- * Возврат от запроса до `return_in_transit` через РЕАЛЬНЫЙ `AppModule` (DI-граф целиком) и реальную БД:
- * тариф обратного рейса считает `DeliveryFacade`, подбор курьера идёт через пул кандидатов delivery.
- */
 import { randomUUID } from 'node:crypto'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
