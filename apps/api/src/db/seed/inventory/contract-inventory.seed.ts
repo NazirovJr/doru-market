@@ -28,11 +28,11 @@ const OTHER_MEDICINES: readonly string[] = [
   'Цитрамон П Sandoz',
 ]
 
-const CLUSTER_PHARMACY_PRICE_STEP_DIRAM = 5000
-const CLUSTER_REFERENCE_BASE_PRICE_DIRAM = 120000
+const CLUSTER_PHARMACY_PRICE_STEP_DIRAM = 100
+const CLUSTER_REFERENCE_BASE_PRICE_DIRAM = 2400
 const CLUSTER_REFERENCE_QUANTITY = 50
-const CLUSTER_GENERIC_BASE_PRICE_DIRAM = 70000
-const CLUSTER_GENERIC_INDEX_STEP_DIRAM = 3000
+const CLUSTER_GENERIC_BASE_PRICE_DIRAM = 1400
+const CLUSTER_GENERIC_INDEX_STEP_DIRAM = 60
 const CLUSTER_GENERIC_QUANTITY = 60
 
 function buildAnalogClusterStock(): readonly StockLine[] {
@@ -58,9 +58,9 @@ function buildAnalogClusterStock(): readonly StockLine[] {
   return lines
 }
 
-const OTHER_MEDICINE_BASE_PRICE_DIRAM = 80000
-const OTHER_MEDICINE_INDEX_STEP_DIRAM = 15000
-const OTHER_PHARMACY_PRICE_STEP_DIRAM = 2500
+const OTHER_MEDICINE_BASE_PRICE_DIRAM = 1600
+const OTHER_MEDICINE_INDEX_STEP_DIRAM = 300
+const OTHER_PHARMACY_PRICE_STEP_DIRAM = 50
 const OTHER_BASE_QUANTITY = 20
 const OTHER_PHARMACY_QUANTITY_STEP = 5
 
@@ -114,7 +114,7 @@ export async function seedContractInventory(db: NodePgDatabase): Promise<void> {
       return db.execute(sql`
         INSERT INTO pharmacy_inventory (id, pharmacy_id, medicine_id, price, quantity, expires_at, batch_number)
         VALUES (${inventoryId(n)}, ${line.pharmacyId}, ${medicineId}, ${line.priceDiram}, ${line.quantity}, ${EXPIRES_AT_FAR}, ${batchNumber})
-        ON CONFLICT (id) DO NOTHING;
+        ON CONFLICT (id) DO UPDATE SET price = EXCLUDED.price;
       `)
     }),
   )
