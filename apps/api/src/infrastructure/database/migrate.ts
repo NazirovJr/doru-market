@@ -1,6 +1,6 @@
 /**
  * `migrate.ts` (EP-01, DTJ-012, SRS-DB-031/032) — программный раннер
- * `drizzle-kit migrate` для вызова из `docker-entrypoint.sh` и CI.
+ * `drizzle-kit migrate` для вызова из контейнера `migrate` (target `migrator`) и CI.
  *
  * Идемпотентен (журнал `drizzle/meta/_journal.json` отслеживает применённые
  * миграции). При недоступности БД — бросает с понятным сообщением и

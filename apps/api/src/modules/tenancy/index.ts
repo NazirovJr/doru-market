@@ -35,17 +35,13 @@ export {
   type CustomDomainStatus,
 } from './domain/value-objects/custom-domain-status.vo.js'
 
-// DTJ-056 — базовый класс тенант-скоупных репозиториев и переиспользуемый
-// контракт-тест на изоляцию тенантов. ЕДИНСТВЕННЫЙ разрешённый прямой экспорт
-// из `infrastructure/` — используется другими модулями через `@/modules/tenancy`.
+// DTJ-056 — базовый класс тенант-скоупных репозиториев. ЕДИНСТВЕННЫЙ разрешённый прямой
+// экспорт из `infrastructure/` — используется другими модулями через `@/modules/tenancy`.
+// Контракт-тест `testing/tenant-isolation.contract-test.ts` (тянет vitest) в фасад не входит.
 export {
   TenantScopedRepository,
   InvalidTenantIdError,
 } from './infrastructure/base/tenant-scoped-repository.js'
-export {
-  describeTenantIsolationContract,
-  type TenantIsolationContractOptions,
-} from './testing/tenant-isolation.contract-test.js'
 
 // DTJ-229 (EP-09) — `orders → tenancy` фасад читает `cod_limit_diram` реального тенанта
 // (`TenancyFacadeAdapter`, `modules/orders/infrastructure/adapters/tenancy-facade.adapter.ts`)
