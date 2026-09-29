@@ -384,6 +384,8 @@ domain/application/infrastructure/presentation конкретного модул
 | DTJ-444 | Межтенантная изоляция создания персонала: POST /staff-accounts проверяет сеть actor'а | EP-15 | application | S | DTJ-030, DTJ-364 | staff-account.policy.ts; create-staff-account.use-case.ts |
 | DTJ-445 | Прод-образ apps/api собирается и применяет миграции | EP-01 | infra | M | DTJ-001, DTJ-412 | infra/docker/Dockerfile.api; docker-entrypoint.sh |
 | DTJ-446 | Заглушки → реальные адаптеры: доставка возврата и отмена заказов при приостановке аптеки | EP-11 | infrastructure | M | DTJ-273, DTJ-071, DTJ-315 | returns/onboarding adapters |
+| DTJ-447 | Реальный IP клиента в auth: OTP/verify/refresh/telegram вместо заглушки 0.0.0.0 | EP-01 | presentation | S | DTJ-023, DTJ-432 | auth controllers; common/http |
+| DTJ-448 | Защита кэша поиска от штампеда не отдаёт 500 | EP-06 | infrastructure | S | DTJ-187 | catalog/infrastructure/cache/** |
 
 ¹ `0008_i18n_overrides_review_status.sql` (DTJ-103) ещё не реализован, но это имя уже занято
 двумя другими миграциями (`0008_onboarding_foundation.sql`, `0008_user_telegram_identities.sql`) —
