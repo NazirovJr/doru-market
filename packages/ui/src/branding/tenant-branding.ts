@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { BRAND_COLOR_KEYS } from '../tokens/branding-allowlist'
 
 export interface TenantBranding {
   readonly brandName: string
@@ -14,7 +15,10 @@ export interface BootstrapBrandingOptions {
 }
 
 const DEFAULT_TIMEOUT_MS = 1500
-const TOKEN_KEY = /^--brand-[a-z-]+$/u
+// camelCase-ключи allowlist -> CSS-имена (primaryHover -> --brand-primary-hover); семантические цвета сюда не входят.
+const EDITABLE_TOKENS: ReadonlySet<string> = new Set(
+  [...BRAND_COLOR_KEYS, 'radius', 'fontFamily'].map((key) => `--brand-${key.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`)}`),
+)
 // HEX, радиус или шрифтовой стек: то, что сервер и так пропускает через allowlist (defense in depth на клиенте).
 const TOKEN_VALUE = /^(#[0-9a-fA-F]{6}|\d{1,2}px|[A-Za-z0-9' ,-]{1,80})$/u
 const HTTP_URL = /^https?:\/\//u
@@ -33,7 +37,7 @@ export function parseTenantBranding(raw: unknown): TenantBranding | null {
   }
   const palette = Object.fromEntries(
     Object.entries(raw.palette).filter(
-      (entry): entry is [string, string] => TOKEN_KEY.test(entry[0]) && typeof entry[1] === 'string' && TOKEN_VALUE.test(entry[1]),
+      (entry): entry is [string, string] => EDITABLE_TOKENS.has(entry[0]) && typeof entry[1] === 'string' && TOKEN_VALUE.test(entry[1]),
     ),
   )
   return { brandName: raw.brandName, palette, logoUrl: optionalUrl(raw.logoUrl), faviconUrl: optionalUrl(raw.faviconUrl) }

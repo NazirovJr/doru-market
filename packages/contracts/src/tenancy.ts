@@ -8,7 +8,7 @@ export const BRAND_FONT_FAMILY_ALLOWLIST = ["'Inter', system-ui, sans-serif", 's
 
 const hexColor = z.string().regex(HEX_COLOR_PATTERN, 'Expected a 6-digit HEX color')
 
-// Каждый токен — явное поле strict-объекта: неизвестный ключ отклоняется, а не сохраняется молча.
+// Семантические цвета (success/danger/warning и производные) тенант не перекрашивает; неизвестный ключ отклоняется, а не сохраняется молча.
 export const BrandPaletteSchema = z.strictObject({
   '--brand-primary': hexColor,
   '--brand-primary-hover': hexColor,
@@ -19,9 +19,6 @@ export const BrandPaletteSchema = z.strictObject({
   '--brand-text': hexColor,
   '--brand-text-muted': hexColor,
   '--brand-border': hexColor,
-  '--brand-success': hexColor,
-  '--brand-danger': hexColor,
-  '--brand-warning': hexColor,
   '--brand-radius': z.string().regex(RADIUS_PATTERN, 'Expected a radius like "8px"'),
   '--brand-font-family': z.enum(BRAND_FONT_FAMILY_ALLOWLIST),
 })
@@ -39,9 +36,6 @@ export const NEUTRAL_FALLBACK_PALETTE: BrandPalette = {
   '--brand-text': '#0f172a',
   '--brand-text-muted': '#64748b',
   '--brand-border': '#e2e8f0',
-  '--brand-success': '#16a34a',
-  '--brand-danger': '#dc2626',
-  '--brand-warning': '#d97706',
   '--brand-radius': '8px',
   '--brand-font-family': 'system-ui, sans-serif',
 }
@@ -51,6 +45,13 @@ export const BrandPalettePatchSchema = BrandPaletteSchema.partial().transform(
   (palette): Readonly<Record<string, string>> =>
     Object.fromEntries(Object.entries(palette).filter((entry): entry is [string, string] => entry[1] !== undefined)),
 )
+
+const BRAND_PALETTE_TOKENS: ReadonlySet<string> = new Set(Object.keys(BrandPaletteSchema.shape))
+
+// Оставляет только токены, которые тенант вправе менять (в БД могли остаться устаревшие ключи).
+export function pickEditableBrandTokens(palette: Readonly<Record<string, string>>): Readonly<Record<string, string>> {
+  return Object.fromEntries(Object.entries(palette).filter(([token]) => BRAND_PALETTE_TOKENS.has(token)))
+}
 
 export const BrandLogoUrlSchema = z.url({ protocol: /^https?$/u })
 

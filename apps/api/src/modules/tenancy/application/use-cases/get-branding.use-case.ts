@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { NEUTRAL_FALLBACK_PALETTE, NotFoundError, type TenantBrandingDto } from '@dorutj/contracts'
+import { NEUTRAL_FALLBACK_PALETTE, NotFoundError, pickEditableBrandTokens, type TenantBrandingDto } from '@dorutj/contracts'
 import { TENANT_REPOSITORY, type TenantRepositoryPort } from '../ports/tenant-repository.port.js'
 import { TenantId } from '../../domain/value-objects/tenant-id.vo.js'
 
@@ -17,11 +17,11 @@ export class GetBrandingUseCase {
       throw new NotFoundError({ resource: 'tenant', tenantId: command.tenantId })
     }
     const { settings } = tenant
-    const isEmpty = Object.keys(settings.brandPalette).length === 0
+    const palette = pickEditableBrandTokens(settings.brandPalette)
     return {
       slug: tenant.slug.value,
       brandName: settings.brandName,
-      palette: isEmpty ? NEUTRAL_FALLBACK_PALETTE : settings.brandPalette,
+      palette: Object.keys(palette).length === 0 ? NEUTRAL_FALLBACK_PALETTE : palette,
       logoUrl: settings.brandLogoUrl,
       // В tenant_settings нет колонок favicon/support_phone — поля контракта зарезервированы, значение null.
       faviconUrl: null,

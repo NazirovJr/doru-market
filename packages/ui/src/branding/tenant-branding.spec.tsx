@@ -40,7 +40,7 @@ describe('parseTenantBranding', () => {
     expect(parseTenantBranding(raw)).toBeNull()
   })
 
-  it('отбрасывает чужие ключи и инъекционные значения, оставляя валидные токены', () => {
+  it('отбрасывает чужие и семантические ключи и инъекционные значения, оставляя валидные токены', () => {
     const parsed = parseTenantBranding({
       brandName: 'X',
       palette: {
@@ -49,6 +49,8 @@ describe('parseTenantBranding', () => {
         '--brand-bg': '#fff;background:red',
         background: '#000000',
         '--evil_key': '#000000',
+        '--brand-danger': '#ff0000',
+        '--brand-success-bg': '#00ff00',
         '--brand-radius': 12,
       },
     })

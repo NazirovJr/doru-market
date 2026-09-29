@@ -240,6 +240,17 @@ describe.skipIf(!postgresAvailable)('TenancyBrandingController — Supertest int
     expect((response.body as ErrorBody).error.code).toBe('VALIDATION_ERROR')
   })
 
+  it('семантический цвет в PUT → 400 с полем токена; устаревший в БД ключ в GET не отдаётся', async () => {
+    const tenantId = await seedTenant({ '--brand-primary': '#123456', '--brand-danger': '#ff0000' })
+
+    const rejected = await putBranding(adminOf(tenantId), tenantId, { brandName: 'X', brandPalette: { '--brand-danger': '#00ff00' } })
+    expect(rejected.status).toBe(400)
+    expect((rejected.body as ErrorBody).error.details?.field).toBe('--brand-danger')
+
+    const served = await request(ctx.httpServer).get('/api/v1/tenant/branding').set(TENANT_HEADER, tenantId)
+    expect((served.body as BrandingBody).data.palette).toEqual({ '--brand-primary': '#123456' })
+  })
+
   it('критерий 3: свежий тенант (brand_palette = {}) → GET отдаёт NEUTRAL_FALLBACK_PALETTE', async () => {
     const tenantId = await seedTenant()
 

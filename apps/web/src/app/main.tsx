@@ -6,6 +6,7 @@ import { queryClient } from '@/app/providers/query-client'
 import { LocaleProvider } from '@/shared/config/locale-provider'
 import { router } from '@/app/router'
 import { bootstrapBranding } from '@/app/bootstrap-branding'
+import '@dorutj/ui/tokens'
 import '@/app/styles.css'
 
 const rootElement = document.getElementById('root')

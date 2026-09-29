@@ -87,6 +87,20 @@ describe('UpdateBrandingUseCase', () => {
     expect((error as ValidationError).details).toMatchObject({ field: '--brand-font-family' })
   })
 
+  it.each(['--brand-success', '--brand-danger', '--brand-warning'])('семантический токен %s → ValidationError c полем токена, БД не тронута', async (token) => {
+    const { useCase, save } = makeHarness(makeTenant({}))
+    const error = await useCase.execute(command({ rawRequest: { brandName: 'X', brandPalette: { [token]: '#123456' } } })).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ValidationError)
+    expect((error as ValidationError).details).toMatchObject({ field: token })
+    expect(save).not.toHaveBeenCalled()
+  })
+
+  it('PUT вычищает устаревшие семантические ключи, сохранённые в БД', async () => {
+    const { useCase, save } = makeHarness(makeTenant({ '--brand-danger': '#ff0000', '--brand-accent': '#f59e0b' }))
+    await useCase.execute(command())
+    expect((save.mock.calls[0]?.[0] as TenantSettings).brandPalette).toEqual({ '--brand-accent': '#f59e0b', '--brand-primary': '#0f766e' })
+  })
+
   it('неизвестный токен → field указывает на него', async () => {
     const { useCase } = makeHarness(makeTenant({}))
     const error = await useCase.execute(command({ rawRequest: { brandName: 'X', brandPalette: { background: '#000000' } } })).catch((e: unknown) => e)
@@ -133,6 +147,13 @@ describe('GetBrandingUseCase', () => {
   it('заполненная палитра возвращается как есть', async () => {
     const result = await run(makeTenant({ '--brand-primary': '#0f766e' }))
     expect(result.palette).toEqual({ '--brand-primary': '#0f766e' })
+  })
+
+  it('устаревшие семантические ключи из БД не отдаются; палитра из одних семантических ключей → фолбэк', async () => {
+    const mixed = await run(makeTenant({ '--brand-primary': '#0f766e', '--brand-danger': '#ff0000' }))
+    expect(mixed.palette).toEqual({ '--brand-primary': '#0f766e' })
+    const onlySemantic = await run(makeTenant({ '--brand-success': '#00ff00' }))
+    expect(onlySemantic.palette).toEqual(NEUTRAL_FALLBACK_PALETTE)
   })
 
   it('несуществующий тенант → NotFoundError', async () => {

@@ -1,5 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { ForbiddenError, NotFoundError, UpdateBrandingRequestSchema, ValidationError, type UserRole } from '@dorutj/contracts'
+import {
+  ForbiddenError,
+  NotFoundError,
+  pickEditableBrandTokens,
+  UpdateBrandingRequestSchema,
+  ValidationError,
+  type UserRole,
+} from '@dorutj/contracts'
 import { BrandingAuthorizationPolicy } from '../policies/branding-authorization.policy.js'
 import { TENANT_EVENT_PUBLISHER, type TenantEventPublisherPort } from '../ports/tenant-event-publisher.port.js'
 import { TENANT_REPOSITORY, type TenantRepositoryPort } from '../ports/tenant-repository.port.js'
@@ -57,7 +64,7 @@ export class UpdateBrandingUseCase {
     const current = tenant.settings
     const updated = tenant.updateBranding({
       brandName: request.brandName,
-      brandPalette: { ...current.brandPalette, ...request.brandPalette },
+      brandPalette: { ...pickEditableBrandTokens(current.brandPalette), ...request.brandPalette },
       brandLogoUrl: request.logoUrl === undefined ? current.brandLogoUrl : request.logoUrl,
     })
     await this.settingsRepository.save(updated.settings, tenantId)

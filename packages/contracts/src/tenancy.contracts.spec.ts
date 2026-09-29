@@ -5,6 +5,7 @@ import {
   BRAND_FONT_FAMILY_ALLOWLIST,
   BrandPaletteSchema,
   NEUTRAL_FALLBACK_PALETTE,
+  pickEditableBrandTokens,
   UpdateBrandingRequestSchema,
 } from './tenancy.js'
 
@@ -84,5 +85,24 @@ describe('UpdateBrandingRequestSchema', () => {
 
   it.each(['javascript:alert(1)', 'data:image/svg+xml,<svg/>', 'not a url'])('logoUrl %j отклоняется', (logoUrl) => {
     expect(UpdateBrandingRequestSchema.safeParse({ ...valid, logoUrl }).success).toBe(false)
+  })
+})
+
+describe('семантические цвета не перекрашиваются тенантом', () => {
+  it.each(['--brand-success', '--brand-danger', '--brand-warning', '--brand-danger-bg', '--brand-success-text', '--brand-warning-strong'])(
+    '%s отклоняется как неизвестный токен',
+    (token) => {
+      const result = BrandPaletteSchema.partial().safeParse({ [token]: '#123456' })
+      expect(result.success).toBe(false)
+      expect(!result.success && result.error.issues[0]).toMatchObject({ code: 'unrecognized_keys', keys: [token] })
+    },
+  )
+
+  it('NEUTRAL_FALLBACK_PALETTE их не содержит', () => {
+    expect(Object.keys(NEUTRAL_FALLBACK_PALETTE).filter((key) => /success|danger|warning/u.test(key))).toEqual([])
+  })
+
+  it('pickEditableBrandTokens отбрасывает устаревшие семантические ключи', () => {
+    expect(pickEditableBrandTokens({ '--brand-primary': '#0f766e', '--brand-danger': '#dc2626' })).toEqual({ '--brand-primary': '#0f766e' })
   })
 })

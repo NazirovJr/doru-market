@@ -18,9 +18,6 @@ const WHITE_LABEL_PALETTE_JSON = JSON.stringify({
   '--brand-text': '#134e4a',
   '--brand-text-muted': '#5eead4',
   '--brand-border': '#99f6e4',
-  '--brand-success': '#16a34a',
-  '--brand-danger': '#dc2626',
-  '--brand-warning': '#d97706',
   '--brand-radius': '12px',
   '--brand-font-family': 'system-ui, sans-serif',
 })

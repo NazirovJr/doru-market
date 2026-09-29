@@ -39,9 +39,6 @@ const NEUTRAL_PALETTE_JSON = JSON.stringify({
   '--brand-text': '#0f172a',
   '--brand-text-muted': '#64748b',
   '--brand-border': '#e2e8f0',
-  '--brand-success': '#16a34a',
-  '--brand-danger': '#dc2626',
-  '--brand-warning': '#d97706',
   '--brand-radius': '8px',
   '--brand-font-family': 'system-ui, sans-serif',
 })
