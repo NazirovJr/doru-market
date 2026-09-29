@@ -52,6 +52,25 @@ describe('useExcelImport (DTJ-168)', () => {
     expect(formData.get('mode')).toBe('append_update')
     expect((formData.get('file') as File).name).toBe('stock.csv')
   })
+
+  it('DTJ-441: pharmacyId передан — попадает в query-строку запроса', async () => {
+    const fetchMock = stubFetch(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ data: { sourceUploadId: 'up-2', totalBatches: 1, totalRows: 1, rejectedByParser: 0 } }), {
+          status: 202,
+        }),
+      ),
+    )
+    const queryClient = makeQueryClient()
+    const file = new File(['a,b,c'], 'stock.csv', { type: 'text/csv' })
+
+    const { result } = renderHook(() => useExcelImport(), { wrapper: makeWrapper(queryClient) })
+    result.current.mutate({ file, mode: 'append_update', pharmacyId: 'pharmacy-1' })
+
+    await waitFor(() => { expect(result.current.isSuccess).toBe(true) })
+    const [url] = fetchMock.mock.calls[0] as [string]
+    expect(url).toContain('pharmacyId=pharmacy-1')
+  })
 })
 
 describe('useImportBatchesPolling (DTJ-168)', () => {

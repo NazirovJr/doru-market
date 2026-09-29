@@ -18,6 +18,8 @@ export const IMPORT_POLL_INTERVAL_MS = 2000
 interface ExcelImportInput {
   readonly file: File
   readonly mode: InventoryExcelImportMode
+  /** DTJ-441: аптека сети, выбранная сетевым `pharmacy_admin` — `undefined` для аптека-привязанных ролей. */
+  readonly pharmacyId?: string
 }
 
 function uploadStatusPath(sourceUploadId: string): string {
@@ -28,11 +30,15 @@ function errorReportPath(sourceUploadId: string): string {
   return `/api/v1/inventory-sync-batches/${sourceUploadId}/error-report`
 }
 
+function excelImportPath(pharmacyId: string | undefined): string {
+  return pharmacyId === undefined ? EXCEL_IMPORT_PATH : `${EXCEL_IMPORT_PATH}?pharmacyId=${encodeURIComponent(pharmacyId)}`
+}
+
 async function postExcelImport(input: ExcelImportInput): Promise<InventoryExcelImportAcceptedResponse> {
   const formData = new FormData()
   formData.append('file', input.file)
   formData.append('mode', input.mode)
-  return httpPostForm<InventoryExcelImportAcceptedResponse>(EXCEL_IMPORT_PATH, formData)
+  return httpPostForm<InventoryExcelImportAcceptedResponse>(excelImportPath(input.pharmacyId), formData)
 }
 
 export function useExcelImport(): UseMutationResult<InventoryExcelImportAcceptedResponse, HttpError, ExcelImportInput> {

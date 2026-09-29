@@ -73,10 +73,13 @@ describe('InventoryModule — DI-резолвинг целиком (реальн
     const { LoggerModule } = await import('@/common/logging/logger.module.js')
     const { SharedKernelModule } = await import('@/shared-kernel/shared-kernel.module.js')
     const { DatabaseModule } = await import('@/infrastructure/database/database.module.js')
+    const { DomainEventsModule } = await import('@/common/events/domain-events.module.js')
     const { InventoryModule } = await import('./inventory.module.js')
 
+    // DomainEventsModule (DTJ-441: InventoryBatchQueuedEventHandler инжектирует DomainEventHandlerRegistry,
+    // @Global() в AppModule, здесь — явно, тот же приём, что payments.module.full-boot.di.spec.ts).
     const moduleRef = await Test.createTestingModule({
-      imports: [AppConfigModule, LoggerModule, SharedKernelModule, DatabaseModule, InventoryModule],
+      imports: [AppConfigModule, LoggerModule, SharedKernelModule, DatabaseModule, DomainEventsModule, InventoryModule],
     }).compile()
 
     expect(moduleRef).toBeDefined()
