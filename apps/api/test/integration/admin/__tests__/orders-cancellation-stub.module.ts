@@ -1,13 +1,20 @@
 import { Global, Module } from '@nestjs/common'
 import { PHARMACY_ORDERS_CANCELLATION } from '@/modules/orders/index.js'
 
-/** Харнессы без `OrdersModule` поднимают `OnboardingModule`, которому нужен порт отмены заказов; их сценарии его не вызывают. */
+export const ORDERS_CANCELLATION_STUB_CALLS: { pharmacyId: string; scope: string }[] = []
+
+/** Харнессы без `OrdersModule` поднимают `OnboardingModule`, которому нужен порт отмены заказов: заглушка ничего не отменяет и запоминает вызовы. */
 @Global()
 @Module({
   providers: [
     {
       provide: PHARMACY_ORDERS_CANCELLATION,
-      useValue: { execute: () => Promise.reject(new Error('orders cancellation is not part of this harness')) },
+      useValue: {
+        execute: (pharmacyId: string, scope = 'all') => {
+          ORDERS_CANCELLATION_STUB_CALLS.push({ pharmacyId, scope })
+          return Promise.resolve({ cancelledOrderIds: [], failedOrderIds: [] })
+        },
+      },
     },
   ],
   exports: [PHARMACY_ORDERS_CANCELLATION],
