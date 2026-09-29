@@ -38,6 +38,7 @@ import {
   type UsersRepository,
 } from '@/modules/auth/application/ports/users.repository.port.js'
 import { createTestApp, type TestApp } from './__tests__/test-app.js'
+import { seedPharmacyInChain } from './__tests__/seed-pharmacy.js'
 
 const TENANT_ID = '33333333-3333-4333-8333-333333333333'
 const CHAIN_A = '11111111-1111-4111-8111-111111111111'
@@ -120,7 +121,7 @@ describe('auth.create-staff-account (DTJ-030, SRS-API-035/036)', () => {
   it('A. pharmacy_admin создаёт pharmacist в СВОЕЙ сети → 201', async () => {
     const admin = await seedPharmacyAdminAndGetToken('pharmacy_admin', CHAIN_A)
     const targetPhone = '+992917123456'
-    const pharmacyId = '66666666-6666-4666-8666-666666666666'
+    const pharmacyId = await seedPharmacyInChain(app, CHAIN_A)
 
     const response = await request(httpServer)
       .post('/api/v1/staff-accounts')
@@ -147,7 +148,7 @@ describe('auth.create-staff-account (DTJ-030, SRS-API-035/036)', () => {
   it('B. happy end-to-end: admin создал pharmacist → pharmacist входит через OTP → JWT с role=pharmacist', async () => {
     const admin = await seedPharmacyAdminAndGetToken('pharmacy_admin', CHAIN_A)
     const targetPhone = '+992917999000'
-    const pharmacyId = '77777777-7777-4777-8777-777777777777'
+    const pharmacyId = await seedPharmacyInChain(app, CHAIN_A)
 
     // 1) admin создаёт pharmacist
     const create = await request(httpServer)
@@ -204,6 +205,39 @@ describe('auth.create-staff-account (DTJ-030, SRS-API-035/036)', () => {
     expect(response.status).toBe(403)
     const body = response.body as ErrorBody
     expect(body.error.code).toBe('FORBIDDEN')
+  })
+
+  it('C2. pharmacy_admin (chainA) → pharmacist в РЕАЛЬНОЙ аптеке chainB → 403 CROSS_TENANT_ACCESS_DENIED, пользователь не создан', async () => {
+    const admin = await seedPharmacyAdminAndGetToken('pharmacy_admin', CHAIN_A)
+    const foreignPharmacyId = await seedPharmacyInChain(app, CHAIN_B)
+    const phone = '+992917222333'
+    const response = await request(httpServer)
+      .post('/api/v1/staff-accounts')
+      .set('Authorization', `Bearer ${admin.accessToken}`)
+      .send({ phone, fullName: 'X', role: 'pharmacist', pharmacyId: foreignPharmacyId, chainId: CHAIN_A })
+    expect(response.status).toBe(403)
+    expect((response.body as ErrorBody).error.code).toBe('CROSS_TENANT_ACCESS_DENIED')
+    expect(await users.findByTenantAndPhone(TENANT_ID, phone)).toBeNull()
+  })
+
+  it('C3. pharmacy_admin (chainA) → несуществующая аптека → 403 CROSS_TENANT_ACCESS_DENIED', async () => {
+    const admin = await seedPharmacyAdminAndGetToken('pharmacy_admin', CHAIN_A)
+    const response = await request(httpServer)
+      .post('/api/v1/staff-accounts')
+      .set('Authorization', `Bearer ${admin.accessToken}`)
+      .send({ phone: '+992917222444', fullName: 'X', role: 'pharmacist', pharmacyId: randomUUID(), chainId: CHAIN_A })
+    expect(response.status).toBe(403)
+    expect((response.body as ErrorBody).error.code).toBe('CROSS_TENANT_ACCESS_DENIED')
+  })
+
+  it('C4. super_admin создаёт pharmacist в аптеке любой сети → 201', async () => {
+    const superAdmin = await seedPharmacyAdminAndGetToken('super_admin', null)
+    const pharmacyId = await seedPharmacyInChain(app, CHAIN_B)
+    const response = await request(httpServer)
+      .post('/api/v1/staff-accounts')
+      .set('Authorization', `Bearer ${superAdmin.accessToken}`)
+      .send({ phone: '+992917222555', fullName: 'X', role: 'pharmacist', pharmacyId, chainId: CHAIN_B })
+    expect(response.status).toBe(201)
   })
 
   it('D. customer → любая роль → 403 INSUFFICIENT_ROLE (RolesGuard, а не policy)', async () => {

@@ -33,6 +33,7 @@
 import { Inject, Injectable } from '@nestjs/common'
 import {
   ConflictError,
+  CrossTenantAccessDeniedError,
   ForbiddenError,
   InvalidPhoneNumberFormatError,
   type UserRole,
@@ -49,6 +50,10 @@ import {
   type UsersRepository,
 } from '@/modules/auth/application/ports/users.repository.port.js'
 import { type JwtClaims } from '@/modules/auth/application/ports/jwt-signer.port.js'
+import {
+  PHARMACY_CHAIN_LOOKUP,
+  type PharmacyChainLookupPort,
+} from '@/modules/auth/application/ports/pharmacy-chain-lookup.port.js'
 
 export interface CreateStaffAccountCommand {
   readonly phone: string
@@ -65,16 +70,23 @@ export interface CreateStaffAccountResult {
   readonly temporaryOtpHint: false
 }
 
+export type CreateStaffAccountError =
+  | ForbiddenError
+  | CrossTenantAccessDeniedError
+  | ConflictError
+  | InvalidPhoneNumberFormatError
+
 @Injectable()
 export class CreateStaffAccountUseCase {
   constructor(
     @Inject(USERS_REPOSITORY) private readonly users: UsersRepository,
+    @Inject(PHARMACY_CHAIN_LOOKUP) private readonly pharmacyChains: PharmacyChainLookupPort,
   ) {}
 
   async execute(
     actor: JwtClaims,
     command: CreateStaffAccountCommand,
-  ): Promise<Result<CreateStaffAccountResult, ForbiddenError | ConflictError | InvalidPhoneNumberFormatError>> {
+  ): Promise<Result<CreateStaffAccountResult, CreateStaffAccountError>> {
     const phoneResult = this.parsePhone(command.phone)
     if (isErr(phoneResult)) {
       return err(phoneResult.error)
@@ -84,6 +96,11 @@ export class CreateStaffAccountUseCase {
     const policyError = this.checkPolicy(actor, command)
     if (policyError !== null) {
       return err(policyError)
+    }
+
+    const scopeError = await this.checkPharmacyScope(actor, command.pharmacyId ?? null)
+    if (scopeError !== null) {
+      return err(scopeError)
     }
 
     // `actor.tenantId` для `super_admin` может быть null; на этом шаге
@@ -107,8 +124,8 @@ export class CreateStaffAccountUseCase {
       phoneNumber: phone.value,
       role: command.role,
       fullName: command.fullName,
-      ...(command.pharmacyId !== undefined ? { pharmacyId: command.pharmacyId } : { pharmacyId: null }),
-      ...(command.chainId !== undefined ? { chainId: command.chainId } : { chainId: null }),
+      pharmacyId: command.pharmacyId ?? null,
+      chainId: command.chainId ?? null,
     })
 
     return ok({ userId: user.id, role: user.role, temporaryOtpHint: false })
@@ -147,6 +164,21 @@ export class CreateStaffAccountUseCase {
         targetChainId: command.chainId,
       },
     )
+  }
+
+  /** Несуществующая аптека неотличима от чужой; actor без сети ограничен собственной аптекой. */
+  private async checkPharmacyScope(
+    actor: JwtClaims,
+    pharmacyId: string | null,
+  ): Promise<CrossTenantAccessDeniedError | null> {
+    if (actor.role === 'super_admin' || pharmacyId === null) {
+      return null
+    }
+    const inScope =
+      actor.chainId === null
+        ? pharmacyId === actor.pharmacyId
+        : (await this.pharmacyChains.findChainIdByPharmacyId(pharmacyId)) === actor.chainId
+    return inScope ? null : new CrossTenantAccessDeniedError({ actorChainId: actor.chainId, targetPharmacyId: pharmacyId })
   }
 
   /**

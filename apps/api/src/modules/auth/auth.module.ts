@@ -61,6 +61,8 @@ import {
   type RefreshTokenGeneratorPort,
 } from './application/ports/refresh-token-generator.port.js'
 import { UNIT_OF_WORK, type UnitOfWorkPort } from './application/ports/unit-of-work.port.js'
+import { PHARMACY_CHAIN_LOOKUP } from './application/ports/pharmacy-chain-lookup.port.js'
+import { DrizzlePharmacyChainLookupAdapter } from './infrastructure/adapters/drizzle-pharmacy-chain-lookup.adapter.js'
 import { Rs256JwtSignerAdapter } from './infrastructure/adapters/rs256-jwt-signer.adapter.js'
 import { CryptoOtpGeneratorAdapter } from './infrastructure/adapters/crypto-otp-generator.adapter.js'
 import { MockSmsProviderAdapter } from './infrastructure/adapters/mock-sms-provider.adapter.js'
@@ -116,6 +118,7 @@ import { RedisModule } from '@/infrastructure/redis/redis.module.js'
     { provide: UNIT_OF_WORK, useClass: DrizzleUnitOfWorkAdapter },
     { provide: TELEGRAM_INIT_DATA_VERIFIER, useClass: TelegramInitDataVerifierAdapter },
     { provide: USER_TELEGRAM_IDENTITIES_REPOSITORY, useClass: DrizzleUserTelegramIdentitiesRepository },
+    { provide: PHARMACY_CHAIN_LOOKUP, useClass: DrizzlePharmacyChainLookupAdapter },
     Rs256JwtSignerAdapter,
     CryptoOtpGeneratorAdapter,
     MockSmsProviderAdapter,
