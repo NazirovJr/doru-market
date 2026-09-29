@@ -2,7 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AppProviders } from '@/app/providers'
 import { AppRouter } from '@/app/router'
-import '@dorutj/ui/tokens'
+import '@dorutj/ui/tokens.css'
+import '@dorutj/ui/components.css'
 import '@/app/styles.css'
 
 const rootEl = document.getElementById('root')
