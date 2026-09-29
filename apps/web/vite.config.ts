@@ -56,6 +56,11 @@ export default defineConfig(({ command, mode }) => {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
       },
     },
+    // DTJ-427: манифест сборки — граф импортов чанков, по которому size-check.ts
+    // отличает критический путь (entry + статические импорты) от ленивых маршрутов.
+    build: {
+      manifest: true,
+    },
     server: {
       proxy: {
         '/api': {

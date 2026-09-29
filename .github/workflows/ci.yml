@@ -108,6 +108,40 @@ jobs:
       - run: pnpm env:check
 
   # ---------------------------------------------------------------------------------------------
+  # Job — DTJ-427, SRS-UX-036/037/038/NFR-036: бюджет ≤250KB gzip для JS/CSS первого экрана
+  # apps/web. Размещён ОТДЕЛЬНЫМ job'ом (не внутри typecheck-lint-arch) — гейт требует реального
+  # `dist/.vite/manifest.json`, т.е. `vite build`, а не только статического анализа исходников;
+  # `pnpm size-check` (turbo-таргет `size-check`, dependsOn: build) сам собирает apps/web и его
+  # workspace-зависимости перед проверкой.
+  # ---------------------------------------------------------------------------------------------
+  size-check:
+    name: size-check (apps/web)
+    needs: typecheck-lint-arch
+    runs-on: ubuntu-latest
+    env:
+      VITE_API_BASE_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ github.sha }}
+          restore-keys: turbo-
+
+      - run: pnpm test:size-check
+      - run: pnpm size-check
+
+  # ---------------------------------------------------------------------------------------------
   # Job 2 — unit-тесты, матрица по приложению (параллельные прогоны). `test` — реальный скрипт
   # КАЖДОГО apps/* package.json, coverage уже включён внутри vitest.config.ts каждого пакета
   # (`coverage.enabled: true`) — отдельный `--coverage` флаг не нужен (нет и в реальном скрипте).

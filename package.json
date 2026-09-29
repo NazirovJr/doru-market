@@ -27,6 +27,8 @@
     "typecheck:arch": "tsc --noEmit -p tests/arch/tsconfig.json",
     "env:check": "tsx scripts/env-check.ts",
     "test:env-check": "vitest run scripts/env-check.spec.ts",
+    "size-check": "turbo run size-check --filter=@dorutj/web",
+    "test:size-check": "vitest run scripts/size-check.spec.ts",
     "db:generate": "pnpm --filter @dorutj/api db:generate",
     "db:migrate": "pnpm --filter @dorutj/api db:migrate",
     "db:push": "pnpm --filter @dorutj/api db:push",

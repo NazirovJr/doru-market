@@ -1,0 +1,4 @@
+{
+  "distDir": "dist",
+  "firstScreenRoute": "src/pages/home/home-page.tsx"
+}
