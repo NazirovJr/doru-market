@@ -14,6 +14,7 @@ import {
   ONBOARDING_REVIEW_LOG_REPOSITORY,
   type OnboardingReviewLogRepositoryPort,
 } from '@/modules/onboarding/application/ports/onboarding-review-log.repository.port.js'
+import { ORDERS_CANCELLATION, type OrdersCancellationPort } from '@/modules/onboarding/application/ports/orders-cancellation.port.js'
 import {
   PHARMACY_SUSPENSION_REASONS_REQUIRING_FORCE_CANCEL,
   type PharmacySuspensionReason,
@@ -30,6 +31,7 @@ export interface SuspendPharmacyResult {
   readonly id: string
   readonly status: string
   readonly requiresForceCancelAction: boolean
+  readonly cancelledOrderIds: readonly string[]
 }
 
 @Injectable()
@@ -39,26 +41,37 @@ export class SuspendPharmacyUseCase {
     private readonly pharmacyAccountRepository: PharmacyAccountRepositoryPort,
     @Inject(ONBOARDING_REVIEW_LOG_REPOSITORY)
     private readonly reviewLogRepository: OnboardingReviewLogRepositoryPort,
+    @Inject(ORDERS_CANCELLATION)
+    private readonly ordersCancellation: OrdersCancellationPort,
   ) {}
 
+  // Повторный вызов на уже приостановленной аптеке не меняет причину и лишь дорабатывает отмену заказов.
   async execute(input: SuspendPharmacyInput): Promise<SuspendPharmacyResult> {
     const account = await this.pharmacyAccountRepository.findById(input.pharmacyId)
     if (account === null) {
       throw new Error(`PharmacyAccount not found: ${input.pharmacyId}`)
     }
-    const suspended = account.suspend(input.reason, { id: input.actorId })
-    await this.pharmacyAccountRepository.save(suspended)
-    await this.reviewLogRepository.append({
-      pharmacyId: input.pharmacyId,
-      action: 'suspend',
-      actorUserId: input.actorId,
-      reason: input.notes,
-      checklistSnapshot: { reason: input.reason },
-    })
+    const alreadySuspended = account.status === 'suspended'
+    const suspended = alreadySuspended ? account : account.suspend(input.reason, { id: input.actorId })
+    const reason = suspended.suspensionReason ?? input.reason
+    if (!alreadySuspended) {
+      await this.pharmacyAccountRepository.save(suspended)
+      await this.reviewLogRepository.append({
+        pharmacyId: input.pharmacyId,
+        action: 'suspend',
+        actorUserId: input.actorId,
+        reason: input.notes,
+        checklistSnapshot: { reason },
+      })
+    }
+    const requiresForceCancelAction = PHARMACY_SUSPENSION_REASONS_REQUIRING_FORCE_CANCEL.has(reason)
+    // SRS-DOM-161: без force-cancel отменяются только заказы без оплаты; оплаченные идут штатным ходом.
+    const cancelled = requiresForceCancelAction ? { cancelledOrderIds: [] } : await this.ordersCancellation.cancelUnpaid(input.pharmacyId)
     return {
       id: suspended.id,
       status: suspended.status,
-      requiresForceCancelAction: PHARMACY_SUSPENSION_REASONS_REQUIRING_FORCE_CANCEL.has(input.reason),
+      requiresForceCancelAction,
+      cancelledOrderIds: cancelled.cancelledOrderIds,
     }
   }
 }

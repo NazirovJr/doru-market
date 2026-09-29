@@ -63,6 +63,19 @@ describe('CancelPharmacyIncompleteOrdersUseCase', () => {
     expect(await useCase.execute(PHARMACY_ID)).toEqual({ cancelledOrderIds: ['o2'], failedOrderIds: ['o1'] })
   })
 
+  it('scope=unpaid: ищет только pending_payment и confirmed, оплаченные не трогает', async () => {
+    const cancel = vi.fn().mockResolvedValue({ status: 'cancelled' })
+    const { useCase, findOrdersAny } = makeUseCase(
+      { pending_payment: [{ id: 'o1', status: 'pending_payment' }], paid_escrow: [{ id: 'o2', status: 'paid_escrow' }] },
+      cancel,
+    )
+
+    const result = await useCase.execute(PHARMACY_ID, 'unpaid')
+
+    expect(result.cancelledOrderIds).toEqual(['o1'])
+    expect(findOrdersAny.mock.calls.map(([filter]) => filter.status)).toEqual(['pending_payment', 'confirmed'])
+  })
+
   it('нет незавершённых заказов -> ничего не отменяется', async () => {
     const cancel = vi.fn()
     const { useCase } = makeUseCase({}, cancel)

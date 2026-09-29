@@ -52,4 +52,5 @@ export const PHARMACY_ORDERS_CANCELLATION = Symbol.for('@dorutj/orders/pharmacy-
 export type {
   CancelPharmacyIncompleteOrdersUseCase as PharmacyOrdersCancellation,
   CancelPharmacyIncompleteOrdersResult as PharmacyOrdersCancellationResult,
+  CancelPharmacyOrdersScope as PharmacyOrdersCancellationScope,
 } from './application/order-lifecycle/cancel-pharmacy-incomplete-orders.use-case.js'

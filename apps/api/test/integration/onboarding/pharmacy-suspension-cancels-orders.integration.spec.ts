@@ -1,7 +1,3 @@
-/**
- * Приостановка аптеки -> принудительная отмена незавершённых заказов через РЕАЛЬНЫЙ `AppModule`:
- * системная отмена, возврат склада и рефанд в `escrow_ledger` (MockBank) — без моков портов.
- */
 import { randomUUID } from 'node:crypto'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { and, eq, inArray } from 'drizzle-orm'
@@ -166,6 +162,21 @@ describe.skipIf(!postgresAvailable)('Приостановка аптеки: ORDE
     expect(await refundRows(cashOrderId)).toHaveLength(0)
     const [stock] = await db.select({ quantity: pharmacyInventory.quantity }).from(pharmacyInventory).where(eq(pharmacyInventory.id, batchId))
     expect(stock?.quantity).toBe(INITIAL_STOCK + 2 * ORDERED_QUANTITY)
+  })
+
+  it('приостановка без force-cancel: отменяются только заказы без оплаты, оплаченный идёт штатно; повтор идемпотентен', async () => {
+    await seedScenario()
+
+    const first = await suspendPharmacy.execute({ pharmacyId, actorId: adminId, reason: 'voluntary_pause', notes: null })
+    const second = await suspendPharmacy.execute({ pharmacyId, actorId: adminId, reason: 'voluntary_pause', notes: null })
+
+    expect(first).toMatchObject({ requiresForceCancelAction: false, cancelledOrderIds: [cashOrderId] })
+    expect(second.cancelledOrderIds).toEqual([])
+    expect(await statusOf(cashOrderId)).toBe('cancelled')
+    expect(await statusOf(paidOrderId)).toBe('paid_escrow')
+    expect(await refundRows(paidOrderId)).toHaveLength(0)
+    const log = await pool.query('SELECT 1 FROM onboarding_review_log WHERE pharmacy_id = $1', [pharmacyId])
+    expect(log.rowCount).toBe(1)
   })
 
   it('доставленный заказ и заказ другой аптеки не затронуты', async () => {

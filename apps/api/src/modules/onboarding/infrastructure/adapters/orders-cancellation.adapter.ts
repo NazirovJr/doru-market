@@ -1,5 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { PHARMACY_ORDERS_CANCELLATION, type PharmacyOrdersCancellation } from '@/modules/orders/index.js'
+import {
+  PHARMACY_ORDERS_CANCELLATION,
+  type PharmacyOrdersCancellation,
+  type PharmacyOrdersCancellationResult,
+  type PharmacyOrdersCancellationScope,
+} from '@/modules/orders/index.js'
 import type {
   ForceCancelResult,
   OrdersCancellationPort,
@@ -11,9 +16,17 @@ export class OrdersCancellationAdapter implements OrdersCancellationPort {
 
   // Свободный текст причины пишется в журнал онбординга; в заказе причина — канонический enum.
   public async forceCancelIncomplete(pharmacyId: string, _reason: string): Promise<ForceCancelResult> {
-    const { cancelledOrderIds, failedOrderIds } = await this.orders.execute(pharmacyId)
+    return this.cancel(pharmacyId, 'all')
+  }
+
+  public async cancelUnpaid(pharmacyId: string): Promise<ForceCancelResult> {
+    return this.cancel(pharmacyId, 'unpaid')
+  }
+
+  private async cancel(pharmacyId: string, scope: PharmacyOrdersCancellationScope): Promise<ForceCancelResult> {
+    const { cancelledOrderIds, failedOrderIds }: PharmacyOrdersCancellationResult = await this.orders.execute(pharmacyId, scope)
     if (failedOrderIds.length > 0) {
-      throw new Error(`force-cancel incomplete: orders not cancelled, retry: ${failedOrderIds.join(',')}`)
+      throw new Error(`pharmacy orders cancellation: orders not cancelled, retry: ${failedOrderIds.join(',')}`)
     }
     return { cancelledOrderIds }
   }

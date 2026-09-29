@@ -7,7 +7,10 @@ import type { OrderCancelReason } from '@/modules/orders/domain/order-domain-eve
 import { SystemCancelOrderUseCase } from './system-cancel-order.use-case.js'
 
 // picked_up и дальше уже у курьера/клиента — отмена невозможна (state machine), они идут штатным ходом.
-const INCOMPLETE_CANCELLABLE_STATUSES: readonly OrderStatus[] = ['pending_payment', 'confirmed', 'paid_escrow', 'processing']
+const STATUSES_BY_SCOPE = {
+  unpaid: ['pending_payment', 'confirmed'],
+  all: ['pending_payment', 'confirmed', 'paid_escrow', 'processing'],
+} as const satisfies Record<string, readonly OrderStatus[]>
 const CANCEL_REASON: OrderCancelReason = 'pharmacy_suspended'
 const PAGE_LIMIT = 100
 
@@ -16,6 +19,8 @@ interface IncompleteOrderRef {
   readonly tenantId: string
   readonly status: OrderStatus
 }
+
+export type CancelPharmacyOrdersScope = keyof typeof STATUSES_BY_SCOPE
 
 export interface CancelPharmacyIncompleteOrdersResult {
   readonly cancelledOrderIds: readonly string[]
@@ -31,10 +36,10 @@ export class CancelPharmacyIncompleteOrdersUseCase {
     @Inject(PINO_LOGGER) private readonly logger: Logger,
   ) {}
 
-  public async execute(pharmacyId: string): Promise<CancelPharmacyIncompleteOrdersResult> {
+  public async execute(pharmacyId: string, scope: CancelPharmacyOrdersScope = 'all'): Promise<CancelPharmacyIncompleteOrdersResult> {
     const cancelledOrderIds: string[] = []
     const failedOrderIds: string[] = []
-    for (const order of await this.findIncompleteOrders(pharmacyId)) {
+    for (const order of await this.findIncompleteOrders(pharmacyId, scope)) {
       // eslint-disable-next-line no-await-in-loop -- последовательно: сбой рефанда одного заказа не должен гасить остальные, порядок важен для журнала
       const cancelled = await this.cancelOne(order)
       if (cancelled === 'cancelled') cancelledOrderIds.push(order.id)
@@ -43,9 +48,9 @@ export class CancelPharmacyIncompleteOrdersUseCase {
     return { cancelledOrderIds, failedOrderIds }
   }
 
-  private async findIncompleteOrders(pharmacyId: string): Promise<readonly IncompleteOrderRef[]> {
+  private async findIncompleteOrders(pharmacyId: string, scope: CancelPharmacyOrdersScope): Promise<readonly IncompleteOrderRef[]> {
     const found: IncompleteOrderRef[] = []
-    for (const status of INCOMPLETE_CANCELLABLE_STATUSES) {
+    for (const status of STATUSES_BY_SCOPE[scope]) {
       let cursor: { readonly v: string; readonly id: string } | null = null
       let hasMore = true
       while (hasMore) {
