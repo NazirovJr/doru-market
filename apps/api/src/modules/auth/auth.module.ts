@@ -87,6 +87,7 @@ import { SessionsController } from './presentation/controllers/sessions.controll
 import { TelegramAuthController } from './presentation/controllers/telegram-auth.controller.js'
 import { StaffAccountsController } from './presentation/controllers/staff-accounts.controller.js'
 import { MeController } from './presentation/controllers/me.controller.js'
+import { E2eLastOtpController } from './presentation/controllers/e2e-last-otp.controller.js'
 import { AuthGuard } from './presentation/guards/auth.guard.js'
 import { RolesGuard } from './presentation/guards/roles.guard.js'
 import { TELEGRAM_INIT_DATA_VERIFIER, TelegramInitDataVerifierAdapter } from './infrastructure/adapters/telegram-init-data-verifier.adapter.js'
@@ -147,6 +148,7 @@ import { RedisModule } from '@/infrastructure/redis/redis.module.js'
     TelegramAuthController,
     StaffAccountsController,
     MeController,
+    E2eLastOtpController,
   ],
   exports: [
     JWT_SIGNER,

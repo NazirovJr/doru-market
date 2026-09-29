@@ -215,6 +215,9 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@dorutj/testing-kit':
+        specifier: workspace:*
+        version: link:../../packages/testing-kit
       '@nestjs/cli':
         specifier: ^11.0.24
         version: 11.0.24(@types/node@24.13.3)(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.26)(prettier@3.9.6)
@@ -565,6 +568,9 @@ importers:
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1(@noble/hashes@1.8.0)
+      maplibre-gl:
+        specifier: ^5.24.0
+        version: 5.24.0
       react:
         specifier: ^19.2.0
         version: 19.2.8
@@ -592,6 +598,9 @@ importers:
 
   tests/e2e:
     devDependencies:
+      '@dorutj/testing-kit':
+        specifier: workspace:*
+        version: link:../../packages/testing-kit
       '@playwright/test':
         specifier: ^1.62.1
         version: 1.62.1

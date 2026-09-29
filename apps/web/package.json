@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "size-check": "pnpm exec tsx ../../scripts/size-check.ts ."
   },
   "dependencies": {
     "@dorutj/contracts": "workspace:*",

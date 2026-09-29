@@ -73,5 +73,9 @@ services:
 
   # Снимает nginx с автозапуска в тестовом стеке — см. пояснение в шапке файла. Профиль
   # заведомо никогда не активируется тестовым/CI-прогоном.
+  api:
+    environment:
+      E2E_TEST_ENDPOINTS: 'true' # GET /api/v1/_test/last-otp для Playwright-хелпера getOtpFromMockSms
+
   nginx:
     profiles: ['edge-only-non-test']

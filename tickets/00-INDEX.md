@@ -372,6 +372,18 @@ domain/application/infrastructure/presentation конкретного модул
 | DTJ-432 | Глобальный rate-limit (@fastify/rate-limit + Redis, SRS-API-012) | EP-19 | infrastructure | M | — | apps/api/src/main.ts; apps/api/src/common/http/rate-limit/rate-limit.config.ts; apps/api/src/common/http/rate-limit/rate-limit.decorator.ts; +2 файлов |
 | DTJ-433 | apps/pharmacy: переход на packages/ui, оболочка кабинета и переключение языка | EP-18 | frontend | M | DTJ-404, DTJ-405, DTJ-406, DTJ-408, DTJ-410 | apps/pharmacy/src/app/**; apps/pharmacy/src/shared/**; apps/pharmacy/src/pages/**; +2 файлов |
 | DTJ-434 | apps/admin: вход по OTP, Bearer-токен в запросах, оболочка с меню по роли | EP-15 | frontend | M | DTJ-350, DTJ-433 | apps/admin/src/app/**; apps/admin/src/shared/api/http-client.ts; apps/admin/src/shared/auth/**; +3 файлов |
+| DTJ-435 | pnpm db:seed по SRS-NFR-031: тенанты, сети, аптеки, остатки, пользователи всех ролей, заказы во всех статусах | EP-19 | infrastructure | M | DTJ-416 | apps/api/src/db/seed/**; packages/testing-kit/src/seed-contract.ts |
+| DTJ-436 | apps/web: бренд и язык из packages/ui/i18n, форма заявки аптеки на i18n, плюрализация количеств | EP-18 | frontend | S | DTJ-402, DTJ-408 | apps/web/src/app/layout.tsx; apps/web/src/features/onboarding-application/** |
+| DTJ-437 | GET /api/v1/i18n/:locale — раздача словарей packages/i18n (SRS-API-058) | EP-18 | presentation | S | DTJ-402 | apps/api/src/modules/i18n/**; packages/contracts/src/i18n.ts |
+| DTJ-438 | Telegram-уведомления тестируемы на стенде: базовый URL Bot API из конфига, telegramChatId в сиде, повтор публикации | EP-16 | infrastructure | S | DTJ-435 | telegram-notify.provider.ts; worker-telegram-sender.ts; seed |
+| DTJ-439 | Реальный AnalogOfferLookupAdapter: аналоги с ценами и экономией вместо заглушки | EP-03 | infrastructure | M | DTJ-101, DTJ-385 | catalog analog-offer-lookup.adapter.ts; catalog.module.ts; inventory facade |
+| DTJ-440 | apps/web: путь покупки кликами — переход к товару, «В корзину», корзина в шапке, восстановление сессии, гео в поиске | EP-18 | frontend | M | DTJ-193, DTJ-436 | apps/web/src/features/search/**; features/analogs/**; pages/medicine/**; auth-store.ts |
+| DTJ-441 | Обработчик очереди inventory-sync в apps/worker и выбор аптеки для pharmacy_admin сети при импорте | EP-04 | infrastructure | M | DTJ-157, DTJ-160, DTJ-435 | apps/worker/src/jobs/inventory-sync-batch/**; inventory-excel-import.controller.ts; apps/pharmacy inventory-bulk |
+| DTJ-442 | Онбординг вживую: ZodValidationPipe ломает маршруты с :id, approve не активирует аптеку, скан лицензии не виден | EP-02 | presentation | M | — | onboarding presentation/controllers/**; review use case; apps/admin onboarding-verification/** |
+| DTJ-443 | AuthGuard учитывает отзыв сессии: access-токен отозванной семьи больше не принимается | EP-01 | presentation | S | — | auth.guard.ts; auth infrastructure (кэш) |
+| DTJ-444 | Межтенантная изоляция создания персонала: POST /staff-accounts проверяет сеть actor'а | EP-15 | application | S | DTJ-030, DTJ-364 | staff-account.policy.ts; create-staff-account.use-case.ts |
+| DTJ-445 | Прод-образ apps/api собирается и применяет миграции | EP-01 | infra | M | DTJ-001, DTJ-412 | infra/docker/Dockerfile.api; docker-entrypoint.sh |
+| DTJ-446 | Заглушки → реальные адаптеры: доставка возврата и отмена заказов при приостановке аптеки | EP-11 | infrastructure | M | DTJ-273, DTJ-071, DTJ-315 | returns/onboarding adapters |
 
 ¹ `0008_i18n_overrides_review_status.sql` (DTJ-103) ещё не реализован, но это имя уже занято
 двумя другими миграциями (`0008_onboarding_foundation.sql`, `0008_user_telegram_identities.sql`) —

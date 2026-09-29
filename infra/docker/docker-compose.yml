@@ -22,6 +22,7 @@ x-api-env: &api-env
   NODE_ENV: ${NODE_ENV:-development}
   PORT: ${PORT:-3000}
   WORKER_HEALTH_PORT: ${WORKER_HEALTH_PORT:-3001}
+  E2E_TEST_ENDPOINTS: ${E2E_TEST_ENDPOINTS:-false}
   # SRS-DB-024/030 (оба Must): прикладной пул ОБЯЗАН ходить под `app_role` — ролью без
   # UPDATE/DELETE на `escrow_ledger` (и на `audit_log`, когда он появится с EP-16).
   # Раньше здесь стоял `dorutj_migrator`, и это сводило гарантию на нет полностью:

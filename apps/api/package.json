@@ -55,6 +55,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@dorutj/testing-kit": "workspace:*",
     "@nestjs/cli": "^11.0.24",
     "@nestjs/testing": "^11.2.3",
     "@types/node": "^24.13.3",

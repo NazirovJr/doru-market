@@ -23,8 +23,14 @@ function selectFile(): void {
   fireEvent.change(input, { target: { files: [file] } })
 }
 
+/** По умолчанию — `GET /pharmacy-accounts?scope=own` (DTJ-441) отвечает пустым списком (аптека-привязанная роль). Тесты пикера переопределяют локально. */
+function stubEmptyChainPharmacies(): void {
+  vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }))))
+}
+
 beforeEach(() => {
   useAuthStore.setState({ accessToken: 'tok', refreshToken: 'ref', user: { id: 'u1', role: 'pharmacy_admin', tenantId: 't1', phoneNumber: null, fullName: null } })
+  stubEmptyChainPharmacies()
 })
 
 afterEach(() => {
@@ -69,6 +75,40 @@ describe('<ExcelImportDropzone /> (DTJ-168)', () => {
     renderDropzone()
     expect(screen.getByTestId('excel-import-upload-button')).toHaveAttribute('aria-disabled', 'true')
     expect(screen.queryByTestId('excel-import-mode-error')).not.toBeInTheDocument()
+  })
+})
+
+/** DTJ-441: сетевой pharmacy_admin (chainId в JWT) должен явно выбрать аптеку сети перед загрузкой. */
+describe('<ExcelImportDropzone /> — выбор аптеки для сетевого pharmacy_admin (DTJ-441)', () => {
+  function stubChainPharmacies(): void {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({ data: [{ id: 'ph-1', chainId: 'chain-1', chainName: 'Excel', name: 'Excel Center', status: 'active', licenseExpiryDate: null }] }),
+            { status: 200 },
+          ),
+        ),
+      ),
+    )
+  }
+
+  it('список аптек сети не пуст — показан пикер, «Загрузить» неактивна без выбранной аптеки', async () => {
+    stubChainPharmacies()
+    renderDropzone()
+    selectFile()
+    fireEvent.click(screen.getByRole('radio', { name: 'Илова кардан/навсозӣ' }))
+
+    await waitFor(() => { expect(screen.getByText('Дорухона')).toBeInTheDocument() })
+    expect(screen.getByTestId('excel-import-upload-button')).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('список аптек сети пуст (аптека-привязанный pharmacy_admin) — пикер не рендерится', async () => {
+    renderDropzone()
+    selectFile()
+
+    await waitFor(() => { expect(screen.queryByText('Дорухона')).not.toBeInTheDocument() })
   })
 })
 
