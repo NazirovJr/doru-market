@@ -113,6 +113,11 @@ test.describe('CUJ-1: поиск и аналоги (SRS-CAT-024/027/030/038/045/
     await expect(cartItem.locator('[data-testid="cart-item-medicine-name"]')).toHaveText(tradeName)
     await expect(cartItem.locator('[data-testid="cart-item-price"]')).toContainText((offer.priceDiram / 100).toFixed(2))
 
+    await cartItem.locator('[data-testid="cart-item-increase"]').click()
+    await expect(cartItem.locator('[data-testid="cart-item-quantity"]')).toHaveText('2')
+    await cartItem.locator('[data-testid="cart-item-remove"]').click()
+    await expect(page.locator('[data-testid="cart-item-row"]')).toHaveCount(0)
+
     await runAxeCheck(page)
   })
 
