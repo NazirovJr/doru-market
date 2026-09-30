@@ -9,8 +9,9 @@
  *
  * DTJ-066: `POST /:id/submit` добавляется в этот же контроллер.
  */
-import { Body, Controller, HttpCode, HttpStatus, Inject, Param, ParseUUIDPipe, Post } from '@nestjs/common'
+import { Body, Controller, HttpCode, HttpStatus, Inject, Ip, Param, ParseUUIDPipe, Post } from '@nestjs/common'
 import { Public } from '@/common/decorators/public.decorator.js'
+import { TenantContext } from '@/common/context/tenant-context.js'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
 import {
   ok,
@@ -86,6 +87,7 @@ export class PharmacyChainsPublicController {
     const result = await this.verifyChainContactPhone.execute({
       chainId: id,
       code: body.code,
+      tenantId: resolveTenantId(),
     })
     return ok(result)
   }
@@ -95,6 +97,7 @@ export class PharmacyChainsPublicController {
   async requestOtp(
     @Param('id', ID_PARSE_UUID) id: string,
     @Body(new ZodValidationPipe(RequestContactPhoneOtpRequestSchema)) _body: RequestContactPhoneOtpRequest,
+    @Ip() ipAddress: string,
   ): Promise<unknown> {
     // Резолв `contactPhone` через репозиторий
     const chain = await this.pharmacyChainRepository.findById(id)
@@ -102,8 +105,10 @@ export class PharmacyChainsPublicController {
       return ok({ sent: false })
     }
     const result = await this.otpPort.requestCode({
+      chainId: chain.id,
       phone: chain.contactPhone,
-      purpose: 'onboarding_contact',
+      tenantId: resolveTenantId(),
+      ipAddress,
     })
     return ok({ sent: true, challengeId: result.challengeId, expiresAt: result.expiresAt.toISOString() })
   }
@@ -117,4 +122,13 @@ export class PharmacyChainsPublicController {
     const result = await this.submitChainForReview.execute({ chainId: id })
     return ok(result)
   }
+}
+
+// Публичные маршруты работают под нейтральным тенантом платформы; без резолва OTP не к чему привязать.
+function resolveTenantId(): string {
+  const tenantId = TenantContext.get()?.tenantId ?? null
+  if (tenantId === null) {
+    throw new Error('PharmacyChainsPublicController: TenantContext не резолвлен, TenantResolutionMiddleware не подключён')
+  }
+  return tenantId
 }

@@ -73,6 +73,7 @@ import {
 } from '@/modules/auth/application/ports/users.repository.port.js'
 import {
   OTP_CODES_REPOSITORY,
+  type OtpCodeRecord,
   type OtpCodesRepository,
 } from '@/modules/auth/application/ports/otp-codes.repository.port.js'
 import {
@@ -104,6 +105,13 @@ export interface VerifyOtpInput {
   readonly deviceLabel: string
   readonly userAgent: string
   readonly ipAddress: string
+}
+
+export interface VerifyContactCodeInput {
+  readonly tenantId: string
+  readonly subjectRef: string
+  readonly purpose: 'onboarding_contact'
+  readonly code: string
 }
 
 export interface VerifyOtpResult {
@@ -146,45 +154,77 @@ export class VerifyOtpUseCase {
   async execute(input: VerifyOtpInput): Promise<Result<VerifyOtpResult, VerifyOtpError>> {
     const now = this.clock.now()
     return this.uow.run(async (tx) => {
-      const record = await this.otpCodes.findByIdForUpdate(tx, input.otpRequestId)
-      if (record === null) {
-        // DTJ-024 §3.2: «Given строка не найдена → OtpMismatchError
-        // (не раскрывать «не существует» отдельным кодом — единообразие с
-        // обычным неверным кодом)».
+      const checked = await this.checkCode({ tx, otpRequestId: input.otpRequestId, code: input.code, purpose: 'login' })
+      if (isErr(checked)) {
+        return err(checked.error)
+      }
+      return this.completeVerification({ tx, record: checked.value, input, now })
+    })
+  }
+
+  /**
+   * Проверка кода, привязанного к `subjectRef` (не к телефону-логину), без выдачи сессии:
+   * тот же лимит попыток, срок и хеш, что у логина; код потребляется при успехе.
+   */
+  async verifyContactCode(input: VerifyContactCodeInput): Promise<Result<void, VerifyOtpError>> {
+    const now = this.clock.now()
+    const active = await this.otpCodes.findActiveBySubject({
+      tenantId: input.tenantId,
+      subjectRef: input.subjectRef,
+      purpose: input.purpose,
+      now,
+    })
+    if (active === null) {
+      return err(new OtpMismatchError())
+    }
+    return this.uow.run(async (tx) => {
+      const checked = await this.checkCode({ tx, otpRequestId: active.id, code: input.code, purpose: input.purpose })
+      if (isErr(checked)) {
+        return err(checked.error)
+      }
+      if (checked.value.consumedAt !== null) {
         return err(new OtpMismatchError())
       }
-
-      // 1) Презентационный лимит попыток (Redis-счётчик) — ПЕРЕД verify.
-      const attemptsCheck = await this.checkVerifyAttemptsLocked(input.otpRequestId, record.expiresAt)
-      if (attemptsCheck.error !== null) {
-        return err(attemptsCheck.error)
-      }
-
-      // 2) VO-уровень: verify хеша + (опосредованно) срока годности.
-      const candidateHash = this.hashCode(input.code, input.otpRequestId)
-      const otp = OtpCode.restore({
-        codeHash: record.codeHash,
-        subjectRef: record.subjectRef,
-        issuedAt: record.issuedAt,
-        expiresAt: record.expiresAt,
-      })
-      if (otp.isExpired(this.clock)) {
-        await this.recordFailedVerify({ tx, otpRequestId: input.otpRequestId, otpId: record.id, expiresAt: record.expiresAt })
-        return err(new OtpExpiredError())
-      }
-      const verifyResult = otp.verify(candidateHash)
-      if (isErr(verifyResult)) {
-        await this.recordFailedVerify({ tx, otpRequestId: input.otpRequestId, otpId: record.id, expiresAt: record.expiresAt })
-        // `details.attempts` — SRS-API-022, сколько попыток ОСТАЛОСЬ (клиент
-        // показывает счётчик пользователю). Новый `OtpMismatchError`, а не
-        // `verifyResult.error` как есть — VO-уровень (`OtpCode.verify`) не
-        // знает о презентационном Redis-счётчике попыток, у него нет details.
-        return err(new OtpMismatchError({ attempts: attemptsCheck.attemptsLeft }))
-      }
-
-      // 3) Успех: find-or-create User, AuthSession, JWT, consume OTP.
-      return this.completeVerification({ tx, record, input, now })
+      await this.otpCodes.markConsumed(tx, checked.value.id, now)
+      return ok(undefined)
     })
+  }
+
+  /** Общая часть проверки: блокировка строки, лимит попыток, срок, хеш, назначение кода. */
+  private async checkCode(args: {
+    tx: UnitOfWorkTx
+    otpRequestId: string
+    code: string
+    purpose: VerifyContactCodeInput['purpose'] | 'login'
+  }): Promise<Result<OtpCodeRecord, VerifyOtpError>> {
+    const { tx, otpRequestId, code, purpose } = args
+    const record = await this.otpCodes.findByIdForUpdate(tx, otpRequestId)
+    // DTJ-024 §3.2: несуществующая строка и код чужого назначения неотличимы от неверного кода.
+    if (record?.purpose !== purpose) {
+      return err(new OtpMismatchError())
+    }
+
+    const attemptsCheck = await this.checkVerifyAttemptsLocked(otpRequestId, record.expiresAt)
+    if (attemptsCheck.error !== null) {
+      return err(attemptsCheck.error)
+    }
+
+    const otp = OtpCode.restore({
+      codeHash: record.codeHash,
+      subjectRef: record.subjectRef,
+      issuedAt: record.issuedAt,
+      expiresAt: record.expiresAt,
+    })
+    if (otp.isExpired(this.clock)) {
+      await this.recordFailedVerify({ tx, otpRequestId, otpId: record.id, expiresAt: record.expiresAt })
+      return err(new OtpExpiredError())
+    }
+    if (isErr(otp.verify(this.hashCode(code, otpRequestId)))) {
+      await this.recordFailedVerify({ tx, otpRequestId, otpId: record.id, expiresAt: record.expiresAt })
+      // `details.attempts` — SRS-API-022, сколько попыток ОСТАЛОСЬ (клиент показывает счётчик).
+      return err(new OtpMismatchError({ attempts: attemptsCheck.attemptsLeft }))
+    }
+    return ok(record)
   }
 
   /**

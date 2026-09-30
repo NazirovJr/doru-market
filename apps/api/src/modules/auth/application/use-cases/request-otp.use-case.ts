@@ -45,10 +45,22 @@ import { SMS_PROVIDER, type SmsProviderPort } from '@/modules/auth/application/p
 
 const SHA256_HEX_LENGTH = 64
 
+export type RequestableOtpPurpose = Extract<OtpPurpose, 'login' | 'onboarding_contact'>
+
 export interface RequestOtpInput {
   readonly phone: string
   readonly ipAddress: string
   readonly tenantId: string
+  readonly purpose?: RequestableOtpPurpose
+  /** К чему привязан код; по умолчанию сам телефон. */
+  readonly subjectRef?: string
+}
+
+interface IssueOtpInput {
+  readonly phone: PhoneNumber
+  readonly tenantId: string
+  readonly purpose: RequestableOtpPurpose
+  readonly subjectRef: string
 }
 
 export interface RequestOtpResult {
@@ -96,7 +108,12 @@ export class RequestOtpUseCase {
   async execute(input: RequestOtpInput): Promise<RequestOtpResult> {
     const phone = parsePhoneOrThrow(input.phone)
     await this.enforceRateLimits(phone.value, input.ipAddress, input.tenantId)
-    return this.issueOtp(phone, input.tenantId)
+    return this.issueOtp({
+      phone,
+      tenantId: input.tenantId,
+      purpose: input.purpose ?? 'login',
+      subjectRef: input.subjectRef ?? phone.value,
+    })
   }
 
   private async enforceRateLimits(
@@ -157,30 +174,31 @@ export class RequestOtpUseCase {
     ]
   }
 
-  private async issueOtp(phone: PhoneNumber, tenantId: string): Promise<RequestOtpResult> {
+  private async issueOtp(input: IssueOtpInput): Promise<RequestOtpResult> {
+    const { phone, tenantId, purpose, subjectRef } = input
     const otpRequestId = this.deps.ids.next()
-    const { code } = this.deps.otpGenerator.generate('login')
+    const { code } = this.deps.otpGenerator.generate(purpose)
     const codeHash = hashCodeWithSalt(code, otpRequestId)
     const otpCode = OtpCode.issue({
       codeHash,
-      subjectRef: phone.value,
+      subjectRef,
       clock: this.deps.clock,
       ttlSeconds: OTP_TTL_SECONDS,
     })
     // `id: otpRequestId` — ОБЯЗАТЕЛЬНО тот же id, которым уже посолен `codeHash`
     // выше (см. JSDoc порта `OtpCodesRepository.create`): иначе `VerifyOtpUseCase`
     // не найдёт строку по `otpRequestId`, и любой verify вернёт `OtpMismatchError`.
-    await this.deps.otpCodes.supersedeUnconsumed({ tenantId, subjectRef: phone.value, purpose: 'login', now: otpCode.issuedAt })
+    await this.deps.otpCodes.supersedeUnconsumed({ tenantId, subjectRef, purpose, now: otpCode.issuedAt })
     await this.deps.otpCodes.create({
       id: otpRequestId,
       tenantId,
-      subjectRef: phone.value,
-      purpose: 'login',
+      subjectRef,
+      purpose,
       codeHash: otpCode.codeHash,
       issuedAt: otpCode.issuedAt,
       expiresAt: otpCode.expiresAt,
     })
-    await this.deps.smsProvider.sendOtp(phone, code, 'login' satisfies OtpPurpose)
+    await this.deps.smsProvider.sendOtp(phone, code, purpose)
     return { otpRequestId, expiresInSeconds: OTP_TTL_SECONDS }
   }
 }

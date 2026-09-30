@@ -64,8 +64,8 @@ export { UNIT_OF_WORK, type UnitOfWorkPort } from './application/ports/unit-of-w
 // а не открывать второе соединение пула поверх удержанного.
 export { type UnitOfWorkTx } from './application/ports/unit-of-work.port.js'
 export { PhoneNumber } from './domain/value-objects/phone-number.vo.js'
-export { RequestOtpUseCase, type RequestOtpInput, type RequestOtpResult } from './application/use-cases/request-otp.use-case.js'
-export { VerifyOtpUseCase, type VerifyOtpInput, type VerifyOtpResult, type VerifyOtpError } from './application/use-cases/verify-otp.use-case.js'
+export { RequestOtpUseCase, type RequestOtpInput, type RequestOtpResult, type RequestableOtpPurpose } from './application/use-cases/request-otp.use-case.js'
+export { VerifyOtpUseCase, type VerifyOtpInput, type VerifyOtpResult, type VerifyOtpError, type VerifyContactCodeInput } from './application/use-cases/verify-otp.use-case.js'
 export { RefreshTokenUseCase, type RefreshTokenInput, type RefreshTokenResult, type RefreshTokenError } from './application/use-cases/refresh-token.use-case.js'
 export { LogoutUseCase, type LogoutInput, type LogoutResult } from './application/use-cases/logout.use-case.js'
 export { LogoutAllUseCase, type LogoutAllInput } from './application/use-cases/logout-all.use-case.js'

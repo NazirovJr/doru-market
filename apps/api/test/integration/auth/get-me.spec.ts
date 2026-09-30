@@ -29,6 +29,7 @@ import {
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { users as usersTable } from '@/db/schema/users.js'
 import { createTestApp, type TestApp } from './__tests__/test-app.js'
+import { seedPharmacyInChain } from './__tests__/seed-pharmacy.js'
 
 const TENANT_ID = '33333333-3333-4333-8333-333333333333'
 const CHAIN_A = '11111111-1111-4111-8111-111111111111'
@@ -198,7 +199,7 @@ describe('auth.me (DTJ-028 follow-up, SRS-API-025)', () => {
         phone: '+992917555666',
         fullName: 'Pharmacist',
         role: 'pharmacist',
-        pharmacyId: '66666666-6666-4666-8666-666666666666',
+        pharmacyId: await seedPharmacyInChain(app, CHAIN_A),
         chainId: CHAIN_A,
       })
     expect(create.status).toBe(201)

@@ -19,10 +19,12 @@
 import { Injectable } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { err, ok, type Result } from '@dorutj/domain-kernel'
-import { JwtClaims, JwtSignerPort, JwtVerificationError } from '@/modules/auth/application/ports/jwt-signer.port.js'
-
-const ACCESS_TOKEN_EXPIRES_MINUTES = 15
-const SECONDS_PER_MINUTE = 60
+import {
+  ACCESS_TOKEN_TTL_SECONDS,
+  JwtClaims,
+  JwtSignerPort,
+  JwtVerificationError,
+} from '@/modules/auth/application/ports/jwt-signer.port.js'
 
 interface JsonWebTokenErrorLike {
   readonly name: string
@@ -109,7 +111,7 @@ export class Rs256JwtSignerAdapter implements JwtSignerPort {
       privateKey,
       publicKey,
       kid,
-      expiresInSeconds: ACCESS_TOKEN_EXPIRES_MINUTES * SECONDS_PER_MINUTE,
+      expiresInSeconds: ACCESS_TOKEN_TTL_SECONDS,
     }
   }
 }
