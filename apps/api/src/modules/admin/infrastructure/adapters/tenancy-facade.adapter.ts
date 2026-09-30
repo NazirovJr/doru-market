@@ -1,5 +1,6 @@
 // codLimitDiram конвертируется number ↔ bigint ровно на этой границе (домен хранит bigint, контракт — number).
 import { Inject, Injectable } from '@nestjs/common'
+import { pickEditableBrandTokens } from '@dorutj/contracts'
 import { TENANT_REPOSITORY, TenantId, type Tenant, type TenantRepositoryPort } from '@/modules/tenancy/index.js'
 import {
   TENANCY_FACADE_PORT,
@@ -71,7 +72,7 @@ function toDetailView(tenant: Tenant): TenantDetailView {
     customDomain: tenant.customDomain,
     brandName: tenant.settings.brandName,
     brandLogoUrl: tenant.settings.brandLogoUrl,
-    brandPalette: tenant.settings.brandPalette,
+    brandPalette: pickEditableBrandTokens(tenant.settings.brandPalette),
     codLimitDiram: Number(tenant.settings.codLimitDiram),
     holdPeriodDays: tenant.settings.holdPeriodDays,
   }

@@ -140,6 +140,18 @@ describe('tests/arch/fixtures — каждый нарушитель должен
     PROCESS_SPAWN_TIMEOUT_MS,
   )
 
+  // ─── 3b. Литерал бренда → ESLint no-restricted-syntax (dorutj/no-hardcoded-brand) ───
+  it(
+    'hardcoded-brand: ловится ESLint (no-restricted-syntax, запрет хардкода бренда)',
+    () => {
+      const result = runEslint(['tests/arch/fixtures/hardcoded-brand/page-title.ts'])
+
+      expect(result.exitCode).not.toBe(0)
+      expect(result.output).toContain('Имя бренда — только из i18n')
+    },
+    PROCESS_SPAWN_TIMEOUT_MS,
+  )
+
   // ─── 4a. application/ импортирует infrastructure/ → ESLint no-restricted-imports ───
   it(
     'application-imports-infrastructure: ловится ESLint (no-restricted-imports, §1.1)',
@@ -199,9 +211,10 @@ describe('tests/arch/fixtures — каждый нарушитель должен
 
   // ─── Smoke: все ESLint-фикстуры одним batch-вызовом — ни одна не пропущена молча ───
   it(
-    'smoke (ESLint batch): все 4 ESLint-фикстуры разом всё ещё ловятся вместе',
+    'smoke (ESLint batch): все 5 ESLint-фикстур разом всё ещё ловятся вместе',
     () => {
       const result = runEslint([
+        'tests/arch/fixtures/hardcoded-brand/page-title.ts',
         'tests/arch/fixtures/domain-imports-drizzle/domain/order.entity.ts',
         'tests/arch/fixtures/domain-uses-date-now/domain/otp.entity.ts',
         'tests/arch/fixtures/magic-number/pricing.ts',
@@ -212,6 +225,7 @@ describe('tests/arch/fixtures — каждый нарушитель должен
       expect(result.output).toContain('Слой domain обязан быть чистым')
       expect(result.output).toContain('В domain время берётся через порт Clock')
       expect(result.output).toContain('No magic number: 7919')
+      expect(result.output).toContain('Имя бренда — только из i18n')
       expect(result.output).toContain('application зависит только от domain и собственных портов')
     },
     PROCESS_SPAWN_TIMEOUT_MS,

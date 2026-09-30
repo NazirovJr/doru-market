@@ -16,6 +16,11 @@ import { TenantCacheInvalidationHandler } from './infrastructure/events/tenant-c
 import { TenantResolutionMiddleware } from './presentation/middleware/tenant-resolution.middleware.js'
 import { TenantMetaController } from './presentation/tenant-meta.controller.js'
 import { GetTenantMetaUseCase } from './application/use-cases/get-tenant-meta.use-case.js'
+import { TenancyBrandingController } from './presentation/controllers/tenancy-branding.controller.js'
+import { GetBrandingUseCase } from './application/use-cases/get-branding.use-case.js'
+import { UpdateBrandingUseCase } from './application/use-cases/update-branding.use-case.js'
+import { TENANT_EVENT_PUBLISHER } from './application/ports/tenant-event-publisher.port.js'
+import { InProcessTenantEventPublisher } from './infrastructure/events/in-process-tenant-event-publisher.js'
 import { TenantScopeGuard } from '@/common/guards/tenant-scope.guard.js'
 import {
   TENANT_REPOSITORY,
@@ -29,7 +34,7 @@ import { TENANT_CACHE, type TenantCachePort } from './application/ports/tenant-c
 
 @Module({
   imports: [DatabaseModule, AuthModule],
-  controllers: [TenantMetaController],
+  controllers: [TenantMetaController, TenancyBrandingController],
   providers: [
     { provide: TENANT_REPOSITORY, useClass: DrizzleTenantRepository },
     { provide: TENANT_SETTINGS_REPOSITORY, useClass: DrizzleTenantSettingsRepository },
@@ -40,6 +45,9 @@ import { TENANT_CACHE, type TenantCachePort } from './application/ports/tenant-c
     TenantCacheInvalidationHandler,
     TenantResolutionMiddleware,
     GetTenantMetaUseCase,
+    GetBrandingUseCase,
+    UpdateBrandingUseCase,
+    { provide: TENANT_EVENT_PUBLISHER, useClass: InProcessTenantEventPublisher },
     // Глобальный guard: проверяет, что `TenantResolutionMiddleware` оставил
     // резолвленный тенант в `TenantContext` (DTJ-055). `APP_GUARD` — единственный
     // поддерживаемый NestJS способ зарегистрировать guard на ВСЕ маршруты разом

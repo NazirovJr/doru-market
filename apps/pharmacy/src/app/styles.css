@@ -1,23 +1,18 @@
 @import 'tailwindcss';
 
 /*
- * Временные токены дизайн-системы (DTJ-166) — тот же приём, что `apps/web/src/app/styles.css`
- * (DTJ-003/DTJ-028): компоненты используют @theme-токены (`bg-surface`, `text-ink`, ...), а не
- * буквальный HEX/RGB (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §5, «ноль хардкодных цветов»).
- * TODO(EP-18): заменить значения токенов на итоговую White-Label дизайн-систему `packages/ui`,
- * когда она перестанет быть заглушкой (см. `packages/ui/src/index.ts`).
+ * Утилиты Tailwind читают токены бренда (`--brand-*`) — их выставляют `@dorutj/ui/tokens` (нейтральные
+ * дефолты) и рантайм-брендинг тенанта (bootstrap-branding), поэтому смена бренда не требует пересборки.
  */
-@theme {
-  --color-surface: #ffffff;
-  --color-ink: #0f172a;
-  --color-ink-muted: #64748b;
-  --color-line: #e2e8f0;
-  --color-brand-primary: #0ea5e9;
-  --color-brand-danger: #dc2626;
-  /* DTJ-169: статусные бейджи батчей синхронизации (completed_full_success/partial/failed) — та же
-     заглушка-логика токенов, что выше, packages/ui их ещё не определяет (см. риски тикета). */
-  --color-brand-success: #16a34a;
-  --color-brand-warning: #d97706;
+@theme inline {
+  --color-surface: var(--brand-surface);
+  --color-ink: var(--brand-text);
+  --color-ink-muted: var(--brand-text-muted);
+  --color-line: var(--brand-border);
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-danger: var(--brand-danger);
+  --color-brand-success: var(--brand-success);
+  --color-brand-warning: var(--brand-warning);
 }
 
 /*

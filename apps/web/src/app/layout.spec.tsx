@@ -32,10 +32,10 @@ afterEach(() => {
 })
 
 describe('AppLayout (smoke)', () => {
-  it('рендерится с плейсхолдерами бренда/языка без падений', () => {
+  it('рендерится с брендом и переключателем языка без падений', () => {
     renderLayout()
 
-    expect(screen.getByTestId('brand-placeholder')).toHaveTextContent('[ Бренд ]')
+    expect(screen.getByTestId('brand-name')).toHaveTextContent('DoruTJ')
     expect(screen.getByTestId('language-switcher-placeholder')).toBeInTheDocument()
     expect(screen.getByTestId('child')).toHaveTextContent('ok')
   })

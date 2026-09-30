@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router'
 import { AppProviders } from '@/app/providers'
 import { router } from '@/app/router'
+import { bootstrapBranding } from '@/app/bootstrap-branding'
 // CSS токенов и keyframes пакета — в entry-point, до `styles.css` приложения.
 import '@dorutj/ui/tokens.css'
 import '@dorutj/ui/components.css'
@@ -31,8 +32,10 @@ if (rootElement === null) {
   throw new Error('Корневой DOM-узел #root не найден — проверь apps/pharmacy/index.html')
 }
 
-createRoot(rootElement).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+void bootstrapBranding().then(() => {
+  createRoot(rootElement).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  )
+})

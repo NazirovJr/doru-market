@@ -23,3 +23,7 @@ export type { UseMainButtonOptions, UseMainButtonResult } from './twa/use-main-b
 export { useMainButton } from './twa/use-main-button'
 export type { UseBackButtonOptions } from './twa/use-back-button'
 export { useBackButton } from './twa/use-back-button'
+
+export type { BootstrapBrandingOptions, BrandingLoader, TenantBranding } from './branding/tenant-branding'
+export { applyTenantBranding, bootstrapBranding, parseTenantBranding, useTenantBranding } from './branding/tenant-branding'
+export { TenantBrandLogo, type TenantBrandLogoProps } from './branding/tenant-brand-logo'

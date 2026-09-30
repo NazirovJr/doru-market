@@ -8,6 +8,7 @@ import { queryClient } from '@/app/providers/query-client'
 import { restoreSession } from '@/shared/api/http-client'
 import { LocaleProvider, useLocale } from '@/shared/config/locale-provider'
 import { router } from '@/app/router'
+import { bootstrapBranding } from '@/app/bootstrap-branding'
 import '@dorutj/ui/tokens.css'
 import '@dorutj/ui/components.css'
 import '@/app/styles.css'
@@ -24,8 +25,8 @@ const LocalizedToastProvider = ({ children }: { readonly children: ReactNode }):
   return <ToastProvider closeButtonLabel={t('common.close')}>{children}</ToastProvider>
 }
 
-// Сессию восстанавливаем до первого рендера, иначе корзина/шапка стартуют гостевыми.
-void restoreSession().finally(() => {
+// Сессию и бренд грузим до первого рендера, иначе корзина/шапка стартуют гостевыми и без бренда.
+void Promise.allSettled([restoreSession(), bootstrapBranding()]).then(() => {
   createRoot(rootElement).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
