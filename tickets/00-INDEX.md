@@ -1,9 +1,8 @@
 # DTJ Tickets — Индекс и план запуска разработки
 
 > Владелец: Tech Lead. Источник данных: все файлы `tickets/ep*/DTJ-*.md` (271 тикет) +
-> `tickets/00-EPICS.md` (19 эпиков R1). Иерархия приоритета документов — см.
-> `docs/product/scope-r1.md` → `docs/architecture/decisions/README.md` → `docs/architecture/clean-architecture.md` →
-> `docs/architecture/tech-baseline.md` → `docs/product/charter.md` → `docs/spec/*.md` → `docs/product/client-brief-original.txt`.
+> `tickets/00-EPICS.md` (19 эпиков R1). Иерархия приоритета документов — единая
+> таблица в [`AGENTS.md`](../AGENTS.md#иерархия-документов).
 >
 > Методологическое замечание, важное для чтения всего документа: поле `depends_on` в каждом
 > тикете кодирует зависимости **только внутри своего эпика** (проверено эмпирически — из 271
