@@ -1,6 +1,6 @@
 /**
  * `EscrowInvariantSpec` (EP-10, DTJ-255, D-25, SRS-DOM-180/SRS-ORD-027/SRS-ORD-027a,
- * `docs/architecture/decisions/README.md` D-25 п.4, `docs/spec/21-module-orders-payments-escrow.md`
+ * `docs/architecture/decisions/d-25-cash-not-paid-escrow.md` D-25 п.4, `docs/spec/21-module-orders-payments-escrow.md`
  * TC-ORD-001c/d) — сквозной гейт-тест инварианта:
  *
  *   order.status === 'paid_escrow' ⟹ существуют записи escrow_ledger для этого заказа.

@@ -773,7 +773,7 @@ EP-06 → EP-09 → EP-10 → EP-12 → EP-13 → EP-19`, EP-04 исключён
 
 ## Конфликты владения файлами
 
-**Статус: РАЗРЕШЕНО (D-27, `docs/architecture/decisions/README.md`).** Все находки этого раздела
+**Статус: РАЗРЕШЕНО (D-27, `docs/architecture/decisions/d-27-file-ownership-protocol.md`).** Все находки этого раздела
 закрыты протоколом владения файлами D-27: (1) barrel-файлы (`index.ts`, `*.module.ts`,
 `package.json`, `tsconfig.json`, `.github/workflows/*.yml`,
 `infra/docker/docker-compose*.yml`) удалены из `files_owned` затронутых тикетов и

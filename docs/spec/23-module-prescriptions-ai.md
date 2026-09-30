@@ -646,7 +646,7 @@ interface RawSttResult {
 
 **SRS-RX-041** [R2] [D-15] Базовая модель Whisper (`STT_MODEL`, ASSUMPTION `whisper-1`, БЕЗ
 дообучения на тадж. диалектах — research прямо опровергает существование такой модели, см.
-`research/00-RESEARCH-DIGEST.md` строка 537-541 и Часть B D-15 `docs/architecture/decisions/README.md`).
+`research/00-RESEARCH-DIGEST.md` строка 537-541 и Часть B D-15 `docs/architecture/decisions/d-15-stt-tajik.md`).
 **Явный риск, фиксируемый как принятое ограничение MVP, не дефект**: WER (word error rate) для
 таджикского не бенчмаркан ни одним публичным источником на момент разработки — голос
 спроектирован как ВТОРИЧНЫЙ канал ввода (первичный — поиск текстом, CUJ-1), деградация качества

@@ -2,7 +2,7 @@
 
 > Скопируйте всё, что внутри блока ниже, и вставьте в Claude Design.
 > Источник: `docs/spec/30-ux-screens-and-flows.md`, `docs/product/scope-r1.md`,
-> `docs/architecture/decisions/README.md` (D-01).
+> `docs/architecture/decisions/d-01-brand-in-config.md` (D-01).
 > Если дизайн получится слишком большим за один заход — вставляйте по одному блоку «ЭКРАН N».
 
 ---

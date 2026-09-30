@@ -44,7 +44,7 @@ EP-09 зависит от EP-04 и EP-06, но фактическим блоке
 
 ## 3. Центральное решение эпика — D-25, проверять первым при любом ревью
 
-`docs/architecture/decisions/README.md` D-25: наличный заказ (`payment_method='cash_courier'`) переходит
+`docs/architecture/decisions/d-25-cash-not-paid-escrow.md` D-25: наличный заказ (`payment_method='cash_courier'`) переходит
 **синхронно в `confirmed`**, НЕ в `paid_escrow`. `paid_escrow` достижим **исключительно** из
 `pending_payment` по подписанному вебхуку банка.
 

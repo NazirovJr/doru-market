@@ -250,13 +250,13 @@ White-Label платформой для аптечных сетей (multi-tenan
 | **D-22** | Онбординг аптеки — обязательная верификация лицензии, не публикуется без `verified` | `27-module-admin-moderation-onboarding.md` §2 «Онбординг аптечной сети и аптеки (D-22)» |
 | **D-23** | Telegram-бот — основной канал уведомлений с первого дня, SMS — Mock-фоллбэк | `27-module-admin-moderation-onboarding.md` §6 «Уведомления (`NotificationService`, D-23)»; TWA — `30-ux-screens-and-flows.md` §9 |
 | **D-24** | Спор атомарно замораживает `payout_schedule`, снимается только терминальным статусом с `resolution_reason` | `27-module-admin-moderation-onboarding.md` §9 «Поддержка (D-24)»; денежная сторона спора — `21-module-orders-payments-escrow.md` §8 |
-| **D-25** | (ADR, эскалация из SRS) `cash_courier` — синхронный переход в `paid_escrow` внутри `Order.create()`, второе легитимное исключение из «только вебхук» | Само ADR — `docs/architecture/decisions/README.md` §«Часть B2»; реализующее требование — `SRS-ORD-027` (`21-module-orders-payments-escrow.md`); домен-сторона — `SRS-DOM-089` (`10-domain-model.md`, таблица переходов `order_status`) и категорический запрет `SRS-PAY-018` (`21`) — **оба документа должны быть обновлены явным перечислением двух исключений** (см. примечание ниже) |
+| **D-25** | (ADR, эскалация из SRS) `cash_courier` — синхронный переход в `paid_escrow` внутри `Order.create()`, второе легитимное исключение из «только вебхук» | Само ADR — `docs/architecture/decisions/d-25-cash-not-paid-escrow.md`; реализующее требование — `SRS-ORD-027` (`21-module-orders-payments-escrow.md`); домен-сторона — `SRS-DOM-089` (`10-domain-model.md`, таблица переходов `order_status`) и категорический запрет `SRS-PAY-018` (`21`) — **оба документа должны быть обновлены явным перечислением двух исключений** (см. примечание ниже) |
 
 > **Примечание о состоянии D-25**: на момент сведения этого мастер-документа `10-domain-model.md` §
 > «State machines» (строка перехода `pending_payment → paid_escrow`, `SRS-DOM-089`) и
 > `21-module-orders-payments-escrow.md` §5.1 (категорический запрет `SRS-PAY-018`) **ещё не обновлены**
 > явным перечислением двух исключений (`AdminPaymentOverrideUseCase` + `cash_courier`-путь), как того
-> требует `docs/architecture/decisions/README.md` (последний абзац §D-25). До внесения этого изменения действие
+> требует `docs/architecture/decisions/d-25-cash-not-paid-escrow.md` (последний абзац). До внесения этого изменения действие
 > `SRS-ORD-027` считается авторизованным решением D-25 согласно самому архитектурному документу — это
 > не блокирует разработку, но является открытым техдолгом синхронизации документов, подлежащим
 > устранению Tech Lead/Analyst при следующей правке `10`/`21`.
