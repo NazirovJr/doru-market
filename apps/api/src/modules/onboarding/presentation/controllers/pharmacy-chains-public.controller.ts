@@ -9,16 +9,19 @@
  *
  * DTJ-066: `POST /:id/submit` добавляется в этот же контроллер.
  */
-import { Body, Controller, Inject, Param, ParseUUIDPipe, Post, UsePipes } from '@nestjs/common'
+import { Body, Controller, HttpCode, HttpStatus, Inject, Ip, Param, ParseUUIDPipe, Post } from '@nestjs/common'
 import { Public } from '@/common/decorators/public.decorator.js'
+import { TenantContext } from '@/common/context/tenant-context.js'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
 import {
   ok,
   RequestContactPhoneOtpRequestSchema,
   SubmitChainApplicationRequestSchema,
+  SubmitChainForReviewRequestSchema,
   VerifyChainContactPhoneRequestSchema,
   type RequestContactPhoneOtpRequest,
   type SubmitChainApplicationRequest,
+  type SubmitChainForReviewRequest,
   type VerifyChainContactPhoneRequest,
 } from '@dorutj/contracts'
 import {
@@ -76,23 +79,25 @@ export class PharmacyChainsPublicController {
   }
 
   @Post(':id/verify-contact-phone')
-  @UsePipes(new ZodValidationPipe(VerifyChainContactPhoneRequestSchema))
+  @HttpCode(HttpStatus.OK)
   async verify(
     @Param('id', ID_PARSE_UUID) id: string,
-    @Body() body: VerifyChainContactPhoneRequest,
+    @Body(new ZodValidationPipe(VerifyChainContactPhoneRequestSchema)) body: VerifyChainContactPhoneRequest,
   ): Promise<unknown> {
     const result = await this.verifyChainContactPhone.execute({
       chainId: id,
       code: body.code,
+      tenantId: resolveTenantId(),
     })
     return ok(result)
   }
 
   @Post(':id/request-contact-phone-otp')
-  @UsePipes(new ZodValidationPipe(RequestContactPhoneOtpRequestSchema))
+  @HttpCode(HttpStatus.OK)
   async requestOtp(
     @Param('id', ID_PARSE_UUID) id: string,
-    @Body() _body: RequestContactPhoneOtpRequest,
+    @Body(new ZodValidationPipe(RequestContactPhoneOtpRequestSchema)) _body: RequestContactPhoneOtpRequest,
+    @Ip() ipAddress: string,
   ): Promise<unknown> {
     // Резолв `contactPhone` через репозиторий
     const chain = await this.pharmacyChainRepository.findById(id)
@@ -100,16 +105,30 @@ export class PharmacyChainsPublicController {
       return ok({ sent: false })
     }
     const result = await this.otpPort.requestCode({
+      chainId: chain.id,
       phone: chain.contactPhone,
-      purpose: 'onboarding_contact',
+      tenantId: resolveTenantId(),
+      ipAddress,
     })
     return ok({ sent: true, challengeId: result.challengeId, expiresAt: result.expiresAt.toISOString() })
   }
 
   @Post(':id/submit')
-  @UsePipes(new ZodValidationPipe(RequestContactPhoneOtpRequestSchema))
-  async submitForReview(@Param('id', ID_PARSE_UUID) id: string): Promise<unknown> {
+  @HttpCode(HttpStatus.OK)
+  async submitForReview(
+    @Param('id', ID_PARSE_UUID) id: string,
+    @Body(new ZodValidationPipe(SubmitChainForReviewRequestSchema)) _body: SubmitChainForReviewRequest,
+  ): Promise<unknown> {
     const result = await this.submitChainForReview.execute({ chainId: id })
     return ok(result)
   }
+}
+
+// Публичные маршруты работают под нейтральным тенантом платформы; без резолва OTP не к чему привязать.
+function resolveTenantId(): string {
+  const tenantId = TenantContext.get()?.tenantId ?? null
+  if (tenantId === null) {
+    throw new Error('PharmacyChainsPublicController: TenantContext не резолвлен, TenantResolutionMiddleware не подключён')
+  }
+  return tenantId
 }

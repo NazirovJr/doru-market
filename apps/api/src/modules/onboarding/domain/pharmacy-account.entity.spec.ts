@@ -234,3 +234,28 @@ describe('PharmacyAccount.updateDeliveryZone (DTJ-367, SRS-ADM-050)', () => {
     expect(() => acc.updateDeliveryZone({ maxDeliveryRadiusKm: 51 })).toThrow(ValidationError)
   })
 })
+
+describe('PharmacyAccount.updateApplication — расписание и лицензия', () => {
+  it('24/7 сохраняется, время работы обнуляется', () => {
+    const updated = PharmacyAccount.create(newAccountCommand()).updateApplication({
+      is24_7: true,
+      openingTime: '08:00',
+      closingTime: '20:00',
+      licenseIssuingAuthority: 'Минздрав',
+      licenseIssueDate: NOW,
+    })
+    expect(updated.isOpen24x7).toBe(true)
+    expect(updated.openingTime).toBeNull()
+    expect(updated.licenseIssuingAuthority).toBe('Минздрав')
+    expect(updated.licenseIssueDate).toEqual(NOW)
+  })
+
+  it('не 24/7 без обоих времён — ValidationError', () => {
+    const acc = PharmacyAccount.create(newAccountCommand())
+    expect(() => acc.updateApplication({ is24_7: false, openingTime: '08:00', closingTime: null })).toThrow(ValidationError)
+  })
+
+  it('без расписания в апдейте текущее расписание не проверяется', () => {
+    expect(() => PharmacyAccount.create(newAccountCommand()).updateApplication({ landmarkTj: 'у рынка' })).not.toThrow()
+  })
+})

@@ -5,7 +5,8 @@
  */
 import { Inject, Injectable } from '@nestjs/common'
 import { PHARMACY_ACCOUNT_REPOSITORY, type PharmacyAccountRepositoryPort } from '@/modules/onboarding/application/ports/pharmacy-account.repository.port.js'
-import type { PharmacyAccount } from '@/modules/onboarding/domain/pharmacy-account.entity.js'
+import { CHAIN_STATUSES_ALLOWING_PHARMACY_ACTIVE, type PharmacyAccount } from '@/modules/onboarding/domain/pharmacy-account.entity.js'
+import { PHARMACY_CHAIN_STATUS, type PharmacyChainStatusPort } from '@/modules/onboarding/application/ports/pharmacy-chain-status.port.js'
 import {
   PHARMACY_VERIFICATION_REPOSITORY,
   type PharmacyVerificationRepositoryPort,
@@ -38,6 +39,7 @@ export interface ReviewPharmacyResult {
 export class ReviewPharmacyApplicationUseCase {
   private readonly publishedEvents: PharmacyAccountActivatedEvent[] = []
 
+  // eslint-disable-next-line max-params -- NestJS DI: четыре порта в конструкторе (принятая конвенция)
   constructor(
     @Inject(PHARMACY_ACCOUNT_REPOSITORY)
     private readonly pharmacyAccountRepository: PharmacyAccountRepositoryPort,
@@ -45,18 +47,23 @@ export class ReviewPharmacyApplicationUseCase {
     private readonly pharmacyVerificationRepository: PharmacyVerificationRepositoryPort,
     @Inject(ONBOARDING_REVIEW_LOG_REPOSITORY)
     private readonly reviewLogRepository: OnboardingReviewLogRepositoryPort,
+    @Inject(PHARMACY_CHAIN_STATUS)
+    private readonly pharmacyChainStatus: PharmacyChainStatusPort,
   ) {}
 
   async approve(input: ReviewPharmacyApproveInput): Promise<ReviewPharmacyResult> {
     const account = await this.loadOrThrow(input.pharmacyId)
     const now = new Date()
     const approved = account.approve({ id: input.actorId })
-    await this.pharmacyAccountRepository.save(approved)
+    // Точка активируется тем же решением, если сеть уже approved/active; иначе остаётся approved (инвариант SRS-DOM-048).
+    const resolved = await this.activateIfParentAllows(approved, input.actorId)
+    await this.pharmacyAccountRepository.save(resolved)
     const existing = await this.pharmacyVerificationRepository.findBySubject({ pharmacyId: input.pharmacyId })
     if (existing !== null) {
       await this.pharmacyVerificationRepository.save({
         ...existing,
         verificationStatus: 'verified',
+        checklistSnapshot: input.checklist,
         reviewedBy: input.actorId,
         reviewedAt: now,
       })
@@ -68,14 +75,16 @@ export class ReviewPharmacyApplicationUseCase {
       reason: input.notes,
       checklistSnapshot: input.checklist,
     })
-    this.publishedEvents.push({
-      type: 'PharmacyAccountActivated',
-      pharmacyId: input.pharmacyId,
-      chainId: approved.chainId,
-      approvedBy: input.actorId,
-      approvedAt: now,
-    })
-    return { id: approved.id, status: approved.status }
+    if (resolved.status === 'active') {
+      this.publishedEvents.push({
+        type: 'PharmacyAccountActivated',
+        pharmacyId: input.pharmacyId,
+        chainId: resolved.chainId,
+        approvedBy: input.actorId,
+        approvedAt: now,
+      })
+    }
+    return { id: resolved.id, status: resolved.status }
   }
 
   async requestChanges(input: ReviewPharmacyChangeInput): Promise<ReviewPharmacyResult> {
@@ -118,6 +127,14 @@ export class ReviewPharmacyApplicationUseCase {
       checklistSnapshot: null,
     })
     return { id: terminated.id, status: terminated.status }
+  }
+
+  private async activateIfParentAllows(approved: PharmacyAccount, actorId: string): Promise<PharmacyAccount> {
+    const parentStatus = await this.pharmacyChainStatus.getStatus(approved.chainId)
+    if (parentStatus === null || !CHAIN_STATUSES_ALLOWING_PHARMACY_ACTIVE.has(parentStatus)) {
+      return approved
+    }
+    return approved.activate({ id: actorId }, parentStatus)
   }
 
   private async loadOrThrow(pharmacyId: string): Promise<PharmacyAccount> {

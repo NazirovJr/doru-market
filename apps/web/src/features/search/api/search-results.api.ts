@@ -17,10 +17,11 @@
  * `text=''` — валидный режим API «браузинг по фильтрам» (`SRS-CAT-045`), но `SearchBar`
  * (DTJ-192) никогда не ведёт на `/search` с пустым текстом (`goToResults` возвращает раньше без
  * навигации) — UI-фильтры каталога (радиус/цена/сортировка) вне объёма этого тикета, поэтому
- * `fetchSearchResults` параметризован только `text`+`cursor`, без `filters`/`geo`/`sort`.
+ * `fetchSearchResults` параметризован `text`/`cursor`/`geo`, без `filters`/`sort`.
  */
 import type { SearchResultItemDto } from '@dorutj/contracts'
 import { httpGetJsonWithMeta, type JsonMeta } from '@/shared/api/http-client'
+import type { GeoCoords } from '@/shared/geo/geo-store'
 
 const SEARCH_PATH = '/api/v1/medicines/search'
 
@@ -50,12 +51,16 @@ function readPagination(meta: JsonMeta | undefined): SearchPaginationMeta | null
   return isSearchPaginationMeta(pagination) ? pagination : null
 }
 
-export async function fetchSearchResults(
-  text: string,
-  cursor: string | undefined,
-  signal?: AbortSignal,
-): Promise<SearchResultsPage> {
-  const envelope = await httpGetJsonWithMeta<readonly SearchResultItemDto[]>(SEARCH_PATH, { text, cursor }, signal)
+export interface FetchSearchResultsInput {
+  readonly text: string
+  readonly cursor?: string | undefined
+  readonly geo?: GeoCoords | null | undefined
+  readonly signal?: AbortSignal | undefined
+}
+
+export async function fetchSearchResults({ text, cursor, geo, signal }: FetchSearchResultsInput): Promise<SearchResultsPage> {
+  const params = { text, cursor, lat: geo?.lat.toString(), lon: geo?.lon.toString() }
+  const envelope = await httpGetJsonWithMeta<readonly SearchResultItemDto[]>(SEARCH_PATH, params, signal)
   const pagination = readPagination(envelope.meta)
   return {
     items: envelope.data,

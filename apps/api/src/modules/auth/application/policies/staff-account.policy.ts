@@ -31,11 +31,8 @@
  *   (избегаем эскалации привилегий внутри сети). Это сознательное
  *   продуктовое решение, не техническое ограничение.
  *
- *   ПРИМЕЧАНИЕ: `actor.pharmacyId` НЕ проверяется в этой policy — для
- *   `pharmacist`/`courier` (SRS-API-035) достаточно `chainId`-совпадения.
- *   Когда `pharmacyId` станет обязательным для `pharmacist` (EP-03), нужно
- *   добавить проверку `target.pharmacyId ∈ pharmacies_by_actor.chainId`
- *   (отдельный тикет).
+ *   ПРИМЕЧАНИЕ: policy чистая и `pharmacyId` не видит — принадлежность аптеки сети actor'а
+ *   проверяет `CreateStaffAccountUseCase` через `PharmacyChainLookupPort`.
  */
 import { type UserRole } from '@dorutj/contracts'
 

@@ -13,6 +13,7 @@
  */
 import { Inject, Injectable } from '@nestjs/common'
 import { PHARMACY_CHAIN_REPOSITORY, type PharmacyChainRepositoryPort } from '@/modules/onboarding/application/ports/pharmacy-chain.repository.port.js'
+import { PHARMACY_ACCOUNT_REPOSITORY, type PharmacyAccountRepositoryPort } from '@/modules/onboarding/application/ports/pharmacy-account.repository.port.js'
 import type { PharmacyChain } from '@/modules/onboarding/domain/pharmacy-chain.entity.js'
 import {
   PHARMACY_VERIFICATION_REPOSITORY,
@@ -47,6 +48,7 @@ export class ReviewChainApplicationUseCase {
   /** Буфер опубликованных событий (вне persistance — тестируемо без outbox). */
   private readonly publishedEvents: PharmacyChainActivatedEvent[] = []
 
+  // eslint-disable-next-line max-params -- NestJS DI: четыре порта в конструкторе (принятая конвенция)
   constructor(
     @Inject(PHARMACY_CHAIN_REPOSITORY)
     private readonly pharmacyChainRepository: PharmacyChainRepositoryPort,
@@ -54,6 +56,8 @@ export class ReviewChainApplicationUseCase {
     private readonly pharmacyVerificationRepository: PharmacyVerificationRepositoryPort,
     @Inject(ONBOARDING_REVIEW_LOG_REPOSITORY)
     private readonly reviewLogRepository: OnboardingReviewLogRepositoryPort,
+    @Inject(PHARMACY_ACCOUNT_REPOSITORY)
+    private readonly pharmacyAccountRepository: PharmacyAccountRepositoryPort,
   ) {}
 
   async approve(input: ReviewChainApproveInput): Promise<ReviewChainResult> {
@@ -66,6 +70,7 @@ export class ReviewChainApplicationUseCase {
       await this.pharmacyVerificationRepository.save({
         ...existing,
         verificationStatus: 'verified',
+        checklistSnapshot: input.checklist,
         reviewedBy: input.actorId,
         reviewedAt: now,
       })
@@ -77,6 +82,7 @@ export class ReviewChainApplicationUseCase {
       reason: input.notes,
       checklistSnapshot: input.checklist,
     })
+    await this.activateApprovedPharmacies(approved, input.actorId)
     this.publishedEvents.push({
       type: 'PharmacyChainActivated',
       chainId: input.chainId,
@@ -126,6 +132,16 @@ export class ReviewChainApplicationUseCase {
       checklistSnapshot: null,
     })
     return { id: terminated.id, status: terminated.status }
+  }
+
+  // Точки, одобренные раньше сети, ждали её одобрения в статусе approved.
+  private async activateApprovedPharmacies(chain: PharmacyChain, actorId: string): Promise<void> {
+    const pharmacies = await this.pharmacyAccountRepository.listByChain(chain.id)
+    await Promise.all(
+      pharmacies
+        .filter((pharmacy) => pharmacy.status === 'approved')
+        .map((pharmacy) => this.pharmacyAccountRepository.save(pharmacy.activate({ id: actorId }, chain.status))),
+    )
   }
 
   private async loadOrThrow(chainId: string): Promise<PharmacyChain> {

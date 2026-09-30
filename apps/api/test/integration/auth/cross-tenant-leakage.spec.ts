@@ -29,6 +29,7 @@ import {
   type UsersRepository,
 } from '@/modules/auth/application/ports/users.repository.port.js'
 import { createTestApp, type TestApp } from './__tests__/test-app.js'
+import { seedPharmacyInChain } from './__tests__/seed-pharmacy.js'
 
 // Два разных tenantId — имитируют две аптечные сети.
 const TENANT_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
@@ -94,7 +95,7 @@ describe('auth.cross-tenant-leakage (устав §3.4, волна 3.5 задач
   it('1. Пользователь ТЕНАНТА А создаёт staff → 201 (базовая проверка)', async () => {
     const adminA = await seedUserAndGetToken(TENANT_A, CHAIN_A, 'pharmacy_admin')
     const targetPhone = '+992917111111'
-    const pharmacyId = '66666666-6666-4666-8666-666666666666'
+    const pharmacyId = await seedPharmacyInChain(app, CHAIN_A)
 
     const response = await request(httpServer)
       .post('/api/v1/staff-accounts')
@@ -117,7 +118,7 @@ describe('auth.cross-tenant-leakage (устав §3.4, волна 3.5 задач
     // 1) Создаём пользователя в ТЕНАНТЕ А (через админа А) — ресурс принадлежит А
     const adminA = await seedUserAndGetToken(TENANT_A, CHAIN_A, 'pharmacy_admin')
     const targetPhone = '+992917222222'
-    const pharmacyId = '77777777-7777-4777-8777-777777777777'
+    const pharmacyId = await seedPharmacyInChain(app, CHAIN_A)
 
     const createByA = await request(httpServer)
       .post('/api/v1/staff-accounts')

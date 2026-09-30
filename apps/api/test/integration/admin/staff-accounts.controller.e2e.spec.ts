@@ -5,8 +5,16 @@ import { randomUUID } from 'node:crypto'
 import type { INestApplication } from '@nestjs/common'
 import request from 'supertest'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { AUTH_SESSIONS_REPOSITORY, SMS_PROVIDER, type AuthSessionsRepository, type SmsProviderPort } from '@/modules/auth/index.js'
+import {
+  AUTH_SESSIONS_REPOSITORY,
+  SMS_PROVIDER,
+  USERS_REPOSITORY,
+  type AuthSessionsRepository,
+  type SmsProviderPort,
+  type UsersRepository,
+} from '@/modules/auth/index.js'
 import { createTestApp, seedActor, seedChain, type TestApp } from './__tests__/staff-accounts-test-app.js'
+import { seedPharmacyInChain } from '../auth/__tests__/seed-pharmacy.js'
 
 const CHAIN_A = randomUUID()
 const CHAIN_B = randomUUID()
@@ -51,7 +59,7 @@ describe('admin.staff-accounts (DTJ-364, SRS-ADM-041/042)', () => {
   it('A. pharmacy_admin создаёт pharmacist → видит его в scope=own → деактивирует', async () => {
     const admin = await seedActor(app, 'pharmacy_admin', CHAIN_A)
     const phone = randomPhone()
-    const pharmacyId = randomUUID()
+    const pharmacyId = await seedPharmacyInChain(app, CHAIN_A)
 
     const create = await request(httpServer)
       .post('/api/v1/staff-accounts')
@@ -82,7 +90,7 @@ describe('admin.staff-accounts (DTJ-364, SRS-ADM-041/042)', () => {
     const createB = await request(httpServer)
       .post('/api/v1/staff-accounts')
       .set('Authorization', `Bearer ${adminB.accessToken}`)
-      .send({ phone: phoneB, fullName: 'Чужой сотрудник', role: 'pharmacist', pharmacyId: randomUUID(), chainId: CHAIN_B })
+      .send({ phone: phoneB, fullName: 'Чужой сотрудник', role: 'pharmacist', pharmacyId: await seedPharmacyInChain(app, CHAIN_B), chainId: CHAIN_B })
     expect(createB.status).toBe(201)
     const createdB = (createB.body as CreateBody).data
 
@@ -100,7 +108,7 @@ describe('admin.staff-accounts (DTJ-364, SRS-ADM-041/042)', () => {
     const createB = await request(httpServer)
       .post('/api/v1/staff-accounts')
       .set('Authorization', `Bearer ${adminB.accessToken}`)
-      .send({ phone: phoneB, fullName: 'Чужой сотрудник', role: 'pharmacist', pharmacyId: randomUUID(), chainId: CHAIN_B })
+      .send({ phone: phoneB, fullName: 'Чужой сотрудник', role: 'pharmacist', pharmacyId: await seedPharmacyInChain(app, CHAIN_B), chainId: CHAIN_B })
     const createdB = (createB.body as CreateBody).data
 
     const deactivate = await request(httpServer)
@@ -109,6 +117,23 @@ describe('admin.staff-accounts (DTJ-364, SRS-ADM-041/042)', () => {
       .send({ isActive: false })
     expect(deactivate.status).toBe(403)
     expect((deactivate.body as ErrorBody).error.code).toBe('CROSS_TENANT_ACCESS_DENIED')
+  })
+
+  it('C2. pharmacy_admin (chain A) создаёт сотрудника в аптеке ЧУЖОЙ сети → 403 CROSS_TENANT_ACCESS_DENIED, сотрудник не создан', async () => {
+    const adminA = await seedActor(app, 'pharmacy_admin', CHAIN_A)
+    const foreignPharmacyId = await seedPharmacyInChain(app, CHAIN_B)
+    const phone = randomPhone()
+
+    const create = await request(httpServer)
+      .post('/api/v1/staff-accounts')
+      .set('Authorization', `Bearer ${adminA.accessToken}`)
+      .send({ phone, fullName: 'Внедрённый сотрудник', role: 'pharmacist', pharmacyId: foreignPharmacyId, chainId: CHAIN_A })
+    expect(create.status).toBe(403)
+    expect((create.body as ErrorBody).error.code).toBe('CROSS_TENANT_ACCESS_DENIED')
+
+    const users = app.get<UsersRepository>(USERS_REPOSITORY)
+    const stored = await users.list({ filter: { chainId: CHAIN_A, phoneLike: phone }, limit: 1, cursor: null })
+    expect(stored.items).toEqual([])
   })
 
   it('D. роль без прав (pharmacist) → 403 INSUFFICIENT_ROLE (RolesGuard, ГРУБАЯ проверка ДО policy)', async () => {
@@ -173,7 +198,7 @@ describe('admin.staff-accounts (DTJ-364, SRS-ADM-041/042)', () => {
     const create = await request(httpServer)
       .post('/api/v1/staff-accounts')
       .set('Authorization', `Bearer ${admin.accessToken}`)
-      .send({ phone, fullName: 'Фармацевт с сессией', role: 'pharmacist', pharmacyId: randomUUID(), chainId: CHAIN_A })
+      .send({ phone, fullName: 'Фармацевт с сессией', role: 'pharmacist', pharmacyId: await seedPharmacyInChain(app, CHAIN_A), chainId: CHAIN_A })
     const created = (create.body as CreateBody).data
 
     const sms = app.get<unknown>(SMS_PROVIDER) as SmsProviderPort & { peekLast: () => { code: string } | null }

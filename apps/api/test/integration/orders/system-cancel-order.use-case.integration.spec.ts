@@ -15,6 +15,9 @@ import { afterEach, beforeAll, beforeEach, afterAll, describe, expect, it, vi } 
 import type { Logger } from 'pino'
 import { ok } from '@dorutj/domain-kernel'
 import { OrdersFacade } from '@/modules/orders/application/orders.facade.js'
+import { OrderCancellationService } from '@/modules/orders/application/order-lifecycle/order-cancellation.service.js'
+import { DrizzleOrdersUnitOfWorkAdapter } from '@/modules/orders/infrastructure/adapters/drizzle-orders-unit-of-work.adapter.js'
+import { DrizzleOrdersOutboxAdapter } from '@/modules/orders/infrastructure/adapters/drizzle-orders-outbox.adapter.js'
 import { DrizzleOrderRepository } from '@/modules/orders/infrastructure/repositories/order.repository.js'
 import { SystemCancelOrderUseCase } from '@/modules/orders/application/order-lifecycle/system-cancel-order.use-case.js'
 import type { InventoryFacadePort } from '@/modules/orders/application/ports/inventory-facade.port.js'
@@ -178,10 +181,19 @@ describe.skipIf(!postgresAvailable)('SystemCancelOrderUseCase — integration (D
     refundFull = vi.fn<RefundFacadePort['refundFull']>().mockResolvedValue(ok(undefined))
     const refundFacade: RefundFacadePort = { refundFull, refundPartialFulfillment: vi.fn() }
     const ordersFacade = new OrdersFacade(new DrizzleOrderRepository(db))
-    useCase = new SystemCancelOrderUseCase(ordersFacade, inventoryFacade, refundFacade, new FixedClock(), SILENT_LOGGER)
+    const cancellation = new OrderCancellationService(
+      new DrizzleOrdersUnitOfWorkAdapter(db),
+      new DrizzleOrdersOutboxAdapter(db),
+      ordersFacade,
+      inventoryFacade,
+      refundFacade,
+      SILENT_LOGGER,
+    )
+    useCase = new SystemCancelOrderUseCase(ordersFacade, cancellation, new FixedClock(), SILENT_LOGGER)
   })
 
   afterEach(async () => {
+    await pool.query('DELETE FROM outbox WHERE tenant_id = $1', [tenantId]).catch(() => undefined)
     await pool.query('DELETE FROM order_items WHERE order_id = ANY($1)', [createdOrderIds]).catch(() => undefined)
     await pool.query('DELETE FROM orders WHERE id = ANY($1)', [createdOrderIds]).catch(() => undefined)
     await pool.query('DELETE FROM tenants WHERE id = $1', [tenantId]).catch(() => undefined)

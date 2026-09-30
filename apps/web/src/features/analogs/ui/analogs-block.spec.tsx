@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router'
+import { formatMoney } from '@dorutj/i18n'
 import { LocaleProvider } from '@/shared/config/locale-provider'
 import { AnalogsBlock } from './analogs-block'
 import type { AnalogsDataDto } from '../api/use-analogs-query'
@@ -14,6 +16,7 @@ import type { AnalogsDataDto } from '../api/use-analogs-query'
  */
 
 const MEDICINE_ID = '11111111-1111-1111-1111-111111111111'
+const onAddToCart = vi.fn()
 
 type FetchImpl = (input: string, init?: RequestInit) => Promise<Response>
 
@@ -32,7 +35,9 @@ function renderBlock(): ReturnType<typeof render> {
   return render(
     <QueryClientProvider client={queryClient}>
       <LocaleProvider>
-        <AnalogsBlock medicineId={MEDICINE_ID} />
+        <MemoryRouter>
+          <AnalogsBlock medicineId={MEDICINE_ID} onAddToCart={onAddToCart} />
+        </MemoryRouter>
       </LocaleProvider>
     </QueryClientProvider>,
   )
@@ -64,11 +69,7 @@ afterEach(() => {
 
 describe('AnalogsBlock (DTJ-104)', () => {
   it('1. TC-CAT-013: savingsDiram=6500 — плашка экономии рендерится с ТОЧНЫМ форматированием (без округления, дефолтная локаль tj)', async () => {
-    // Ожидание — ЗАПЯТАЯ ("65,00"), не точка буквального примера AC тикета ("Сэкономьте 65.00
-    // сомони"): под дефолтной локалью 'tj' (→ реальный BCP-47 'tg') И Node, И реальный Chromium
-    // (проверено вручную Browser-инструментом на живом /medicines/:id при сдаче DTJ-104) дают
-    // запятую — см. JSDoc `model/format-savings.ts` и раздел DISPUTED отчёта сдачи. Числовая суть
-    // TC-CAT-013 («точное форматирование, без округления») соблюдена — это и проверяется здесь.
+    // Сумма форматируется `formatMoney` (`@dorutj/i18n`) внутри `SavingsBadge` — без округления.
     const data = buildData({
       titleKey: 'catalog.analogs.title_savings',
       savingsDiram: 6500,
@@ -79,11 +80,11 @@ describe('AnalogsBlock (DTJ-104)', () => {
     renderBlock()
 
     await waitFor(() => {
-      expect(screen.getByTestId('analogs-savings-banner')).toHaveTextContent('65,00 сомонӣ сарфа кунед')
+      expect(screen.getByTestId('analogs-savings-banner')).toHaveTextContent(`${formatMoney(6500, 'tj')} сарфа кунед`)
     })
   })
 
-  it('2. TC-CAT-014: titleKey=title_neutral (savings отсутствует) — SavingsBanner НЕ рендерится, нейтральный заголовок и список аналогов присутствуют', async () => {
+  it('2. TC-CAT-014: titleKey=title_neutral (savings отсутствует) — плашка экономии НЕ рендерится, нейтральный заголовок и список аналогов присутствуют', async () => {
     const data = buildData({
       titleKey: 'catalog.analogs.title_neutral',
       savingsDiram: null,
@@ -179,7 +180,7 @@ describe('AnalogsBlock (DTJ-104)', () => {
     renderBlock()
 
     expect(screen.getByTestId('analogs-block-skeleton')).toBeInTheDocument()
-    expect(screen.getAllByTestId('analog-card-skeleton')).toHaveLength(3)
+    expect(screen.getByTestId('analogs-block-skeleton').children).toHaveLength(3)
     expect(screen.queryByTestId('analogs-block')).not.toBeInTheDocument()
   })
 

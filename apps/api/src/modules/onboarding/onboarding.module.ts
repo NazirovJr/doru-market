@@ -23,9 +23,9 @@ import { DrizzlePharmacyChainRepository } from './infrastructure/repositories/ph
 import { DrizzlePharmacyAccountRepository } from './infrastructure/repositories/pharmacy-account.repository.js'
 import { DrizzleOnboardingReviewLogRepository } from './infrastructure/repositories/onboarding-review-log.repository.js'
 import { PharmacyChainStatusAdapter } from './infrastructure/adapters/pharmacy-chain-status.adapter.js'
-import { NullOrdersCancellationAdapter } from './infrastructure/adapters/null-orders-cancellation.adapter.js'
+import { OrdersCancellationAdapter } from './infrastructure/adapters/orders-cancellation.adapter.js'
 import { LocalObjectStorageAdapter } from './infrastructure/adapters/local-object-storage.adapter.js'
-import { StubOtpAdapter } from './infrastructure/adapters/otp.adapter.js'
+import { AuthOtpAdapter } from './infrastructure/adapters/auth-otp.adapter.js'
 import { OnboardingFacade } from './onboarding.facade.js'
 import { SubmitChainApplicationUseCase } from './application/use-cases/submit-chain-application.use-case.js'
 import { VerifyChainContactPhoneUseCase } from './application/use-cases/verify-chain-contact-phone.use-case.js'
@@ -33,6 +33,7 @@ import { SubmitPharmacyApplicationUseCase } from './application/use-cases/submit
 import { SubmitChainForReviewUseCase } from './application/use-cases/submit-chain-for-review.use-case.js'
 import { SubmitPharmacyForReviewUseCase } from './application/use-cases/submit-pharmacy-for-review.use-case.js'
 import { ListPendingVerificationsUseCase } from './application/use-cases/list-pending-verifications.use-case.js'
+import { GetPharmacyVerificationDetailUseCase } from './application/use-cases/get-pharmacy-verification-detail.use-case.js'
 import { ReviewChainApplicationUseCase } from './application/use-cases/review-chain-application.use-case.js'
 import { ReviewPharmacyApplicationUseCase } from './application/use-cases/review-pharmacy-application.use-case.js'
 import { SuspendPharmacyUseCase } from './application/use-cases/suspend-pharmacy.use-case.js'
@@ -62,15 +63,16 @@ import { PharmacyAccountsAdminController } from './presentation/controllers/phar
     { provide: PHARMACY_VERIFICATION_REPOSITORY, useClass: DrizzlePharmacyVerificationRepository },
     { provide: ONBOARDING_REVIEW_LOG_REPOSITORY, useClass: DrizzleOnboardingReviewLogRepository },
     { provide: OBJECT_STORAGE, useClass: LocalObjectStorageAdapter },
-    { provide: OTP_PORT, useClass: StubOtpAdapter },
+    { provide: OTP_PORT, useClass: AuthOtpAdapter },
     { provide: PHARMACY_CHAIN_STATUS, useClass: PharmacyChainStatusAdapter },
-    { provide: ORDERS_CANCELLATION, useClass: NullOrdersCancellationAdapter },
+    { provide: ORDERS_CANCELLATION, useClass: OrdersCancellationAdapter },
     SubmitChainApplicationUseCase,
     VerifyChainContactPhoneUseCase,
     SubmitPharmacyApplicationUseCase,
     SubmitChainForReviewUseCase,
     SubmitPharmacyForReviewUseCase,
     ListPendingVerificationsUseCase,
+    GetPharmacyVerificationDetailUseCase,
     ReviewChainApplicationUseCase,
     ReviewPharmacyApplicationUseCase,
     SuspendPharmacyUseCase,

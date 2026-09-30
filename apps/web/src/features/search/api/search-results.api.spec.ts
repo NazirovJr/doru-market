@@ -54,7 +54,7 @@ describe('fetchSearchResults (DTJ-193)', () => {
       ),
     )
 
-    const page = await fetchSearchResults('парацетамол', 'cursor-1')
+    const page = await fetchSearchResults({ text: 'парацетамол', cursor: 'cursor-1' })
 
     const [calledUrl] = fetchMock.mock.calls[0] ?? []
     expect(calledUrl).toBe(`${searchUrl}?text=${encodeURIComponent('парацетамол')}&cursor=cursor-1`)
@@ -66,16 +66,25 @@ describe('fetchSearchResults (DTJ-193)', () => {
   it('cursor не передан — не попадает в query-строку', async () => {
     const fetchMock = stubFetch(() => Promise.resolve(jsonResponse({ data: [] })))
 
-    await fetchSearchResults('аспирин', undefined)
+    await fetchSearchResults({ text: 'аспирин' })
 
     const [calledUrl] = fetchMock.mock.calls[0] ?? []
     expect(calledUrl).toBe(`${searchUrl}?text=${encodeURIComponent('аспирин')}`)
   })
 
+  it('geo передан — lat/lon попадают в query-строку', async () => {
+    const fetchMock = stubFetch(() => Promise.resolve(jsonResponse({ data: [] })))
+
+    await fetchSearchResults({ text: 'аспирин', geo: { lat: 38.559, lon: 68.787 } })
+
+    const [calledUrl] = fetchMock.mock.calls[0] ?? []
+    expect(calledUrl).toBe(`${searchUrl}?text=${encodeURIComponent('аспирин')}&lat=38.559&lon=68.787`)
+  })
+
   it('meta.pagination отсутствует в ответе — nextCursor=null, hasMore=false (не бросает)', async () => {
     stubFetch(() => Promise.resolve(jsonResponse({ data: [resultItem('m1')] })))
 
-    const page = await fetchSearchResults('аспирин', undefined)
+    const page = await fetchSearchResults({ text: 'аспирин' })
 
     expect(page.nextCursor).toBeNull()
     expect(page.hasMore).toBe(false)
@@ -86,6 +95,6 @@ describe('fetchSearchResults (DTJ-193)', () => {
       Promise.resolve(jsonResponse({ error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } }, 503)),
     )
 
-    await expect(fetchSearchResults('аспирин', undefined)).rejects.toMatchObject({ status: 503 })
+    await expect(fetchSearchResults({ text: 'аспирин' })).rejects.toMatchObject({ status: 503 })
   })
 })

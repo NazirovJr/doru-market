@@ -27,8 +27,7 @@
  * DTJ-273 — первые use case'ы/адаптеры модуля. `imports: [TenancyModule, SupportModule]` — оба
  * НЕ `@Global()`, тот же явный приём, что
  * `orders.module.ts`/`payments.module.ts` для `TenancyModule`. `RETURNS_DELIVERY_PORT` биндится
- * NullAdapter'ом (правило 15 AGENTS.md, TODO(EP-13) — см. JSDoc адаптера): модуль `delivery` на
- * этой волне содержит только domain-слой, реального провайдера ещё нет.
+ * `ReturnsDeliveryFacadeAdapter` поверх `DeliveryFacade`.
  *
  * ИСПРАВЛЕНО при слиянии `feat/ep-11-returns-flow` в `development`: `imports` не содержал
  * `AuthModule`, хотя `OrderReturnsController` (DTJ-275) использует `@UseGuards(AuthGuard,
@@ -60,15 +59,15 @@ import { RETURNS_ORDERS_FACADE_DRIZZLE_PROVIDER } from './infrastructure/adapter
 import { RETURNS_INVENTORY_FACADE_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-returns-inventory-facade.adapter.js'
 import { RETURNS_TENANT_SETTINGS_DRIZZLE_PROVIDER } from './infrastructure/adapters/drizzle-returns-tenant-settings.adapter.js'
 import { RETURNS_SUPPORT_FACADE_PROVIDER } from './infrastructure/adapters/returns-support-facade.adapter.js'
-import { RETURNS_DELIVERY_PORT } from './application/ports/delivery-facade.port.js'
-import { UnimplementedReturnsDeliveryAdapter } from './infrastructure/adapters/unimplemented-returns-delivery-facade.adapter.js'
+import { RETURNS_DELIVERY_FACADE_PROVIDER } from './infrastructure/adapters/returns-delivery-facade.adapter.js'
+import { DeliveryModule } from '@/modules/delivery/delivery.module.js'
 import { RETURNS_PAYMENTS_PORT } from './application/ports/payments-facade.port.js'
 import { PaymentsModule } from '@/modules/payments/payments.module.js'
 import { PaymentsFacadeAdapter } from './infrastructure/adapters/payments-facade.adapter.js'
 import { OrderReturnsController } from './presentation/order-returns.controller.js'
 
 @Module({
-  imports: [TenancyModule, AuthModule, SupportModule, PaymentsModule],
+  imports: [TenancyModule, AuthModule, SupportModule, PaymentsModule, DeliveryModule],
   controllers: [OrderReturnsController],
   providers: [
     ReturnFinancialOutcomeResolver,
@@ -80,8 +79,7 @@ import { OrderReturnsController } from './presentation/order-returns.controller.
     RETURNS_TENANT_SETTINGS_DRIZZLE_PROVIDER,
     RETURNS_SUPPORT_FACADE_PROVIDER,
     // PROCESSED_EVENTS_PORT — теперь общий (common/events, DomainEventsModule, @Global()).
-    // TODO(EP-13): заменить на реальный адаптер, когда у `delivery` появится публичный фасад.
-    { provide: RETURNS_DELIVERY_PORT, useClass: UnimplementedReturnsDeliveryAdapter },
+    RETURNS_DELIVERY_FACADE_PROVIDER,
     { provide: RETURNS_PAYMENTS_PORT, useClass: PaymentsFacadeAdapter },
     RequestReturnUseCase,
     MarkReturnInTransitUseCase,

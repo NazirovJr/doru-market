@@ -20,6 +20,15 @@ function freshPhone(suffix: string): string {
   return `${E2E_FRESH_PHONE_PREFIX}21${suffix}`
 }
 
+// Номер staff-пользователя уникален на прогон (пользователи в БД остаются): 200..999, вне занятых 0xx/1xx этого блока.
+const RUN_SUFFIX_MIN = 200
+const RUN_SUFFIX_SPAN = 800
+const MS_PER_SECOND = 1000
+function uniqueRunPhone(): string {
+  const suffix = RUN_SUFFIX_MIN + (Math.floor(Date.now() / MS_PER_SECOND) % RUN_SUFFIX_SPAN)
+  return freshPhone(String(suffix))
+}
+
 const DUSHANBE_LAT = 38.5598
 const DUSHANBE_LON = 68.787
 const FUTURE_LICENSE_EXPIRY = '2030-01-01'
@@ -33,6 +42,9 @@ const FULL_CHECKLIST: Readonly<Record<string, boolean>> = {
 const HTTP_OK = 200
 const HTTP_FORBIDDEN = 403
 const OTP_LENGTH = 6
+const SEARCH_CACHE_TTL_MS = 30_000
+const POLL_MARGIN_MS = 5_000
+const POLL_INTERVAL_MS = 3_000
 
 function uniqueName(label: string): string {
   return `E2E DTJ-421 ${label} ${String(Date.now())}`
@@ -91,7 +103,6 @@ test.describe('CUJ-9: модерация и онбординг аптеки (DTJ
     await expect(checklistFieldset).toBeVisible()
     await expect(checklistFieldset.getByRole('checkbox')).toHaveCount(Object.keys(FULL_CHECKLIST).length)
 
-    // Ожидаемо красное: см. отчёт сдачи — ни один GET не отдаёт licenseScanUrl фронту.
     await expect(page.locator('[data-testid="onboarding-document-preview"]')).toBeVisible()
   })
 
@@ -117,7 +128,7 @@ test.describe('CUJ-9: модерация и онбординг аптеки (DTJ
     expect(queueBefore.some((item) => item.id === application.id)).toBe(true)
 
     // pharmacy_admin (не pharmacist) — единственная роль, допущенная к inventory-manual-entry.
-    const staffPhone = freshPhone('003')
+    const staffPhone = uniqueRunPhone()
     const staff = await createStaffAccount(admin.accessToken, {
       phone: staffPhone,
       fullName: 'Новая Точка Admin',
@@ -149,10 +160,17 @@ test.describe('CUJ-9: модерация и онбординг аптеки (DTJ
     const queueAfter = await listPendingPharmacyVerifications(admin.accessToken, 'pending_review')
     expect(queueAfter.some((item) => item.id === application.id)).toBe(false)
 
-    // Ожидаемо красное: approve() оставляет status='approved', activate()→'active' никем не вызывается.
-    const searchAfter = await searchMedicinesByText(medicine.tradeName)
-    const foundAfter = searchAfter.find((item) => item.medicineId === medicine.medicineId)
-    expect(foundAfter?.cheapestOffer?.pharmacyId).toBe(application.id)
+    // Кэш выдачи поиска пассивный (TTL 30 с), а searchBefore его уже прогрел — ждём протухания.
+    await expect
+      .poll(
+        async () => {
+          // Ошибка одного опроса (429/5xx кэш-локов на границе TTL) — не отказ, ждём следующий.
+          const items = await searchMedicinesByText(medicine.tradeName).catch(() => [])
+          return items.find((item) => item.medicineId === medicine.medicineId)?.cheapestOffer?.pharmacyId
+        },
+        { timeout: SEARCH_CACHE_TTL_MS + POLL_MARGIN_MS, intervals: [POLL_INTERVAL_MS] },
+      )
+      .toBe(application.id)
 
     const mapAfter = await getPharmacyMapPins({ lat: DUSHANBE_LAT, lon: DUSHANBE_LON, medicineId: medicine.medicineId })
     expect(mapAfter.some((pin) => pin.pharmacyId === application.id)).toBe(true)

@@ -17,6 +17,7 @@ import {
   PharmacyAccount,
   type PharmacyAccountCreateCommand,
 } from '@/modules/onboarding/domain/pharmacy-account.entity.js'
+import type { AccountUpdate } from '@/modules/onboarding/domain/value-objects/pharmacy-account-update.js'
 import type { PharmacyAccountRepositoryPort } from '@/modules/onboarding/application/ports/pharmacy-account.repository.port.js'
 import { PHARMACY_ACCOUNT_REPOSITORY } from '@/modules/onboarding/application/ports/pharmacy-account.repository.port.js'
 import { SubmitChainApplicationUseCase, type SubmitChainApplicationInput } from './submit-chain-application.use-case.js'
@@ -73,7 +74,8 @@ export class SubmitPharmacyApplicationUseCase {
       licenseNumber: input.licenseNumber,
       licenseExpiryDate: input.licenseExpiryDate,
     }
-    const account = PharmacyAccount.create(cmd)
+    // create() принимает только ядро заявки — остальное применяется через доменный updateApplication.
+    const account = PharmacyAccount.create(cmd).updateApplication(toApplicationUpdate(input))
     await this.pharmacyAccountRepository.save(account)
     return { id: account.id, chainId: account.chainId, status: account.status }
   }
@@ -97,5 +99,17 @@ export class SubmitPharmacyApplicationUseCase {
     }
     const chainResult = await this.submitChainApplication.execute(chainInput)
     return chainResult.id
+  }
+}
+
+function toApplicationUpdate(input: SubmitPharmacyApplicationInput): AccountUpdate {
+  const hasSchedule = input.isOpen247 || input.openingTime !== null || input.closingTime !== null
+  return {
+    landmarkTj: input.landmarkTj,
+    licenseIssuingAuthority: input.licenseIssuingAuthority,
+    licenseIssueDate: input.licenseIssueDate,
+    licenseScanUrl: input.licenseScanUrl,
+    pharmacistInChargeName: input.pharmacistInChargeName,
+    ...(hasSchedule ? { is24_7: input.isOpen247, openingTime: input.openingTime, closingTime: input.closingTime } : {}),
   }
 }

@@ -20,6 +20,8 @@ export interface UseCartOptions {
   /** SRS-ORD-005: продлить мягкий холд остатка ДО сборки ответа. По умолчанию `false` — только
    *  экран корзины (`CartScreen`) шлёт `true` при открытии. */
   readonly extendHold?: boolean
+  /** `false` — не запрашивать (шапка не должна создавать серверную корзину каждому гостю). */
+  readonly enabled?: boolean
 }
 
 export function useCart(options: UseCartOptions = {}): UseQueryResult<CartView, HttpError> {
@@ -27,5 +29,6 @@ export function useCart(options: UseCartOptions = {}): UseQueryResult<CartView, 
   return useQuery<CartView, HttpError>({
     queryKey: CART_QUERY_KEY,
     queryFn: () => fetchCart(extendHold),
+    enabled: options.enabled ?? true,
   })
 }

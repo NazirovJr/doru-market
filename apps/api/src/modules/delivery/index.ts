@@ -3,6 +3,7 @@ export {
   DeliveryFacade,
   type CreateDeliveryAssignmentInput,
   type ReturnCourierAssignment,
+  type ReturnTripInput,
   type ProvisionCourierInput,
   type CourierProvisionSnapshot,
 } from './application/delivery.facade.js'

@@ -1,11 +1,15 @@
 /**
  * `OnboardingApplicationDetailPage` (DTJ-075) — экран детали заявки
- * `/admin/onboarding-queue/:subjectType/:id`. Чек-лист + действия оператора.
+ * `/admin/onboarding-queue/:subjectType/:id`. Реквизиты и скан, чек-лист, действия оператора.
  */
 import { useState, type ReactElement } from 'react'
 import { useParams } from 'react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useT } from '@dorutj/i18n'
+import { Button } from '@dorutj/ui'
 import { httpRequest } from '@/shared/api/http-client'
+import { useLocale } from '@/shared/config/locale-provider'
+import { PharmacyVerificationDetailView } from './pharmacy-verification-detail'
 
 const CHECKLIST_ITEMS = [
   'inn_matches_documents',
@@ -18,6 +22,8 @@ type SubjectType = 'pharmacy-chains' | 'pharmacy-accounts'
 type ActionKind = 'approve' | 'request-changes' | 'reject' | 'terminate'
 
 export const OnboardingApplicationDetailPage = (): ReactElement => {
+  const { locale } = useLocale()
+  const { t } = useT(locale)
   const params = useParams<{ subjectType?: string; id?: string }>()
   const subjectType = (params.subjectType ?? 'pharmacy-chains') as SubjectType
   const id = params.id ?? ''
@@ -41,14 +47,17 @@ export const OnboardingApplicationDetailPage = (): ReactElement => {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['onboarding-queue'] })
+      void queryClient.invalidateQueries({ queryKey: ['onboarding-application'] })
     },
   })
+  const reasonMissing = reason.length === 0
 
   return (
     <section className="onboarding-application-detail" data-testid="onboarding-application-detail">
-      <h2>Заявка {id}</h2>
+      <h2>{t('admin.onboarding_detail.heading', { id })}</h2>
+      {subjectType === 'pharmacy-accounts' ? <PharmacyVerificationDetailView id={id} /> : null}
       <fieldset>
-        <legend>Чек-лист</legend>
+        <legend>{t('admin.onboarding_detail.checklist')}</legend>
         {CHECKLIST_ITEMS.map((item) => (
           <label key={item}>
             <input
@@ -56,57 +65,53 @@ export const OnboardingApplicationDetailPage = (): ReactElement => {
               checked={checklist[item] ?? false}
               onChange={(e) => { setChecklist((prev) => ({ ...prev, [item]: e.target.checked })) }}
             />
-            {item}
+            {t(`admin.onboarding_detail.check.${item}`)}
           </label>
         ))}
       </fieldset>
       <fieldset>
-        <legend>Действия</legend>
-        <button
-          type="button"
-          onClick={() => { mutation.mutate('approve') }}
-          disabled={mutation.isPending}
-        >
-          Одобрить
-        </button>
+        <legend>{t('admin.onboarding_detail.actions')}</legend>
+        <Button onClick={() => { mutation.mutate('approve') }} loading={mutation.isPending}>
+          {t('admin.onboarding_detail.approve')}
+        </Button>
         <input
           type="text"
-          placeholder="Причина для request-changes"
+          placeholder={t('admin.onboarding_detail.reason_placeholder')}
           value={reason}
           onChange={(e) => { setReason(e.target.value) }}
         />
-        <button
-          type="button"
+        <Button
+          variant="secondary"
           onClick={() => { mutation.mutate('request-changes') }}
-          disabled={reason.length === 0 || mutation.isPending}
+          disabled={reasonMissing || mutation.isPending}
         >
-          Запросить изменения
-        </button>
-        <button
-          type="button"
+          {t('admin.onboarding_detail.request_changes')}
+        </Button>
+        <Button
+          variant="danger"
           onClick={() => { mutation.mutate('reject') }}
-          disabled={reason.length === 0 || mutation.isPending}
+          disabled={reasonMissing || mutation.isPending}
         >
-          Отклонить
-        </button>
+          {t('admin.onboarding_detail.reject')}
+        </Button>
         <label>
           <input
             type="checkbox"
             checked={terminateConfirmed}
             onChange={(e) => { setTerminateConfirmed(e.target.checked) }}
           />
-          Подтверждаю необратимость
+          {t('admin.onboarding_detail.confirm_terminate')}
         </label>
-        <button
-          type="button"
+        <Button
+          variant="danger"
           onClick={() => { mutation.mutate('terminate') }}
-          disabled={!terminateConfirmed || reason.length === 0 || mutation.isPending}
+          disabled={!terminateConfirmed || reasonMissing || mutation.isPending}
         >
-          Прекратить
-        </button>
+          {t('admin.onboarding_detail.terminate')}
+        </Button>
       </fieldset>
-      {mutation.error !== null ? <p role="alert">{String(mutation.error)}</p> : null}
-      {mutation.isSuccess ? <p>Готово</p> : null}
+      {mutation.isError ? <p role="alert">{t('admin.onboarding_detail.action_failed')}</p> : null}
+      {mutation.isSuccess ? <p role="status">{t('admin.onboarding_detail.done')}</p> : null}
     </section>
   )
 }

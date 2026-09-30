@@ -1,31 +1,21 @@
 /**
- * `OtpPort` (DTJ-064) — application-уровень контракт для отправки/верификации
- * одноразовых кодов. Локальная заглушка: реальный `OtpGeneratorPort`/`OtpRepository`
- * (EP-01 модуль `auth`) ещё не стабилизирован к моменту EP-03; здесь определён
- * УЗКИЙ порт с минимально необходимым контрактом для `VerifyChainContactPhoneUseCase`.
- *
- * Координация: `otp_purpose='onboarding_contact'` введён миграцией EP-03
- * (DTJ-063), готов к моменту реальной интеграции с EP-01.
- *
- * Когда EP-01 поставит стабильный `OtpGeneratorPort`, `OtpPort` ЗАМЕНЯЕТСЯ на
- * переиспользование того порта через `@/modules/auth` (правило `02` §1.2,
- * единый источник истины по OTP).
+ * `OtpPort` — контракт onboarding на отправку и проверку OTP контактного телефона заявки сети
+ * (`purpose = 'onboarding_contact'`). Реализация делегирует OTP-механизму модуля `auth`.
  */
 export const OTP_PORT = Symbol.for('@dorutj/onboarding/otp-port')
 
+export interface ContactOtpTarget {
+  readonly chainId: string
+  readonly phone: string
+  readonly tenantId: string
+}
+
 export interface OtpPort {
-  /**
-   * Запрашивает отправку OTP-кода на указанный телефон с указанным purpose.
-   * Возвращает детали доставки (для UI).
-   */
-  requestCode(input: { phone: string; purpose: 'onboarding_contact' }): Promise<{
+  requestCode(input: ContactOtpTarget & { readonly ipAddress: string }): Promise<{
     challengeId: string
     expiresAt: Date
   }>
 
-  /**
-   * Проверяет OTP-код. Бросает `OtpError`-семейство при ошибке
-   * (OtpMismatchError, OtpExpiredError, OtpAttemptsExceededError).
-   */
-  verifyCode(input: { phone: string; code: string; purpose: 'onboarding_contact' }): Promise<void>
+  /** Бросает `OtpError`-семейство (`OtpMismatchError`, `OtpExpiredError`, `OtpAttemptsExceededError`). */
+  verifyCode(input: ContactOtpTarget & { readonly code: string }): Promise<void>
 }

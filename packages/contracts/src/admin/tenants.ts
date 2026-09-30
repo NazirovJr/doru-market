@@ -1,7 +1,7 @@
-// Частичный патч: непереданное поле не меняется. brandPalette — только формат HEX, без WCAG.
+// Частичный патч: непереданное поле не меняется. brandPalette — allowlist токенов (tenancy.ts), без WCAG.
 import { z } from 'zod'
+import { BrandLogoUrlSchema, BrandPalettePatchSchema } from '../tenancy.js'
 
-const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/u
 const MAX_BRAND_NAME_LENGTH = 255
 
 export interface TenantSummaryDto {
@@ -25,13 +25,11 @@ export interface TenantDetailDto {
   readonly holdPeriodDays: number
 }
 
-export const BrandPaletteSchema = z.record(z.string().min(1), z.string().regex(HEX_COLOR_PATTERN, 'Expected a 6-digit HEX color'))
-
 export const TenantSettingsPatchSchema = z
   .object({
     brandName: z.string().trim().min(1).max(MAX_BRAND_NAME_LENGTH).optional(),
-    brandLogoUrl: z.url().nullable().optional(),
-    brandPalette: BrandPaletteSchema.optional(),
+    brandLogoUrl: BrandLogoUrlSchema.nullable().optional(),
+    brandPalette: BrandPalettePatchSchema.optional(),
     codLimitDiram: z.coerce.number().int().nonnegative().optional(),
     holdPeriodDays: z.coerce.number().int().nonnegative().optional(),
   })

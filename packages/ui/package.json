@@ -19,7 +19,9 @@
     "./components": {
       "types": "./dist/components/index.d.ts",
       "default": "./dist/components/index.js"
-    }
+    },
+    "./tokens.css": "./dist/tokens/index.css",
+    "./components.css": "./dist/components/index.css"
   },
   "scripts": {
     "dev": "storybook dev -p 6006",

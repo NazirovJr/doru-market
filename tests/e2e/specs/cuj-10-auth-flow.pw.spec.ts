@@ -53,16 +53,12 @@ test.describe('CUJ-10: поток авторизации (DTJ-421, SRS-NFR-074)'
       expect(response.status).toBe(HTTP_UNAUTHORIZED)
       expect(response.body.error?.code).toBe(REFRESH_TOKEN_REUSE_DETECTED)
 
-      // Проверка через API, не только код ответа: findActiveByUserId отдаёт строго
-      // revoked_at IS NULL — пустой список подтверждает отзыв всей семьи.
       const sessionsResponse = await getOwnSessions(session!.accessToken)
-      expect(sessionsResponse.status).toBe(HTTP_OK)
-      expect(sessionsResponse.body.data ?? []).toHaveLength(0)
+      expect(sessionsResponse.status).toBe(HTTP_UNAUTHORIZED)
     })
 
     test('new access token from rotated family also rejected after reuse detected', async () => {
       test.skip(rotatedAccessToken === undefined, 'зависит от предыдущего шага серии (rotate)')
-      // Ожидаемо красное: AuthGuard проверяет только подпись/exp, не revoked_at сессии.
       const response = await getOwnSessions(rotatedAccessToken!)
       expect(response.status).toBe(HTTP_UNAUTHORIZED)
     })

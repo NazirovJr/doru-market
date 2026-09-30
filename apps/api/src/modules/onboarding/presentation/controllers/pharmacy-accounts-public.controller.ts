@@ -6,7 +6,7 @@
  * - `POST /api/v1/pharmacy-accounts` — `SubmitPharmacyApplicationUseCase`
  * - `POST /api/v1/pharmacy-accounts/:id/submit` — DTJ-066, `submitForReview`
  */
-import { Body, Controller, Inject, Param, ParseUUIDPipe, Post, UsePipes } from '@nestjs/common'
+import { Body, Controller, HttpCode, HttpStatus, Inject, Param, ParseUUIDPipe, Post } from '@nestjs/common'
 import { Public } from '@/common/decorators/public.decorator.js'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
 import {
@@ -14,6 +14,7 @@ import {
   SubmitPharmacyApplicationRequestSchema,
   SubmitPharmacyForReviewRequestSchema,
   type SubmitPharmacyApplicationRequest,
+  type SubmitPharmacyForReviewRequest,
 } from '@dorutj/contracts'
 import { SubmitPharmacyApplicationUseCase, type SubmitPharmacyApplicationInput } from '@/modules/onboarding/application/use-cases/submit-pharmacy-application.use-case.js'
 import { SubmitPharmacyForReviewUseCase } from '@/modules/onboarding/application/use-cases/submit-pharmacy-for-review.use-case.js'
@@ -62,16 +63,22 @@ export class PharmacyAccountsPublicController {
 
   /** `POST /:id/submit` — DTJ-066: переход `draft → pending_review`. */
   @Post(':id/submit')
-  @UsePipes(new ZodValidationPipe(SubmitPharmacyForReviewRequestSchema))
-  async submitForReview(@Param('id', ID_PARSE_UUID) id: string): Promise<unknown> {
+  @HttpCode(HttpStatus.OK)
+  async submitForReview(
+    @Param('id', ID_PARSE_UUID) id: string,
+    @Body(new ZodValidationPipe(SubmitPharmacyForReviewRequestSchema)) _body: SubmitPharmacyForReviewRequest,
+  ): Promise<unknown> {
     const result = await this.submitPharmacyForReview.execute({ pharmacyId: id })
     return ok(result)
   }
 
   /** `POST /:id/request-reactivation` — DTJ-074: `suspended → pending_review`. */
   @Post(':id/request-reactivation')
-  @UsePipes(new ZodValidationPipe(SubmitPharmacyForReviewRequestSchema))
-  async requestReactivationRoute(@Param('id', ID_PARSE_UUID) id: string): Promise<unknown> {
+  @HttpCode(HttpStatus.OK)
+  async requestReactivationRoute(
+    @Param('id', ID_PARSE_UUID) id: string,
+    @Body(new ZodValidationPipe(SubmitPharmacyForReviewRequestSchema)) _body: SubmitPharmacyForReviewRequest,
+  ): Promise<unknown> {
     const result = await this.requestReactivation.execute({
       pharmacyId: id,
       actorId: '00000000-0000-0000-0000-000000000000',

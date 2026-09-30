@@ -13,7 +13,7 @@ import { randomUUID } from 'node:crypto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Logger } from 'pino'
 import { err, isOk, ok } from '@dorutj/domain-kernel'
-import { ErrorCode, ForbiddenError, NotFoundError, PaymentProviderUnavailableError } from '@dorutj/contracts'
+import { ErrorCode, ForbiddenError, NotFoundError } from '@dorutj/contracts'
 import type { Clock } from '@/shared-kernel/application/ports/clock.port.js'
 import { OrdersFacade } from '@/modules/orders/application/orders.facade.js'
 import { InMemoryOrderRepository } from '@/modules/orders/testing/fixtures/in-memory-order-repository.fixture.js'
@@ -21,6 +21,7 @@ import { validOrderCreateCommand } from '@/modules/orders/testing/fixtures/order
 import { Order, type OrderSnapshot } from '@/modules/orders/domain/order.entity.js'
 import type { InventoryFacadePort, ReleaseStockItemCommand } from '@/modules/orders/application/ports/inventory-facade.port.js'
 import type { RefundError, RefundFacadePort } from '@/modules/orders/application/ports/refund-facade.port.js'
+import { FIXTURE_TX, makeOrderCancellationService } from '@/modules/orders/testing/fixtures/order-cancellation-service.fixture.js'
 import { CancelOrderUseCase } from './cancel-order.use-case.js'
 import type { CancelOrderActor } from './dto/cancel-order-command.dto.js'
 
@@ -68,6 +69,7 @@ interface Harness {
   readonly refundFacade: RefundFacadePort
   readonly releaseStock: ReturnType<typeof vi.fn>
   readonly refundFull: ReturnType<typeof vi.fn>
+  readonly appendAll: ReturnType<typeof vi.fn>
 }
 
 function makeHarness(): Harness {
@@ -85,8 +87,10 @@ function makeHarness(): Harness {
   }
   const refundFull = vi.fn<RefundFacadePort['refundFull']>().mockResolvedValue(ok(undefined))
   const refundFacade: RefundFacadePort = { refundFull, refundPartialFulfillment: vi.fn() }
-  const useCase = new CancelOrderUseCase(ordersFacade, inventoryFacade, refundFacade, new FixedClock(), SILENT_LOGGER)
-  return { useCase, repo, inventoryFacade, refundFacade, releaseStock, refundFull }
+  const appendAll = vi.fn().mockResolvedValue(undefined)
+  const cancellation = makeOrderCancellationService({ repo, inventoryFacade, refundFacade, appendAll, logger: SILENT_LOGGER })
+  const useCase = new CancelOrderUseCase(ordersFacade, cancellation, new FixedClock(), SILENT_LOGGER)
+  return { useCase, repo, inventoryFacade, refundFacade, releaseStock, refundFull, appendAll }
 }
 
 beforeEach(() => {
@@ -273,7 +277,7 @@ describe('CancelOrderUseCase — событие OrderCancelledEvent (refundIssue
 })
 
 describe('CancelOrderUseCase — отказ RefundFacadePort', () => {
-  it('refundFull возвращает err → PaymentProviderUnavailableError, releaseStock уже был вызван (склад не остаётся заблокирован)', async () => {
+  it('refundFull возвращает err → отмена и возврат остатка применены, рефанд отложен на событие в outbox (заказ не остаётся без возврата)', async () => {
     const repo = new InMemoryOrderRepository()
     const ordersFacade = new OrdersFacade(repo)
     const releaseStock = vi.fn<InventoryFacadePort['releaseStock']>().mockResolvedValue(undefined)
@@ -289,17 +293,36 @@ describe('CancelOrderUseCase — отказ RefundFacadePort', () => {
     const refundError: RefundError = { code: ErrorCode.PAYMENT_PROVIDER_UNAVAILABLE, message: 'bank down' }
     const refundFull = vi.fn<RefundFacadePort['refundFull']>().mockResolvedValue(err(refundError))
     const refundFacade: RefundFacadePort = { refundFull, refundPartialFulfillment: vi.fn() }
-    const useCase = new CancelOrderUseCase(ordersFacade, inventoryFacade, refundFacade, new FixedClock(), SILENT_LOGGER)
+    const appendAll = vi.fn().mockResolvedValue(undefined)
+    const cancellation = makeOrderCancellationService({ repo, inventoryFacade, refundFacade, appendAll, logger: SILENT_LOGGER })
+    const useCase = new CancelOrderUseCase(ordersFacade, cancellation, new FixedClock(), SILENT_LOGGER)
     const order = orderAtStatus('paid_escrow')
     repo.seed(order)
 
-    await expect(useCase.execute({ orderId: order.id, actor: CUSTOMER, reason: 'customer_changed_mind' })).rejects.toBeInstanceOf(
-      PaymentProviderUnavailableError,
-    )
+    const result = await useCase.execute({ orderId: order.id, actor: CUSTOMER, reason: 'customer_changed_mind' })
 
+    expect(result).toEqual({ orderId: order.id, status: 'cancelled', refundIssued: false })
     expect(releaseStock).toHaveBeenCalledTimes(1)
-    const saved = await repo.findById(CUSTOMER.tenantId, order.id)
-    expect(saved?.status).toBe('cancelled') // отмена уже сохранена — рефанд не откатывает её (D-EP09-17, тот же принцип)
+    expect((await repo.findById(CUSTOMER.tenantId, order.id))?.status).toBe('cancelled')
+    expect(appendAll).toHaveBeenCalledWith(
+      order.tenantId,
+      [expect.objectContaining({ type: 'OrderCancelledEvent', orderId: order.id, refundRequired: true })],
+      FIXTURE_TX,
+    )
+  })
+
+  it('событие отмены для наличного заказа не требует рефанда', async () => {
+    const { useCase, repo, appendAll } = makeHarness()
+    const order = orderAtStatus('confirmed')
+    repo.seed(order)
+
+    await useCase.execute({ orderId: order.id, actor: CUSTOMER, reason: 'customer_changed_mind' })
+
+    expect(appendAll).toHaveBeenCalledWith(
+      order.tenantId,
+      [expect.objectContaining({ type: 'OrderCancelledEvent', refundRequired: false })],
+      FIXTURE_TX,
+    )
   })
 })
 
@@ -315,6 +338,6 @@ describe('CancelOrderUseCase — releaseStock построен из order.items'
 
     await useCase.execute({ orderId: order.id, actor: CUSTOMER, reason: 'customer_changed_mind' })
 
-    expect(releaseStock).toHaveBeenCalledWith(expected)
+    expect(releaseStock).toHaveBeenCalledWith(expected, FIXTURE_TX)
   })
 })

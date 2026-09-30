@@ -26,13 +26,20 @@ import {
   type RevokeReason,
   type RotateAuthSessionInput,
 } from '@/modules/auth/application/ports/auth-sessions.repository.port.js'
+import {
+  SESSION_STATUS_CACHE,
+  type SessionStatusCachePort,
+} from '@/modules/auth/application/ports/session-status-cache.port.js'
 import { type UnitOfWorkTx } from '@/modules/auth/application/ports/unit-of-work.port.js'
 import { AuthSession } from '@/modules/auth/domain/value-objects/auth-session.vo.js'
 import { resolveDrizzleClient } from './drizzle-tx.util.js'
 
 @Injectable()
 export class DrizzleAuthSessionsRepository implements AuthSessionsRepository {
-  constructor(@Inject(DRIZZLE_DB) private readonly db: DrizzleDb) {}
+  constructor(
+    @Inject(DRIZZLE_DB) private readonly db: DrizzleDb,
+    @Inject(SESSION_STATUS_CACHE) private readonly statusCache: SessionStatusCachePort,
+  ) {}
 
   async create(input: CreateAuthSessionInput, tx?: UnitOfWorkTx): Promise<AuthSession> {
     const client = resolveDrizzleClient(this.db, tx)
@@ -145,6 +152,8 @@ export class DrizzleAuthSessionsRepository implements AuthSessionsRepository {
       .set({ revokedAt: input.now, revokeReason: input.reason })
       .where(and(eq(authSessions.familyId, input.familyId), isNull(authSessions.revokedAt)))
       .returning({ id: authSessions.id })
+    // Кэш помечается до коммита транзакции: при откате ложный отзыв безопаснее пропущенного.
+    await this.statusCache.markRevoked(rows.map((row) => row.id))
     return rows.length
   }
 
@@ -160,6 +169,7 @@ export class DrizzleAuthSessionsRepository implements AuthSessionsRepository {
       .set({ revokedAt: input.now, revokeReason: input.reason })
       .where(and(eq(authSessions.id, input.sessionId), isNull(authSessions.revokedAt)))
       .returning({ id: authSessions.id })
+    await this.statusCache.markRevoked(rows.map((row) => row.id))
     return rows.length
   }
 
@@ -175,6 +185,7 @@ export class DrizzleAuthSessionsRepository implements AuthSessionsRepository {
       .set({ revokedAt: input.now, revokeReason: input.reason })
       .where(and(eq(authSessions.userId, input.userId), isNull(authSessions.revokedAt)))
       .returning({ id: authSessions.id })
+    await this.statusCache.markRevoked(rows.map((row) => row.id))
     return rows.length
   }
 }

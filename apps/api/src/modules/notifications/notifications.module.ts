@@ -89,7 +89,7 @@ import { NotificationsDiagnosticsController } from './presentation/notifications
     NotificationTemplatesRepository,
     NotificationPreferencesRepository,
     BullmqNotificationDispatchQueueAdapter,
-    OutboxToNotificationsConsumer, // PROCESSED_EVENTS_PORT общий, см. common/events.
+    OutboxToNotificationsConsumer,
   ],
   exports: [
     IDENTITY_FACADE_PORT,

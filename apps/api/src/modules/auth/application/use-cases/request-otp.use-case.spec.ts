@@ -222,6 +222,16 @@ describe('RequestOtpUseCase (DTJ-023, SRS-API-018/019/020/021)', () => {
     expect(otpCodes.superseded).toEqual([{ subjectRef: PHONE, createdBefore: 0 }])
   })
 
+  it('1b. purpose=onboarding_contact: код привязан к переданному subjectRef, те же лимиты, SMS на телефон (DTJ-064)', async () => {
+    const { useCase, sms, otpCodes, rateLimiter: limiter } = buildUseCase({ rateLimiter })
+    const subjectRef = `chain-1:${PHONE}`
+    await useCase.execute({ phone: PHONE, ipAddress: IP, tenantId: TENANT, purpose: 'onboarding_contact', subjectRef })
+    expect(otpCodes.created[0]).toMatchObject({ purpose: 'onboarding_contact', subjectRef })
+    expect(otpCodes.superseded).toEqual([{ subjectRef, createdBefore: 0 }])
+    expect(sms.lastPhone).toBe(PHONE)
+    expect(limiter.state.size).toBe(4)
+  })
+
   it('2. невалидный формат: InvalidPhoneNumberFormatError, rate-limit НЕ инкрементирован', async () => {
     const { useCase, sms, otpCodes } = buildUseCase({ rateLimiter })
     await expect(

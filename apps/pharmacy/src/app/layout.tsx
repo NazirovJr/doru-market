@@ -2,7 +2,7 @@ import { type ReactElement } from 'react'
 import { useLocation, useNavigate, Outlet } from 'react-router'
 import type { UserRole } from '@dorutj/contracts'
 import { useT } from '@dorutj/i18n'
-import { BrandLogo, Button, LanguageSwitcher, Tabs, type TabItem } from '@dorutj/ui'
+import { Button, LanguageSwitcher, Tabs, TenantBrandLogo, type TabItem } from '@dorutj/ui'
 import { useLocale } from '@/shared/config/locale-provider'
 import { useAuthStore } from '@/shared/api/auth-store'
 
@@ -68,7 +68,7 @@ export const AppLayout = (): ReactElement => {
       <header className="flex flex-col gap-3 border-b border-line px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <BrandLogo altText={t('brand.name')} size={32} />
+            <TenantBrandLogo fallbackName={t('brand.name')} size={32} />
             <span className="text-sm text-ink-muted" data-testid="shell-staff-label">
               {user?.fullName ?? t('pharmacy.shell.staff_fallback')}
             </span>

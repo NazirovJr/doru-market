@@ -1,9 +1,11 @@
+import { Logger } from '@nestjs/common'
 import { Worker } from 'bullmq'
 import type { Redis } from 'ioredis'
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { DomainEventEnvelope } from '@dorutj/contracts'
 import { DomainEventHandlerRegistry, type DomainEventHandler } from './domain-event-handler.js'
 import { DomainEventsRouter } from './domain-events.router.js'
+import type { ProcessedEventsPort } from './processed-events.port.js'
 
 const fakeWorkerClose = vi.fn().mockResolvedValue(undefined)
 const fakeWorkerOn = vi.fn()
@@ -28,6 +30,7 @@ describe('DomainEventsRouter', () => {
   let quitMock: Mock
   let registry: DomainEventHandlerRegistry
   let router: DomainEventsRouter
+  let processed: Set<string>
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -35,7 +38,12 @@ describe('DomainEventsRouter', () => {
     quitMock = vi.fn().mockResolvedValue(undefined)
     connection = { quit: quitMock } as unknown as Redis
     registry = new DomainEventHandlerRegistry()
-    router = new DomainEventsRouter(connection, registry)
+    processed = new Set()
+    const processedEvents: ProcessedEventsPort = {
+      isProcessed: (consumer, eventId) => Promise.resolve(processed.has(`${consumer}:${eventId}`)),
+      markProcessed: (consumer, eventId) => Promise.resolve(processed.add(`${consumer}:${eventId}`).size > 0),
+    }
+    router = new DomainEventsRouter(connection, registry, processedEvents)
   })
 
   function tickFn(): (job: { data: DomainEventEnvelope }) => Promise<void> {
@@ -67,6 +75,54 @@ describe('DomainEventsRouter', () => {
     registry.register(fakeHandler('b', ['X'], handleB))
 
     await expect(tickFn()({ data: envelope('X') })).rejects.toThrow('boom')
+  })
+
+  it('ретрай: второй обработчик упал в первый раз — при повторе первый НЕ вызывается снова, второй выполняется; каждый отработал по разу', async () => {
+    const handleA = vi.fn().mockResolvedValue(undefined)
+    const handleB = vi.fn().mockRejectedValueOnce(new Error('boom')).mockResolvedValue(undefined)
+    registry.register(fakeHandler('a', ['X'], handleA))
+    registry.register(fakeHandler('b', ['X'], handleB))
+    const tick = tickFn()
+
+    await expect(tick({ data: envelope('X') })).rejects.toThrow('consumers [b] failed: boom')
+    await tick({ data: envelope('X') })
+
+    expect(handleA).toHaveBeenCalledTimes(1)
+    expect(handleB).toHaveBeenCalledTimes(2)
+    expect([...processed].sort()).toEqual(['a:evt-1', 'b:evt-1'])
+  })
+
+  it('упавший обработчик не помечается обработанным', async () => {
+    registry.register(fakeHandler('a', ['X'], vi.fn().mockRejectedValue(new Error('boom'))))
+
+    await expect(tickFn()({ data: envelope('X') })).rejects.toThrow()
+
+    expect(processed.size).toBe(0)
+  })
+
+  it('обработчик, уже отработавший событие (в т.ч. в собственной транзакции), пропускается', async () => {
+    const handleA = vi.fn().mockResolvedValue(undefined)
+    registry.register(fakeHandler('a', ['X'], handleA))
+    processed.add('a:evt-1')
+
+    await tickFn()({ data: envelope('X') })
+
+    expect(handleA).not.toHaveBeenCalled()
+  })
+
+  it('исчерпание попыток логируется error с eventId, промежуточный сбой — warn', () => {
+    const errorSpy = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined)
+    const warnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+    router.onModuleInit()
+    const onFailed = fakeWorkerOn.mock.calls.find(([event]) => event === 'failed')?.[1] as (job: unknown, error: Error) => void
+    const job = (attemptsMade: number): unknown => ({ name: 'X', attemptsMade, opts: { attempts: 10 }, data: envelope('X') })
+
+    onFailed(job(3), new Error('boom'))
+    onFailed(job(10), new Error('boom'))
+
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('eventId=evt-1'))
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('ИСЧЕРПАНЫ'))
   })
 
   it('onModuleDestroy закрывает Worker и Redis-соединение', async () => {

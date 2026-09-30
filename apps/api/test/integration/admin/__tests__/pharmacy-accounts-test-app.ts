@@ -13,6 +13,7 @@ import { ResponseInterceptor } from '@/common/http/interceptors/response.interce
 import { AuthModule } from '@/modules/auth/auth.module.js'
 import { JWT_SIGNER, type JwtSignerPort } from '@/modules/auth/index.js'
 import { OnboardingModule } from '@/modules/onboarding/onboarding.module.js'
+import { OrdersCancellationStubModule } from './orders-cancellation-stub.module.js'
 import { OnboardingFacade } from '@/modules/onboarding/index.js'
 import { AuditLogModule } from '@/common/audit/audit-log.module.js'
 import { PharmacyAccountsOverviewController } from '@/modules/admin/presentation/pharmacy-accounts-overview.controller.js'
@@ -66,7 +67,7 @@ function applyTestEnv(): void {
 }
 
 @Module({
-  imports: [AuthModule, OnboardingModule, InventoryModule],
+  imports: [AuthModule, OrdersCancellationStubModule, OnboardingModule, InventoryModule],
   controllers: [PharmacyAccountsOverviewController],
   providers: [
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },

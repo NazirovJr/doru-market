@@ -12,6 +12,7 @@ import { ok, err } from '@dorutj/domain-kernel'
 import type { JwtClaims, JwtSignerPort } from '@/modules/auth/index.js'
 import { TenantContext } from '@/common/context/tenant-context.js'
 import { RequestContext, type RequestContextStore } from '@/common/context/request-context.js'
+import type { SessionStatusService } from '@/modules/auth/application/services/session-status.service.js'
 import { AuthGuard } from './auth.guard.js'
 
 const CLAIMS: JwtClaims = {
@@ -48,98 +49,115 @@ function buildJwtSigner(overrides: Partial<JwtSignerPort> = {}): JwtSignerPort {
   }
 }
 
+function buildSessionStatus(revoked = false): { readonly isRevoked: ReturnType<typeof vi.fn> } {
+  return { isRevoked: vi.fn(() => Promise.resolve(revoked)) }
+}
+
+function buildGuard(
+  options: {
+    isPublic?: boolean
+    jwtSigner?: JwtSignerPort
+    sessionStatus?: ReturnType<typeof buildSessionStatus>
+  } = {},
+): AuthGuard {
+  return new AuthGuard(
+    buildReflector(options.isPublic ?? false),
+    options.jwtSigner ?? buildJwtSigner(),
+    (options.sessionStatus ?? buildSessionStatus()) as unknown as SessionStatusService,
+  )
+}
+
+function inTenant<T>(tenantId: string, fn: () => T): T {
+  return TenantContext.run(TenantContext.forTenant({ tenantId, slug: 's', chainId: null, isNeutral: false }), fn)
+}
+
 /** Требуется активный `RequestContext.run()`-скоуп — `patch()` вне него молча no-op'ает. */
-function runWithRequestContext<T>(fn: () => T): { result: T; store: RequestContextStore } {
+async function runWithRequestContext(fn: () => Promise<unknown>): Promise<RequestContextStore> {
   const store: RequestContextStore = { requestId: 'req-1', tenantId: null, userId: null, role: null }
-  const result = RequestContext.run(store, fn)
-  return { result, store }
+  await RequestContext.run(store, fn)
+  return store
 }
 
 describe('AuthGuard (DTJ-022, foundIssue DTJ-233 — RequestContext.patch)', () => {
-  it('@Public() — пропускает без проверки токена, request.authClaims не заполняется', () => {
-    const guard = new AuthGuard(buildReflector(true), buildJwtSigner())
+  it('@Public() — пропускает без проверки токена и статуса сессии, request.authClaims не заполняется', async () => {
+    const sessionStatus = buildSessionStatus()
+    const guard = buildGuard({ isPublic: true, sessionStatus })
     const { context, request } = buildContext({})
 
-    expect(guard.canActivate(context)).toBe(true)
+    await expect(guard.canActivate(context)).resolves.toBe(true)
     expect(request.authClaims).toBeUndefined()
+    expect(sessionStatus.isRevoked).not.toHaveBeenCalled()
   })
 
-  it('нет заголовка Authorization — 401 UNAUTHENTICATED', () => {
-    const guard = new AuthGuard(buildReflector(), buildJwtSigner())
+  it('нет заголовка Authorization — 401 UNAUTHENTICATED', async () => {
     const { context } = buildContext({})
 
-    expect(() => guard.canActivate(context)).toThrow(UnauthorizedException)
+    await expect(buildGuard().canActivate(context)).rejects.toThrow(UnauthorizedException)
   })
 
-  it('невалидная схема (не Bearer) — 401 UNAUTHENTICATED', () => {
-    const guard = new AuthGuard(buildReflector(), buildJwtSigner())
+  it('невалидная схема (не Bearer) — 401 UNAUTHENTICATED', async () => {
     const { context } = buildContext({ authorization: 'Basic abc' })
 
-    expect(() => guard.canActivate(context)).toThrow(UnauthorizedException)
+    await expect(buildGuard().canActivate(context)).rejects.toThrow(UnauthorizedException)
   })
 
-  it('JwtSignerPort.verify → TOKEN_EXPIRED — 401 TOKEN_EXPIRED', () => {
+  it('JwtSignerPort.verify → TOKEN_EXPIRED — 401 TOKEN_EXPIRED', async () => {
     const jwtSigner = buildJwtSigner({
       verify: vi.fn(() => err({ code: 'TOKEN_EXPIRED', message: 'expired', name: 'JwtVerificationError' } as never)),
     })
-    const guard = new AuthGuard(buildReflector(), jwtSigner)
     const { context } = buildContext({ authorization: 'Bearer expired-token' })
 
-    expect(() => {
-      TenantContext.run(TenantContext.forTenant({ tenantId: 'tenant-1', slug: 's', chainId: null, isNeutral: false }), () =>
-        guard.canActivate(context),
-      )
-    }).toThrow(UnauthorizedException)
+    await expect(inTenant('tenant-1', () => buildGuard({ jwtSigner }).canActivate(context))).rejects.toThrow(
+      UnauthorizedException,
+    )
   })
 
-  it('валидный токен, тенант совпадает — заполняет request.authClaims (customer-роль, не super_admin)', () => {
-    const guard = new AuthGuard(buildReflector(), buildJwtSigner())
+  it('валидный токен, тенант совпадает — заполняет request.authClaims (customer-роль, не super_admin)', async () => {
     const { context, request } = buildContext({ authorization: 'Bearer valid-token' })
 
-    TenantContext.run(TenantContext.forTenant({ tenantId: 'tenant-1', slug: 's', chainId: null, isNeutral: false }), () => {
-      expect(guard.canActivate(context)).toBe(true)
-    })
+    await expect(inTenant('tenant-1', () => buildGuard().canActivate(context))).resolves.toBe(true)
 
     expect(request.authClaims).toEqual(CLAIMS)
   })
 
-  it('claims.tenantId ≠ резолвленный тенант — 403 CROSS_TENANT_ACCESS_DENIED (не super_admin)', () => {
-    const guard = new AuthGuard(buildReflector(), buildJwtSigner())
+  it('claims.tenantId ≠ резолвленный тенант — 403 CROSS_TENANT_ACCESS_DENIED (не super_admin)', async () => {
     const { context } = buildContext({ authorization: 'Bearer valid-token' })
 
-    expect(() => {
-      TenantContext.run(TenantContext.forTenant({ tenantId: 'OTHER-tenant', slug: 's', chainId: null, isNeutral: false }), () =>
-        guard.canActivate(context),
-      )
-    }).toThrow(UnauthorizedException)
+    await expect(inTenant('OTHER-tenant', () => buildGuard().canActivate(context))).rejects.toThrow(
+      UnauthorizedException,
+    )
   })
 
-  it('foundIssue DTJ-233 — успешная аутентификация вызывает RequestContext.patch({userId, role}), а не оставляет их null', () => {
-    const guard = new AuthGuard(buildReflector(), buildJwtSigner())
+  it('foundIssue DTJ-233 — успешная аутентификация вызывает RequestContext.patch({userId, role}), а не оставляет их null', async () => {
     const { context } = buildContext({ authorization: 'Bearer valid-token' })
 
-    const { store } = runWithRequestContext(() => {
-      TenantContext.run(TenantContext.forTenant({ tenantId: 'tenant-1', slug: 's', chainId: null, isNeutral: false }), () =>
-        guard.canActivate(context),
-      )
-    })
+    const store = await runWithRequestContext(() => inTenant('tenant-1', () => buildGuard().canActivate(context)))
 
     expect(store.userId).toBe(CLAIMS.sub)
     expect(store.role).toBe(CLAIMS.role)
   })
 
-  it('super_admin (tenantId=null) — пропускает cross-tenant проверку, RequestContext.patch всё равно вызывается', () => {
+  it('super_admin (tenantId=null) — пропускает cross-tenant проверку, RequestContext.patch всё равно вызывается', async () => {
     const superAdminClaims: JwtClaims = { ...CLAIMS, role: 'super_admin', tenantId: null }
-    const guard = new AuthGuard(buildReflector(), buildJwtSigner({ verify: vi.fn(() => ok(superAdminClaims)) }))
+    const guard = buildGuard({ jwtSigner: buildJwtSigner({ verify: vi.fn(() => ok(superAdminClaims)) }) })
     const { context, request } = buildContext({ authorization: 'Bearer valid-token' })
 
-    const { store } = runWithRequestContext(() => {
-      // Ни одна проверка тенанта не должна сработать — TenantContext намеренно НЕ установлен.
-      expect(guard.canActivate(context)).toBe(true)
-    })
+    // Ни одна проверка тенанта не должна сработать — TenantContext намеренно НЕ установлен.
+    const store = await runWithRequestContext(() => guard.canActivate(context))
 
     expect(request.authClaims).toEqual(superAdminClaims)
     expect(store.userId).toBe(superAdminClaims.sub)
     expect(store.role).toBe('super_admin')
+  })
+
+  it('DTJ-443 — сессия токена отозвана → 401 TOKEN_INVALID, claims не проставляются', async () => {
+    const sessionStatus = buildSessionStatus(true)
+    const { context, request } = buildContext({ authorization: 'Bearer valid-token' })
+
+    await expect(inTenant('tenant-1', () => buildGuard({ sessionStatus }).canActivate(context))).rejects.toMatchObject({
+      response: { code: 'TOKEN_INVALID' },
+    })
+    expect(sessionStatus.isRevoked).toHaveBeenCalledWith(CLAIMS.sessionId)
+    expect(request.authClaims).toBeUndefined()
   })
 })

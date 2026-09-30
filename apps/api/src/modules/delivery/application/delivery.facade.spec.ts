@@ -7,6 +7,7 @@ import type { CourierRepositoryPort } from './ports/courier.repository.port.js'
 import type { DeliveryAssignmentRepositoryPort } from './ports/delivery-assignment.repository.port.js'
 import type { CalculateDeliveryFeeUseCase } from './use-cases/calculate-delivery-fee.use-case.js'
 import type { CourierProvisionSnapshot, ProvisionCourierUseCase } from './use-cases/provision-courier.use-case.js'
+import type { ReturnTripService } from './services/return-trip.service.js'
 import { DeliveryFacade } from './delivery.facade.js'
 
 const NOW = new Date('2026-09-05T10:00:00.000Z')
@@ -49,6 +50,7 @@ function makeFacade(params: { assignment?: DeliveryAssignment | null; courier?: 
   couriersSave: ReturnType<typeof vi.fn>
   calculateFeeExecute: ReturnType<typeof vi.fn>
   provisionCourierExecute: ReturnType<typeof vi.fn>
+  returnTrip: { calculateReturnFee: ReturnType<typeof vi.fn>; suggestReturnCourier: ReturnType<typeof vi.fn> }
 } {
   const assignment = params.assignment === undefined ? makeAssignment() : params.assignment
   const courier = params.courier === undefined ? makeCourier() : params.courier
@@ -76,8 +78,12 @@ function makeFacade(params: { assignment?: DeliveryAssignment | null; courier?: 
   const provisionedSnapshot: CourierProvisionSnapshot = { id: COURIER_ID, userId: 'user-1', chainId: 'chain-1', vehicleType: 'foot', taxStatus: 'chain_employee' }
   const provisionCourierExecute = vi.fn().mockResolvedValue(provisionedSnapshot)
   const provisionCourierUseCase = { execute: provisionCourierExecute } as unknown as ProvisionCourierUseCase
-  const facade = new DeliveryFacade(assignments, couriers, makeClock(), calculateFee, provisionCourierUseCase)
-  return { facade, assignmentsSave, couriersSave, calculateFeeExecute, provisionCourierExecute }
+  const returnTrip = {
+    calculateReturnFee: vi.fn().mockResolvedValue(777n),
+    suggestReturnCourier: vi.fn().mockResolvedValue({ courierId: COURIER_ID, etaMinutes: null }),
+  }
+  const facade = new DeliveryFacade(assignments, couriers, makeClock(), calculateFee, provisionCourierUseCase, returnTrip as unknown as ReturnTripService)
+  return { facade, assignmentsSave, couriersSave, calculateFeeExecute, provisionCourierExecute, returnTrip }
 }
 
 describe('DeliveryFacade', () => {
@@ -158,9 +164,18 @@ describe('DeliveryFacade', () => {
     expect(calculateFeeExecute).toHaveBeenCalledWith(input)
   })
 
-  it('assignReturnCourier: заглушка возвращает null (DTJ-273/274 вне периметра)', async () => {
-    const { facade } = makeFacade()
-    expect(await facade.assignReturnCourier('tenant-1', 'return-1')).toBeNull()
+  it('calculateReturnFee: делегирует ReturnTripService', async () => {
+    const { facade, returnTrip } = makeFacade()
+    const input = { tenantId: 'tenant-1', orderId: ORDER_ID }
+    expect(await facade.calculateReturnFee(input)).toBe(777n)
+    expect(returnTrip.calculateReturnFee).toHaveBeenCalledWith(input)
+  })
+
+  it('suggestReturnCourier: делегирует ReturnTripService', async () => {
+    const { facade, returnTrip } = makeFacade()
+    const input = { tenantId: 'tenant-1', orderId: ORDER_ID }
+    expect(await facade.suggestReturnCourier(input)).toEqual({ courierId: COURIER_ID, etaMinutes: null })
+    expect(returnTrip.suggestReturnCourier).toHaveBeenCalledWith(input)
   })
 
   it('provisionCourier: делегирует ProvisionCourierUseCase.execute() (DTJ-364)', async () => {

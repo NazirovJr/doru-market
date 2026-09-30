@@ -153,9 +153,19 @@ function refreshAccessTokenOnce(): Promise<boolean> {
   return inFlightRefresh
 }
 
+// После перезагрузки accessToken пуст (живёт только в памяти), а refreshToken сохранён: запрос без Bearer получает 401 и лечится refresh'ем.
+async function needsRefresh(response: Response, sentWithoutToken: boolean): Promise<boolean> {
+  const hasRefreshToken = useAuthStore.getState().refreshToken !== null
+  if (sentWithoutToken && hasRefreshToken && response.status === HTTP_STATUS_UNAUTHORIZED) {
+    return true
+  }
+  return isTokenExpired(response)
+}
+
 async function requestWithAuthRetry(path: string, init: HttpClientOptions, alreadyRetried: boolean): Promise<Response> {
+  const sentWithoutToken = useAuthStore.getState().accessToken === null
   const response = await performRequest(path, init)
-  if (!(await isTokenExpired(response))) {
+  if (!(await needsRefresh(response, sentWithoutToken))) {
     return response
   }
   if (alreadyRetried) {

@@ -51,6 +51,7 @@ export default defineConfig({
         'src/components/**/*.ts',
         'src/hooks/**/*.ts',
         'src/twa/**/*.ts',
+        'src/branding/**/*.{ts,tsx}',
       ],
       // `index.ts` — барабанный экспорт (D-27); фикстуры-нарушители — тестовые данные,
       // не продуктовая логика; `*.stories.tsx` — Storybook-демонстрация, не продуктовый код

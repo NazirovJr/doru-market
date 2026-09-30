@@ -20,6 +20,10 @@ import { type UserRole } from '@dorutj/contracts'
 /** DI-токен для `JwtSignerPort` (NestJS, EP-01 DTJ-022). */
 export const JWT_SIGNER = Symbol.for('@dorutj/auth/jwt-signer')
 
+const ACCESS_TOKEN_TTL_MINUTES = 15
+const SECONDS_PER_MINUTE = 60
+export const ACCESS_TOKEN_TTL_SECONDS = ACCESS_TOKEN_TTL_MINUTES * SECONDS_PER_MINUTE
+
 export interface JwtClaims {
   readonly sub: string
   readonly role: UserRole

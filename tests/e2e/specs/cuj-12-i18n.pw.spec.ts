@@ -63,7 +63,7 @@ test.describe('CUJ-12: i18n-инвариант (apps/web, SRS-NFR-076)', () => {
   })
 
   test('brand.name читается из словаря текущей локали на tj/ru/en (не хардкод-плейсхолдер)', async ({ page }) => {
-    const brand = page.locator('[data-testid="brand-placeholder"]')
+    const brand = page.locator('[data-testid="brand-name"]')
     for (const code of ['TJ', 'RU', 'EN'] as const) {
       await switchLocale(page, code)
       await expect(brand, `локаль ${code}`).toHaveText(EXPECTED_BRAND_NAME)

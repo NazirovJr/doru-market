@@ -96,6 +96,10 @@ class FakeUsersRepository implements UsersRepository {
 const TENANT_ID = '33333333-3333-3333-3333-333333333333'
 const CHAIN_A = '11111111-1111-1111-1111-111111111111'
 const CHAIN_B = '22222222-2222-2222-2222-222222222222'
+const PHARMACY_A = '66666666-6666-6666-6666-666666666666'
+const PHARMACY_B = '88888888-8888-8888-8888-888888888888'
+const PHARMACY_UNKNOWN = '99999999-9999-9999-9999-999999999999'
+const PHARMACY_CHAINS: Readonly<Record<string, string>> = { [PHARMACY_A]: CHAIN_A, [PHARMACY_B]: CHAIN_B }
 
 function actor(overrides: Partial<JwtClaims> = {}): JwtClaims {
   return {
@@ -115,7 +119,9 @@ describe('CreateStaffAccountUseCase (DTJ-030, SRS-API-035)', () => {
 
   beforeEach(() => {
     users = new FakeUsersRepository()
-    useCase = new CreateStaffAccountUseCase(users)
+    useCase = new CreateStaffAccountUseCase(users, {
+      findChainIdByPharmacyId: (id) => Promise.resolve(PHARMACY_CHAINS[id] ?? null),
+    })
   })
 
   it('1. happy path: pharmacy_admin создаёт pharmacist в СВОЕЙ сети', async () => {
@@ -123,7 +129,7 @@ describe('CreateStaffAccountUseCase (DTJ-030, SRS-API-035)', () => {
       phone: '+992917123456',
       fullName: 'Алиев Али',
       role: 'pharmacist',
-      pharmacyId: '66666666-6666-6666-6666-666666666666',
+      pharmacyId: PHARMACY_A,
       chainId: CHAIN_A,
     })
     expect(isOk(result)).toBe(true)
@@ -133,7 +139,7 @@ describe('CreateStaffAccountUseCase (DTJ-030, SRS-API-035)', () => {
     // Проверяем, что user реально записан с правильным chainId/pharmacyId.
     const saved = await users.findById(result.value.userId)
     expect(saved?.chainId).toBe(CHAIN_A)
-    expect(saved?.pharmacyId).toBe('66666666-6666-6666-6666-666666666666')
+    expect(saved?.pharmacyId).toBe(PHARMACY_A)
   })
 
   it('2. happy path: super_admin создаёт pharmacist в чужой сети', async () => {
@@ -230,7 +236,81 @@ describe('CreateStaffAccountUseCase (DTJ-030, SRS-API-035)', () => {
     expect(second.error.details?.existingUserId).toBe(first.ok ? first.value.userId : '')
   })
 
-  it('9. invalid phone: 400 INVALID_PHONE_FORMAT', async () => {
+  it('10. pharmacy_admin сети A → pharmacist в аптеке сети B (chainId сети A) → 403 CROSS_TENANT_ACCESS_DENIED, user не создан', async () => {
+    const phone = '+992917777001'
+    const result = await useCase.execute(actor(), {
+      phone,
+      fullName: 'X',
+      role: 'pharmacist',
+      pharmacyId: PHARMACY_B,
+      chainId: CHAIN_A,
+    })
+    expect(isErr(result)).toBe(true)
+    if (!isErr(result)) throw new Error('expected err')
+    expect(result.error.code).toBe(ErrorCode.CROSS_TENANT_ACCESS_DENIED)
+    expect(await users.findByTenantAndPhone(TENANT_ID, phone)).toBeNull()
+  })
+
+  it('11. pharmacy_admin → courier с pharmacyId чужой сети → 403 CROSS_TENANT_ACCESS_DENIED', async () => {
+    const result = await useCase.execute(actor(), {
+      phone: '+992917777002',
+      fullName: 'X',
+      role: 'courier',
+      pharmacyId: PHARMACY_B,
+      chainId: CHAIN_A,
+    })
+    expect(isErr(result)).toBe(true)
+    if (!isErr(result)) throw new Error('expected err')
+    expect(result.error.code).toBe(ErrorCode.CROSS_TENANT_ACCESS_DENIED)
+  })
+
+  it('12. несуществующая аптека неотличима от чужой → 403 CROSS_TENANT_ACCESS_DENIED', async () => {
+    const result = await useCase.execute(actor(), {
+      phone: '+992917777003',
+      fullName: 'X',
+      role: 'pharmacist',
+      pharmacyId: PHARMACY_UNKNOWN,
+      chainId: CHAIN_A,
+    })
+    expect(isErr(result)).toBe(true)
+    if (!isErr(result)) throw new Error('expected err')
+    expect(result.error.code).toBe(ErrorCode.CROSS_TENANT_ACCESS_DENIED)
+  })
+
+  it('13. pharmacy_admin без сети: только собственная аптека, чужая → 403', async () => {
+    const own = actor({ chainId: null, pharmacyId: PHARMACY_UNKNOWN })
+    const allowed = await useCase.execute(own, {
+      phone: '+992917777004',
+      fullName: 'X',
+      role: 'pharmacist',
+      pharmacyId: PHARMACY_UNKNOWN,
+      chainId: null,
+    })
+    expect(isOk(allowed)).toBe(true)
+    const denied = await useCase.execute(own, {
+      phone: '+992917777005',
+      fullName: 'X',
+      role: 'pharmacist',
+      pharmacyId: PHARMACY_A,
+      chainId: null,
+    })
+    expect(isErr(denied)).toBe(true)
+    if (!isErr(denied)) throw new Error('expected err')
+    expect(denied.error.code).toBe(ErrorCode.CROSS_TENANT_ACCESS_DENIED)
+  })
+
+  it('14. super_admin создаёт pharmacist в любой аптеке без проверки сети', async () => {
+    const result = await useCase.execute(actor({ role: 'super_admin', chainId: null }), {
+      phone: '+992917777006',
+      fullName: 'X',
+      role: 'pharmacist',
+      pharmacyId: PHARMACY_B,
+      chainId: CHAIN_B,
+    })
+    expect(isOk(result)).toBe(true)
+  })
+
+  it('15. invalid phone: 400 INVALID_PHONE_FORMAT', async () => {
     const result = await useCase.execute(actor(), {
       phone: 'not-a-phone',
       fullName: 'X',
