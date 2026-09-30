@@ -11,6 +11,7 @@ import { ResponseInterceptor } from '@/common/http/interceptors/response.interce
 import { AuthModule } from '@/modules/auth/auth.module.js'
 import { JWT_SIGNER, type JwtSignerPort } from '@/modules/auth/index.js'
 import { OnboardingModule } from '@/modules/onboarding/onboarding.module.js'
+import { OrdersCancellationStubModule } from './orders-cancellation-stub.module.js'
 import { OnboardingFacade } from '@/modules/onboarding/index.js'
 import { AuditLogModule } from '@/common/audit/audit-log.module.js'
 import { IdempotencyModule } from '@/common/idempotency/idempotency.module.js'
@@ -72,7 +73,7 @@ function applyTestEnv(): void {
 
 @Module({
   // InventoryModule уже регистрирует RevokeExpiredRotatedKeyController — не дублировать.
-  imports: [AuthModule, OnboardingModule, InventoryModule],
+  imports: [AuthModule, OrdersCancellationStubModule, OnboardingModule, InventoryModule],
   controllers: [PharmacyApiKeysController],
   providers: [
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },

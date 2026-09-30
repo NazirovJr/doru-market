@@ -16,12 +16,10 @@ import {
   type OrderAdminDetailView,
   type OrdersFacadePort,
 } from '../ports/orders-facade.port.js'
-import { PAYMENTS_FACADE_PORT, type PaymentsFacadePort } from '../ports/payments-facade.port.js'
+import { ORDER_CANCELLATION_PORT, type OrderCancellationPort } from '../ports/order-cancellation.port.js'
 
 const SUPER_ADMIN_ROLE = 'super_admin'
 const MIN_REASON_LENGTH = 10
-const CASH_COURIER_METHOD = 'cash_courier'
-const REFUND_REQUIRED_STATUSES = new Set<string>(['paid_escrow', 'processing'])
 const FORCE_CANCEL_AUDIT_CATEGORY = 'force_cancel_order'
 const FORCE_CANCEL_ACTION = 'admin_force_cancel_order'
 const ORDER_ENTITY_TYPE = 'order'
@@ -46,10 +44,10 @@ export interface AdminForceCancelOrderResult {
 
 @Injectable()
 export class AdminForceCancelOrderUseCase {
-  // eslint-disable-next-line max-params -- 4 порта (Orders/Payments facade + AuditLog + UnitOfWork), тот же состав, что GetOrderDetailAdminUseCase/AdminPaymentOverrideUseCase.
+  // eslint-disable-next-line max-params -- 4 порта (Orders facade + OrderCancellation + AuditLog + UnitOfWork), тот же состав, что GetOrderDetailAdminUseCase/AdminPaymentOverrideUseCase.
   public constructor(
     @Inject(ORDERS_FACADE_PORT) private readonly ordersFacade: OrdersFacadePort,
-    @Inject(PAYMENTS_FACADE_PORT) private readonly paymentsFacade: PaymentsFacadePort,
+    @Inject(ORDER_CANCELLATION_PORT) private readonly cancellation: OrderCancellationPort,
     @Inject(AUDIT_LOG_PORT) private readonly auditLog: AuditLogPort,
     @Inject(UNIT_OF_WORK) private readonly unitOfWork: UnitOfWorkPort,
   ) {}
@@ -59,12 +57,13 @@ export class AdminForceCancelOrderUseCase {
     this.assertReason(cmd.reason, cmd.orderId)
     const order = await this.findOrderOrThrow(cmd.orderId)
 
-    await this.unitOfWork.run(async (tx) => {
-      await this.cancelOrThrow(order, cmd, tx)
+    const { refundRequired } = await this.unitOfWork.run(async (tx) => {
+      const cancelled = await this.cancelOrThrow(order, cmd, tx)
       await this.auditLog.write(this.buildAuditEntry(order, cmd))
+      return cancelled
     })
 
-    const refundIssued = await this.refundIfNeeded(order, cmd.reason)
+    const refundIssued = refundRequired && (await this.cancellation.settleRefund(cmd.orderId, ADMIN_FORCE_CANCEL_ORDER_REASON))
     return { orderId: cmd.orderId, status: 'cancelled', refundIssued }
   }
 
@@ -88,12 +87,12 @@ export class AdminForceCancelOrderUseCase {
     return order
   }
 
-  private async cancelOrThrow(order: OrderAdminDetailView, cmd: AdminForceCancelOrderCommand, tx: unknown): Promise<void> {
+  private async cancelOrThrow(order: OrderAdminDetailView, cmd: AdminForceCancelOrderCommand, tx: unknown): Promise<{ readonly refundRequired: boolean }> {
     try {
-      await this.ordersFacade.cancel(
-        cmd.orderId,
+      return await this.cancellation.cancelInTransaction(
         {
           tenantId: order.tenantId,
+          orderId: cmd.orderId,
           reason: ADMIN_FORCE_CANCEL_ORDER_REASON,
           actor: { kind: 'user', userId: cmd.actor.userId },
           now: new Date(),
@@ -128,13 +127,5 @@ export class AdminForceCancelOrderUseCase {
       requestId: cmd.requestId,
       tenantId: order.tenantId,
     }
-  }
-
-  private async refundIfNeeded(order: OrderAdminDetailView, reason: string): Promise<boolean> {
-    const refundRequired = order.paymentMethod !== CASH_COURIER_METHOD && REFUND_REQUIRED_STATUSES.has(order.status)
-    if (refundRequired) {
-      await this.paymentsFacade.refundFull(order.tenantId, { orderId: order.id, reason })
-    }
-    return refundRequired
   }
 }

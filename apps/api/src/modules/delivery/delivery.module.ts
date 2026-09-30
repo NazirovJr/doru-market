@@ -16,6 +16,7 @@ import { ResolveDeliveryOfferTimeoutUseCase } from './application/use-cases/reso
 import { GetPendingDeliveryOffersUseCase } from './application/use-cases/get-pending-delivery-offers.use-case.js'
 import { BuildCourierCandidateQueryService } from './application/services/build-courier-candidate-query.service.js'
 import { EscalateDeliveryOfferService } from './application/services/escalate-delivery-offer.service.js'
+import { ReturnTripService } from './application/services/return-trip.service.js'
 import { CalculateDeliveryFeeUseCase } from './application/use-cases/calculate-delivery-fee.use-case.js'
 import { ManageDeliveryZonesUseCase } from './application/use-cases/manage-delivery-zones.use-case.js'
 import { ManageDeliveryPricingRulesUseCase } from './application/use-cases/manage-delivery-pricing-rules.use-case.js'
@@ -133,6 +134,7 @@ import { DeliveryAssignmentActionsController } from './presentation/delivery-ass
     ReissueHandoverOtpUseCase,
     GetMineDeliveryAssignmentsUseCase,
     GetDeliveryAssignmentDetailUseCase,
+    ReturnTripService,
     DeliveryFacade,
   ],
   exports: [DeliveryFacade],

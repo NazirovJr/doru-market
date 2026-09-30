@@ -33,6 +33,8 @@ export type OrderDomainEvent =
       readonly reason: OrderCancelReason
       readonly cancelledBy: string | null
       readonly at: Date
+      /** Выставляет use case отмены (`Order.cancel` денег не решает): деньги были в эскроу, обработчик обязан довести рефанд. */
+      readonly refundRequired?: boolean
     }
   // ==================== DTJ-300 (EP-12, модуль 24) — далее 5 новых вариантов ====================
   /** SRS-PHT-007/009 — `AcceptOrderUseCase` успешно перевёл заказ в `processing` и мягко

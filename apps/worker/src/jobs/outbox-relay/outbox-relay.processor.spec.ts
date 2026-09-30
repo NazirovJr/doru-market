@@ -1,6 +1,7 @@
 import type { Queue } from 'bullmq'
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { OutboxClaim, OutboxEventRecord, OutboxReaderPort } from './outbox-reader.port.js'
+import { DOMAIN_EVENT_JOB_ATTEMPTS, DOMAIN_EVENT_RETRY_BACKOFF_MS } from './outbox-relay.constants.js'
 import { OutboxRelayProcessor } from './outbox-relay.processor.js'
 
 function createEvent(id: string): OutboxEventRecord {
@@ -71,7 +72,7 @@ describe('OutboxRelayProcessor', () => {
         tenantId: event.tenantId,
         occurredAt: event.occurredAt.toISOString(),
         payload: event.payload,
-      }, { jobId: event.id })
+      }, { jobId: event.id, attempts: DOMAIN_EVENT_JOB_ATTEMPTS, backoff: { type: 'exponential', delay: DOMAIN_EVENT_RETRY_BACKOFF_MS } })
       expect(claim.markPublishedMock).toHaveBeenCalledWith(event.id)
     }
   })

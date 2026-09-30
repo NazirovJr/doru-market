@@ -7,7 +7,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Logger } from 'pino'
 import { err, isOk, ok } from '@dorutj/domain-kernel'
-import { ErrorCode, NotFoundError, PaymentProviderUnavailableError } from '@dorutj/contracts'
+import { ErrorCode, NotFoundError } from '@dorutj/contracts'
 import type { Clock } from '@/shared-kernel/application/ports/clock.port.js'
 import { OrdersFacade } from '@/modules/orders/application/orders.facade.js'
 import { InMemoryOrderRepository } from '@/modules/orders/testing/fixtures/in-memory-order-repository.fixture.js'
@@ -15,6 +15,7 @@ import { validOrderCreateCommand } from '@/modules/orders/testing/fixtures/order
 import { Order, type OrderSnapshot } from '@/modules/orders/domain/order.entity.js'
 import type { InventoryFacadePort } from '@/modules/orders/application/ports/inventory-facade.port.js'
 import type { RefundError, RefundFacadePort } from '@/modules/orders/application/ports/refund-facade.port.js'
+import { FIXTURE_TX, makeOrderCancellationService } from '@/modules/orders/testing/fixtures/order-cancellation-service.fixture.js'
 import { SystemCancelOrderUseCase, type SystemCancelOrderCommand } from './system-cancel-order.use-case.js'
 
 const NOW = new Date('2026-09-04T03:00:00.000Z')
@@ -58,7 +59,8 @@ function makeHarness(): Harness {
   }
   const refundFull = vi.fn<RefundFacadePort['refundFull']>().mockResolvedValue(ok(undefined))
   const refundFacade: RefundFacadePort = { refundFull, refundPartialFulfillment: vi.fn() }
-  const useCase = new SystemCancelOrderUseCase(ordersFacade, inventoryFacade, refundFacade, new FixedClock(), SILENT_LOGGER)
+  const cancellation = makeOrderCancellationService({ repo, inventoryFacade, refundFacade, appendAll: vi.fn().mockResolvedValue(undefined), logger: SILENT_LOGGER })
+  const useCase = new SystemCancelOrderUseCase(ordersFacade, cancellation, new FixedClock(), SILENT_LOGGER)
   return { useCase, repo, releaseStock, refundFull }
 }
 
@@ -163,7 +165,7 @@ describe('SystemCancelOrderUseCase (DTJ-253/254)', () => {
     ).rejects.toBeInstanceOf(NotFoundError)
   })
 
-  it('RefundFacadePort возвращает Err → пробрасывает PaymentProviderUnavailableError, но отмена/release уже применены (не откатываются)', async () => {
+  it('RefundFacadePort возвращает Err → отмена/release применены, рефанд отложен на событие в outbox (refundRequired=true), исключения нет', async () => {
     const { repo, releaseStock } = makeHarness()
     const order = orderAtStatus('paid_escrow')
     await repo.save(order)
@@ -178,20 +180,25 @@ describe('SystemCancelOrderUseCase (DTJ-253/254)', () => {
       reserveForOrder: vi.fn(),
       reconcileZeroStock: vi.fn(),
     }
-    const failingUseCase = new SystemCancelOrderUseCase(
-      new OrdersFacade(repo),
-      inventoryFacade,
-      refundFacade,
-      new FixedClock(),
-      SILENT_LOGGER,
-    )
+    const appendAll = vi.fn().mockResolvedValue(undefined)
+    const cancellation = makeOrderCancellationService({ repo, inventoryFacade, refundFacade, appendAll, logger: SILENT_LOGGER })
+    const failingUseCase = new SystemCancelOrderUseCase(new OrdersFacade(repo), cancellation, new FixedClock(), SILENT_LOGGER)
 
-    await expect(
-      failingUseCase.execute({ tenantId: TENANT_ID, orderId: order.id, expectedFromStatus: 'paid_escrow', reason: 'pickup_sla_timeout' }),
-    ).rejects.toBeInstanceOf(PaymentProviderUnavailableError)
-    const saved = await repo.findById(TENANT_ID, order.id)
-    expect(saved?.status).toBe('cancelled') // отмена уже совершилась до вызова рефанда
+    const result = await failingUseCase.execute({
+      tenantId: TENANT_ID,
+      orderId: order.id,
+      expectedFromStatus: 'paid_escrow',
+      reason: 'pickup_sla_timeout',
+    })
+
+    expect(result).toEqual({ orderId: order.id, status: 'cancelled', refundIssued: false })
+    expect((await repo.findById(TENANT_ID, order.id))?.status).toBe('cancelled')
     expect(releaseStock).toHaveBeenCalledTimes(1)
+    expect(appendAll).toHaveBeenCalledWith(
+      TENANT_ID,
+      [expect.objectContaining({ type: 'OrderCancelledEvent', orderId: order.id, reason: 'pickup_sla_timeout', refundRequired: true })],
+      FIXTURE_TX,
+    )
   })
 
   it('releaseStock получает inventoryBatchId/quantity позиций заказа (не пустой массив)', async () => {

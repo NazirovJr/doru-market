@@ -13,7 +13,7 @@ import { ResponseInterceptor } from '@/common/http/interceptors/response.interce
 import { AuthModule } from '@/modules/auth/auth.module.js'
 import { JWT_SIGNER, type JwtSignerPort } from '@/modules/auth/index.js'
 import { OrdersModule } from '@/modules/orders/orders.module.js'
-import { ORDERS_FACADE } from '@/modules/orders/index.js'
+import { ORDERS_FACADE, ORDER_CANCELLATION } from '@/modules/orders/index.js'
 import { PaymentsModule } from '@/modules/payments/payments.module.js'
 import { PAYMENTS_FACADE } from '@/modules/payments/index.js'
 import { OnboardingModule } from '@/modules/onboarding/onboarding.module.js'
@@ -24,6 +24,7 @@ import { DomainEventsModule } from '@/common/events/domain-events.module.js'
 import { OrdersAdminController } from '@/modules/admin/presentation/orders-admin.controller.js'
 import { OrdersAdminActionsController } from '@/modules/admin/presentation/orders-admin-actions.controller.js'
 import { ORDERS_FACADE_PORT } from '@/modules/admin/application/ports/orders-facade.port.js'
+import { ORDER_CANCELLATION_PORT } from '@/modules/admin/application/ports/order-cancellation.port.js'
 import { PAYMENTS_FACADE_PORT } from '@/modules/admin/application/ports/payments-facade.port.js'
 import { PRESCRIPTIONS_FACADE_PORT } from '@/modules/admin/application/ports/prescriptions-facade.port.js'
 import { ONBOARDING_FACADE_PORT } from '@/modules/admin/application/ports/onboarding-facade.port.js'
@@ -83,6 +84,7 @@ function applyTestEnv(): void {
   controllers: [OrdersAdminController, OrdersAdminActionsController],
   providers: [
     { provide: ORDERS_FACADE_PORT, useExisting: ORDERS_FACADE },
+    { provide: ORDER_CANCELLATION_PORT, useExisting: ORDER_CANCELLATION },
     { provide: PAYMENTS_FACADE_PORT, useExisting: PAYMENTS_FACADE },
     { provide: PRESCRIPTIONS_FACADE_PORT, useClass: NullPrescriptionsFacadeAdapter },
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },

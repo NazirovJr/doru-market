@@ -44,7 +44,7 @@ function makeOrder(overrides: Partial<OrderReturnContext> = {}): OrderReturnCont
 
 function buildHarness(orderOverrides: Partial<OrderReturnContext> = {}) {
   const markProcessed = vi.fn<ProcessedEventsPort['markProcessed']>().mockResolvedValue(true)
-  const processedEvents: ProcessedEventsPort = { markProcessed }
+  const processedEvents: ProcessedEventsPort = { markProcessed, isProcessed: vi.fn().mockResolvedValue(false) }
   const getOrderForReturn = vi.fn<ReturnsOrdersPort['getOrderForReturn']>().mockResolvedValue(makeOrder(orderOverrides))
   const getCourierIdForUser = vi.fn<ReturnsOrdersPort['getCourierIdForUser']>().mockResolvedValue(null)
   const ordersPort: ReturnsOrdersPort = { getOrderForReturn, getCourierIdForUser }

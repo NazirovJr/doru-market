@@ -189,9 +189,13 @@ describe.skipIf(!postgresAvailable || !redisAvailable)('DomainEventsRouter — i
       })
 
       await expect.poll(() => handlerBAttempts, { timeout: WAIT_MARGIN_MS, interval: 100 }).toBeGreaterThanOrEqual(2)
-      await expect.poll(() => handlerACalls.length, { timeout: WAIT_MARGIN_MS, interval: 100 }).toBeGreaterThanOrEqual(1)
+      await expect.poll(() => handlerACalls.length, { timeout: WAIT_MARGIN_MS, interval: 100 }).toBe(1)
 
-      expect(handlerACalls.filter((id) => id === eventId).length).toBeGreaterThanOrEqual(1)
+      await new Promise((resolve) => setTimeout(resolve, 1_000))
+      expect(handlerACalls.filter((id) => id === eventId)).toHaveLength(1)
+      expect(handlerBAttempts).toBe(2)
+      const marks = await pool.query('SELECT consumer_name FROM processed_events WHERE event_id = $1 ORDER BY consumer_name', [eventId])
+      expect(marks.rows.map((r: { consumer_name: string }) => r.consumer_name)).toEqual(['test.fake-a', 'test.fake-b'])
     },
     TEST_TIMEOUT_MS,
   )

@@ -1,10 +1,11 @@
 /**
  * `PharmacySuspensionController` (DTJ-071) — маршруты `suspend` и
  * `force-cancel-incomplete-orders`. `Idempotency-Key` обязателен для
- * force-cancel (SRS-ADM-016), проверяется общим механизмом EP-01.
+ * force-cancel (SRS-ADM-016): `@Idempotent()` даёт 400 без заголовка и повтор без дублей.
  */
-import { Body, Controller, HttpCode, HttpStatus, Headers, Inject, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, HttpCode, HttpStatus, Inject, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
+import { Idempotent } from '@/common/http/decorators/idempotent.decorator.js'
 import {
   ForceCancelOrdersRequestSchema,
   SuspendPharmacyRequestSchema,
@@ -12,13 +13,11 @@ import {
   type ForceCancelOrdersRequest,
   type SuspendPharmacyRequest,
 } from '@dorutj/contracts'
-import { AuthGuard, Roles, RolesGuard } from '@/modules/auth/index.js'
+import { AuthGuard, CurrentUser, Roles, RolesGuard, type JwtClaims } from '@/modules/auth/index.js'
 import { SuspendPharmacyUseCase } from '@/modules/onboarding/application/use-cases/suspend-pharmacy.use-case.js'
 import { ForceCancelIncompleteOrdersUseCase } from '@/modules/onboarding/application/use-cases/force-cancel-incomplete-orders.use-case.js'
 
 const ID_PARSE_UUID = new ParseUUIDPipe({ version: '4' })
-const SYSTEM_ACTOR_ID = '00000000-0000-0000-0000-000000000000'
-const IDEMPOTENCY_HEADER = 'idempotency-key'
 
 @Controller({ path: 'admin/pharmacy-accounts', version: '1' })
 @UseGuards(AuthGuard, RolesGuard)
@@ -36,10 +35,11 @@ export class PharmacySuspensionController {
   async suspend(
     @Param('id', ID_PARSE_UUID) id: string,
     @Body(new ZodValidationPipe(SuspendPharmacyRequestSchema)) body: SuspendPharmacyRequest,
+    @CurrentUser() claims: JwtClaims,
   ): Promise<unknown> {
     const result = await this.suspendPharmacy.execute({
       pharmacyId: id,
-      actorId: SYSTEM_ACTOR_ID,
+      actorId: claims.sub,
       reason: body.reason,
       notes: body.notes ?? null,
     })
@@ -48,18 +48,15 @@ export class PharmacySuspensionController {
 
   @Post(':id/force-cancel-incomplete-orders')
   @HttpCode(HttpStatus.OK)
+  @Idempotent()
   async forceCancel(
     @Param('id', ID_PARSE_UUID) id: string,
     @Body(new ZodValidationPipe(ForceCancelOrdersRequestSchema)) body: ForceCancelOrdersRequest,
-    @Headers(IDEMPOTENCY_HEADER) idempotencyKey: string | undefined,
+    @CurrentUser() claims: JwtClaims,
   ): Promise<unknown> {
-    if (idempotencyKey === undefined || idempotencyKey.length === 0) {
-      // TODO(EP-01): заменить на 400 IDEMPOTENCY_KEY_REQUIRED через общий interceptor
-      throw new Error('Idempotency-Key header is required')
-    }
     const result = await this.forceCancelIncompleteOrders.execute({
       pharmacyId: id,
-      actorId: SYSTEM_ACTOR_ID,
+      actorId: claims.sub,
       reason: body.reason,
     })
     return ok(result)

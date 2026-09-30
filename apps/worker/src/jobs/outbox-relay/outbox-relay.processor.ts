@@ -1,7 +1,12 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
 import type { Queue } from 'bullmq'
 import type { DomainEventEnvelope } from '@dorutj/contracts'
-import { DOMAIN_EVENTS_QUEUE, OUTBOX_RELAY_BATCH_LIMIT } from './outbox-relay.constants.js'
+import {
+  DOMAIN_EVENTS_QUEUE,
+  DOMAIN_EVENT_JOB_ATTEMPTS,
+  DOMAIN_EVENT_RETRY_BACKOFF_MS,
+  OUTBOX_RELAY_BATCH_LIMIT,
+} from './outbox-relay.constants.js'
 import { OUTBOX_READER_PORT, type OutboxEventRecord, type OutboxReaderPort } from './outbox-reader.port.js'
 
 // Публикация в Redis идёт конкурентно (падение одной строки не роняет тик), а мутация статуса —
@@ -37,7 +42,11 @@ export class OutboxRelayProcessor {
   }
 
   private async publish(event: OutboxEventRecord): Promise<void> {
-    await this.domainEventsQueue.add(event.eventType, toEnvelope(event), { jobId: event.id })
+    await this.domainEventsQueue.add(event.eventType, toEnvelope(event), {
+      jobId: event.id,
+      attempts: DOMAIN_EVENT_JOB_ATTEMPTS,
+      backoff: { type: 'exponential', delay: DOMAIN_EVENT_RETRY_BACKOFF_MS },
+    })
   }
 }
 

@@ -65,6 +65,11 @@ function orderNumber(prefix: string): string {
   return `${prefix}-${randomUUID().slice(0, 8)}`
 }
 
+/** Формат, который разбирает реальный `OrdersFacade` (DTJ-YYMMDD-NNNNN); по умолчанию `seedOrder` пишет упрощённый номер. */
+export function canonicalOrderNumber(): string {
+  return `DTJ-260929-${String(Math.floor(Math.random() * 100_000)).padStart(5, '0')}`
+}
+
 export async function seedTenant(
   db: NodePgDatabase,
   overrides?: Partial<{ disputeWindowHours: number; returnRestockMinRemainingDays: number }>,
@@ -132,13 +137,14 @@ export interface SeedOrderOptions {
   readonly billingStrategy?: 'single_invoice' | 'split_items_delivery'
   readonly deliveredAt?: Date | null
   readonly courierId?: string | null
+  readonly orderNumber?: string
 }
 
 export async function seedOrder(db: NodePgDatabase, opts: SeedOrderOptions): Promise<string> {
   const id = randomUUID()
   await db.insert(orders).values({
     id,
-    orderNumber: orderNumber('DTJ273'),
+    orderNumber: opts.orderNumber ?? orderNumber('DTJ273'),
     customerId: opts.customerId,
     tenantId: opts.tenantId,
     status: opts.status,

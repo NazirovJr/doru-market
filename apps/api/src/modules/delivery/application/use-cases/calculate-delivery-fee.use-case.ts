@@ -28,6 +28,14 @@ export interface CalculateDeliveryFeeInput {
   readonly atMoment?: Date
 }
 
+export type CalculateReturnTripFeeInput = Omit<CalculateDeliveryFeeInput, 'itemsTotalDiram'>
+
+interface ResolvedTariff {
+  readonly rule: DeliveryPricingRule
+  readonly distanceKm: number
+  readonly isNightTariff: boolean
+}
+
 @Injectable()
 export class CalculateDeliveryFeeUseCase {
   public constructor(
@@ -37,13 +45,22 @@ export class CalculateDeliveryFeeUseCase {
   ) {}
 
   public async execute(input: CalculateDeliveryFeeInput): Promise<bigint> {
+    const { rule, distanceKm, isNightTariff } = await this.resolveTariff(input)
+    return rule.computeFeeForDistance(distanceKm, Money.fromDiram(input.itemsTotalDiram), isNightTariff).diram
+  }
+
+  public async executeForReturn(input: CalculateReturnTripFeeInput): Promise<bigint> {
+    const { rule, distanceKm, isNightTariff } = await this.resolveTariff(input)
+    return rule.computeTripFee(distanceKm, isNightTariff).diram
+  }
+
+  private async resolveTariff(input: CalculateReturnTripFeeInput): Promise<ResolvedTariff> {
     const atMoment = input.atMoment ?? this.clock.now()
     const zone = await this.resolveZone(input.tenantId, input.customerGeoPoint)
     const rule = await this.resolveRule(input.tenantId, zone.id, atMoment)
     const distanceKm = input.pharmacyGeoPoint.distanceTo(input.customerGeoPoint) / METERS_PER_KM
     const isNightTariff = isWithinNightTariff(atMoment, rule.props.nightTariffStartTime, rule.props.nightTariffEndTime)
-    const fee = rule.computeFeeForDistance(distanceKm, Money.fromDiram(input.itemsTotalDiram), isNightTariff)
-    return fee.diram
+    return { rule, distanceKm, isNightTariff }
   }
 
   /** Приоритет: меньший `priority`, тай-брейк — меньший `radiusKm`. */

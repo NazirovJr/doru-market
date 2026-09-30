@@ -29,7 +29,8 @@ import { Module } from '@nestjs/common'
 import { OnboardingModule } from '@/modules/onboarding/onboarding.module.js'
 import { OnboardingFacade } from '@/modules/onboarding/index.js'
 import { OrdersModule } from '@/modules/orders/orders.module.js'
-import { ORDERS_FACADE } from '@/modules/orders/index.js'
+import { ORDERS_FACADE, ORDER_CANCELLATION } from '@/modules/orders/index.js'
+import { ORDER_CANCELLATION_PORT } from './application/ports/order-cancellation.port.js'
 import { PaymentsModule } from '@/modules/payments/payments.module.js'
 import { PAYMENTS_FACADE } from '@/modules/payments/index.js'
 import { AuthModule } from '@/modules/auth/index.js'
@@ -126,6 +127,7 @@ import { OrdersAdminActionsController } from './presentation/orders-admin-action
   providers: [
     { provide: ONBOARDING_FACADE_PORT, useExisting: OnboardingFacade },
     { provide: ORDERS_FACADE_PORT, useExisting: ORDERS_FACADE },
+    { provide: ORDER_CANCELLATION_PORT, useExisting: ORDER_CANCELLATION },
     { provide: PAYMENTS_FACADE_PORT, useExisting: PAYMENTS_FACADE },
     { provide: INVENTORY_FACADE_PORT, useExisting: InventoryFacade },
     // DTJ-352 — feature_flags (см. JSDoc блока выше).
