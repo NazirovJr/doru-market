@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router'
 import type { ReactElement } from 'react'
 import { useLocale, type Locale } from '@/shared/config/locale-provider'
+import { CartHeaderLink } from '@/features/cart/ui/cart-header-link'
 
 // Плейсхолдеры до готовности packages/ui (EP-18): BrandLogo и LanguageSwitcher — реальные
 // компоненты подключит соответствующий тикет EP-18, здесь только зарезервировано место в layout
@@ -38,7 +39,10 @@ export const AppLayout = (): ReactElement => (
       <span className="font-semibold" data-testid="brand-placeholder">
         {BRAND_PLACEHOLDER}
       </span>
-      <LanguageSwitcherPlaceholder />
+      <div className="flex items-center gap-4">
+        <LanguageSwitcherPlaceholder />
+        <CartHeaderLink />
+      </div>
     </header>
     <main className="flex-1 p-4">
       <Outlet />

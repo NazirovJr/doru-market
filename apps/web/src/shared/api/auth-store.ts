@@ -10,15 +10,14 @@ import { persist, createJSONStorage } from 'zustand/middleware'
  *     действующего access-токена; он получит только refresh и должен
  *     перехватить ВЕСЬ сетевой трафик для refresh'а (нетривиально).
  *   - `refreshToken` — `localStorage` (`zustand/persist` middleware).
- *     Гидратация: при старте приложения `http-client.refreshAccessToken()`
- *     попытается сразу сделать `POST /api/v1/auth/refresh` (SRS-API-026),
- *     если в storage найдён `refreshToken` И нет `accessToken`.
+ *     Гидратация: `restoreSession()` (`http-client.ts`, вызывается из `app/main.tsx`
+ *     до первого рендера) делает `POST /api/v1/auth/refresh`,
+ *     если в storage найден `refreshToken` И нет `accessToken`.
  *   - `user` — `{ id, role, phoneNumber, fullName } | null` для UI
  *     (имя в шапке, `intent`-редирект после login). ВАЖНО: `phoneNumber`
  *     для Telegram-юзеров = `null` (DTJ-027).
  *   - `setSession(...)` — единая точка обновления после login/refresh.
  *   - `clear()` — logout (удаляет ВСЁ, включая persisted refresh).
- *   - `hydrate()` — попытка refresh'а при старте; идемпотентно.
  *
  * Персистентность реализована через `zustand/persist` — Zustand сам
  * сериализует в `localStorage` и восстанавливает при загрузке модуля.

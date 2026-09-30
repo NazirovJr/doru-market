@@ -27,6 +27,7 @@
 import { useInfiniteQuery, type UseInfiniteQueryResult } from '@tanstack/react-query'
 import type { SearchResultItemDto } from '@dorutj/contracts'
 import type { HttpError } from '@/shared/api/http-client'
+import type { GeoCoords } from '@/shared/geo/geo-store'
 import { fetchSearchResults, type SearchResultsPage } from '../api/search-results.api'
 
 const HTTP_STATUS_SERVICE_UNAVAILABLE = 503
@@ -48,12 +49,12 @@ export interface UseSearchResultsResult {
 }
 
 /** Непустой `text` — обязательное условие запроса: пустой ввод в этом тикете не браузит каталог (см. JSDoc `search-results.api.ts`). */
-export function useSearchResults(text: string): UseSearchResultsResult {
+export function useSearchResults(text: string, geo: GeoCoords | null = null): UseSearchResultsResult {
   const trimmed = text.trim()
 
   const query: UseInfiniteQueryResult<{ pages: SearchResultsPage[] }, HttpError> = useInfiniteQuery({
-    queryKey: ['search', 'results', trimmed],
-    queryFn: ({ pageParam, signal }) => fetchSearchResults(trimmed, pageParam, signal),
+    queryKey: ['search', 'results', trimmed, geo],
+    queryFn: ({ pageParam, signal }) => fetchSearchResults({ text: trimmed, cursor: pageParam, geo, signal }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage: SearchResultsPage) => (lastPage.hasMore ? (lastPage.nextCursor ?? undefined) : undefined),
     enabled: trimmed.length > 0,

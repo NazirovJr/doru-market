@@ -82,3 +82,11 @@ describe('MedicineCard — цена/остаток/расстояние', () => 
     expect(screen.getByTestId('medicine-card-distance')).toHaveTextContent('900 м')
   })
 })
+
+describe('MedicineCard — необязательные производитель и цена', () => {
+  it('без priceDiram цена не рисуется, без manufacturerName нет висящего разделителя', () => {
+    render(<MedicineCard tradeName="Цитрамон" innName={BASE_PROPS.innName} dosageForm="таблетки" dosageStrength="500 мг" controlCategory="none" inStock locale="ru" t={t} />)
+    expect(screen.queryByTestId('price-tag')).not.toBeInTheDocument()
+    expect(screen.getByText('Парацетамол+Кофеин+Аспирин · таблетки 500 мг')).toBeInTheDocument()
+  })
+})

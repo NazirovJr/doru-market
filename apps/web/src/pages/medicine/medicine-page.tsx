@@ -1,43 +1,80 @@
-import type { ReactElement } from 'react'
+import { useMemo, type ReactElement } from 'react'
 import { useParams } from 'react-router'
-import { useT } from '@dorutj/i18n'
+import { ErrorState, Skeleton } from '@dorutj/ui'
+import { useT, type Locale, type TranslateFunction } from '@dorutj/i18n'
 import { useLocale } from '@/shared/config/locale-provider'
+import { useUserGeo } from '@/shared/geo/use-user-geo'
 import { AnalogsBlock } from '@/features/analogs/ui/analogs-block'
+import { usePharmacyMapPins } from '@/features/pharmacy-map/api/use-pharmacy-map-pins'
+import { useAddToCart, type AddToCart } from '@/features/cart/model/use-add-to-cart'
+import { useMedicineDetail } from '@/features/medicine/api/use-medicine-detail'
+import { buildOffersBbox } from '@/features/medicine/model/offers-bbox'
+import { MedicineHeader } from '@/features/medicine/ui/medicine-header'
+import { MedicineOffers } from '@/features/medicine/ui/medicine-offers'
+import { NearbyControl } from '@/features/search/ui/nearby-control'
 
-/**
- * `medicine-page.tsx` — экран `/medicines/:id` (дизайн-референс `docs/spec/32-design-reference.md`
- * строка 176: `Medicine` → «Название/МНН/форма/производитель, бейдж Rx, `AnalogBanner`… + список
- * предложений аптек»).
- *
- * **ДОПУЩЕНИЕ (см. отчёт сдачи DTJ-104, раздел ДОПУЩЕНИЯ/DISPUTED).** Полноценного экрана
- * карточки товара во `apps/web` НЕТ — ни маршрута, ни страницы, ни тикета на неё в
- * `tickets/00-INDEX.md` (проверено: `DTJ-095` — бэкенд `GET /medicines/:id`, `layer: application`,
- * `files_owned` только `apps/api/**`; фронтенд-эквивалента не существует). DTJ-104 требует
- * (правило 1 AGENTS.md), чтобы `AnalogsBlock` был РЕАЛЬНО встроен в экран лекарства, а не просто
- * существовал файлом — без хост-страницы это невозможно физически. Этот файл — МИНИМАЛЬНЫЙ,
- * честно помеченный стаб (только `:id` из маршрута → `AnalogsBlock`), НЕ полноценный экран
- * `Medicine` из дизайн-референса (название/МНН/форма/производитель/список предложений/кнопка «На
- * карте» — вне `files_owned` DTJ-104, задача отдельного тикета EP-04/EP-07, которого пока нет в
- * плане). Тот же приём временного маркера, что `app/layout.tsx` (`TODO(EP-18)`).
- *
- * TODO(EP-04/EP-07): заменить на полноценный экран карточки товара, когда появится
- * соответствующий тикет (название/МНН/форма/производитель/список предложений/кнопка «На карте») —
- * `AnalogsBlock` при этом переносится как есть, без изменений (уже самодостаточный feature-модуль).
- */
+const HTTP_STATUS_NOT_FOUND = 404
+
+interface OffersSectionProps {
+  readonly medicineId: string
+  readonly locale: Locale
+  readonly t: TranslateFunction
+  readonly onAddToCart: AddToCart
+}
+
+const OffersSection = ({ medicineId, locale, t, onAddToCart }: OffersSectionProps): ReactElement => {
+  const geo = useUserGeo()
+  const bbox = useMemo(() => buildOffersBbox(geo.coords), [geo.coords])
+  const pins = usePharmacyMapPins({ bbox, medicineId })
+
+  return (
+    <div className="flex flex-col gap-3">
+      <NearbyControl status={geo.status} onRequest={geo.request} t={t} />
+      {pins.isPending ? <Skeleton variant="row" /> : null}
+      {pins.isError ? (
+        <ErrorState
+          t={t}
+          titleKey="ux.error.generic_500"
+          variant="inline"
+          onRetry={() => {
+            void pins.refetch()
+          }}
+        />
+      ) : null}
+      {pins.isSuccess ? (
+        <MedicineOffers medicineId={medicineId} pins={pins.data} locale={locale} t={t} onAddToCart={onAddToCart} />
+      ) : null}
+      <AnalogsBlock
+        medicineId={medicineId}
+        geo={geo.coords ?? undefined}
+        onAddToCart={onAddToCart}
+      />
+    </div>
+  )
+}
+
 const MedicinePage = (): ReactElement => {
   const { locale } = useLocale()
   const { t } = useT(locale)
   const { id } = useParams<{ id: string }>()
   const medicineId = id ?? ''
+  const detail = useMedicineDetail(medicineId)
+  const addToCart = useAddToCart()
+
+  if (medicineId.length === 0 || detail.isError) {
+    const notFound = medicineId.length > 0 && detail.error?.status === HTTP_STATUS_NOT_FOUND
+    return (
+      <p role="alert" data-testid="medicine-page-error" className="text-sm text-ink">
+        {notFound ? t('catalog.medicine.not_found') : t('ux.error.generic_500')}
+      </p>
+    )
+  }
 
   return (
     <section className="flex flex-col gap-4" data-testid="medicine-page">
-      {medicineId.length === 0 ? (
-        <p role="alert" data-testid="medicine-page-missing-id" className="text-sm text-ink">
-          {t('ux.error.generic_500')}
-        </p>
-      ) : (
-        <AnalogsBlock medicineId={medicineId} />
+      {detail.isPending ? <Skeleton variant="card" /> : <MedicineHeader medicine={detail.data} t={t} />}
+      {detail.isPending ? null : (
+        <OffersSection medicineId={medicineId} locale={locale} t={t} onAddToCart={addToCart} />
       )}
     </section>
   )

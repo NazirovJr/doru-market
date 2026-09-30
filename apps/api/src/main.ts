@@ -20,7 +20,7 @@ import pino from 'pino'
 import type Redis from 'ioredis'
 import { AppModule } from './app.module.js'
 import { AppConfigService } from './config/app-config.service.js'
-import { isAllowedCorsOrigin } from './config/cors-origin.policy.js'
+import { buildCorsOptions } from './config/cors-origin.policy.js'
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js'
 import { REDIS_CLIENT } from './infrastructure/redis/redis.token.js'
 import { JWT_SIGNER, type JwtSignerPort } from './modules/auth/index.js'
@@ -70,11 +70,7 @@ async function registerTransportSecurity(
     contentSecurityPolicy: { directives: { defaultSrc: ["'self'"] } },
     hsts: { maxAge: HSTS_MAX_AGE_SECONDS, includeSubDomains: true },
   })
-  await app.register(cors as unknown as FastifyRegisterablePlugin, {
-    origin: (origin: string | undefined, callback: (error: Error | null, allow: boolean) => void) => {
-      callback(null, origin === undefined || isAllowedCorsOrigin(origin, config))
-    },
-  })
+  await app.register(cors as unknown as FastifyRegisterablePlugin, buildCorsOptions(config))
   // [DTJ-161, SRS-INV-014/API-066] Регистрируется ГЛОБАЛЬНО (тот же уровень, что helmet/cors) —
   // `request.parts()`/`request.file()` становятся доступны на ЛЮБОМ маршруте приложения, но
   // фактически используются только `InventoryExcelImportController`. `fileSize` — общий

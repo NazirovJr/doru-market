@@ -20,3 +20,23 @@ export function isAllowedCorsOrigin(origin: string, config: CorsOriginPolicyConf
   }
   return config.isDevelopment && LOCALHOST_DEV_ORIGIN_PATTERN.test(origin)
 }
+
+/** Ответные заголовки, которые читает браузерный клиент: гостевой токен корзины и id запроса. */
+export const CORS_EXPOSED_HEADERS = ['x-cart-session-token', 'x-request-id'] as const
+export const CORS_ALLOWED_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'] as const
+
+export interface CorsOptions {
+  readonly origin: (origin: string | undefined, callback: (error: Error | null, allow: boolean) => void) => void
+  readonly exposedHeaders: readonly string[]
+  readonly methods: readonly string[]
+}
+
+export function buildCorsOptions(config: CorsOriginPolicyConfig): CorsOptions {
+  return {
+    origin: (origin, callback) => {
+      callback(null, origin === undefined || isAllowedCorsOrigin(origin, config))
+    },
+    exposedHeaders: CORS_EXPOSED_HEADERS,
+    methods: CORS_ALLOWED_METHODS,
+  }
+}
