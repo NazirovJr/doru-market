@@ -107,6 +107,10 @@ jobs:
       - run: pnpm test:env-check
       - run: pnpm env:check
 
+      # Ссылки на документы и пути в коде существуют (scripts/ci/docs-check.mjs).
+      - run: pnpm test:docs-check
+      - run: pnpm docs:check
+
   # ---------------------------------------------------------------------------------------------
   # Job — DTJ-427, SRS-UX-036/037/038/NFR-036: бюджет ≤250KB gzip для JS/CSS первого экрана
   # apps/web. Размещён ОТДЕЛЬНЫМ job'ом (не внутри typecheck-lint-arch) — гейт требует реального

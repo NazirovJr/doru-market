@@ -18,7 +18,7 @@ import { useLocale } from '@/shared/config/locale-provider'
  * сериализуемой `toAnalogsDataDto()` (`analog-result.dto.ts`), а не повторное изобретение
  * контракта — тот же приём, что `features/search/api/search.api.ts` (DTJ-192, `SuggestSuggestion`)
  * применил для `/medicines/suggest`, которого тоже нет в пакете контрактов. Зафиксировано в отчёте
- * сдачи как рекомендация завести `packages/contracts/src/analogs.ts` (правило 2 тикета DTJ-104) —
+ * сдачи как рекомендация завести файла `analogs.ts` в `packages/contracts/src` (правило 2 тикета DTJ-104) —
  * этот тикет её не создаёт (вне `files_owned`, правило 7 AGENTS.md).
  *
  * **`Accept-Language`.** `httpGetJson`/`httpRequestJson` (`shared/api/http-client.ts`) сегодня НЕ

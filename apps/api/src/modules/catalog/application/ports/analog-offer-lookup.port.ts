@@ -42,7 +42,7 @@ import type { PharmacyOfferPublic } from '@dorutj/contracts'
 
 /**
  * Гео-точка пользователя (SRS-CAT-011). Широта/долгота в градусах, WGS-84.
- * Дубликат типа из `apps/api/src/shared-kernel/geo/geo-point.vo.ts` —
+ * Дубликат типа из `apps/api/src/shared-kernel/domain/value-objects/geo-point.vo.ts` —
  * намеренно НЕ импортируем `shared-kernel` из `application`-порта
  * (нарушит направление зависимостей, см. AGENTS.md §5), и намеренно НЕ
  * дублируем VO в `packages/domain-kernel` — тип публичного контракта,

@@ -4,7 +4,7 @@
  * через `CategoryTreeService.buildTree`, когда тот появится в DTJ-094 полной версии).
  *
  * @see docs/history/state-log-to-2026-09-06.md §11.6
- * @see docs/tickets/00-INDEX.md DTJ-094
+ * @see tickets/00-INDEX.md DTJ-094
  */
 export const CATEGORIES_READ_REPOSITORY = Symbol.for('@dorutj/catalog/categories-read-repository')
 

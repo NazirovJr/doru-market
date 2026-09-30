@@ -2,7 +2,7 @@
  * Самопроверка `runAxeCheck` (DTJ-417, критерий приёмки №4) — реальный Playwright-прогон
  * против МИНИМАЛЬНОЙ статической HTML-страницы (не требует бэкенда/докер-стека), с намеренным
  * нарушением. Часть `pnpm test:e2e`/`pnpm verify` (не требует живого стека — см.
- * `tests/e2e/README.md`/JSDoc `playwright.config.ts`, `project: 'self-check'`).
+ * JSDoc `playwright.config.ts`, `project: 'self-check'`).
  */
 import { fileURLToPath } from 'node:url'
 import { test, expect } from '@playwright/test'

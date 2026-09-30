@@ -17,7 +17,7 @@
  *     (use case делает clamp).
  *
  * @see docs/history/state-log-to-2026-09-06.md §11.6 (Волна 4)
- * @see docs/tickets/00-INDEX.md DTJ-092, DTJ-094
+ * @see tickets/00-INDEX.md DTJ-092, DTJ-094
  */
 import type { Medicine } from '../../domain/medicine.entity.js'
 

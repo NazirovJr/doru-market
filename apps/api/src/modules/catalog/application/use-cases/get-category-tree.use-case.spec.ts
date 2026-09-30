@@ -13,7 +13,7 @@
  * интеграционным тестом `categories.controller.integration.spec.ts` через
  * подмену Nest Logger — здесь мы только проверяем, что use case НЕ падает.
  *
- * @see docs/tickets/ep03-catalog-analogs/DTJ-094.md
+ * @see tickets/ep03-catalog-analogs/DTJ-094.md
  * @see docs/history/state-log-to-2026-09-06.md §11.6 (Волна 4)
  */
 import { describe, expect, it } from 'vitest'

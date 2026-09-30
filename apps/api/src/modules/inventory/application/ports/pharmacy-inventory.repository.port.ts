@@ -8,7 +8,7 @@
  * отсутствует; для "нет в наличии" — `quantity = 0`.
  *
  * @see docs/history/state-log-to-2026-09-06.md §11.6
- * @see docs/tickets/00-INDEX.md DTJ-148, DTJ-154
+ * @see tickets/00-INDEX.md DTJ-148, DTJ-154
  */
 import type { InventoryBatchUpsertRow } from '../../domain/value-objects/inventory-batch-upsert-row.vo.js'
 import type { PharmacyInventory } from '../../domain/pharmacy-inventory.entity.js'

@@ -23,7 +23,7 @@
  *
  * Репозиторий замокирован in-memory — unit-тест без БД.
  *
- * @see docs/tickets/ep03-catalog-analogs/DTJ-096.md
+ * @see tickets/ep03-catalog-analogs/DTJ-096.md
  */
 import { describe, expect, it, vi } from 'vitest'
 import { err, ok } from '@dorutj/domain-kernel'
