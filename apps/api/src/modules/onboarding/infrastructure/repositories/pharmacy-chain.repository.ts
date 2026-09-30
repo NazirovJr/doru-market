@@ -7,10 +7,11 @@
  * аналогично `tenant.repository.ts` (DTJ-052).
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { and, asc, count, eq, isNotNull } from 'drizzle-orm'
+import { and, asc, count, eq, gt, isNotNull, or, type SQL } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { pharmacyChains } from '@/db/schema/pharmacy-chains.js'
 import { PharmacyChain } from '@/modules/onboarding/domain/pharmacy-chain.entity.js'
+import type { ListQueueQuery, QueuePage } from '@/modules/onboarding/application/ports/verification-queue.types.js'
 import type {
   ListByStatusFilter,
   ListByStatusResult,
@@ -18,6 +19,7 @@ import type {
 } from '@/modules/onboarding/application/ports/pharmacy-chain.repository.port.js'
 import { isOnboardingStatus } from '@/modules/onboarding/domain/value-objects/onboarding-status.vo.js'
 import { resolveDrizzleClient } from './drizzle-tx.util.js'
+import { toQueuePage } from './verification-queue-page.util.js'
 
 @Injectable()
 export class DrizzlePharmacyChainRepository implements PharmacyChainRepositoryPort {
@@ -79,6 +81,30 @@ export class DrizzlePharmacyChainRepository implements PharmacyChainRepositoryPo
       })),
       total,
     }
+  }
+
+  async listQueue(query: ListQueueQuery): Promise<QueuePage> {
+    const conditions: SQL[] = [isNotNull(pharmacyChains.submittedAt)]
+    if (query.status !== undefined) {
+      conditions.push(eq(pharmacyChains.status, query.status))
+    }
+    if (query.cursor !== null) {
+      const anchor = new Date(query.cursor.v)
+      const after = or(
+        gt(pharmacyChains.submittedAt, anchor),
+        and(eq(pharmacyChains.submittedAt, anchor), gt(pharmacyChains.id, query.cursor.id)),
+      )
+      if (after !== undefined) {
+        conditions.push(after)
+      }
+    }
+    const rows = await this.db
+      .select({ id: pharmacyChains.id, status: pharmacyChains.status, submittedAt: pharmacyChains.submittedAt })
+      .from(pharmacyChains)
+      .where(and(...conditions))
+      .orderBy(asc(pharmacyChains.submittedAt), asc(pharmacyChains.id))
+      .limit(query.limit + 1)
+    return toQueuePage(rows.map((row) => ({ ...row, reviewReason: null, slaTargetAt: null })), query.limit)
   }
 
   async save(chain: PharmacyChain, tx?: unknown): Promise<void> {

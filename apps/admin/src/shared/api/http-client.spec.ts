@@ -128,6 +128,23 @@ describe('httpRequest', () => {
     expect(useAuthStore.getState().user).toBeNull()
   })
 
+  it('после перезагрузки (есть refreshToken, нет accessToken) 401 UNAUTHENTICATED лечится refresh-ом и повтором', async () => {
+    useAuthStore.setState({ refreshToken: 'persisted-refresh', user: { id: 'u1', role: 'super_admin', tenantId: null, phoneNumber: null, fullName: null } })
+    const fetchMock = vi.fn((input: string, init?: RequestInit) => {
+      if (input === REFRESH_URL) {
+        return new Response(JSON.stringify({ accessToken: 'refreshed-token' }), { status: 200 })
+      }
+      const isRefreshed = new Headers(init?.headers).get('authorization') === 'Bearer refreshed-token'
+      return isRefreshed ? okResponse() : new Response(JSON.stringify({ error: { code: 'UNAUTHENTICATED' } }), { status: 401 })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const response = await httpRequest('/protected')
+
+    expect(response.status).toBe(200)
+    expect(useAuthStore.getState().accessToken).toBe('refreshed-token')
+  })
+
   it('401 с другим кодом (не TOKEN_EXPIRED) — не вызывает refresh и не редиректит', async () => {
     const assignSpy = stubLocationAssign()
     vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(JSON.stringify({ error: { code: 'UNAUTHENTICATED' } }), { status: 401 }))))

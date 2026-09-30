@@ -45,6 +45,7 @@ function fakeAccountRepository(): PharmacyAccountRepositoryPort {
   return {
     findById: vi.fn().mockResolvedValue(null),
     listByStatus: vi.fn(),
+    listQueue: vi.fn(),
     listByChain: vi.fn(),
     save: vi.fn(),
     listAny: vi.fn(),
@@ -62,6 +63,7 @@ function fakeChainRepository(
     findById,
     findByTinInn: vi.fn(),
     listByStatus: vi.fn(),
+    listQueue: vi.fn(),
     save,
   }
   return { repository, save, findById }

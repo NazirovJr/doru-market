@@ -3,11 +3,13 @@
  * `pharmacy-chain.repository.ts` (DTJ-064) — те же `findById`/`save` + `chainFromRow`.
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { and, asc, count, desc, eq, ilike, inArray, isNotNull, lt, lte, or, type SQL } from 'drizzle-orm'
+import { and, asc, count, desc, eq, gt, ilike, inArray, isNotNull, lt, lte, or, sql, type SQL } from 'drizzle-orm'
 import { DRIZZLE_DB, type DrizzleDb } from '@/infrastructure/database/drizzle.provider.js'
 import { pharmacies } from '@/db/schema/pharmacies.js'
 import { pharmacyChains } from '@/db/schema/pharmacy-chains.js'
+import { pharmacyVerification } from '@/db/schema/pharmacy-verification.js'
 import { PharmacyAccount } from '@/modules/onboarding/domain/pharmacy-account.entity.js'
+import type { ListQueueQuery, QueuePage } from '@/modules/onboarding/application/ports/verification-queue.types.js'
 import type {
   ListAnyCursor,
   ListAnyPage,
@@ -20,6 +22,7 @@ import {
   CHAIN_STATUSES_ALLOWING_PHARMACY_ACTIVE,
   isOnboardingStatus,
 } from '@/modules/onboarding/domain/value-objects/onboarding-status.vo.js'
+import { toQueuePage } from './verification-queue-page.util.js'
 
 @Injectable()
 export class DrizzlePharmacyAccountRepository implements PharmacyAccountRepositoryPort {
@@ -84,6 +87,43 @@ export class DrizzlePharmacyAccountRepository implements PharmacyAccountReposito
       })),
       total,
     }
+  }
+
+  // Драйвер — последняя запись pharmacy_verification аптеки: именно в ней время подачи и SLA.
+  async listQueue(query: ListQueueQuery): Promise<QueuePage> {
+    const conditions: SQL[] = [
+      isNotNull(pharmacyVerification.submittedAt),
+      sql`${pharmacyVerification.id} = (
+        select v.id from pharmacy_verification v where v.pharmacy_id = ${pharmacies.id}
+        order by v.submitted_at desc nulls last, v.id desc limit 1)`,
+    ]
+    if (query.status !== undefined) {
+      conditions.push(eq(pharmacies.status, query.status))
+    }
+    if (query.cursor !== null) {
+      const anchor = new Date(query.cursor.v)
+      const after = or(
+        gt(pharmacyVerification.submittedAt, anchor),
+        and(eq(pharmacyVerification.submittedAt, anchor), gt(pharmacies.id, query.cursor.id)),
+      )
+      if (after !== undefined) {
+        conditions.push(after)
+      }
+    }
+    const rows = await this.db
+      .select({
+        id: pharmacies.id,
+        status: pharmacies.status,
+        submittedAt: pharmacyVerification.submittedAt,
+        reviewReason: pharmacyVerification.reviewReason,
+        slaTargetAt: pharmacyVerification.slaTargetAt,
+      })
+      .from(pharmacyVerification)
+      .innerJoin(pharmacies, eq(pharmacies.id, pharmacyVerification.pharmacyId))
+      .where(and(...conditions))
+      .orderBy(asc(pharmacyVerification.submittedAt), asc(pharmacies.id))
+      .limit(query.limit + 1)
+    return toQueuePage(rows, query.limit)
   }
 
   /** [DTJ-353] Кросс-тенантный курсорный список (`super_admin`) — см. JSDoc порта `listAny`. */

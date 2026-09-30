@@ -9,16 +9,18 @@
  *
  * DTJ-066: `POST /:id/submit` добавляется в этот же контроллер.
  */
-import { Body, Controller, Inject, Param, ParseUUIDPipe, Post, UsePipes } from '@nestjs/common'
+import { Body, Controller, HttpCode, HttpStatus, Inject, Param, ParseUUIDPipe, Post } from '@nestjs/common'
 import { Public } from '@/common/decorators/public.decorator.js'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
 import {
   ok,
   RequestContactPhoneOtpRequestSchema,
   SubmitChainApplicationRequestSchema,
+  SubmitChainForReviewRequestSchema,
   VerifyChainContactPhoneRequestSchema,
   type RequestContactPhoneOtpRequest,
   type SubmitChainApplicationRequest,
+  type SubmitChainForReviewRequest,
   type VerifyChainContactPhoneRequest,
 } from '@dorutj/contracts'
 import {
@@ -76,10 +78,10 @@ export class PharmacyChainsPublicController {
   }
 
   @Post(':id/verify-contact-phone')
-  @UsePipes(new ZodValidationPipe(VerifyChainContactPhoneRequestSchema))
+  @HttpCode(HttpStatus.OK)
   async verify(
     @Param('id', ID_PARSE_UUID) id: string,
-    @Body() body: VerifyChainContactPhoneRequest,
+    @Body(new ZodValidationPipe(VerifyChainContactPhoneRequestSchema)) body: VerifyChainContactPhoneRequest,
   ): Promise<unknown> {
     const result = await this.verifyChainContactPhone.execute({
       chainId: id,
@@ -89,10 +91,10 @@ export class PharmacyChainsPublicController {
   }
 
   @Post(':id/request-contact-phone-otp')
-  @UsePipes(new ZodValidationPipe(RequestContactPhoneOtpRequestSchema))
+  @HttpCode(HttpStatus.OK)
   async requestOtp(
     @Param('id', ID_PARSE_UUID) id: string,
-    @Body() _body: RequestContactPhoneOtpRequest,
+    @Body(new ZodValidationPipe(RequestContactPhoneOtpRequestSchema)) _body: RequestContactPhoneOtpRequest,
   ): Promise<unknown> {
     // Резолв `contactPhone` через репозиторий
     const chain = await this.pharmacyChainRepository.findById(id)
@@ -107,8 +109,11 @@ export class PharmacyChainsPublicController {
   }
 
   @Post(':id/submit')
-  @UsePipes(new ZodValidationPipe(RequestContactPhoneOtpRequestSchema))
-  async submitForReview(@Param('id', ID_PARSE_UUID) id: string): Promise<unknown> {
+  @HttpCode(HttpStatus.OK)
+  async submitForReview(
+    @Param('id', ID_PARSE_UUID) id: string,
+    @Body(new ZodValidationPipe(SubmitChainForReviewRequestSchema)) _body: SubmitChainForReviewRequest,
+  ): Promise<unknown> {
     const result = await this.submitChainForReview.execute({ chainId: id })
     return ok(result)
   }

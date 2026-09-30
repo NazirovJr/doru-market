@@ -243,9 +243,9 @@ export interface GetPharmacyMapPinsInput {
 export async function getPharmacyMapPins(input: GetPharmacyMapPinsInput, options: HttpOptions = {}): Promise<readonly MapPin[]> {
   const delta = 0.05
   const bbox = `${String(input.lon - delta)},${String(input.lat - delta)},${String(input.lon + delta)},${String(input.lat + delta)}`
-  const result = await call<readonly MapPin[]>('GET', `/api/v1/pharmacies/map?bbox=${bbox}&medicineId=${input.medicineId}`, options)
+  const result = await call<{ data: readonly MapPin[] }>('GET', `/api/v1/pharmacies/map?bbox=${bbox}&medicineId=${input.medicineId}`, options)
   if (result.status !== 200) {
     throw new Error(`getPharmacyMapPins: неожиданный статус ${String(result.status)}: ${JSON.stringify(result.body)}`)
   }
-  return result.body
+  return result.body.data
 }

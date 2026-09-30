@@ -3,7 +3,7 @@
  * `force-cancel-incomplete-orders`. `Idempotency-Key` обязателен для
  * force-cancel (SRS-ADM-016), проверяется общим механизмом EP-01.
  */
-import { Body, Controller, Headers, Inject, Param, ParseUUIDPipe, Post, UseGuards, UsePipes } from '@nestjs/common'
+import { Body, Controller, HttpCode, HttpStatus, Headers, Inject, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe.js'
 import {
   ForceCancelOrdersRequestSchema,
@@ -32,10 +32,10 @@ export class PharmacySuspensionController {
   ) {}
 
   @Post(':id/suspend')
-  @UsePipes(new ZodValidationPipe(SuspendPharmacyRequestSchema))
+  @HttpCode(HttpStatus.OK)
   async suspend(
     @Param('id', ID_PARSE_UUID) id: string,
-    @Body() body: SuspendPharmacyRequest,
+    @Body(new ZodValidationPipe(SuspendPharmacyRequestSchema)) body: SuspendPharmacyRequest,
   ): Promise<unknown> {
     const result = await this.suspendPharmacy.execute({
       pharmacyId: id,
@@ -47,10 +47,10 @@ export class PharmacySuspensionController {
   }
 
   @Post(':id/force-cancel-incomplete-orders')
-  @UsePipes(new ZodValidationPipe(ForceCancelOrdersRequestSchema))
+  @HttpCode(HttpStatus.OK)
   async forceCancel(
     @Param('id', ID_PARSE_UUID) id: string,
-    @Body() body: ForceCancelOrdersRequest,
+    @Body(new ZodValidationPipe(ForceCancelOrdersRequestSchema)) body: ForceCancelOrdersRequest,
     @Headers(IDEMPOTENCY_HEADER) idempotencyKey: string | undefined,
   ): Promise<unknown> {
     if (idempotencyKey === undefined || idempotencyKey.length === 0) {

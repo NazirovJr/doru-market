@@ -3,6 +3,7 @@
  * к агрегату `PharmacyAccount`. `findById`/`save` — базовые CRUD.
  */
 import type { PharmacyAccount } from '../../domain/pharmacy-account.entity.js'
+import type { ListQueueQuery, QueuePage } from './verification-queue.types.js'
 
 export const PHARMACY_ACCOUNT_REPOSITORY = Symbol.for('@dorutj/onboarding/pharmacy-account-repository')
 
@@ -28,7 +29,10 @@ export interface ListByStatusResult {
 
 export interface PharmacyAccountRepositoryPort {
   findById(id: string): Promise<PharmacyAccount | null>
+  // Фильтр по сроку лицензии (список истекающих); очередь модерации — `listQueue`.
   listByStatus(filter: ListByStatusFilter): Promise<ListByStatusResult>
+  // Очередь модерации: старые заявки первыми (по времени подачи), keyset-курсор.
+  listQueue(query: ListQueueQuery): Promise<QueuePage>
   listByChain(chainId: string): Promise<readonly PharmacyAccount[]>
   save(account: PharmacyAccount): Promise<void>
   // Аптеки status='active' сети tenantId, чья сеть в approved|active — тот же критерий, что isPharmacyActive, батчем.

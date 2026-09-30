@@ -15,6 +15,8 @@ export interface AccountUpdate {
   readonly openingTime?: string | null
   readonly closingTime?: string | null
   readonly licenseNumber?: string
+  readonly licenseIssuingAuthority?: string | null
+  readonly licenseIssueDate?: Date | null
   readonly licenseExpiryDate?: Date | null
   readonly licenseScanUrl?: string | null
   readonly pharmacistInChargeName?: string | null
@@ -63,8 +65,8 @@ export function mergeAccountUpdate(current: PharmacyAccountProps, update: Accoun
     // DTJ-367: не часть AccountUpdate (заявки draft/rejected) — меняется только через updateDeliveryZone.
     maxDeliveryRadiusKm: current.maxDeliveryRadiusKm,
     licenseNumber: pickString(update.licenseNumber, current.licenseNumber),
-    licenseIssuingAuthority: current.licenseIssuingAuthority,
-    licenseIssueDate: current.licenseIssueDate,
+    licenseIssuingAuthority: pickStringOrNull(update.licenseIssuingAuthority, current.licenseIssuingAuthority),
+    licenseIssueDate: pickDateOrNull(update.licenseIssueDate, current.licenseIssueDate),
     licenseExpiryDate: pickDateOrNull(update.licenseExpiryDate, current.licenseExpiryDate),
     licenseScanUrl: pickStringOrNull(update.licenseScanUrl, current.licenseScanUrl),
     pharmacistInChargeName: pickStringOrNull(update.pharmacistInChargeName, current.pharmacistInChargeName),

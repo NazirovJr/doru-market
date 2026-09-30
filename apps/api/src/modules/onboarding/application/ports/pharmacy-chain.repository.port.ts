@@ -7,6 +7,7 @@
  * операции. Реализация в `infrastructure/repositories/pharmacy-chain.repository.ts`.
  */
 import type { PharmacyChain } from '../../domain/pharmacy-chain.entity.js'
+import type { ListQueueQuery, QueuePage } from './verification-queue.types.js'
 
 export const PHARMACY_CHAIN_REPOSITORY = Symbol.for('@dorutj/onboarding/pharmacy-chain-repository')
 
@@ -32,5 +33,7 @@ export interface PharmacyChainRepositoryPort {
   findById(id: string, tx?: unknown): Promise<PharmacyChain | null>
   findByTinInn(tinInn: string): Promise<PharmacyChain | null>
   listByStatus(filter: ListByStatusFilter): Promise<ListByStatusResult>
+  // Очередь модерации: старые заявки первыми, keyset-курсор.
+  listQueue(query: ListQueueQuery): Promise<QueuePage>
   save(chain: PharmacyChain, tx?: unknown): Promise<void>
 }
