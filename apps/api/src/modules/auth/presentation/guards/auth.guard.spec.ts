@@ -4,7 +4,6 @@
  * успешная аутентификация обязана заполнить И `request.authClaims` (`@CurrentUser()`), И
  * `RequestContext` (`userId`/`role`, foundIssue DTJ-233 — JSDoc файла обещал это с DTJ-022, код
  * не делал; см. JSDoc `auth.guard.ts`/`test/integration/orders/__tests__/test-app.ts`).
- * DTJ-443: токен отозванной сессии отклоняется.
  */
 import { UnauthorizedException, type ExecutionContext } from '@nestjs/common'
 import type { Reflector } from '@nestjs/core'

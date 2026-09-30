@@ -158,7 +158,6 @@ export class VerifyOtpUseCase {
       if (isErr(checked)) {
         return err(checked.error)
       }
-      // 3) Успех: find-or-create User, AuthSession, JWT, consume OTP.
       return this.completeVerification({ tx, record: checked.value, input, now })
     })
   }
@@ -205,13 +204,11 @@ export class VerifyOtpUseCase {
       return err(new OtpMismatchError())
     }
 
-    // 1) Презентационный лимит попыток (Redis-счётчик) — ПЕРЕД verify.
     const attemptsCheck = await this.checkVerifyAttemptsLocked(otpRequestId, record.expiresAt)
     if (attemptsCheck.error !== null) {
       return err(attemptsCheck.error)
     }
 
-    // 2) VO-уровень: verify хеша + (опосредованно) срока годности.
     const otp = OtpCode.restore({
       codeHash: record.codeHash,
       subjectRef: record.subjectRef,

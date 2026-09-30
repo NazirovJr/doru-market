@@ -1,7 +1,4 @@
-/**
- * DTJ-443 — `AuthGuard` учитывает отзыв сессии: access-токен отозванной сессии/семьи отклоняется
- * сразу, без ожидания `exp`. Реальные Postgres/Redis, полный путь login → refresh → logout*.
- */
+// DTJ-443: access-токен отозванной сессии отклоняется сразу; реальные Postgres/Redis.
 import type { Server } from 'node:http'
 import type { INestApplication } from '@nestjs/common'
 import request from 'supertest'
