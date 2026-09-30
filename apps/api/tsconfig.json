@@ -7,6 +7,9 @@
       "@/*": [
         "./src/*"
       ],
+      "@test/*": [
+        "./test/*"
+      ],
       "@dorutj/contracts": [
         "../../packages/contracts/src/index.ts"
       ],
