@@ -2,14 +2,14 @@
 
 > **Файл-инструкция.** Создаётся в начале каждой сессии по правилу: имя с суффиксом
 > `-IN-PROGRESS.md`, после полного прохождения плана — переименовать в `-completed.md`
-> (см. правило в `AGENTS.md` §8 и `05-DEVELOPER-HANDBOOK.md` §15).
+> (см. правило в `AGENTS.md` §8 и `docs/guides/developer-handbook.md` §15).
 >
 > **Текущий статус:** `_IN-PROGRESS`. Исполнитель отработал блоки 0б, 1.1, 1.2, 2,
 > 5 (частично), 6. **Переименование в `_completed.md` отложено до подтверждения
 > локально зелёного `pnpm verify`** (см. Часть 6 — «Что прогнать локально»).
 >
 > **Версия документа:** 1.0. Дата: 30.08.2026. Стартовая точка: §11.4
-> `docs/STATE-AND-RESUME-POINT.md` (ВОЛНА 3.5).
+> `docs/history/state-log-to-2026-09-06.md` (ВОЛНА 3.5).
 
 ---
 
@@ -22,13 +22,13 @@
 Ты — инженер-разработчик (модель minimax-m3) в проекте DoruTJ. Перед ЛЮБОЙ строкой кода:
 
 1) ПРОЧИТАЙ ОБЯЗАТЕЛЬНО:
-   - docs/STATE-AND-RESUME-POINT.md  (где мы сейчас)
+   - docs/history/state-log-to-2026-09-06.md  (где мы сейчас)
    - AGENTS.md                       (золотые правила, формат отчёта)
-   - docs/05-DEVELOPER-HANDBOOK.md   (как работать, §2 железные правила, §16 отчёт)
+   - docs/guides/developer-handbook.md   (как работать, §2 железные правила, §16 отчёт)
    - tickets/00-EPICS.md             (граф зависимостей эпиков и владение файлами)
    - СВОЙ ТИКЕТ tickets/.../DTJ-NNN.md ЦЕЛИКОМ, включая «Риски»
    - Все SRS-разделы, на которые ссылается тикет (srs_refs)
-   - Решения D-* из docs/03-ARCHITECT-DECISIONS.md, если тикет на них ссылается
+   - Решения D-* из docs/architecture/decisions/README.md, если тикет на них ссылается
 
 2) ПРАВИЛА (Ж1–Ж10, нарушение = возврат тикета):
    Ж1. Никогда не объявляй тикет готовым без `pnpm verify` (или локального эквивалента
@@ -86,7 +86,7 @@
    Зависишь от несделанного → застабь порт null-адаптером с TODO и ссылкой.
    Проверка не зелёная → верни blockers с текстом ошибки, НЕ отключай проверку.
 
-7) ТЕКУЩАЯ СТАДИЯ ПРОЕКТА (проверь в STATE-AND-RESUME-POINT.md §1):
+7) ТЕКУЩАЯ СТАДИЯ ПРОЕКТА (проверь в docs/history/state-log-to-2026-09-06.md §1):
    - Волна 1 (EP-01 + бутстрап) — ПРИНЯТА
    - Волны 2-3 (EP-02/03/04) — ПРИНЯТЫ ЧАСТИЧНО (~55%), есть 6 дефектов
    - ВОЛНА 3.5 (исправление долга) — ТОЧКА ВОЗОБНОВЛЕНИЯ, плана см. §11.4
@@ -98,7 +98,7 @@
 
 ---
 
-## Часть 2. ПЛАН ВОЛНЫ 3.5 (по §11.4 STATE-AND-RESUME-POINT.md)
+## Часть 2. ПЛАН ВОЛНЫ 3.5 (по §11.4 docs/history/state-log-to-2026-09-06.md)
 
 ### Общая оценка (от архитектора)
 
@@ -457,7 +457,7 @@ EP-04/EP-05. Стартует по команде «продолжай» с яв
 | `-completed.md` | Все задачи из плана выполнены, `pnpm verify` зелёный, отчёты сданы |
 
 **Примеры имён:**
-- `wave-3.5-next-session-plan-IN-PROGRESS.md` ← **этот файл сейчас**
+- `docs/history/prompts/minimax-m3-wave-3.5-session-plan.md` ← **этот файл сейчас**
 - `wave-3.5-next-session-plan-completed.md` ← так переименуем после успешного прохождения
 - `wave-4-search-map-plan-IN-PROGRESS.md`
 - `wave-4-search-map-plan-completed.md`
@@ -469,9 +469,9 @@ EP-04/EP-05. Стартует по команде «продолжай» с яв
 ## Часть 4. КОНТЕКСТ ДЛЯ БЫСТРОГО СТАРТА СЛЕДУЮЩЕЙ СЕССИИ
 
 ### Что уже прочитано в этой сессии (и можно не перечитывать):
-- `docs/STATE-AND-RESUME-POINT.md` целиком (629 строк)
+- `docs/history/state-log-to-2026-09-06.md` целиком (629 строк)
 - `AGENTS.md` целиком (177 строк)
-- `docs/05-DEVELOPER-HANDBOOK.md` целиком (579 строк)
+- `docs/guides/developer-handbook.md` целиком (579 строк)
 - `tickets/00-EPICS.md` целиком (303 строки)
 - `apps/api/src/app.module.ts` (60 строк) — middleware подключён
 - `apps/api/src/common/guards/tenant-scope.guard.ts` (82 строки) — guard существует
@@ -508,8 +508,8 @@ Research ──✅──> SRS ──✅──> Тикеты ──✅──> В�
 ### Следующее действие (БУКВАЛЬНОЕ):
 
 1. **Скопировать Часть 1 (SYSTEM PROMPT) в начало диалога следующей сессии.**
-2. Сказать: «продолжай по плану из `prompt-plan-minimax-m3/wave-3.5-next-session-plan-IN-PROGRESS.md`».
-3. Модель прочитает STATE-AND-RESUME-POINT.md, чтобы убедиться в актуальности.
+2. Сказать: «продолжай по плану из `docs/history/prompts/minimax-m3-wave-3.5-session-plan.md`».
+3. Модель прочитает docs/history/state-log-to-2026-09-06.md, чтобы убедиться в актуальности.
 4. Модель начнёт с **Блока 0** — починит `apps/worker/typecheck` (это РЕАЛЬНО красное).
 5. После зелёного `pnpm verify` — переходит к **Блокам 1–6** по §11.4.
 6. После выполнения всех блоков — переименовать файл в `-completed.md`.
@@ -594,7 +594,7 @@ npx vitest run --root apps/web features/auth/model/login-flow.model.spec.ts
 pnpm verify
 ```
 
-Если `pnpm verify` зелёный — **переименуй** файл `wave-3.5-next-session-plan-IN-PROGRESS.md` в `wave-3.5-next-session-plan-completed.md` (по правилу AGENTS.md §8 / Часть 3 этого плана).
+Если `pnpm verify` зелёный — **переименуй** файл `docs/history/prompts/minimax-m3-wave-3.5-session-plan.md` в `wave-3.5-next-session-plan-completed.md` (по правилу AGENTS.md §8 / Часть 3 этого плана).
 
 ## Найденные чужие проблемы (не в `files_owned` — НЕ чинил молча)
 

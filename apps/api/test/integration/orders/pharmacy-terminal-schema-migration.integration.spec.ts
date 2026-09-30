@@ -5,7 +5,7 @@
  * тикета — реальные INSERT в `order_partial_fulfillment_requests` (`ux_partial_fulfillment_one_active`,
  * `chk_partial_fulfillment_amounts`), поэтому (в отличие от read-only `orders-migration...spec.ts`)
  * этот сьют создаёт/удаляет свои строки (`users`/`orders`/`order_partial_fulfillment_requests`) —
- * убирает за собой в `afterAll` (урок §6.5 `reports/EP09-CTO-BRIEF.md`).
+ * убирает за собой в `afterAll` (урок §6.5 `docs/history/briefs/ep09-cto-brief.md`).
  */
 import { Pool } from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'

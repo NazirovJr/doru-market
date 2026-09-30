@@ -1,10 +1,10 @@
 # ВОЛНА 3.5 — отчёт о блокере среды
 
 > Составитель: исполнитель (новая сессия, модель minimax-m3).
-> Дата: продолжение после точки остановки в `docs/STATE-AND-RESUME-POINT.md` §11.4.
-> Роль: **ИСПОЛНИТЕЛЬ**, не CTO (см. `CLAUDE-CTO.md` §1). Вердиктов о приёмке не выношу.
-> Связанные документы: `STATE-AND-RESUME-POINT.md` §11.4–§11.7, `WAVE35-CHECKPOINT.md`,
-> `WAVE23-QUALITY-ASSESSMENT.md`, `AGENTS.md` §11, `CLAUDE-CTO.md` §5.
+> Дата: продолжение после точки остановки в `docs/history/state-log-to-2026-09-06.md` §11.4.
+> Роль: **ИСПОЛНИТЕЛЬ**, не CTO (см. `docs/process/coordinator.md` §1). Вердиктов о приёмке не выношу.
+> Связанные документы: `docs/history/state-log-to-2026-09-06.md` §11.4–§11.7, `docs/history/reports/wave-3.5-checkpoint.md`,
+> `docs/history/reports/wave-2-3-quality-assessment.md`, `AGENTS.md` §11, `docs/process/coordinator.md` §5.
 
 ---
 
@@ -20,10 +20,10 @@
 Это та же граница, которая зафиксирована в системных инструкциях («programs cannot open
 named pipes ... fails with EPERM»). Проявляется как EPERM errno -4048 на любой
 `child_process.spawn`/`spawnSync` из node, включая `node → node` и `node → cmd`. Это не
-баг проекта и не баг pnpm-store — `WAVE35-CHECKPOINT.md` уже подтвердил, что
+баг проекта и не баг pnpm-store — `docs/history/reports/wave-3.5-checkpoint.md` уже подтвердил, что
 `concat-map`/`commander` распакованы корректно; проблема в среде сеанса.
 
-По `AGENTS.md` §11 («не можешь запустить проверку — это блокер») и `CLAUDE-CTO.md` §5
+По `AGENTS.md` §11 («не можешь запустить проверку — это блокер») и `docs/process/coordinator.md` §5
 («эскалация: что делать, когда гейт не проходит по причине вне твоего контроля») работа
 остановлена **до явного разрешения CTO** на продолжение в режиме «без гейтов».
 
@@ -45,7 +45,7 @@ named pipes ... fails with EPERM»). Проявляется как EPERM errno -
 | Defect `CatalogModule` пустой? | `grep -n "CatalogModule"` по `app.module.ts` | ✅ в `imports` (задача 3.1 — закрыта, см. п.3) |
 
 Подтверждено: кодовая база в части **уже выполненных частей §11.4 задач 2.1 и 3.1 — лучше,
-чем говорит STATE-AND-RESUME-POINT.md**. Дефекты A и D помечены в чекпоинте как закрытые
+чем говорит docs/history/state-log-to-2026-09-06.md**. Дефекты A и D помечены в чекпоинте как закрытые
 по-настоящему (WAVE35-CHECKPOINT §«Что закрыто»).
 
 ---
@@ -86,10 +86,10 @@ named pipes ... fails with EPERM»). Проявляется как EPERM errno -
 |---|---|---|---|
 | 1 | `apps/api/vitest.integration.config.ts:5` — самозакрывающийся JSDoc (`**/` внутри `/** */`). `tsc --noEmit` и `eslint` падают на парсинге | `apps/api/vitest.integration.config.ts` | S, ~10 мин |
 | 2 | `env.schema.ts` не содержит `JWT_PRIVATE_KEY`/`JWT_PUBLIC_KEY`/`JWT_KID`. `rs256-jwt-signer.adapter.ts` читает их из `process.env`. `TEST_ENV` в `test-app.ts` тоже не задаёт. **Следствие: auth security integration-сьют (~35 тестов — TWA forge/replay, OTP brute-force, refresh reuse) ни разу реально не выполнялся** | `apps/api/src/config/env.schema.ts`, `apps/api/src/modules/auth/infrastructure/adapters/rs256-jwt-signer.adapter.ts`, `apps/api/test/test-app.ts` | S, ~30-60 мин, **разблокирует проверку auth-флагмана** |
-| 3 | `Dosage`/`DosageForm`/`Barcode` живут и в `packages/domain-kernel`, и в `apps/api/src/shared-kernel`. Одна копия баговая. Правило размещения: VO нужный ≥2 пакетам — в `packages/domain-kernel`; нужный только `apps/api` — в `apps/api/src/shared-kernel`. Копия в обоих местах — дефект. Зафиксировать либо в `02-CLEAN-ARCHITECTURE-AND-CODE.md` (право CTO), либо удалить дубликат. | пакет `packages/domain-kernel/src/value-objects/` vs `apps/api/src/shared-kernel/domain/value-objects/` | M, требует решения CTO |
+| 3 | `Dosage`/`DosageForm`/`Barcode` живут и в `packages/domain-kernel`, и в `apps/api/src/shared-kernel`. Одна копия баговая. Правило размещения: VO нужный ≥2 пакетам — в `packages/domain-kernel`; нужный только `apps/api` — в `apps/api/src/shared-kernel`. Копия в обоих местах — дефект. Зафиксировать либо в `docs/architecture/clean-architecture.md` (право CTO), либо удалить дубликат. | пакет `packages/domain-kernel/src/value-objects/` vs `apps/api/src/shared-kernel/domain/value-objects/` | M, требует решения CTO |
 | 4 | `TenantScopeGuard`: документированный контракт 404/500 с `ErrorCode`, реальный код — везде 401 через Nest pipeline. Юнит-тест проверяет guard в изоляции, не через pipeline. | `apps/api/src/modules/tenancy/presentation/guards/tenant-scope.guard.ts` | S, ~1 час |
 | 5 | Coverage-пороги `packages/contracts`/`packages/domain-kernel` (90%/70%) не достигаются при 100% зелёных тестов. | `packages/contracts/vitest.config.ts`, `packages/domain-kernel/vitest.config.ts` | S — либо дописать тесты, либо обоснованно снизить порог |
-| 6 | `docs/06-CURRENT-PROGRESS.md` — заголовок присваивает себе атрибуцию «Architect» и приоритет над уставом/архитектурой. Это нарушает `CLAUDE-CTO.md` §2/§3 (см. WAVE35-CHECKPOINT «Границы роли»). Не моя зона ответственности (это документ CTO), отмечаю как наблюдение. | `docs/06-CURRENT-PROGRESS.md` | XS, текстовая правка |
+| 6 | `docs/history/progress-log-to-2026-09-02.md` — заголовок присваивает себе атрибуцию «Architect» и приоритет над уставом/архитектурой. Это нарушает `docs/process/coordinator.md` §2/§3 (см. WAVE35-CHECKPOINT «Границы роли»). Не моя зона ответственности (это документ CTO), отмечаю как наблюдение. | `docs/history/progress-log-to-2026-09-02.md` | XS, текстовая правка |
 | 7 | Lint-недетерминизм: 409-431 ошибка на одном дереве за 4 прогона (гонка в пуле воркеров type-aware правил `typescript-eslint`). Пока причина не найдена, «0 ошибок lint» — не надёжный гейт. | `eslint.config.mjs`, конфиг воркеров | L — диагностика |
 
 ### 3.4 Что увидел в `app.module.ts` и `TenancyModule` (контекст для следующей сессии)
@@ -107,7 +107,7 @@ named pipes ... fails with EPERM»). Проявляется как EPERM errno -
 Разрешения не было — кода не пишу. Все находки выше — статический анализ чтением файлов.
 
 Удалено/создано:
-- Создан один новый файл: `reports/WAVE35-BLOCKER-ENV.md` (этот отчёт). Этот файл лежит в `reports/`, не в `apps/`, `packages/`, `tests/`, `tickets/` — то есть не задевает ничей `files_owned`.
+- Создан один новый файл: `docs/history/reports/wave-3.5-blocker-env.md` (этот отчёт). Этот файл лежит в `reports/`, не в `apps/`, `packages/`, `tests/`, `tickets/` — то есть не задевает ничей `files_owned`.
 
 ---
 
@@ -127,9 +127,9 @@ named pipes ... fails with EPERM»). Проявляется как EPERM errno -
 
 | Вопрос | Почему не моя зона |
 |---|---|
-| Дедупликация `Dosage`/`DosageForm`/`Barcode` между `packages/domain-kernel` и `apps/api/src/shared-kernel` — какая копия canonical, какая удаляется | Меняет `02-CLEAN-ARCHITECTURE-AND-CODE.md` / D-правила |
+| Дедупликация `Dosage`/`DosageForm`/`Barcode` между `packages/domain-kernel` и `apps/api/src/shared-kernel` — какая копия canonical, какая удаляется | Меняет `docs/architecture/clean-architecture.md` / D-правила |
 | Допустимо ли опускание coverage-порогов в `packages/contracts`/`packages/domain-kernel` обосновано в отчёте, или дописывать тесты | Меняет пороги гейтов |
-| `docs/06-CURRENT-PROGRESS.md` — шапка («Владелец: Architect», приоритет над уставом) — текстовая правка или полное удаление файла | `docs/06-*` — зона CTO (см. `CLAUDE-CTO.md` §2) |
+| `docs/history/progress-log-to-2026-09-02.md` — шапка («Владелец: Architect», приоритет над уставом) — текстовая правка или полное удаление файла | `docs/history/progress-log-*` — зона CTO (см. `docs/process/coordinator.md` §2) |
 | Стратегия по lint-недетерминизму (409-431 ошибка в 4 прогонах) | Меняет конфиг ESLint/CI |
 
 ---
@@ -148,7 +148,7 @@ pnpm verify 2>&1 | tee /tmp/verify-before-wave35.log
 Если вывод красный — **сначала закрыть то, что красное**, не объезжая. Если вывод
 падает на EPERM (значит sandbox всё ещё активен) — остановиться так же, как здесь.
 
-Это ровно та проверка, которую предписывает §11.7 STATE-AND-RESUME-POINT.md: «архитектор
+Это ровно та проверка, которую предписывает §11.7 docs/history/state-log-to-2026-09-06.md: «архитектор
 принимает волну только после того, как сам прогнал `pnpm verify`». Самопроверка —
 обязанность исполнителя до того, как он начнёт что-то менять.
 

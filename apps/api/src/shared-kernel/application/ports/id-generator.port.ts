@@ -2,7 +2,7 @@
  * Порт `IdGenerator` (EP-01, DTJ-006).
  *
  * `domain`/`application` НЕ ДОЛЖНЫ вызывать `crypto.randomUUID()` / `Math.random()`
- * напрямую — `02-CLEAN-ARCHITECTURE-AND-CODE.md` §2.6. Идентификаторы приходят
+ * напрямую — `docs/architecture/clean-architecture.md` §2.6. Идентификаторы приходят
  * через порт, чтобы тесты были детерминированы (`testing-kit/SequentialIdGenerator`).
  *
  * Возвращаемое значение — UUID v7 (time-ordered) на проде; в тестах — последовательный

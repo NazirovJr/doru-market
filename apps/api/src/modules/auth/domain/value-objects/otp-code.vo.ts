@@ -4,7 +4,7 @@
  * Чистый VO: хранит ХЕШ (`codeHash`), а не сырой код. Сырой код существует ТОЛЬКО
  * в стеке `RequestOtpUseCase` (формируется генератором → передаётся в `SmsProvider` →
  * забывается); в БД и в `OtpCode` живёт только хеш (SRS-API-021). Это правило
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md` §2.5: невалидное состояние невозможно
+ * `docs/architecture/clean-architecture.md` §2.5: невалидное состояние невозможно
  * сконструировать.
  *
  * `subjectRef` — то, к чему привязан код (по умолчанию `phone.value` для логина,
@@ -12,7 +12,7 @@
  * меняется.
  *
  * Конструктор приватный: внешний код вызывает `issue()` или `restore()` —
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md` §2.2.
+ * `docs/architecture/clean-architecture.md` §2.2.
  *
  * `verify()` (DTJ-024, SRS-API-021): сравнивает `sha256(candidateCode + otpRequestId)`
  * с сохранённым `codeHash`. Возвращает `Result<OtpCode, OtpError>`. Для `login`

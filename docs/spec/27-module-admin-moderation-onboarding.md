@@ -1,15 +1,15 @@
 # DoruTJ — Модуль: Админ-панель, модерация, онбординг аптек, уведомления, аналитика
 
 > Владелец: Analyst (SRS). Статус: **BASELINE для фазы Analysis**.
-> Приоритет источников при противоречии: `04-SCOPE-DECISION-PIVOT.md` > `03-ARCHITECT-DECISIONS.md`
-> (D-*) > `00-PROJECT-CHARTER.md` (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `tz.log`
+> Приоритет источников при противоречии: `docs/product/scope-r1.md` > `docs/architecture/decisions/README.md`
+> (D-*) > `docs/product/charter.md` (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `docs/product/client-brief-original.txt`
 > (§ТЗ). Документы `10-domain-model.md`, `11-database-schema.md`, `12-api-conventions-auth-tenancy.md`
 > — **ЗАКОН**: сущности, поля, статусы, коды ошибок из них не переопределяются, только
 > расширяются/уточняются со ссылкой (`SRS-DOM-*`, `SRS-DB-*`, `SRS-API-*`).
 >
 > Идентификаторы требований этого документа: **SRS-ADM-nnn**. Тестовые сценарии: **TC-ADM-nnn**.
-> Каждое требование снабжено меткой релиза **[R1]**/**[R2]**/**[R3]** (`04-SCOPE-DECISION-PIVOT.md`).
-> Слои — по `02-CLEAN-ARCHITECTURE-AND-CODE.md`: **domain** (инварианты, уже определены в
+> Каждое требование снабжено меткой релиза **[R1]**/**[R2]**/**[R3]** (`docs/product/scope-r1.md`).
+> Слои — по `docs/architecture/clean-architecture.md`: **domain** (инварианты, уже определены в
 > `10-domain-model.md` для агрегатов `PharmacyChain`/`PharmacyAccount`/`OrderDispute`/`OrderReturn`/
 > `CatalogMatchQueueItem`; в этом документе — только НОВЫЕ элементы этих слоёв, не дублируемые),
 > **application** (use cases этого модуля), **infrastructure** (адаптеры уведомлений, экспорт-джобы),
@@ -23,7 +23,7 @@
 
 ## Разбиение по релизам
 
-> Обоснование release-меток по каждой возможности — см. `04-SCOPE-DECISION-PIVOT.md` §3–§5.
+> Обоснование release-меток по каждой возможности — см. `docs/product/scope-r1.md` §3–§5.
 > Правило пивота: архитектурные основания (схема, state machine, порты) закладываются в R1 целиком,
 > даже если пользовательская функция включается позже (ретрофит дороже) — это явно отмечено в
 > колонке «Что уже R1» ниже.
@@ -1165,5 +1165,5 @@ Given `quiet_hours_start/end` хранятся как `TIME` без явной �
 поддержка) и **9 новых элементов схемы БД** (`feature_flags`, `notification_templates`,
 `notification_preferences`, `medicine_merge_log`, `product_events`, расширения `notifications`/
 `pharmacies`/`pharmacy_verification`/`support_tickets`/`audit_action_category`/
-`notification_channel`), каждый снабжён меткой релиза **R1/R2/R3** по `04-SCOPE-DECISION-PIVOT.md`.
+`notification_channel`), каждый снабжён меткой релиза **R1/R2/R3** по `docs/product/scope-r1.md`.
 Любое расхождение нижестоящих тикетов Tech Lead с этим документом разрешается ТОЛЬКО через ADR.

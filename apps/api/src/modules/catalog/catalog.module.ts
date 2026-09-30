@@ -24,7 +24,7 @@ import {
 import { CATEGORIES_READ_REPOSITORY } from './application/ports/categories-read.repository.port.js'
 import { InMemoryMedicineReadRepository } from './infrastructure/adapters/in-memory-medicine-read.repository.js'
 import { InMemoryCategoriesReadRepository } from './infrastructure/adapters/in-memory-categories-read.repository.js'
-// Волна 5, блок B (см. reports/CTO-DECISION-WAVE5.md §3): Drizzle-реализации
+// Волна 5, блок B (см. docs/history/briefs/cto-decision-wave5.md §3): Drizzle-реализации
 // MEDICINE_READ_REPOSITORY/CATEGORIES_READ_REPOSITORY — прод раньше не имел способа
 // заполнить `InMemory*` (initial = []), `/api/v1/medicines`/`/api/v1/categories` читали
 // пусто независимо от содержимого Postgres. InMemory-адаптеры выше НЕ удалены — их

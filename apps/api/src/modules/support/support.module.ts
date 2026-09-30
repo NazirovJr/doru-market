@@ -45,7 +45,7 @@
  * `CreateSupportTicketUseCase.execute` в метод `createAutoOrManualTicket` — более ранний и бедный
  * вариант той же идеи, что уже реализованный ниже (DTJ-281) трёхметодный фасад. Оставлена версия
  * DTJ-281 (полнее, независимо верифицирована `pnpm verify` — apps/api 2171 тестов, см.
- * `docs/STATE-AND-RESUME-POINT.md` §13.25); `returns`-сторона (`ReturnsSupportFacadeAdapter`)
+ * `docs/history/state-log-to-2026-09-06.md` §13.25); `returns`-сторона (`ReturnsSupportFacadeAdapter`)
  * адаптирована под неё при разрешении конфликта.
  */
 import { Module } from '@nestjs/common'

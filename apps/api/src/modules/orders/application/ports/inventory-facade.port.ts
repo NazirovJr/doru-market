@@ -1,7 +1,7 @@
 /**
  * Порт `InventoryFacadePort` (EP-09, DTJ-220, SRS-ORD-018 шаг 4c/SRS-ORD-023).
  *
- * Межмодульный фасад `orders → inventory` (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2). `reserveStock`
+ * Межмодульный фасад `orders → inventory` (`docs/architecture/clean-architecture.md` §1.2). `reserveStock`
  * — ЖЁСТКАЯ мутация остатка (списывает `pharmacy_inventory.quantity` по FEFO), вызывается ВНУТРИ
  * транзакции группы checkout (SRS-ORD-018 шаг 4c); недостаточно остатка на ЛЮБУЮ позицию группы →
  * `Result.err` с `ErrorCode.INSUFFICIENT_STOCK`/`EXPIRED_STOCK`, группа откатывается целиком, ОСТАЛЬНЫЕ
@@ -109,7 +109,7 @@ export interface InventoryFacadePort {
    * вызывает порт напрямую (`02` §2.6) — `OrdersFacade.startProcessing()` резолвит флаг ДО вызова
    * `order.startProcessing()`. Реализация — владелец EP-05 (`modules/inventory`).
    *
-   * D-EP09-16 (`reports/EP09-CTO-BRIEF.md`, решение CTO, отменяет прежнее «`always false` до
+   * D-EP09-16 (`docs/history/briefs/ep09-cto-brief.md`, решение CTO, отменяет прежнее «`always false` до
    * готовности реального адаптера»): это ЧТЕНИЕ-РАЗРЕШЕНИЕ (ответ на вопрос «можно ли»), не
    * чтение данных — у него нет безопасного дефолта. `false` от заглушки означало бы «просроченных
    * партий нет» и обходило бы REQ-REG-6 (запрет продажи просроченного товара). Заглушка порта

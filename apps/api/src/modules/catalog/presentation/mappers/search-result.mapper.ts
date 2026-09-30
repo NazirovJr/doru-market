@@ -2,7 +2,7 @@
  * `search-result.mapper.ts` (DTJ-190, EP-06, R1) — presentation-мапперы `SearchResultPage`/
  * `SuggestMedicinesResultItem[]` (application, DTJ-188/189) → HTTP DTO (`@dorutj/contracts`
  * `search.ts`, DTJ-180). Единственное место, где application-результат превращается в
- * публичный контракт (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1 — сущность/внутренняя форма
+ * публичный контракт (`docs/architecture/clean-architecture.md` §1 — сущность/внутренняя форма
  * никогда не возвращается наружу как есть).
  *
  * **`SearchResultItem` (порт) → `SearchResultItemDto` (контракт).** Поля идентичны 1:1 по

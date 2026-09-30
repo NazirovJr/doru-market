@@ -51,7 +51,7 @@ REVOKE CONNECT ON DATABASE dorutj FROM PUBLIC;
 -- то есть ко всем 104+ миграциям `pnpm db:migrate`, выполненным позже. Тот же приём, что
 -- 0031_app_role_privileges.sql уже применяет для `app_role` — здесь то же самое для `test`.
 -- Соответствует известному предсуществующему разрыву тестовой инфраструктуры, отмеченному
--- (но не устранённому в периметре тех тикетов) в `docs/STATE-AND-RESUME-POINT.md`
+-- (но не устранённому в периметре тех тикетов) в `docs/history/state-log-to-2026-09-06.md`
 -- («dorutj_test... support_tickets/audit_log в собственности роли dorutj_migrator, а не test»).
 -- `TRUNCATE` — ОТДЕЛЬНАЯ привилегия в PostgreSQL, не входит в `SELECT, INSERT, UPDATE, DELETE`
 -- (найдено ТЕМ ЖЕ живым прогоном: интеграционные тесты `test/integration/inventory/*`

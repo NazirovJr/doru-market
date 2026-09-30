@@ -1,7 +1,7 @@
 /**
  * `DrizzleSupportOrdersFacadeAdapter` (EP-14, DTJ-279) — реализация `SupportOrdersFacadePort`
  * через прямое чтение `orders`. НЕ стаб, вопреки решению D-EP11-8 брифа
- * `reports/EP11-EP14-CTO-BRIEF.md` (волна 5, обоснование там: «OrdersFacade не существует» —
+ * `docs/history/briefs/ep11-ep14-cto-brief.md` (волна 5, обоснование там: «OrdersFacade не существует» —
  * ссылка на состояние `orders` ДО EP-09, устаревшая на этой волне: `orders` — зрелый, стабильный
  * модуль). Тот же приём, что `DrizzlePayoutScheduleRepository.orderBelongsToTenant` (`payments`,
  * DTJ-245, принято CTO) — чтение ЧУЖОЙ Drizzle-схемы из своего `infrastructure` не является

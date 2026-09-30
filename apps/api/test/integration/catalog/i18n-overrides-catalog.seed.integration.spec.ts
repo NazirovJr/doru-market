@@ -45,7 +45,7 @@
  * (свой namespace ключей под общим нейтральным тенантом) — не трогает строку самого
  * нейтрального тенанта (`tenants`/`tenant_settings`, заведена `0021_seed_neutral_tenant.sql`,
  * общая инфраструктура для ВСЕХ файлов `test/integration/catalog/*`) и не делает
- * `TRUNCATE ... CASCADE` (урок волны 5 — см. `reports/EP09-CTO-BRIEF.md` §6.5).
+ * `TRUNCATE ... CASCADE` (урок волны 5 — см. `docs/history/briefs/ep09-cto-brief.md` §6.5).
  *
  * **Откат миграции.** DoD DTJ-103 требует «применяется и откатывается». Полный
  * apply→rollback→re-apply цикл здесь НЕ прогоняется автоматически: `dorutj_test3` —

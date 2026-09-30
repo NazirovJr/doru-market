@@ -23,15 +23,15 @@
 **Иерархия документов** (при конфликте выигрывает верхний):
 
 ```
-04-SCOPE-DECISION-PIVOT.md        ← объём релиза R1
-03-ARCHITECT-DECISIONS.md         ← решения D-01..D-27
-05-DEVELOPER-HANDBOOK.md          ← ЭТОТ документ: как работать
-02-CLEAN-ARCHITECTURE-AND-CODE.md ← слои и пороги C1..C18
-01-TECH-BASELINE.md               ← версии пакетов
-00-PROJECT-CHARTER.md             ← устав
+docs/product/scope-r1.md        ← объём релиза R1
+docs/architecture/decisions/README.md         ← решения D-01..D-27
+docs/guides/developer-handbook.md          ← ЭТОТ документ: как работать
+docs/architecture/clean-architecture.md ← слои и пороги C1..C18
+docs/architecture/tech-baseline.md               ← версии пакетов
+docs/product/charter.md             ← устав
 spec/*.md                         ← SRS, 1017 требований
 tickets/**/DTJ-*.md               ← конкретная задача
-tz.log                            ← исходное ТЗ (низший приоритет)
+docs/product/client-brief-original.txt                            ← исходное ТЗ (низший приоритет)
 ```
 
 ---
@@ -87,7 +87,7 @@ tz.log                            ← исходное ТЗ (низший при
 ```
 1. Свой тикет tickets/<эпик>/DTJ-NNN.md — ЦЕЛИКОМ, включая «Риски»
 2. Все разделы SRS, перечисленные в поле srs_refs
-3. Решения D-* из 03-ARCHITECT-DECISIONS.md, если тикет на них ссылается
+3. Решения D-* из docs/architecture/decisions/README.md, если тикет на них ссылается
 4. Файлы, перечисленные в depends_on тикетов — что там уже сделано
 ```
 

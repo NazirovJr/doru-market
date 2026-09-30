@@ -1,6 +1,6 @@
 /**
  * Константы и DI-токены джобы `cart-cleanup` (DTJ-224, SRS-ORD-005..009). Таймзона —
- * Asia/Dushanbe (`01-TECH-BASELINE.md`); расписание — ежедневно 05:00, между
+ * Asia/Dushanbe (`docs/architecture/tech-baseline.md`); расписание — ежедневно 05:00, между
  * `prune-search-query-log` (04:30) и `license-expiry-check` (06:00) — окно низкой нагрузки,
  * порядок с соседними джобами не критичен (независимые таблицы).
  */

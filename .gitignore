@@ -5,7 +5,6 @@ build/
 !apps/web/.env
 .env.local
 *.log
-!tz.log
 coverage/
 .turbo/
 .vite/

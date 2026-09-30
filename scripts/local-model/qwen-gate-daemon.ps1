@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-  Демон гейта: выполняет scripts/qwen-gate.ps1 вне песочницы dsh по запросу из неё.
+  Демон гейта: выполняет scripts/local-model/qwen-gate.ps1 вне песочницы dsh по запросу из неё.
 
 .DESCRIPTION
   В песочнице dsh (workspace-write) дочерние процессы не могут перехватывать вывод через
@@ -13,9 +13,9 @@
   потому что демон живёт вне песочницы dsh.
 
 .EXAMPLE
-  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate-daemon.ps1
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-gate-daemon.ps1
 .EXAMPLE
-  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate-daemon.ps1 -Repo D:\job\doruTJ-qwen
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-gate-daemon.ps1 -Repo <путь_к_рабочей_копии>
 #>
 [CmdletBinding()]
 param([string] $Repo = '')
@@ -27,7 +27,7 @@ $ErrorActionPreference = 'Continue'
 if (-not $Repo) { $Repo = & git -C $PSScriptRoot rev-parse --show-toplevel }
 $Repo = (Resolve-Path -LiteralPath $Repo).Path
 Set-Location -LiteralPath $Repo
-$gate = Join-Path $Repo 'scripts\qwen-gate.ps1'
+$gate = Join-Path $Repo 'scripts\local-model\qwen-gate.ps1'
 if (-not (Test-Path -LiteralPath $gate)) { throw "нет $gate — демон запускается из рабочей копии с гейтом" }
 $exchange = Join-Path $Repo 'node_modules\.cache\qwen-gate'
 New-Item -ItemType Directory -Force -Path $exchange | Out-Null

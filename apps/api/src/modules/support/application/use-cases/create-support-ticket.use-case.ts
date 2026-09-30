@@ -13,7 +13,7 @@
  * (и вызовет ЕЁ) — этот use case не получит собственный `if (isEscrowBlocking) {...}` в обход
  * домена, иначе гарантия перестаёт быть архитектурной.
  *
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md` §3: use case не знает про HTTP, вход — простой командный
+ * `docs/architecture/clean-architecture.md` §3: use case не знает про HTTP, вход — простой командный
  * объект, выход — простой результат.
  */
 import { Inject, Injectable } from '@nestjs/common'

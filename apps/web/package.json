@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "size-check": "pnpm exec tsx ../../scripts/size-check.ts ."
+    "size-check": "pnpm exec tsx ../../scripts/ci/size-check.ts ."
   },
   "dependencies": {
     "@dorutj/contracts": "workspace:*",

@@ -1,7 +1,7 @@
 /**
  * Интеграционный тест `CartAbandonedCleanupJob` (DTJ-224) — РЕАЛЬНЫЙ Postgres, не мок
  * (тест-план тикета: «удаляет старые, не трогает свежие корзины»; D-EP09-14
- * `reports/EP09-CTO-BRIEF.md`: Testcontainers не используются — живой локальный Postgres +
+ * `docs/history/briefs/ep09-cto-brief.md`: Testcontainers не используются — живой локальный Postgres +
  * `describe.skipIf`, тот же приём, что `apps/api/test/integration/orders/
  * drizzle-cart.repository.integration.spec.ts`).
  *

@@ -2,7 +2,7 @@ import { useAuthStore, type AuthUser } from '@/shared/api/auth-store'
 
 /**
  * `http-client.ts` (DTJ-166) — тонкая обёртка над fetch, единственный слой, которому разрешено
- * делать сетевые запросы (`docs/02-CLEAN-ARCHITECTURE-AND-CODE.md` §5: «fetch/axios внутри
+ * делать сетевые запросы (`docs/architecture/clean-architecture.md` §5: «fetch/axios внутри
  * компонента запрещён — только через слой api»). Портировано из
  * `apps/web/src/shared/api/http-client.ts` (EP-01, DTJ-028) — ТОТ ЖЕ контракт `/auth/otp/*` и
  * `/auth/refresh` (DTJ-166 «Технический контекст»). TODO(EP-18): вынести в общий пакет, когда

@@ -55,7 +55,7 @@ export class PharmacyNotInChainScopeError extends SecurityError {
  * `application`-порт `PharmacyApiKeyVerificationPort` бросает эти ошибки, а
  * presentation-слой их ловит; жить в `presentation/` они не могут (правило
  * `application-does-not-know-infrastructure`, вынесено на разблокировку
- * волны 4, docs/05-DEVELOPER-HANDBOOK.md §18).
+ * волны 4, docs/guides/developer-handbook.md §18).
  */
 export abstract class PharmacyApiKeyVerificationError extends SecurityError {}
 

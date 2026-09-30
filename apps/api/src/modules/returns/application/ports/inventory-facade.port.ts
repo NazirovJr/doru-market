@@ -1,7 +1,7 @@
 /**
  * Порт `ReturnsInventoryPort` (EP-11, DTJ-270, SRS-DOM-053/054, REQ-RET-3/4).
  *
- * Межмодульный фасад `returns → inventory` (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2) —
+ * Межмодульный фасад `returns → inventory` (`docs/architecture/clean-architecture.md` §1.2) —
  * ЕДИНСТВЕННЫЙ разрешённый способ, которым `returns` возвращает товар на остаток аптеки после
  * `disposition='restock'`. Прямой импорт `modules/inventory/domain/*`/`modules/inventory/
  * application/*` из `returns` — блокирующее нарушение (`dependency-cruiser`,

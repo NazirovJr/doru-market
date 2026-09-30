@@ -1,6 +1,6 @@
 /**
  * `SupportTicketsQueuePage` (DTJ-283) — экран `/admin/support-tickets`. Тонкая композиция
- * `SupportTicketQueue`, ноль бизнес-логики (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §5) — тот же
+ * `SupportTicketQueue`, ноль бизнес-логики (`docs/architecture/clean-architecture.md` §5) — тот же
  * приём, что `onboarding-queue.page.tsx` (DTJ-075): страница живёт в корне `features/support/`,
  * не в `ui/` (`apps/admin` не заводит отдельный слой `pages/`, см. её JSDoc).
  */

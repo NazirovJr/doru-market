@@ -1,14 +1,14 @@
 # DoruTJ — Модуль 23: Рецепты, OCR и голосовой ввод (AI Medical Input)
 
 > Владелец документа: Analyst (SRS). Статус: **BASELINE v1.0**.
-> Покрывает: CUJ-5 (Рецепт/AI), CUJ-8 (Голосовой ввод), tz.log МОДУЛЬ 2 «OCR-распознавание
+> Покрывает: CUJ-5 (Рецепт/AI), CUJ-8 (Голосовой ввод), docs/product/client-brief-original.txt МОДУЛЬ 2 «OCR-распознавание
 > рецептов и голосовых сообщений».
-> Обязательное чтение перед этим документом: `00-PROJECT-CHARTER.md`, `01-TECH-BASELINE.md`,
-> `02-CLEAN-ARCHITECTURE-AND-CODE.md`, `03-ARCHITECT-DECISIONS.md`, `04-SCOPE-DECISION-PIVOT.md`,
-> `research/00-RESEARCH-DIGEST.md`, `tz.log`, `spec/10-domain-model.md`, `spec/11-database-schema.md`,
+> Обязательное чтение перед этим документом: `docs/product/charter.md`, `docs/architecture/tech-baseline.md`,
+> `docs/architecture/clean-architecture.md`, `docs/architecture/decisions/README.md`, `docs/product/scope-r1.md`,
+> `research/00-RESEARCH-DIGEST.md`, `docs/product/client-brief-original.txt`, `spec/10-domain-model.md`, `spec/11-database-schema.md`,
 > `spec/12-api-conventions-auth-tenancy.md`.
 > Приоритет при конфликте: **04-SCOPE-DECISION-PIVOT > 03-ARCHITECT-DECISIONS > 00-CHARTER >
-> research > tz.log**. Данный документ НЕ переопределяет `10-domain-model.md`/`11-database-schema.md`/
+> research > docs/product/client-brief-original.txt**. Данный документ НЕ переопределяет `10-domain-model.md`/`11-database-schema.md`/
 > `12-api-conventions-auth-tenancy.md` — расширяет их, ссылаясь на существующие ID (`SRS-DOM-*`,
 > `SRS-DB-*`, `SRS-API-*`) вместо дублирования. Новые требования этого документа — `SRS-RX-*`.
 
@@ -16,7 +16,7 @@
 
 ## Разбиение по релизам
 
-> Основание: `04-SCOPE-DECISION-PIVOT.md` §4 (R2-4) и §2.2 («порт + Mock-провайдер = R1,
+> Основание: `docs/product/scope-r1.md` §4 (R2-4) и §2.2 («порт + Mock-провайдер = R1,
 > реальный адаптер = R2/R3»). Полный объём модуля описан ниже одним документом; таблица показывает,
 > что именно включено (реализовано и доступно пользователю) в каждом релизе.
 
@@ -57,7 +57,7 @@
 
 ---
 
-## 2. Архитектура и слои (Правило Зависимостей, `02-CLEAN-ARCHITECTURE-AND-CODE.md`)
+## 2. Архитектура и слои (Правило Зависимостей, `docs/architecture/clean-architecture.md`)
 
 ```
 apps/api/src/modules/prescriptions/
@@ -125,7 +125,7 @@ GeminiOcrProvider()` внутри use case является блокирующи
 
 ### 3.1 Форматы и лимиты
 
-**SRS-RX-004** [R1] [tz.log Модуль 2, REQ-OCR-2] Эндпоинт `POST /api/v1/prescriptions` принимает
+**SRS-RX-004** [R1] [docs/product/client-brief-original.txt Модуль 2, REQ-OCR-2] Эндпоинт `POST /api/v1/prescriptions` принимает
 `multipart/form-data` с полями:
 
 | Поле | Тип | Обязательность | Правило |
@@ -157,7 +157,7 @@ GeminiOcrProvider()` внутри use case является блокирующи
 
 ### 3.2 Предобработка изображения
 
-**SRS-RX-007** [R1] [REQ-OCR-2, tz.log Модуль 2] `UploadPrescriptionUseCase` вызывает
+**SRS-RX-007** [R1] [REQ-OCR-2, docs/product/client-brief-original.txt Модуль 2] `UploadPrescriptionUseCase` вызывает
 `ImagePreprocessingPort.normalize(buffer, mimeType)` ДО постановки OCR-джобы в очередь.
 Реализация — `SharpImagePreprocessingAdapter` (библиотека `sharp`, локальная, без сети), шаги
 строго в этом порядке:
@@ -228,7 +228,7 @@ SSE-KMS, ключ `STORAGE_ENCRYPTION_KEY` из секретного храни�
 (`application`), не из guard'а (`02` §3.4), контроллер не содержит условной логики видимости.
 
 **SRS-RX-013 — срок хранения** [R1] [ASSUMPTION до юридического заключения, Часть D п.4
-`03-ARCHITECT-DECISIONS.md`] `PRESCRIPTION_IMAGE_RETENTION_DAYS` (ASSUMPTION 365) от
+`docs/architecture/decisions/README.md`] `PRESCRIPTION_IMAGE_RETENTION_DAYS` (ASSUMPTION 365) от
 `prescriptions.created_at`. По истечении — scheduled BullMQ job `purge-expired-prescription-images`
 (repeatable, ежедневно 04:00 `Asia/Dushanbe`) вызывает `ObjectStorageProvider.delete()` для обоих
 ключей (`original`, `processed`) и проставляет `prescriptions.image_purged_at = NOW()`. **Строка
@@ -269,7 +269,7 @@ interface OcrRecognizeInput {
 ```
 
 `RawOcrResult` — СТРОГАЯ Zod-схема (`packages/contracts/src/prescriptions.ts`,
-`RawOcrResultSchema`), расширяющая структуру `tz.log` §Модуль 2 (`detected_medicines`,
+`RawOcrResultSchema`), расширяющая структуру `docs/product/client-brief-original.txt` §Модуль 2 (`detected_medicines`,
 `is_official_stamp_present`, `doctor_name`) полями качества изображения и явным разделением «сырой
 кандидат провайдера» vs «решение бэкенда» (REQ-OCR-3, research-рекомендация #5):
 
@@ -288,7 +288,7 @@ interface OcrRecognizeInput {
   ],
   "isOfficialStampPresent": true,           // boolean | null (null = зона печати не найдена в кадре)
   "doctorNameRaw": "Раҳимов А.А.",          // string | null
-  "doctorIssuedDateRaw": "12.08.2026",      // string | null — НОВОЕ поле относительно tz.log, для проверки просрочки (§7.4)
+  "doctorIssuedDateRaw": "12.08.2026",      // string | null — НОВОЕ поле относительно docs/product/client-brief-original.txt, для проверки просрочки (§7.4)
   "imageQualityFlags": {
     "blurry": false, "lowResolution": false, "glare": false, "cropped": false, "skewSevere": false
   }
@@ -348,7 +348,7 @@ backoff (встроенный механизм BullMQ, Charter §3.1 табли�
 
 ### 4.3 `GeminiOcrProvider` [R2]
 
-**SRS-RX-022** [R2] [tz.log Модуль 2] Модель `gemini-2.5-flash` (`GEMINI_MODEL` ENV, дефолт
+**SRS-RX-022** [R2] [docs/product/client-brief-original.txt Модуль 2] Модель `gemini-2.5-flash` (`GEMINI_MODEL` ENV, дефолт
 зафиксирован явной строкой, не «последняя доступная» — Baseline §принцип выбора версий), вызов через
 Structured Output (`responseSchema` = JSON-Schema, сгенерированная из `RawOcrResultSchema`)
 — провайдер гарантированно возвращает валидный JSON без дополнительного парсинга текста ответа.
@@ -646,7 +646,7 @@ interface RawSttResult {
 
 **SRS-RX-041** [R2] [D-15] Базовая модель Whisper (`STT_MODEL`, ASSUMPTION `whisper-1`, БЕЗ
 дообучения на тадж. диалектах — research прямо опровергает существование такой модели, см.
-`research/00-RESEARCH-DIGEST.md` строка 537-541 и Часть B D-15 `03-ARCHITECT-DECISIONS.md`).
+`research/00-RESEARCH-DIGEST.md` строка 537-541 и Часть B D-15 `docs/architecture/decisions/README.md`).
 **Явный риск, фиксируемый как принятое ограничение MVP, не дефект**: WER (word error rate) для
 таджикского не бенчмаркан ни одним публичным источником на момент разработки — голос
 спроектирован как ВТОРИЧНЫЙ канал ввода (первичный — поиск текстом, CUJ-1), деградация качества
@@ -682,7 +682,7 @@ interface RawSttResult {
 
 ### 8.4 Промпт-глоссарий и code-switching
 
-**SRS-RX-045** [R1] [REQ-STT-3, tz.log Модуль 2 пример «Салом алейкум, ба ман барои фишори баланд
+**SRS-RX-045** [R1] [REQ-STT-3, docs/product/client-brief-original.txt Модуль 2 пример «Салом алейкум, ба ман барои фишори баланд
 каптоприл ва аспирин кардио лозим»] `initialPrompt` формируется динамически
 `BuildSttPromptUseCase` (application, вызывается ПЕРЕД `transcribe()`): берёт до 30 самых частых
 (по `search_query_log`/аналитике, если данных ещё нет — курированный статический список топ-30
@@ -855,7 +855,7 @@ ASSUMPTION `30` (единое значение для MVP; дифференци�
 
 **Обоснование**: `prescriptions` (существующая схема) хранит `composite_confidence`,
 `lasa_candidate_count` и связанные сигналы КАК ЕДИНСТВЕННЫЕ колонки на весь рецепт, но и
-`10-domain-model.md` (SRS-DOM-028, строки 757-758), и `tz.log` (`detected_medicines: array`)
+`10-domain-model.md` (SRS-DOM-028, строки 757-758), и `docs/product/client-brief-original.txt` (`detected_medicines: array`)
 однозначно описывают рецепт как список из НЕСКОЛЬКИХ позиций, каждая — с собственным кандидатом,
 confidence и LASA-статусом. Без отдельной таблицы невозможно корректно реализовать §5
 (`itemConfidence` на уровне позиции) и §8.3 UI-экран верификации (список позиций). Существующая

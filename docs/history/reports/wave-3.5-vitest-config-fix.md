@@ -1,11 +1,11 @@
 # WAVE35 — починка `apps/api/vitest.integration.config.ts` (парсинг-фейл JSDoc)
 
 > Составитель: исполнитель (сессия, модель minimax-m3).
-> Роль: **ИСПОЛНИТЕЛЬ**, не CTO (см. `CLAUDE-CTO.md` §1).
-> Связанные документы: `reports/WAVE35-BLOCKER-ENV-CORRECTION.md`,
-> `reports/WAVE35-CHECKPOINT.md` §«Что исправить ДО завершения волны 3.5» п.2,
-> `docs/05-DEVELOPER-HANDBOOK.md` §5, §17; `AGENTS.md` §11, Ж11.
-> Соответствие WAVE35-CHECKPOINT.md: **п.2 из списка «Что исправить ДО завершения волны 3.5»**
+> Роль: **ИСПОЛНИТЕЛЬ**, не CTO (см. `docs/process/coordinator.md` §1).
+> Связанные документы: `docs/history/reports/wave-3.5-blocker-env-correction.md`,
+> `docs/history/reports/wave-3.5-checkpoint.md` §«Что исправить ДО завершения волны 3.5» п.2,
+> `docs/guides/developer-handbook.md` §5, §17; `AGENTS.md` §11, Ж11.
+> Соответствие docs/history/reports/wave-3.5-checkpoint.md: **п.2 из списка «Что исправить ДО завершения волны 3.5»**
 > (XS, ~10 мин) — выполнен. С `files_owned` — частично: файл `vitest.integration.config.ts`
 > формально не в `files_owned` тикета DTJ-029 (security-тесты), но де-факто блокирует весь
 > его прогон (см. §1 ниже); правка — **восстановление работоспособности**, а не добавление
@@ -35,7 +35,7 @@ JSDoc-комментария пытается разобрать содержи�
 описание сместила ошибку на 17:52 (следующий такой же backtick); полная замена JSDoc на
 line-комментарии устранила ошибку.
 
-Это **тот же класс дефекта**, что зафиксирован в `WAVE35-CHECKPOINT.md` §«Новые проблемы» №2:
+Это **тот же класс дефекта**, что зафиксирован в `docs/history/reports/wave-3.5-checkpoint.md` §«Новые проблемы» №2:
 «`apps/api/vitest.integration.config.ts:5` — самозакрывающийся JSDoc». Зафиксированный там
 диагноз («`**/` внутри `/** */`») был неточен (на самом деле — backtick+`**/*` внутри JSDoc
 воспринимается парсером как expression), но симптом тот же.
@@ -55,7 +55,7 @@ line-комментарии устранила ошибку.
 - **DTJ-029** (Definition of Done): «`pnpm verify` зелёный локально». Без починки
   этого конфига `pnpm verify` упадёт на этапе vitest — не из-за семантики кода, а
   из-за парсера. Это означает, что **DTJ-029 нельзя сдать, пока файл сломан**.
-- **WAVE35-CHECKPOINT.md п.2** прямо говорит: «Починить `apps/api/vitest.integration.config.ts:5`».
+- **docs/history/reports/wave-3.5-checkpoint.md п.2** прямо говорит: «Починить `apps/api/vitest.integration.config.ts:5`».
   Это **архитектурная рекомендация**, не «исправить файл из чужого тикета молча».
 
 Принятое решение: правка **локальная и оборонительная** — JSDoc заменён на line-комментарии
@@ -132,7 +132,7 @@ Error: spawn EPERM
   syscall: 'spawn'
 ```
 
-Это **тот же класс блокера**, что `WAVE35-BLOCKER-ENV.md` фиксировал, **но** в отличие от
+Это **тот же класс блокера**, что `docs/history/reports/wave-3.5-blocker-env.md` фиксировал, **но** в отличие от
 того отчёта — здесь я могу показать **точное место**: `esbuild@0.28.2/lib/main.js:2272`,
 функция `ensureServiceIsRunning`. Vite/Vitest при загрузке своего конфига (`vitest.config.ts`)
 вызывает esbuild для бандлинга, esbuild стартует свой service-процесс через `child_process.spawn`
@@ -173,7 +173,7 @@ service для бандлинга конфига).
   **«правка внесена, eslint зелёный на этом файле, vitest run заблокирован средой»**.
 - **Причина блокера — не код, а инфраструктура сеанса.** Эта правка **не сломана** —
   она просто не может быть валидирована прогоном в этой среде.
-- **WAVE35-CHECKPOINT.md п.2 оценивался как XS ~10 мин.** Правка уложилась в 10 мин.
+- **docs/history/reports/wave-3.5-checkpoint.md п.2 оценивался как XS ~10 мин.** Правка уложилась в 10 мин.
   Блокер — **не на правке**, а на этапе её валидации через `pnpm verify`.
 
 ---
@@ -183,9 +183,9 @@ service для бандлинга конфига).
 | Что | Почему |
 |---|---|
 | Не правил 404 lint-ошибки в других файлах | Это **не мой `files_owned`** (Ж10); пакетная автоправка нарушила бы Ж3 («не сдавать зелёным, отключив проверки»). |
-| Не правил `dosage.vo.ts` (рецидив F) | WAVE35-CHECKPOINT.md п.4 — отдельный тикет, **не** WAVE35-BLOCKER-ENV. |
-| Не правил `env.schema.ts` для JWT-ключей | WAVE35-CHECKPOINT.md п.3 — отдельный тикет, **не** WAVE35-BLOCKER-ENV. |
-| Не правил `docs/06-CURRENT-PROGRESS.md` | WAVE35-CHECKPOINT.md п.1 — зона CTO, **не** исполнителя. |
+| Не правил `dosage.vo.ts` (рецидив F) | docs/history/reports/wave-3.5-checkpoint.md п.4 — отдельный тикет, **не** WAVE35-BLOCKER-ENV. |
+| Не правил `env.schema.ts` для JWT-ключей | docs/history/reports/wave-3.5-checkpoint.md п.3 — отдельный тикет, **не** WAVE35-BLOCKER-ENV. |
+| Не правил `docs/history/progress-log-to-2026-09-02.md` | docs/history/reports/wave-3.5-checkpoint.md п.1 — зона CTO, **не** исполнителя. |
 | Не прогнал `pnpm verify` целиком | EPERM на esbuild-spawn (§3). |
 | Не правил `eslint.config.mjs`, `package.json`, `*.module.ts` | D-27: только добавлением строк; здесь нечего добавлять, есть что чинить, но это **чужие** файлы. |
 
@@ -196,11 +196,11 @@ service для бандлинга конфига).
 | Файл | Было | Стало | Что |
 |---|---:|---:|---|
 | `apps/api/vitest.integration.config.ts` | 43 строки | 50 строк | JSDoc-блок заменён на line-комментарии (см. §2.1). |
-| `reports/WAVE35-BLOCKER-ENV-CORRECTION.md` | — | новый | Создан в этой сессии ранее. |
-| `reports/WAVE35-VITEST-CONFIG-FIX.md` | — | новый | Этот отчёт. |
+| `docs/history/reports/wave-3.5-blocker-env-correction.md` | — | новый | Создан в этой сессии ранее. |
+| `docs/history/reports/wave-3.5-vitest-config-fix.md` | — | новый | Этот отчёт. |
 
 **Удалено:** `reports/WAVE35-BLOCKER-ENV-FOLLOWUP.md` — ложный отчёт, см. предыдущий
-отчёт `WAVE35-BLOCKER-ENV-CORRECTION.md`.
+отчёт `docs/history/reports/wave-3.5-blocker-env-correction.md`.
 
 ---
 
@@ -226,7 +226,7 @@ npx vitest run --root apps/api 2>&1 | tee /tmp/vitest-after-fix.log
 
 ```
 ТИКЕТ: WAVE35-CORRECTION-DTJ029-fix (правка конфига, формально не в files_owned
-       DTJ-029; обоснование — §1.2; соответствие WAVE35-CHECKPOINT.md п.2)
+       DTJ-029; обоснование — §1.2; соответствие docs/history/reports/wave-3.5-checkpoint.md п.2)
 
 ФАЙЛЫ:
   - apps/api/vitest.integration.config.ts — заменён JSDoc на line-комментарии;
@@ -238,7 +238,7 @@ npx vitest run --root apps/api 2>&1 | tee /tmp/vitest-after-fix.log
     сейчас упадёт на этапе загрузки конфига (esbuild-spawn EPERM) — это блокер среды,
     не результат моей правки (см. §3).
 
-КРИТЕРИИ ПРИЁМКИ (WAVE35-CHECKPOINT.md п.2):
+КРИТЕРИИ ПРИЁМКИ (docs/history/reports/wave-3.5-checkpoint.md п.2):
   1. Убрать самозакрывающийся JSDoc-комментарий → ВЫПОЛНЕН (apps/api/vitest.integration.config.ts)
   2. `tsc --noEmit` не падает на парсинг этого файла → НЕ ПРОВЕРЕНО (см. §3 — vitest/esbuild
      блокирует, но tsc не зависит от esbuild spawn; следующая сессия в рабочей среде
@@ -257,10 +257,10 @@ npx vitest run --root apps/api 2>&1 | tee /tmp/vitest-after-fix.log
   npx vitest run --root apps/api                     → БЛОКЕР EPERM (esbuild spawn)
 
 ДОПУЩЕНИЯ:
-  - WAVE35-CHECKPOINT.md п.2 «самозакрывающийся JSDoc» — диагноз был неточен
+  - docs/history/reports/wave-3.5-checkpoint.md п.2 «самозакрывающийся JSDoc» — диагноз был неточен
     (на самом деле — backtick+`**/*` внутри JSDoc воспринимается TS-парсером как
     expression); симптом и место совпадают.
-  - WAVE35-CHECKPOINT.md п.2 «XS, ~10 мин» — оценка верна для самой правки.
+  - docs/history/reports/wave-3.5-checkpoint.md п.2 «XS, ~10 мин» — оценка верна для самой правки.
     Валидация через `pnpm verify` заняла бы ещё ~5 мин в рабочей среде.
   - файлы вне моего files_owned не трогал (Ж10), кроме этого конфига —
     обоснование в §1.2.

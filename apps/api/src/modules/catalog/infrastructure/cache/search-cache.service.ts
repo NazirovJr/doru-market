@@ -2,7 +2,7 @@
  * `SearchCacheService` (DTJ-187, EP-06 «Умный поиск», SRS-CAT-058) — Redis-кэш результатов
  * поиска и автодополнения + read-only доступ к trending searches.
  *
- * **Слой.** Чистая infrastructure-утилита (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1) — без
+ * **Слой.** Чистая infrastructure-утилита (`docs/architecture/clean-architecture.md` §1) — без
  * бизнес-логики и доменных инвариантов, только сериализация/TTL/graceful degradation.
  * Потребители — `SearchMedicinesUseCase` (DTJ-188) и `SuggestMedicinesUseCase` (DTJ-189),
  * оба получают этот класс через конструктор DI (тикет DTJ-187, «Технический контекст»),

@@ -4,7 +4,7 @@
  *
  * **Почему не в `application/search/providers/null-search.provider.ts` (DTJ-180).** Та
  * фабрика — слой `application`, ему запрещено импортировать `infrastructure`
- * (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1, `application-does-not-know-infrastructure`,
+ * (`docs/architecture/clean-architecture.md` §1.1, `application-does-not-know-infrastructure`,
  * проверено `no-restricted-imports`/`dependency-cruiser` при попытке сделать ветвление прямо
  * там). Направление `infrastructure → application` архитектурно разрешено (стрелки
  * зависимостей — только внутрь), поэтому этот файл легитимно импортирует ОБА:

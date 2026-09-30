@@ -10,13 +10,13 @@
 - Доменные ошибки: `MissingSubstancesError`, `InvalidMedicineStateError`,
   `ControlCategoryChangeRequiresModerationError` (DTJ-093).
 
-**Правило зависимостей (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1):**
+**Правило зависимостей (`docs/architecture/clean-architecture.md` §1):**
 - НОЛЬ импортов фреймворков (`@nestjs/*`, `drizzle-orm`, `pg`, `ioredis`, `bullmq`, `fastify`,
   `zod`, `pino`, `axios`, `node:fs`, `node:http`).
 - НОЛЬ импортов `application/`, `infrastructure/`, `presentation/`.
 - Нет `Date.now()` / `Math.random()` / `process.env` — время и случайность через порты
   (см. §2.6).
-- Контракт: `02-CLEAN-ARCHITECTURE-AND-CODE.md` §2.
+- Контракт: `docs/architecture/clean-architecture.md` §2.
 
 Соседние слои:
 - `../application/` — use cases (оркестрация, порты наружу).

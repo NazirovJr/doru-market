@@ -3,7 +3,7 @@
  * follow-up) — unit-тест нижнего слоя изоляции тенантов через
  * `TenantResolutionMiddleware`.
  *
- * Что проверяется (контракт, документированный в STATE-AND-RESUME-POINT.md
+ * Что проверяется (контракт, документированный в docs/history/state-log-to-2026-09-06.md
  * §11.4 задача 2.4: «создать данные тенанта A, запросить их от имени тенанта
  * B, убедиться в отказе»):
  *
@@ -27,7 +27,7 @@
  * требует `AuthGuard` (DTJ-022, EP-01) и описан как `it.todo` в
  * `apps/api/test/integration/auth/phone-tenant-isolation.spec.ts`.
  *
- * @see docs/STATE-AND-RESUME-POINT.md §11.4 задача 2.4
+ * @see docs/history/state-log-to-2026-09-06.md §11.4 задача 2.4
  * @see apps/api/src/modules/tenancy/presentation/middleware/tenant-resolution.middleware.ts
  */
 import type { IncomingMessage, ServerResponse } from 'node:http'

@@ -2,7 +2,7 @@
  * Порт `EscrowLedgerRepository` (EP-10, DTJ-240, SRS-PAY-011, `21-module-orders-payments-
  * escrow.md` §4.2) — append-only персистентность `EscrowLedgerEntry`.
  *
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.3: порт объявляется в `application/ports/*.port.ts`,
+ * `docs/architecture/clean-architecture.md` §1.3: порт объявляется в `application/ports/*.port.ts`,
  * реализация — `infrastructure/repositories/escrow-ledger.repository.ts`
  * (`DrizzleEscrowLedgerRepository`, тот же тикет). Ticket/спека называют канонический файл
  * репозитория путём `infrastructure/repositories/escrow-ledger.repository.ts` — здесь
@@ -11,7 +11,7 @@
  * `CaptureEscrowUseCase`/`RefundOrderUseCase`/`AdjustLedgerUseCase`, DTJ-244..246) был бы
  * вынужден импортировать конкретный Drizzle-класс из `infrastructure/**`, что
  * `dependency-cruiser`-правило `application-does-not-know-infrastructure`
- * (`reports/EP09-CTO-BRIEF.md` §6.1) отклоняет механически. См. отчёт сдачи DTJ-240, раздел
+ * (`docs/history/briefs/ep09-cto-brief.md` §6.1) отклоняет механически. См. отчёт сдачи DTJ-240, раздел
  * ДОПУЩЕНИЯ.
  *
  * КОМПИЛЯЦИОННАЯ ГАРАНТИЯ (AC4 DTJ-240, SRS-PAY-011): `update`/`delete` физически НЕ

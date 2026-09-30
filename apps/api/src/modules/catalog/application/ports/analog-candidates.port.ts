@@ -20,7 +20,7 @@
  *      выборка» / «точное решение в DTJ-099», не дефект** (см. SRS-CAT-043).
  *
  * **Граница модуля.** Порт читает ТОЛЬКО таблицы `medicines` и
- * `medicine_substances` — обе catalog-owned (`02-CLEAN-ARCHITECTURE-AND-CODE.md`
+ * `medicine_substances` — обе catalog-owned (`docs/architecture/clean-architecture.md`
  * §1.1 запрещает только МЕЖМОДУЛЬНЫЕ прямые джойны; внутри своего модуля
  * прямой SQL к своим таблицам разрешён без исключений).
  *

@@ -8,7 +8,7 @@ packages:
 # для которых он обнаружил postinstall-скрипты, и попросил явно решить true/false — решаем:
 #   esbuild            — трансформация для vitest / vite
 #   unrs-resolver       — резолвер импортов для eslint-plugin-import-x (правило import-x/no-cycle)
-#   argon2              — apps/api: нативный биндинг хеширования паролей (01-TECH-BASELINE.md
+#   argon2              — apps/api: нативный биндинг хеширования паролей (docs/architecture/tech-baseline.md
 #                         §Backend); без сборки биндинга пакет не работает в рантайме.
 #   msgpackr-extract    — транзитивная зависимость bullmq (msgpackr): нативное ускорение
 #                         сериализации джобов, опционально, но безопасно собрать.
@@ -26,9 +26,9 @@ minimumReleaseAgeExclude:
   - '@testing-library/react@16.3.3'
 
 # Flutter-приложения (apps/pharmacy_mobile, apps/courier_mobile) не входят в pnpm-workspace —
-# они управляются pub/Dart. См. docs/01-TECH-BASELINE.md.
+# они управляются pub/Dart. См. docs/architecture/tech-baseline.md.
 
-# Единый резолв версий по всему workspace (docs/01-TECH-BASELINE.md §Правила, п.1).
+# Единый резолв версий по всему workspace (docs/architecture/tech-baseline.md §Правила, п.1).
 # ПРИМЕЧАНИЕ (DTJ — волна 1, установка зависимостей): в корневом package.json секция
 # "pnpm.overrides" уже присутствовала, но pnpm 11.x эту секцию не читает — она молча
 # игнорируется (см. предупреждение "pnpm.overrides ... no longer read"), из-за чего пиновка
@@ -46,5 +46,5 @@ overrides:
   # каждого пакета, где vite не объявлен напрямую (apps/api, apps/worker, packages/contracts,
   # packages/i18n, packages/testing-kit, tests/e2e) — при этом apps/web/packages/ui, где vite
   # объявлен явно, получают ^7.3.6. Итог — два разных vite в одном workspace для одного и того
-  # же vitest. Форсируем единый ^7.3.6 baseline (01-TECH-BASELINE.md) во всех местах.
+  # же vitest. Форсируем единый ^7.3.6 baseline (docs/architecture/tech-baseline.md) во всех местах.
   vite: ^7.3.6

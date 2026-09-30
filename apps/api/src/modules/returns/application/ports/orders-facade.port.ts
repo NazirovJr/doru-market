@@ -1,7 +1,7 @@
 /**
  * Порт `ReturnsOrdersPort` (EP-11, DTJ-270, `21-module-orders-payments-escrow.md` §7.1).
  *
- * Межмодульный фасад `returns → orders` (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2) — ЕДИНСТВЕННЫЙ
+ * Межмодульный фасад `returns → orders` (`docs/architecture/clean-architecture.md` §1.2) — ЕДИНСТВЕННЫЙ
  * разрешённый способ, которым `returns` читает заказ. Прямой импорт `modules/orders/domain/*`/
  * `modules/orders/application/*` из `returns` — блокирующее нарушение (`dependency-cruiser`,
  * `no-cross-module-deep-import`). 1:1 паттерн `modules/payments/application/ports/

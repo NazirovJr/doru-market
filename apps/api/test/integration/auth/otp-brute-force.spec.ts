@@ -2,7 +2,7 @@
  * `otp-brute-force.spec.ts` (EP-01, DTJ-029) — сквозной интеграционный тест
  * защиты auth-flow от брутфорса. Полный путь: HTTP → guard → use case →
  * Drizzle-репозиторий (Postgres) + Redis rate-limiter → HTTP-ответ (волна 5
- * блок A — `reports/CTO-DECISION-WAVE5.md` §3, реальные `dorutj_test`/Redis,
+ * блок A — `docs/history/briefs/cto-decision-wave5.md` §3, реальные `dorutj_test`/Redis,
  * не InMemory). Без мока use case; вся цепочка `OtpRequestController` +
  * `OtpVerifyController` + `VerifyOtpUseCase` (DTJ-024) реальная.
  *

@@ -16,7 +16,7 @@
  *      полное дерево возвращается (НЕ 500, критерий 3 приёмки).
  *
  * @see docs/tickets/ep03-catalog-analogs/DTJ-094.md
- * @see docs/STATE-AND-RESUME-POINT.md §11.6 (Волна 4)
+ * @see docs/history/state-log-to-2026-09-06.md §11.6 (Волна 4)
  */
 import type { Server } from 'node:http'
 import { VersioningType, type INestApplication } from '@nestjs/common'

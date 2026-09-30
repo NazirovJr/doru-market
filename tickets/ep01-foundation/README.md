@@ -4,9 +4,9 @@
 > использованы — нет тикетов, которые оправдывали бы дальнейшее дробление; см. `tickets/00-EPICS.md`
 > «если тикетов получается больше, чем влезает в диапазон — укрупни, а не выходи за границы» —
 > обратная ситуация (диапазон не исчерпан) укрупнению не мешает).
-> Источники: `docs/04-SCOPE-DECISION-PIVOT.md` (R1-12 Auth) → `docs/03-ARCHITECT-DECISIONS.md`
-> (D-01, D-02, D-05..D-08, D-11 контекстно) → `docs/02-CLEAN-ARCHITECTURE-AND-CODE.md` (слои, C1-C18)
-> → `docs/01-TECH-BASELINE.md` (версии) → `docs/spec/00-SRS-MASTER.md`, `10-domain-model.md`,
+> Источники: `docs/product/scope-r1.md` (R1-12 Auth) → `docs/architecture/decisions/README.md`
+> (D-01, D-02, D-05..D-08, D-11 контекстно) → `docs/architecture/clean-architecture.md` (слои, C1-C18)
+> → `docs/architecture/tech-baseline.md` (версии) → `docs/spec/00-SRS-MASTER.md`, `10-domain-model.md`,
 > `11-database-schema.md`, `12-api-conventions-auth-tenancy.md`, `30-ux-screens-and-flows.md`
 > (§5, §«Login»), `32-design-reference.md` (§«Login») → `tickets/00-EPICS.md` (владение файлами,
 > волны).
@@ -119,7 +119,7 @@ NestJS+Fastify, OTP+JWT-аутентификацию и RBAC-guard'ы — без
 ## Известные пробелы SRS, закрытые точечно внутри тикетов (не отдельными тикетами)
 
 Все три — реальные расхождения/пробелы в `docs/spec/*.md`, того же класса, что уже официально
-признан архитектором для `SRS-DOM-372/585/909` (`docs/STATE-AND-RESUME-POINT.md` §2.2.2 п.2), а не
+признан архитектором для `SRS-DOM-372/585/909` (`docs/history/state-log-to-2026-09-06.md` §2.2.2 п.2), а не
 допущенные этим планированием домыслы:
 
 1. **`auth_sessions` vs `refresh_tokens`** — `docs/spec/11-database-schema.md` таблица 18 называет
@@ -136,7 +136,7 @@ NestJS+Fastify, OTP+JWT-аутентификацию и RBAC-guard'ы — без
    ... DROP NOT NULL`, дополнить DDL-реестр.
 
 Если на общей приёмке SRS архитектор заведёт централизованный тикет «сверка и перенумерация» (по
-аналогии с уже запланированным для `SRS-DOM-372/585/909`, `docs/STATE-AND-RESUME-POINT.md` §4.2) —
+аналогии с уже запланированным для `SRS-DOM-372/585/909`, `docs/history/state-log-to-2026-09-06.md` §4.2) —
 эти три точечные правки можно консолидировать туда постфактум; сейчас решено не ждать и закрыть
 локально, чтобы не блокировать реализацию R1-12.
 

@@ -1,10 +1,10 @@
 /**
- * Runtime-connectivity check (STATE-AND-RESUME-POINT.md §11.7, задача «к волне 4 добавить
+ * Runtime-connectivity check (docs/history/state-log-to-2026-09-06.md §11.7, задача «к волне 4 добавить
  * автоматический тест на подключённость»). Цель — гарантировать, что код, написанный
  * в тикете, ФИЗИЧЕСКИ УЧАСТВУЕТ в рантайме NestJS, а не просто лежит в `src/` как
  * неиспользуемый модуль.
  *
- * Дефект A (STATE-AND-RESUME-POINT.md §11.2): `TenantResolutionMiddleware` был написан,
+ * Дефект A (docs/history/state-log-to-2026-09-06.md §11.2): `TenantResolutionMiddleware` был написан,
  * но в `app.module.ts` остался комментарий «EP-02 добавит позже» — ни один запрос не
  * резолвил тенанта. Зелёный `pnpm lint` / `pnpm typecheck` / `pnpm test` не ловили это,
  * потому что они проверяют ФОРМУ кода, а не УЧАСТИЕ в `AppModule`. Этот тест — страховка
@@ -25,7 +25,7 @@
  * стабильный шаблон «импорт класса + строка в массиве». Это сознательное упрощение:
  * полноценный AST-парсер (`typescript` API) подключит EP-19 при желании.
  *
- * @see docs/STATE-AND-RESUME-POINT.md §11.7
+ * @see docs/history/state-log-to-2026-09-06.md §11.7
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -128,7 +128,7 @@ describe('Runtime connectivity — код, который не подключё�
       expect(
         args.includes('TenantResolutionMiddleware'),
         'TenantResolutionMiddleware должен быть в consumer.apply(...) — иначе ни один ' +
-          'запрос не резолвит тенанта (дефект A, STATE-AND-RESUME-POINT.md §11.2).',
+          'запрос не резолвит тенанта (дефект A, docs/history/state-log-to-2026-09-06.md §11.2).',
       ).toBe(true)
     })
 
@@ -253,7 +253,7 @@ describe('Runtime connectivity — код, который не подключё�
       expect(
         inner.includes('MedicinesController'),
         'MedicinesController должен быть в controllers: [] CatalogModule — иначе у каталога ' +
-          'ноль HTTP-эндпоинтов (дефект D, STATE-AND-RESUME-POINT.md §11.2).',
+          'ноль HTTP-эндпоинтов (дефект D, docs/history/state-log-to-2026-09-06.md §11.2).',
       ).toBe(true)
     })
 

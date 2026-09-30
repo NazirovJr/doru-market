@@ -9,7 +9,7 @@
  *      substances, offers, hasAnalogs }`
  *
  * Конвертация domain `MedicineRecord` → DTO делается здесь, в presentation-слое
- * (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §3.2: маппер DTO↔domain живёт в presentation).
+ * (`docs/architecture/clean-architecture.md` §3.2: маппер DTO↔domain живёт в presentation).
  *
  * **`imageUrl: null` плейсхолдер (SRS-CAT-007).** Given `imageUrl === null`,
  * фронтенд (`packages/ui`, EP-18) сам рендерит SVG-плейсхолдер по `dosageFormClass`.

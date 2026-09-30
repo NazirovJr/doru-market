@@ -3,10 +3,10 @@
 # SRS: SRS-NFR-063 (последовательность отката + предупреждение о необратимой миграции схемы),
 # SRS-DB-034 (drizzle-kit генерирует только forward-миграции; sibling *.down.sql — политика
 # проекта для ALTER существующей таблицы, не для CREATE новой).
-# Владение: files_owned DTJ-428 (scripts/deploy/**).
+# Владение: files_owned DTJ-428 (infra/deploy/**).
 #
 # Использование:
-#   scripts/deploy/rollback.sh <PREVIOUS_IMAGE_TAG>
+#   infra/deploy/rollback.sh <PREVIOUS_IMAGE_TAG>
 #
 # Что делает:
 #   1. Определяет ПОСЛЕДНЮЮ ПРИМЕНЁННУЮ миграцию по журналу drizzle-kit

@@ -14,7 +14,7 @@
  * подмену Nest Logger — здесь мы только проверяем, что use case НЕ падает.
  *
  * @see docs/tickets/ep03-catalog-analogs/DTJ-094.md
- * @see docs/STATE-AND-RESUME-POINT.md §11.6 (Волна 4)
+ * @see docs/history/state-log-to-2026-09-06.md §11.6 (Волна 4)
  */
 import { describe, expect, it } from 'vitest'
 import { CategoryTreeService } from '@/modules/catalog/domain/services/category-tree.service.js'

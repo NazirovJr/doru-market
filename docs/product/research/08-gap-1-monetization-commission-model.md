@@ -1,13 +1,13 @@
 # Gap-1: Platform Monetization Model — Commission & White-Label Pricing
 
 > Статус: **research draft**, закрывает пробел, обозначенный оркестратором после ревью
-> `tz.log` + Charter + документов 01–07. Все числовые ставки, не подтверждённые первичным
+> `docs/product/client-brief-original.txt` + Charter + документов 01–07. Все числовые ставки, не подтверждённые первичным
 > источником, помечены **ASSUMPTION** и требуют утверждения продуктом/финансами до того, как
 > попадут в коммерческие договоры с аптеками/сетями.
 
 ## 0. Почему это отдельный документ, а не пункт в другом research-файле
 
-`tz.log` описывает архитектуру Escrow (`03-payments-and-escrow.md`) и упоминает
+`docs/product/client-brief-original.txt` описывает архитектуру Escrow (`03-payments-and-escrow.md`) и упоминает
 `payout_schedule`/комиссию для `cash_courier` как «отдельный B2B биллинг» (см.
 `03-payments-and-escrow.md` §6.5, REQ-PAY-6/REQ-PAY-14), но **нигде не называет число** —
 ни процент, ни формулу, ни то, с какой базы (items_total vs total_amount) она считается.
@@ -245,9 +245,9 @@ CREATE TABLE platform_billing_invoice_lines (
 
 ## 4. Часть C — White-Label коммерческая модель
 
-### 4.1 Неразрешённое противоречие между `tz.log` и Charter §3.4 — фиксируется явно
+### 4.1 Неразрешённое противоречие между `docs/product/client-brief-original.txt` и Charter §3.4 — фиксируется явно
 
-`tz.log` (Часть III) описывает White-Label как: «Полный комплект исходного кода с передачей
+`docs/product/client-brief-original.txt` (Часть III) описывает White-Label как: «Полный комплект исходного кода с передачей
 **неисключительных прав** и развертыванием **в закрытом контуре заказчика (On-Premise в ЦОД
 Таджиктелеком)**» — это модель **разовой продажи лицензии на код** с изолированной инфраструктурой
 заказчика, где у DoruTJ физически нет доступа к БД/трафику тенанта после передачи.
@@ -260,7 +260,7 @@ Charter §3.4, напротив, описывает **shared multi-tenant SaaS**
 Это два разных договорных и архитектурных трека, которые **нельзя обслуживать одной ценовой
 моделью**:
 
-| | On-Premise разовая продажа (буква `tz.log`) | Shared multi-tenant SaaS (архитектура Charter §3.4) |
+| | On-Premise разовая продажа (буква `docs/product/client-brief-original.txt`) | Shared multi-tenant SaaS (архитектура Charter §3.4) |
 |---|---|---|
 | Где крутится код | Инфраструктура заказчика (ЦОД Таджиктелеком) | Инфраструктура DoruTJ |
 | Видимость DoruTJ в GMV тенанта после сделки | Отсутствует | Есть (те же таблицы `orders`/`pharmacy_inventory`, просто со scoped `chain_id`) |
@@ -271,7 +271,7 @@ Charter §3.4, напротив, описывает **shared multi-tenant SaaS**
 пункт таблицы отклонений §3.5 Charter): поскольку Charter уже реализует shared-DB
 multi-tenancy как техническое решение (и именно это описано в CUJ-7, тестах на утечку данных
 между тенантами), **основным продаваемым предложением считается shared multi-tenant SaaS**, а
-буквальный «On-Premise + полный transfer кода» из `tz.log` — это **опциональная bespoke-сделка**
+буквальный «On-Premise + полный transfer кода» из `docs/product/client-brief-original.txt` — это **опциональная bespoke-сделка**
 вне стандартного прайсинга платформы (индивидуальный контракт, не описывается в схеме БД
 продукта). Ключевой вывод, снимающий кажущееся противоречие с §3.4 «деньги тенанта не
 проходят через DoruTJ»: **не проходят деньги, но проходят данные** (заказы лежат в общей
@@ -299,7 +299,7 @@ CREATE TABLE whitelabel_contracts (
 
 | Компонент | Ставка (ASSUMPTION) | Обоснование |
 |---|---|---|
-| Setup fee (разовый, кастомизация за 48 часов из `tz.log`) | **15 000–40 000 TJS**, зависит от объёма кастомизации (палитра/лого — нижняя граница; выделенный Telegram-бот + доп. интеграции — верхняя) | Стандартная практика white-label SaaS — onboarding fee покрывает работу первых недель ([getmonetizely.com](https://www.getmonetizely.com/articles/white-label-pricing-models-maximizing-value-when-licensing-your-technology)) |
+| Setup fee (разовый, кастомизация за 48 часов из `docs/product/client-brief-original.txt`) | **15 000–40 000 TJS**, зависит от объёма кастомизации (палитра/лого — нижняя граница; выделенный Telegram-бот + доп. интеграции — верхняя) | Стандартная практика white-label SaaS — onboarding fee покрывает работу первых недель ([getmonetizely.com](https://www.getmonetizely.com/articles/white-label-pricing-models-maximizing-value-when-licensing-your-technology)) |
 | Monthly license fee | **3 000–4 000 TJS** за первые 10 филиалов + **150–250 TJS** за каждый доп. филиал | Per-seat/per-unit модель, распространённая для white-label SaaS ([smartsaas.works](https://smartsaas.works/blog/post/white-label-saas-pricing-how-to-set-model-for-resellers/118)) |
 | Revenue share (опционально, `plan_type = 'saas_royalty'`) | **1–2%** от GMV тенанта (не 30–40%, как в «чистых» revenue-share моделях технологических провайдеров — там провайдер несёт весь платёжный риск; здесь платёж идёт мимо DoruTJ, роялти — плата за инфраструктуру/поддержку, а не за расчёты) | Компромисс между «0% — Charter §3.4 буквально» и типовым диапазоном revenue-share 30–40% ([getmonetizely.com](https://www.getmonetizely.com/articles/white-label-pricing-models-maximizing-value-when-licensing-your-technology)), скорректированным на то, что DoruTJ не участвует в движении денег |
 
@@ -308,7 +308,7 @@ CREATE TABLE whitelabel_contracts (
 `gross_amount_dirams` считается из `orders` тенанта за период (данные есть, т.к. shared DB),
 оплата — банковским переводом, вне эскроу.
 
-### 4.3 On-Premise трек (буквальный `tz.log`)
+### 4.3 On-Premise трек (буквальный `docs/product/client-brief-original.txt`)
 
 Разовая продажа неисключительной лицензии на исходный код — коммерческая сумма определяется
 переговорами (не формула продукта), плюс опциональный годовой support/maintenance контракт,
@@ -355,7 +355,7 @@ CREATE TABLE whitelabel_contracts (
 | White-Label SaaS, setup | Разовый | 15 000–40 000 TJS | `whitelabel_contracts.setup_fee_dirams` | Инвойс при подписании |
 | White-Label SaaS, monthly | Per-branch tier | 3 000–4 000 TJS / 10 филиалов + 150–250 TJS/доп. | `whitelabel_contracts.monthly_fee_dirams` | Инвойс, авансом за месяц |
 | White-Label SaaS, royalty (опционально) | % от GMV тенанта | 1–2% | `whitelabel_contracts.royalty_bps` → `platform_billing_invoices.kind='whitelabel_royalty'` | Тот же цикл, что cash_courier |
-| White-Label On-Premise (буква `tz.log`) | Разовая продажа лицензии + support | Договорная сумма + 15–20%/год support | Вне схемы БД продукта | Отдельный юридический договор |
+| White-Label On-Premise (буква `docs/product/client-brief-original.txt`) | Разовая продажа лицензии + support | Договорная сумма + 15–20%/год support | Вне схемы БД продукта | Отдельный юридический договор |
 
 Все процентные ставки НДС-облагаемые (14%, см. §1.2) — инвойс обязан показывать комиссию и НДС
 отдельными строками.
@@ -420,9 +420,9 @@ CREATE TABLE whitelabel_contracts (
 3. Реальная комиссия эквайринга Alif/DC Bank **для DoruTJ как агрегатора** (не конечного
    мерчанта) — публичные тарифы могут не совпадать с агентским/партнёрским договором для
    маркетплейса; нужен прямой запрос в отделы партнёрств обоих банков.
-4. Ключевое архитектурное решение не зафиксировано ни в Charter, ни в `tz.log` явно: считать ли
+4. Ключевое архитектурное решение не зафиксировано ни в Charter, ни в `docs/product/client-brief-original.txt` явно: считать ли
    White-Label продуктом shared multi-tenant SaaS (по факту архитектуры §3.4) или буквальным
-   On-Premise переносом кода (по факту текста `tz.log` Части III)? От ответа зависит, нужна ли
+   On-Premise переносом кода (по факту текста `docs/product/client-brief-original.txt` Части III)? От ответа зависит, нужна ли
    таблица `whitelabel_contracts` вообще, или White-Label — это чисто юридический трек вне
    продуктовой схемы БД. Требуется явное решение архитектора, желательно оформленное как ADR в
    `docs/adr/`.

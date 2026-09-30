@@ -11,7 +11,7 @@
 - Mappers: `medicine.mapper.ts`, `category.mapper.ts`, `substance.mapper.ts` (DTJ-092).
 - `catalog.module.ts` (NestJS): DI-регистрация `{ provide: TOKEN, useClass: ... }`.
 
-**Правило зависимостей (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1):**
+**Правило зависимостей (`docs/architecture/clean-architecture.md` §1.1):**
 - Реализует порты, объявленные в `../application/ports/*`.
 - Может импортировать `domain/` (для типов и маппинга) и `application/` (для DI).
 - Схема БД (`apps/api/src/db/schema/*`) живёт тут, в инфраструктуре; НЕ утекает в `domain/`

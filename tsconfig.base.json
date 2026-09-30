@@ -12,7 +12,7 @@
     "isolatedModules": true,
     "skipLibCheck": true,
 
-    /* ---- Строгость (docs/02-CLEAN-ARCHITECTURE-AND-CODE.md §6.3) ---- */
+    /* ---- Строгость (docs/architecture/clean-architecture.md §6.3) ---- */
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,

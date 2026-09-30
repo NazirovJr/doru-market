@@ -1,6 +1,6 @@
 /**
  * `pharmacy-terminal.mapper.ts` (DTJ-301, EP-12, модуль 24 «Терминал фармацевта») — DTO↔domain
- * терминала (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1: presentation не знает доменных
+ * терминала (`docs/architecture/clean-architecture.md` §1.1: presentation не знает доменных
  * инвариантов, только маппинг структурированных полей — НЕ форматирует пользовательский текст
  * (i18n/цвета — забота клиента, DoD тикета)).
  *

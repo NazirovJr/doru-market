@@ -1,7 +1,7 @@
 /**
  * Порт `PartialFulfillmentTimeoutQueuePort` (EP-12, DTJ-304, SRS-PHT-019/023a) — планирование
  * BullMQ delayed job таймаута ответа клиента (`Что сделать` п.2 тикета). Заводится по тому же
- * обязательному правилу `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.3, что `EscrowLedgerRepository`
+ * обязательному правилу `docs/architecture/clean-architecture.md` §1.3, что `EscrowLedgerRepository`
  * (DTJ-240)/`PartialFulfillmentRequestRepositoryPort` (этот тикет) — `application` не имеет
  * права знать конкретный BullMQ/`Queue` напрямую (`infrastructure`), только через порт.
  *

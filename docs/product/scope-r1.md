@@ -1,10 +1,10 @@
 # DoruTJ — Решение по объёму после гейта GO/NO-GO (PIVOT)
 
 > Владелец: Architect / PM. Статус: **BASELINE v2.0, ОБЯЗАТЕЛЕН.**
-> Основание: `docs/competition/00-GO-NOGO-VERDICT.md` (вердикт **PIVOT**, уверенность 68 %,
+> Основание: `docs/product/competition/00-GO-NOGO-VERDICT.md` (вердикт **PIVOT**, уверенность 68 %,
 > взвешенный балл полного объёма −25) + решение владельца продукта от 27.08.2026.
 > Этот документ **переопределяет §2 «Definition of Product Done»** устава.
-> Приоритет: **04-SCOPE-DECISION > 03-ARCHITECT-DECISIONS > 00-PROJECT-CHARTER > research > tz.log**.
+> Приоритет: **04-SCOPE-DECISION > 03-ARCHITECT-DECISIONS > 00-PROJECT-CHARTER > research > docs/product/client-brief-original.txt**.
 
 ---
 
@@ -52,7 +52,7 @@ D3 (мультиаптечные остатки в реальном времен
 ## 3. RELEASE 1 — «Дешевле рядом» (ядро). НОВЫЙ Definition of Product Done
 
 **R1 — это законченный, полностью рабочий продукт, а не прототип.** Все стандарты качества
-(`02-CLEAN-ARCHITECTURE-AND-CODE.md`, `pnpm verify`, покрытие, E2E) действуют в полном объёме.
+(`docs/architecture/clean-architecture.md`, `pnpm verify`, покрытие, E2E) действуют в полном объёме.
 
 ### 3.1 Функциональный состав R1
 

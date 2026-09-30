@@ -3,9 +3,9 @@
 > Владелец: Tech Lead зоны «Терминал фармацевта + Курьерский веб-модуль».
 > Диапазон ID: **DTJ-300..DTJ-349** (использовано DTJ-300..DTJ-332, 33 тикета; резерв
 > DTJ-333..DTJ-349 не занят — оставлен на непредвиденное дробление в процессе разработки).
-> Источники (по убыванию приоритета): `04-SCOPE-DECISION-PIVOT.md` → `03-ARCHITECT-DECISIONS.md`
-> (D-09, D-10, D-19, D-24, D-25) → `02-CLEAN-ARCHITECTURE-AND-CODE.md` → `01-TECH-BASELINE.md` →
-> `00-PROJECT-CHARTER.md` (CUJ-2'/3'/4') → `docs/spec/00-SRS-MASTER.md` →
+> Источники (по убыванию приоритета): `docs/product/scope-r1.md` → `docs/architecture/decisions/README.md`
+> (D-09, D-10, D-19, D-24, D-25) → `docs/architecture/clean-architecture.md` → `docs/architecture/tech-baseline.md` →
+> `docs/product/charter.md` (CUJ-2'/3'/4') → `docs/spec/00-SRS-MASTER.md` →
 > `docs/spec/24-module-pharmacy-terminal.md` (Часть A, R1) →
 > `docs/spec/25-module-courier-delivery.md` (§A, R1) → `docs/spec/30-ux-screens-and-flows.md` →
 > `docs/spec/32-design-reference.md`.
@@ -17,19 +17,19 @@
 - **EP-13** — Часть A модуля 25 (API-контракт курьера/диспетчера) целиком + веб-реализация в
   `apps/courier`. **Часть B (Flutter `apps/courier_mobile`) — R2, вне этого пакета.**
 
-## Важное решение: разрешение конфликта между `01-TECH-BASELINE.md` и `docs/spec/30-ux-screens-and-flows.md`
+## Важное решение: разрешение конфликта между `docs/architecture/tech-baseline.md` и `docs/spec/30-ux-screens-and-flows.md`
 
 `docs/spec/30-ux-screens-and-flows.md` описывает терминал фармацевта как раздел `/admin/order-queue`
 внутри `apps/admin`, а курьера — как раздел `/courier/*` внутри `apps/web`. Одновременно
-`01-TECH-BASELINE.md` §«Frontend» (приоритет ВЫШЕ, чем `docs/spec/*`, по иерархии документов проекта)
+`docs/architecture/tech-baseline.md` §«Frontend» (приоритет ВЫШЕ, чем `docs/spec/*`, по иерархии документов проекта)
 явно перечисляет **четыре раздельных** фронтенд-приложения: `apps/web`, `apps/pharmacy`, `apps/courier`,
 `apps/admin`. `tickets/00-EPICS.md` (владение файлами по эпикам) согласуется именно с
-`01-TECH-BASELINE.md`.
+`docs/architecture/tech-baseline.md`.
 
 **Решение, принятое этим пакетом тикетов**: реализовать `apps/pharmacy` (DTJ-310..312) и `apps/courier`
 (DTJ-325..332) как ОТДЕЛЬНЫЕ React-приложения со своими корневыми маршрутами (без префиксов
 `/admin`/`/courier` — они больше не подразделы чужого приложения), сохранив контент/поведение/тексты
-каждого экрана из `30-ux` без изменений. Причина — `01-TECH-BASELINE.md` стоит выше `docs/spec/30-ux` в
+каждого экрана из `30-ux` без изменений. Причина — `docs/architecture/tech-baseline.md` стоит выше `docs/spec/30-ux` в
 иерархии документов проекта. Это решение зафиксировано в DTJ-310 и DTJ-325 и требует синхронизации с
 тимлидами `apps/web`/`apps/admin`, чтобы те же экраны не были продублированы в их приложениях.
 

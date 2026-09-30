@@ -1,7 +1,7 @@
 /**
  * Порт `PrescriptionsFacadePort` (EP-09, DTJ-220, SRS-ORD-015/018 шаг 4a).
  *
- * Межмодульный фасад `orders → prescriptions` (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2).
+ * Межмодульный фасад `orders → prescriptions` (`docs/architecture/clean-architecture.md` §1.2).
  * Вызывается ПЕРВЫМ в цикле обработки группы checkout (SRS-ORD-018 шаг 4a) — Rx-позиции без
  * верифицированного рецепта исключаются из ПОПЫТКИ (`meta.excludedItems`, SRS-ORD-015), не
  * блокируют оформление остальных позиций той же аптеки.

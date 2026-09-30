@@ -2,7 +2,7 @@
  * `CartIdentityGuard` (EP-09, DTJ-226, SRS-API-024/036/045, D-EP09-23) — резолвит, кто
  * обращается к корзине: аутентифицированный `customer` (Bearer JWT) ИЛИ гость по
  * `X-Cart-Session-Token`. НИКОГДА не блокирует запрос — `CartController` публичный
- * (`@Public()`), гость имеет право на корзину без логина (SRS-ORD-002/tz.log). Результат
+ * (`@Public()`), гость имеет право на корзину без логина (SRS-ORD-002/docs/product/client-brief-original.txt). Результат
  * кладётся в `request.cartIdentity`, читается декоратором `@CartIdentity()`.
  *
  * НЕ переиспользует `AuthGuard` (EP-01) напрямую — `AuthGuard` бросает `401 UNAUTHENTICATED`

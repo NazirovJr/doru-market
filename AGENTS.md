@@ -1,18 +1,18 @@
 # DoruTJ — правила работы в этом репозитории
 
 > Читается автоматически агентскими инструментами. **Прочитай целиком перед первой строкой кода.**
-> Это выжимка. Подробности — [`docs/05-DEVELOPER-HANDBOOK.md`](docs/05-DEVELOPER-HANDBOOK.md).
+> Это выжимка. Подробности — [`docs/guides/developer-handbook.md`](docs/guides/developer-handbook.md).
 
 > **Твоя роль.** Если тебе выдали тикет `DTJ-*` и попросили написать код — ты **ИСПОЛНИТЕЛЬ**.
 > Ты не принимаешь собственную работу, не меняешь решения `D-*`, версии пакетов, объём релиза
-> и конфигурацию гейтов. Не согласен с решением — см. §6 [`CLAUDE-CTO.md`](CLAUDE-CTO.md),
+> и конфигурацию гейтов. Не согласен с решением — см. §6 [`docs/process/coordinator.md`](docs/process/coordinator.md),
 > там порядок спора. Застрял — эскалируй, а не додумывай.
 
 **Что это за проект:** фармацевтический маркетплейс Таджикистана + White-Label платформа
 для аптечных сетей. Монорепо pnpm + Turborepo, NestJS 11 на Fastify, PostgreSQL + Drizzle,
 React 19 + Vite, Flutter для мобильных клиентов.
 
-**С чего начать:** [`docs/STATE-AND-RESUME-POINT.md`](docs/STATE-AND-RESUME-POINT.md) — где мы сейчас
+**С чего начать:** [`docs/history/state-log-to-2026-09-06.md`](docs/history/state-log-to-2026-09-06.md) — где мы сейчас
 и что делать дальше. Читать первым.
 
 ---
@@ -224,20 +224,20 @@ grep -rn "ИмяКласса\|имяФункции" apps packages --include=*.ts
 
 | Документ | Когда открывать |
 |---|---|
-| [`CLAUDE-CTO.md`](CLAUDE-CTO.md) | **Кто здесь кто и кто что решает.** Если тебе выдали тикет — ты ИСПОЛНИТЕЛЬ, а не CTO: см. блок в начале файла. Там же эскалация и порядок разногласий |
-| [`docs/07-WAVE4-HANDOFF.md`](docs/07-WAVE4-HANDOFF.md) | **ТЕКУЩЕЕ ЗАДАНИЕ.** Итог волны 4, 10 точечных задач по порядку, что дальше по плану |
-| [`docs/STATE-AND-RESUME-POINT.md`](docs/STATE-AND-RESUME-POINT.md) | **Где мы и что делать дальше.** История волн, §12 — блокеры уровня продукта |
-| [`docs/05-DEVELOPER-HANDBOOK.md`](docs/05-DEVELOPER-HANDBOOK.md) | Как работать: порядок, проверки, формат отчёта |
-| [`docs/04-SCOPE-DECISION-PIVOT.md`](docs/04-SCOPE-DECISION-PIVOT.md) | Что входит в релиз R1, что отложено |
-| [`docs/03-ARCHITECT-DECISIONS.md`](docs/03-ARCHITECT-DECISIONS.md) | Решения D-01..D-27. Переоткрывать нельзя |
-| [`docs/02-CLEAN-ARCHITECTURE-AND-CODE.md`](docs/02-CLEAN-ARCHITECTURE-AND-CODE.md) | Слои, пороги C1..C18 |
-| [`docs/01-TECH-BASELINE.md`](docs/01-TECH-BASELINE.md) | Версии пакетов. Отклоняться нельзя |
-| [`docs/00-PROJECT-CHARTER.md`](docs/00-PROJECT-CHARTER.md) | Устав, сценарии CUJ, NFR |
+| [`docs/process/coordinator.md`](docs/process/coordinator.md) | **Кто здесь кто и кто что решает.** Если тебе выдали тикет — ты ИСПОЛНИТЕЛЬ, а не CTO: см. блок в начале файла. Там же эскалация и порядок разногласий |
+| [`docs/history/wave-4-handoff.md`](docs/history/wave-4-handoff.md) | **ТЕКУЩЕЕ ЗАДАНИЕ.** Итог волны 4, 10 точечных задач по порядку, что дальше по плану |
+| [`docs/history/state-log-to-2026-09-06.md`](docs/history/state-log-to-2026-09-06.md) | **Где мы и что делать дальше.** История волн, §12 — блокеры уровня продукта |
+| [`docs/guides/developer-handbook.md`](docs/guides/developer-handbook.md) | Как работать: порядок, проверки, формат отчёта |
+| [`docs/product/scope-r1.md`](docs/product/scope-r1.md) | Что входит в релиз R1, что отложено |
+| [`docs/architecture/decisions/README.md`](docs/architecture/decisions/README.md) | Решения D-01..D-27. Переоткрывать нельзя |
+| [`docs/architecture/clean-architecture.md`](docs/architecture/clean-architecture.md) | Слои, пороги C1..C18 |
+| [`docs/architecture/tech-baseline.md`](docs/architecture/tech-baseline.md) | Версии пакетов. Отклоняться нельзя |
+| [`docs/product/charter.md`](docs/product/charter.md) | Устав, сценарии CUJ, NFR |
 | `docs/spec/*.md` | SRS: 1017 требований |
 | `tickets/**/DTJ-*.md` | Конкретная задача с критериями приёмки |
 
 **Иерархия при конфликте:** `04-SCOPE` → `03-DECISIONS` → `AGENTS.md` → `02-ARCHITECTURE`
-→ `01-BASELINE` → `00-CHARTER` → `spec/` → `tickets/` → `tz.log`.
+→ `01-BASELINE` → `00-CHARTER` → `spec/` → `tickets/` → `docs/product/client-brief-original.txt`.
 
 ---
 

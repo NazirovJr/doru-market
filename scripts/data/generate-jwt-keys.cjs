@@ -1,5 +1,5 @@
-// scripts/generate-jwt-keys.cjs — генерация RS256 ключей для JWT_PRIVATE_KEY/JWT_PUBLIC_KEY
-// в формате .env (escape \n). Запуск: node scripts/generate-jwt-keys.cjs
+// scripts/data/generate-jwt-keys.cjs — генерация RS256 ключей для JWT_PRIVATE_KEY/JWT_PUBLIC_KEY
+// в формате .env (escape \n). Запуск: node scripts/data/generate-jwt-keys.cjs
 const c = require('crypto')
 const { privateKey, publicKey } = c.generateKeyPairSync('rsa', {
   modulusLength: 2048,

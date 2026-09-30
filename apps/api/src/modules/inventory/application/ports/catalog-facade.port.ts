@@ -3,7 +3,7 @@
  *
  * Межмодульный фасад для `inventory → catalog` (`10-domain-model.md` матрица
  * взаимодействий, `'F'` — Facade). EP-05 ЗАВИСИТ от интерфейса, НЕ от
- * прямой таблицы `medicines` (правило `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1).
+ * прямой таблицы `medicines` (правило `docs/architecture/clean-architecture.md` §1.1).
  *
  * EP-04 (catalog) **реализует** этот порт, конкретные методы
  * `findMedicineIdsByBarcodes` и `findFuzzyCandidates` добавляются в

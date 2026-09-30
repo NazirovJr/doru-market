@@ -2,7 +2,7 @@ import type { ControlCategoryPublic } from '@dorutj/contracts'
 
 /**
  * `ReturnChecklistForm.model.ts` (DTJ-277, EP-11, SRS-DOM-053/054) — чистые функции чек-листа
- * приёмки возврата, вынесенные из `ReturnChecklistForm.tsx` (`02-CLEAN-ARCHITECTURE-AND-CODE.md`
+ * приёмки возврата, вынесенные из `ReturnChecklistForm.tsx` (`docs/architecture/clean-architecture.md`
  * §5: бизнес-логика — в `model/`, не в компоненте).
  *
  * `controlCategory` — расширение `OrderReturnDto` (`packages/contracts/src/returns.ts`, DTJ-277

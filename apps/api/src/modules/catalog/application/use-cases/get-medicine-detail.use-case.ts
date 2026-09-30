@@ -20,7 +20,7 @@
  *
  * **Авторизация (SRS-CAT-005/006).** `bypassVisibilityCheck` выставляется
  * ТОЛЬКО presentation-слоем после проверки роли `super_admin`/каталог-оператор
- * (см. риск в тикете). Сам use case НЕ знает про роли (`02-CLEAN-ARCHITECTURE-AND-CODE.md`
+ * (см. риск в тикете). Сам use case НЕ знает про роли (`docs/architecture/clean-architecture.md`
  * §3.4 — авторизация на границе, не внутри бизнес-правил видимости).
  *
  * **404 mapping.** Существование записи не подтверждается постороннему: не найдено,
@@ -33,7 +33,7 @@
  * в общем каталоге кодов (TODO вне рамок тикета).
  *
  * @see docs/spec/20-module-catalog-search.md SRS-CAT-005/006/007/008/009/049/050
- * @see docs/STATE-AND-RESUME-POINT.md §11.4 задача 3.2 (Волна 3.5)
+ * @see docs/history/state-log-to-2026-09-06.md §11.4 задача 3.2 (Волна 3.5)
  */
 import { Inject, Injectable } from '@nestjs/common'
 import { NotFoundError } from '@dorutj/contracts'

@@ -4,7 +4,7 @@
 > `(End of file - total N lines)` — эта пометка и значит, что файл прочитан весь;
 > последняя строка файла — `=== КОНЕЦ ЗАДАНИЯ DTJ-372-fix ===`. Пометки нет — дочитай
 > остаток через `read` с `offset` и только потом работай.
-> Если история сжата или ты не помнишь следующий шаг — перечитай этот файл: `reports/qwen3/tasks/DTJ-372-fix.md`.
+> Если история сжата или ты не помнишь следующий шаг — перечитай этот файл: `scripts/local-model/tasks/DTJ-372-fix.md`.
 >
 > **Проверка и сдача — только этими двумя командами**, других способов нет. Они стоят в начале
 > намеренно: когда история разрастается, dsh вырезает середину длинных результатов `read`, а начало
@@ -13,10 +13,10 @@
 > `git add` и `git commit` не вызывай никогда: коммит делает только гейт с `-Commit`.
 >
 > Проверка:
-> `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed 'apps/api/src/modules/notifications/*','apps/api/src/modules/notifications/**/*','packages/contracts/src/notifications.ts','packages/contracts/src/index.ts' -RequireFile reports/qwen3/tasks/DTJ-372-fix.require.txt`
+> `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-gate.ps1 -Allowed 'apps/api/src/modules/notifications/*','apps/api/src/modules/notifications/**/*','packages/contracts/src/notifications.ts','packages/contracts/src/index.ts' -RequireFile scripts/local-model/tasks/DTJ-372-fix.require.txt`
 >
 > Сдача (раздел 8) — та же команда с `-Commit`:
-> `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed 'apps/api/src/modules/notifications/*','apps/api/src/modules/notifications/**/*','packages/contracts/src/notifications.ts','packages/contracts/src/index.ts' -RequireFile reports/qwen3/tasks/DTJ-372-fix.require.txt -Commit "fix(notifications): DTJ-372 — filter[status], InvalidCursorError, DTO и роли по тикету"`
+> `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-gate.ps1 -Allowed 'apps/api/src/modules/notifications/*','apps/api/src/modules/notifications/**/*','packages/contracts/src/notifications.ts','packages/contracts/src/index.ts' -RequireFile scripts/local-model/tasks/DTJ-372-fix.require.txt -Commit "fix(notifications): DTJ-372 — filter[status], InvalidCursorError, DTO и роли по тикету"`
 
 ## 0. Карточка задачи
 
@@ -194,7 +194,7 @@
 
 ## 5. Тесты — что именно должно быть проверено
 
-Гейт читает `reports/qwen3/tasks/DTJ-372-fix.require.txt`: строки, которые обязаны быть в файлах, и
+Гейт читает `scripts/local-model/tasks/DTJ-372-fix.require.txt`: строки, которые обязаны быть в файлах, и
 строки (с `!`), которых там быть не должно. Строка ищется буквально — перефраз не засчитывается.
 
 `list-own-notifications.use-case.spec.ts`:

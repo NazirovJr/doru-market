@@ -78,7 +78,7 @@ services:
     ports: ['6379:6379'] # dev-профиль — БЕЗ этого в prod
 
   minio:
-    # Пиновка (01-TECH-BASELINE.md, DoD «ни одного :latest»): официальные Docker-образы
+    # Пиновка (docs/architecture/tech-baseline.md, DoD «ни одного :latest»): официальные Docker-образы
     # minio/minio сняты с публикации в Docker Hub (объявление minio, октябрь 2025 — репозиторий
     # заархивирован); RELEASE.2025-09-07T16-13-09Z, ранее указанный здесь как «последний реально
     # опубликованный официальный тег», при живой проверке DTJ-412 (25.09.2026, `docker pull
@@ -86,7 +86,7 @@ services:
     # `minio/minio:latest` — та же ошибка) подтверждённо больше НЕ резолвится вообще — образ
     # `docker compose up -d` не может скачать. `quay.io/minio/minio` (официальная новая площадка
     # публикации) недоступен из текущей CI/dev-сети по egress-политике прокси — см.
-    # `docs/STATE-AND-RESUME-POINT.md` при следующей ревизии этой политики. До появления доступа к
+    # `docs/history/state-log-to-2026-09-06.md` при следующей ревизии этой политики. До появления доступа к
     # `quay.io` используем `pgsty/minio:RELEASE.2026-08-04T00-00-00Z` — зеркало проекта Pigsty
     # (те же официальные бинарники MinIO, `minio --version` подтверждает `RELEASE.2026-08-04T00-
     # 00-00Z`, тот же entrypoint/CMD/порт 9000, drop-in замена) — проверено живым `docker pull` +
@@ -140,7 +140,7 @@ services:
       dockerfile: infra/docker/Dockerfile.api
       target: runtime
     # DTJ-428: имя+тег образа для `docker compose pull`/rolling-деплоя/отката
-    # (scripts/deploy/rolling-deploy.sh, scripts/deploy/rollback.sh, SRS-NFR-062/063). Локально
+    # (infra/deploy/rolling-deploy.sh, infra/deploy/rollback.sh, SRS-NFR-062/063). Локально
     # (`build:` выше без `IMAGE_TAG` в ENV) резолвится в `dorutj-api:local` — `docker compose up`
     # собирает и тегирует этим именем, `pull` в этом случае не находит ничего в registry и
     # скрипты деплоя тогда запускаются с `SKIP_PULL=1` (см. их README-комментарии в шапке файлов).

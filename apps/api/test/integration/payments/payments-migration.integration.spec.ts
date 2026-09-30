@@ -1,7 +1,7 @@
 /**
  * Интеграционный тест миграции `0029_payments.sql` (EP-10, DTJ-236, тест-план тикета) —
  * РЕАЛЬНЫЙ Postgres. Testcontainers НЕ используется (повтор D-EP09-14/D-EP09-31,
- * `reports/EP09-CTO-BRIEF.md`) — тикет DTJ-236 упоминает Testcontainers по инерции текста,
+ * `docs/history/briefs/ep09-cto-brief.md`) — тикет DTJ-236 упоминает Testcontainers по инерции текста,
  * решение архитектора уже отменяет их для всего проекта; тест бьёт по настроенной БД, как
  * `orders-payments-extensions-migration.integration.spec.ts` (DTJ-228, ближайший прецедент).
  *

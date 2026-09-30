@@ -1,9 +1,9 @@
 # DoruTJ — Эпики Release 1
 
 > Владелец: Tech Lead. Статус: **BASELINE, вход для фазы тикетов.**
-> Источники (по убыванию приоритета): `04-SCOPE-DECISION-PIVOT.md` (R1-1..R1-16) →
-> `03-ARCHITECT-DECISIONS.md` (D-01..D-25) → `02-CLEAN-ARCHITECTURE-AND-CODE.md` →
-> `01-TECH-BASELINE.md` (состав `apps/`/`packages/`) → `00-PROJECT-CHARTER.md` →
+> Источники (по убыванию приоритета): `docs/product/scope-r1.md` (R1-1..R1-16) →
+> `docs/architecture/decisions/README.md` (D-01..D-25) → `docs/architecture/clean-architecture.md` →
+> `docs/architecture/tech-baseline.md` (состав `apps/`/`packages/`) → `docs/product/charter.md` →
 > `docs/spec/00-SRS-MASTER.md` (порядок 19 эпиков, откуда взята базовая последовательность
 > и обоснования — здесь она проверена, дополнена владением файлами и волнами запуска) →
 > `docs/spec/1*/2*/3*.md`.
@@ -39,7 +39,7 @@
 
 **Не покрыто R1-* напрямую, но обязательно к сдаче в R1** (зафиксировано явно, чтобы не потерялось
 при нарезке тикетов): EP-11 (возвраты, D-09) и EP-14 (споры/поддержка, D-24) — оба введены
-архитектором как обязательные дополнения схемы БД (`03-ARCHITECT-DECISIONS.md` §C.5, §C.6),
+архитектором как обязательные дополнения схемы БД (`docs/architecture/decisions/README.md` §C.5, §C.6),
 не значатся отдельной строкой в таблице R1-1..R1-16 Pivot-документа, но без них нарушается
 Definition of Product Done R1 («законченный, полностью рабочий продукт, а не прототип»).
 
@@ -206,7 +206,7 @@ EP-07, EP-08, EP-11, EP-14, EP-15, EP-16, EP-17) и сквозные EP-18/ча�
 ## Порядок владения файлами
 
 Каталоги/пакеты по эпикам (backend — `apps/api/src/modules/<context>/**`, если не указано иное;
-`apps/*` — фронтенды из `01-TECH-BASELINE.md`: `web`, `admin`, `pharmacy`, `courier`):
+`apps/*` — фронтенды из `docs/architecture/tech-baseline.md`: `web`, `admin`, `pharmacy`, `courier`):
 
 | Эпик | Каталоги/пакеты |
 |---|---|
@@ -228,7 +228,7 @@ EP-07, EP-08, EP-11, EP-14, EP-15, EP-16, EP-17) и сквозные EP-18/ча�
 | EP-16 | `apps/api/src/modules/notifications/**`, `apps/worker/src/jobs/notifications/**`, `apps/api/src/common/audit/**` |
 | EP-17 | `apps/api/src/modules/analytics/**`, `apps/admin/src/features/analytics/**`, `packages/contracts/src/analytics.ts` |
 | EP-18 | `packages/ui/**`, `packages/i18n/**` (словари/хелперы) |
-| EP-19 | Корневые конфиги (`.dependency-cruiser.cjs`, `eslint.config.mjs`, `turbo.json`, `tsconfig*.json` — уже созданы, см. `docs/STATE-AND-RESUME-POINT.md` §2.3), `infra/docker/**`, `.github/workflows/**`, `tests/{e2e,load,arch}/**`, `docs/api/openapi.json` (генератор) |
+| EP-19 | Корневые конфиги (`.dependency-cruiser.cjs`, `eslint.config.mjs`, `turbo.json`, `tsconfig*.json` — уже созданы, см. `docs/history/state-log-to-2026-09-06.md` §2.3), `infra/docker/**`, `.github/workflows/**`, `tests/{e2e,load,arch}/**`, `docs/api/openapi.json` (генератор) |
 
 ### Пересекающееся владение и правило разрешения
 
@@ -236,7 +236,7 @@ EP-07, EP-08, EP-11, EP-14, EP-15, EP-16, EP-17) и сквозные EP-18/ча�
    Правило: `app/`/`pages/`-роутер создаёт **первый** эпик, который до него добирается по волнам
    (EP-03, волна 3) — остальные (EP-14 волна 10, EP-15 волна 10, EP-17 волна 11) только
    **добавляют** свою запись маршрута и работают исключительно внутри своей папки
-   `features/<own-slice>/**` (правило фронта из `02-CLEAN-ARCHITECTURE-AND-CODE.md` §5:
+   `features/<own-slice>/**` (правило фронта из `docs/architecture/clean-architecture.md` §5:
    горизонтальные импорты `feature-a → feature-b` запрещены — конфликтов на уровне кода не
    возникает, только на уровне общего роутера). EP-15 в волне 10 владеет самим каркасом
    (главный автор `app/pages`), EP-03/EP-14/EP-17 — гостевые правки одной строки роутинга;
@@ -258,7 +258,7 @@ EP-07, EP-08, EP-11, EP-14, EP-15, EP-16, EP-17) и сквозные EP-18/ча�
    принадлежат только EP-19.** Любой другой эпик, которому кажется, что нужно ослабить правило
    (`max-lines`, `no-magic-numbers` и т.п.), обязан завести обсуждение с владельцем EP-19, а не
    править конфиг напрямую — иначе теряется гарантия «ловушка проверяется ловушкой» (§6.1
-   `02-CLEAN-ARCHITECTURE-AND-CODE.md`).
+   `docs/architecture/clean-architecture.md`).
 6. **`packages/ui`/`packages/i18n` (EP-18) — единственный источник компонентов/строк.**
    Вертикальный эпик, которому не хватает компонента, либо ждёт его от EP-18, либо временно
    кладёт локальный компонент в свою `features/<feature>/ui/**` и заводит тикет на перенос в
@@ -280,8 +280,8 @@ EP-07, EP-08, EP-11, EP-14, EP-15, EP-16, EP-17) и сквозные EP-18/ча�
 | `packages/i18n` (скелет словарей tj/ru/en + `useT()`) | **EP-18** | Минимальный вариант нужен уже в волне 1 параллельно EP-01 (см. «Волны выполнения») |
 | `packages/ui` (дизайн-токены, базовые компоненты) | **EP-18** | Аналогично — минимальный набор к волне 1, полный — инкрементально |
 | `docker-compose.yml` (Postgres, Redis, MinIO, Nginx + все `apps/*`) | **EP-19** | Стартует скелетом в волне 1, дополняется контейнером на каждый новый `apps/*` |
-| CI (`.github/workflows`, `pnpm verify`-джоба) | **EP-19** | С первого коммита — `lint`/`arch:check`/`prettier` уже зелёные (`docs/STATE-AND-RESUME-POINT.md` §2.3) |
-| `tests/arch/` (фикстуры-нарушители + тест, что `arch:check`/`lint` их отвергают) | **EP-19** | Обязательный тикет по `02-CLEAN-ARCHITECTURE-AND-CODE.md` §6.1: «ловушка, которая перестала ловить, молчит об этом» |
+| CI (`.github/workflows`, `pnpm verify`-джоба) | **EP-19** | С первого коммита — `lint`/`arch:check`/`prettier` уже зелёные (`docs/history/state-log-to-2026-09-06.md` §2.3) |
+| `tests/arch/` (фикстуры-нарушители + тест, что `arch:check`/`lint` их отвергают) | **EP-19** | Обязательный тикет по `docs/architecture/clean-architecture.md` §6.1: «ловушка, которая перестала ловить, молчит об этом» |
 | Seed-данные (≥300 позиций каталога с корректными связями МНН/веществ) | **EP-04** | Критерий приёмки D-13; команда `pnpm db:seed` |
 | E2E-инфраструктура (Playwright harness, фикстуры CUJ, конфиг раннера) | **EP-19** | Каждый конкретный сценарий (CUJ-1/2'/3'/4'/6'/7') прикрепляется к волне готовности соответствующего эпика, см. «Волны выполнения» |
 
@@ -289,7 +289,7 @@ EP-07, EP-08, EP-11, EP-14, EP-15, EP-16, EP-17) и сквозные EP-18/ча�
 
 ## Проверка полноты (самоконтроль)
 
-- Все 16 возможностей R1-1..R1-16 из `04-SCOPE-DECISION-PIVOT.md` § 3.1 закрыты хотя бы одним
+- Все 16 возможностей R1-1..R1-16 из `docs/product/scope-r1.md` § 3.1 закрыты хотя бы одним
   эпиком (см. колонку «Возможности R1-*» в таблице эпиков).
 - Все 19 эпиков из `docs/spec/00-SRS-MASTER.md` перенесены без пропусков, с сохранением их
   исходного обоснования порядка и с явным указанием, где обоснование уточнено (EP-04/EP-03).

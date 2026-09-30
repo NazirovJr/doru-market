@@ -2,7 +2,7 @@
  * Минимальный порт БД для seed-скрипта каталога.
  *
  * Этот файл существует для разрыва циркулярной зависимости (правило Ж3 +
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md`):
+ * `docs/architecture/clean-architecture.md`):
  *   - `seed-catalog.run.ts` объявляет логику сида и зависит от интерфейса.
  *   - `seed-catalog-drizzle-port.ts` реализует интерфейс и зависит от типа.
  *

@@ -27,7 +27,7 @@
 export const UNIT_OF_WORK = Symbol.for('@dorutj/auth/unit-of-work')
 
 /**
- * Непрозрачный дескриптор транзакции (docs/05-DEVELOPER-HANDBOOK.md §18,
+ * Непрозрачный дескриптор транзакции (docs/guides/developer-handbook.md §18,
  * depcruise `application-does-not-know-infrastructure`): application-порт
  * не имеет права знать о конкретном типе БД (`DrizzleDb`) — только форму
  * «что-то, что передаётся дальше репозиториям». Конкретный тип известен

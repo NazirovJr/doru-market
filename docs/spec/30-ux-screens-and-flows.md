@@ -1,33 +1,33 @@
 # DoruTJ — UX: экраны, потоки, состояния
 
 > Владелец: Analyst (SRS). Статус: **BASELINE для фазы Analysis**.
-> Приоритет источников при противоречии: `04-SCOPE-DECISION-PIVOT.md` > `03-ARCHITECT-DECISIONS.md` (D-*)
-> > `00-PROJECT-CHARTER.md` (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `tz.log` (§ТЗ).
+> Приоритет источников при противоречии: `docs/product/scope-r1.md` > `docs/architecture/decisions/README.md` (D-*)
+> > `docs/product/charter.md` (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `docs/product/client-brief-original.txt` (§ТЗ).
 > `10-domain-model.md`, `11-database-schema.md`, `12-api-conventions-auth-tenancy.md` и модули
 > `20`–`27` — **ЗАКОН**: сущности, поля, enum'ы, статусы, эндпоинты, коды ошибок НЕ переопределяются,
 > только цитируются. Основной источник исследования для этого документа —
-> `docs/research/06-ux-jtbd-and-benchmarks.md` (REQ-UX-1..19) и `docs/research/07-telegram-pwa-and-delivery-ops.md`
+> `docs/product/research/06-ux-jtbd-and-benchmarks.md` (REQ-UX-1..19) и `docs/product/research/07-telegram-pwa-and-delivery-ops.md`
 > (REQ-TG-*, REQ-PWA-*, REQ-GEO-*).
 >
-> Слои — по `02-CLEAN-ARCHITECTURE-AND-CODE.md` §5 (frontend): `app → pages → features → entities → shared`.
+> Слои — по `docs/architecture/clean-architecture.md` §5 (frontend): `app → pages → features → entities → shared`.
 > Экраны этого документа — это `pages` (композиция `features`, ноль бизнес-логики); состояния и
 > переходы, где они зависят от бизнес-правил, ссылаются на use case'ы соответствующих backend-модулей
 > (`SRS-ORD-*`, `SRS-PHT-*`, `SRS-DELIV-*`, `SRS-RX-*` и т.д.) — этот документ их не переопределяет.
 >
 > Идентификаторы требований этого документа: **SRS-UX-nnn**. Тестовые сценарии: **TC-UX-nnn**.
-> Каждое требование помечено меткой релиза **[R1]** / **[R2]** / **[R3]** (`04-SCOPE-DECISION-PIVOT.md`).
-> Покрывает: **CUJ-1..8** (`00-PROJECT-CHARTER.md` §6), Модули 1–5 (`tz.log`), R1-1..R1-16
-> (`04-SCOPE-DECISION-PIVOT.md` §3.1).
+> Каждое требование помечено меткой релиза **[R1]** / **[R2]** / **[R3]** (`docs/product/scope-r1.md`).
+> Покрывает: **CUJ-1..8** (`docs/product/charter.md` §6), Модули 1–5 (`docs/product/client-brief-original.txt`), R1-1..R1-16
+> (`docs/product/scope-r1.md` §3.1).
 
 ---
 
 ## Разбиение по релизам
 
-> Обязательный раздел (см. `04-SCOPE-DECISION-PIVOT.md`, приоритет выше устава). Позиционирование
+> Обязательный раздел (см. `docs/product/scope-r1.md`, приоритет выше устава). Позиционирование
 > изменено: главный экран Customer Web — **поиск со сравнением цены и показом экономии**, НЕ каталог
 > для доставки. Ключевая метрика UX-инструментария (аналитика, A/B, тексты CTA) — **сэкономленные
 > пользователем сомони**, не число заказов. Раздел ниже разбивает UX-поверхность продукта по релизам
-> и объясняет ПОЧЕМУ — со ссылкой на `04-SCOPE-DECISION-PIVOT.md` (далее «Pivot»).
+> и объясняет ПОЧЕМУ — со ссылкой на `docs/product/scope-r1.md` (далее «Pivot»).
 
 | UX-поверхность | Релиз | Почему |
 |---|---|---|
@@ -294,7 +294,7 @@ non-text/пользователей с дальтонизмом):
 
 ### 2.6 Базовые компоненты `packages/ui`
 
-**SRS-UX-021** [`02-CLEAN-ARCHITECTURE-AND-CODE.md` §5, `entities`/`shared`] **[R1]** Минимальный
+**SRS-UX-021** [`docs/architecture/clean-architecture.md` §5, `entities`/`shared`] **[R1]** Минимальный
 набор, переиспользуемый ВСЕМИ приложениями (`apps/web`, `apps/admin`; Flutter R2 — эквиваленты в
 `packages_dart/dorutj_ui`, та же номенклатура токенов):
 
@@ -679,7 +679,7 @@ ISO-4217-обозначение не переводится автоматиче
 
 ## 7. Доступность WCAG 2.1 AA
 
-**SRS-UX-034** [Charter §5, `02-CLEAN-ARCHITECTURE-AND-CODE.md`] **[R1]** Чек-лист по типу
+**SRS-UX-034** [Charter §5, `docs/architecture/clean-architecture.md`] **[R1]** Чек-лист по типу
 компонента — обязателен на code review КАЖДОГО PR, затрагивающего `packages/ui` или `features/*/ui`:
 
 | Тип компонента | Проверки |
@@ -712,7 +712,7 @@ HTML + критический CSS + JS, необходимые ДО интера
 шрифты (Google Fonts, кэшируются CDN отдельно) и изображения. Измерение — `bundlesize`/
 `vite-bundle-visualizer` в CI, порог — блокирующий (`pnpm verify`).
 
-**SRS-UX-037** [`02-CLEAN-ARCHITECTURE-AND-CODE.md` §5, React Router v7] **[R1]** Стратегия разбиения
+**SRS-UX-037** [`docs/architecture/clean-architecture.md` §5, React Router v7] **[R1]** Стратегия разбиения
 бандла — по границам `features/*` (уже архитектурная граница чистого кода, не только perf-приём):
 каждый маршрут (§3.1) — отдельный `lazy()`-чанк через `React.lazy`/`route.lazy` React Router v7.
 Общий вечнозелёный чанк (`app`/`shared`/`entities`) кэшируется агрессивно (`immutable`, хэш в имени

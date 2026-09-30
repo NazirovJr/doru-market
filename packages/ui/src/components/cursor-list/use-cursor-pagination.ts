@@ -1,7 +1,7 @@
 /**
  * `useCursorPagination` (DTJ-408, `SRS-API-004`) — общая логика «загрузить следующую страницу»,
  * переиспользуемая `CursorTable` и `CursorList` (избегает дублирования по C15,
- * `docs/02-CLEAN-ARCHITECTURE-AND-CODE.md`).
+ * `docs/architecture/clean-architecture.md`).
  *
  * Курсорная пагинация (`packages/contracts/src/pagination.ts`, `PaginationMeta`) отдаёт
  * `nextCursor: string | null` — `null` означает «страниц больше нет». Хук НЕ делает fetch сам

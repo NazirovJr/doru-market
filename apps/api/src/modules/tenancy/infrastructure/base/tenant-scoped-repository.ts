@@ -53,7 +53,7 @@
  * }
  * ```
  *
- * @see docs/05-DEVELOPER-HANDBOOK.md §6 (направление зависимостей)
+ * @see docs/guides/developer-handbook.md §6 (направление зависимостей)
  * @see apps/api/src/modules/tenancy/testing/tenant-isolation.contract-test.ts
  *   переиспользуемый contract-test (обязателен для каждого тенант-скоупного
  *   репозитория в `pnpm verify`).

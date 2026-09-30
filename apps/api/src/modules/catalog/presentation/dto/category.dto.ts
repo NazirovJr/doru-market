@@ -6,7 +6,7 @@
  *   `{ id, parentId, slug, name: {tj, ru, en}, sortOrder, childrenCount }`
  *
  * Конвертация `CategoryTreeNode` (use case) → DTO делается здесь, в
- * presentation-слое (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §3.2: маппер
+ * presentation-слое (`docs/architecture/clean-architecture.md` §3.2: маппер
  * DTO↔domain живёт в presentation). Presentation НЕ импортирует `domain/`
  * напрямую — тип `CategoryTreeNode` реэкспортирован use case'ом
  * (`application/use-cases/get-category-tree.use-case.ts`) — это легальный

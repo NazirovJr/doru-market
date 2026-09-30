@@ -15,7 +15,7 @@
  * Это unit-тест `TenantScopeGuard` через `Reflector` (мокаем) и подложенный
  * `TenantContext` (через `TenantContext.run`). Внешние БД не нужны.
  *
- * @see docs/STATE-AND-RESUME-POINT.md §11.4 задача 2.4
+ * @see docs/history/state-log-to-2026-09-06.md §11.4 задача 2.4
  */
 import { beforeEach, describe, expect, it } from 'vitest'
 import { UnauthorizedException } from '@nestjs/common'

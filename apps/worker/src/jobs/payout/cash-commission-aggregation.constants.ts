@@ -4,7 +4,7 @@
  * scheduler.ts`): ежедневная агрегация и еженедельный переход `draft → issued` — буквальный
  * текст тикета «Что сделать» п.3 явно разрешает «тот же файл джобы, второй cron».
  *
- * Таймзона — Asia/Dushanbe (`01-TECH-BASELINE.md`), тот же приём, что сёстры-джобы
+ * Таймзона — Asia/Dushanbe (`docs/architecture/tech-baseline.md`), тот же приём, что сёстры-джобы
  * (`ESCROW_RECONCILIATION_TZ`/`UNPAID_ORDER_TIMEOUT_TZ`/`PAYOUT_SCHEDULER_TZ`) — здесь ЕЩЁ и
  * содержательно значима (не только для BullMQ-расписания): вся арифметика периода
  * (`cash-commission-aggregation.util.ts`) считается в ЭТОЙ таймзоне.

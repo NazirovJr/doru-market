@@ -1,6 +1,6 @@
 /**
  * Чистые хелперы + общие типы `CheckoutUseCase` (EP-09, DTJ-227) — вынесены из
- * `checkout.use-case.ts` ради `C2` (≤300 строк/файл, `02-CLEAN-ARCHITECTURE-AND-CODE.md`), тот
+ * `checkout.use-case.ts` ради `C2` (≤300 строк/файл, `docs/architecture/clean-architecture.md`), тот
  * же приём, что вынос валидаторов `Order.create()` в `order-create.validators.ts` (DTJ-221).
  */
 import type { BillingStrategy } from '@dorutj/contracts'

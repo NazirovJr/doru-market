@@ -1,9 +1,9 @@
 # DoruTJ — дизайн-референс (Claude Design canvas)
 
 > Владелец: Architect/Lead. Статус: см. §«Статус» ниже.
-> Источник дизайна: `Mobile app design planning/DoruTJ.dc.html` (интерактивный канвас Claude Design,
+> Источник дизайна: `docs/product/design/claude-design-canvas/DoruTJ.dc.html` (интерактивный канвас Claude Design,
 > 1719 строк: разметка `x-dc`/`sc-if`/`sc-for` — строки 1–1088, скрипт состояния/логики —
-> строки 1089–1717). Скриншоты в `Mobile app design planning/screenshots/` — россыпь debug/check-снимков
+> строки 1089–1717). Скриншоты в `docs/product/design/claude-design-canvas/screenshots/` — россыпь debug/check-снимков
 > без подписей по экранам; авторитетный источник токенов/текстов — сам `.dc.html`, он же и прочитан
 > целиком для этого документа. Письменный источник требований — `docs/spec/30-ux-screens-and-flows.md`
 > (обозначается ниже «30-ux»).

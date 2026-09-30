@@ -6,7 +6,7 @@
  *
  * Рендеринг toast'а из пойманного `AdminApiError` — ответственность вызывающего компонента
  * (переиспользует существующие ключи `ux.error.*`, `packages/i18n`, не заводит новый паттерн) —
- * этот файл не рендерит UI (`shared/` ниже `features/`, `02-CLEAN-ARCHITECTURE-AND-CODE.md` §5).
+ * этот файл не рендерит UI (`shared/` ниже `features/`, `docs/architecture/clean-architecture.md` §5).
  */
 import { httpRequest } from './http-client'
 

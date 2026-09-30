@@ -1,7 +1,7 @@
 > **УСТАРЕЛ (19.09.2026) — не отправлять.** Содержит пять фактических ошибок, одна из них роняет
 > каждый `accept` (`jobId` с двоеточием), и предлагает класс `PickupSlaTimeoutJob`, который уже
-> занят DTJ-254. Разбор — `reports/qwen3/ANALYSIS-2026-09-19.md` §3. Замена — четыре проверенных
-> задания `reports/qwen3/tasks/DTJ-307a.md` … `DTJ-307d.md`.
+> занят DTJ-254. Разбор — `docs/process/local-models/qwen3-analysis-2026-09-19.md` §3. Замена — четыре проверенных
+> задания `scripts/local-model/tasks/DTJ-307a.md` … `DTJ-307d.md`.
 
 Ты работаешь разработчиком в монорепозитории DoruTJ (D:\job\doruTJ). Тикет: DTJ-307.
 

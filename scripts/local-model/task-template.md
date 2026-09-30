@@ -39,7 +39,7 @@
 - [ ] Все команды — PowerShell 5.1: без `&&`, `grep`, `find`. Проверки только через гейт (№3).
 - [ ] `git status --short` в рабочей копии пустой, и на время задания в ней пишет только эта модель:
       ни ты, ни IDE, ни локальный стенд, ни вторая модель (№13). Ветку модель создаёт сама, первым шагом.
-- [ ] В той же рабочей копии запущен `scripts/qwen-gate-daemon.ps1`: без него vitest в песочнице
+- [ ] В той же рабочей копии запущен `scripts/local-model/qwen-gate-daemon.ps1`: без него vitest в песочнице
       dsh не запускается (ANALYSIS §4.6). Для задания открыта новая сессия dsh.
 - [ ] Сессия создана на пресете `executor` (фишка рядом с выбором рабочей папки на экране новой
       сессии; в шапке сессии видно, какой пресет запущен). В нём у модели нет `update_goal` —
@@ -54,7 +54,7 @@
 - [ ] Команды проверки и сдачи стоят в шапке, в первых 3500 символах файла. Под давлением контекста
       dsh оставляет от длинного результата `read` только первые 4096 и последние 1024 символа —
       на DTJ-372 команда гейта оказалась в вырезанной середине, и модель выдумала свою (№34).
-      `scripts/qwen-task.ps1` отказывается ставить такое задание активным.
+      `scripts/local-model/qwen-task.ps1` отказывается ставить такое задание активным.
 - [ ] Раздел 2.4 шаблона (Zod 4, тип-гард для `includes`, `any` в спеках) перенесён в задание, плюс
       факты о других библиотеках тикета. На каждом из этих мест Next теряла по часу (№36, №42).
 - [ ] Решения, которых нет в образце (поля DTO, параметры запроса, роли, слой преобразования),
@@ -75,7 +75,7 @@
 (`/goal`): если модель остановится посреди работы, dsh сам запустит следующий раунд.
 
 ```
-/goal Выполни задание из файла reports/qwen3/tasks/<ID>.md: прочитай его инструментом read целиком. Не пиши текст перед вызовом инструмента: сразу вызывай инструмент.
+/goal Выполни задание из файла scripts/local-model/tasks/<ID>.md: прочитай его инструментом read целиком. Не пиши текст перед вызовом инструмента: сразу вызывай инструмент.
 ```
 
 Цель закрывает человек. На пресете `executor` инструмента `update_goal` у модели нет, поэтому
@@ -125,10 +125,10 @@
 > раздел перечитай через `read` с `offset`/`limit`. В вызове `pwsh` — всегда `timeoutMs: 600000`.
 >
 > Проверка:
-> `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed {{GATE_ALLOWED}} -RequireFile reports/qwen3/tasks/{{ID}}.require.txt`
+> `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-gate.ps1 -Allowed {{GATE_ALLOWED}} -RequireFile scripts/local-model/tasks/{{ID}}.require.txt`
 >
 > Сдача (раздел 8) — та же команда с `-Commit`:
-> `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed {{GATE_ALLOWED}} -RequireFile reports/qwen3/tasks/{{ID}}.require.txt -Commit "{{COMMIT_MSG}}"`
+> `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-gate.ps1 -Allowed {{GATE_ALLOWED}} -RequireFile scripts/local-model/tasks/{{ID}}.require.txt -Commit "{{COMMIT_MSG}}"`
 
 ## 0. Карточка задачи
 
@@ -175,7 +175,7 @@
    `write` с шапкой и первым тестом, дальше `edit` — по одному тесту.
 7. Проверка — только эта команда (в `workdir` = рабочая папка). Свои способы проверки не
    придумывай, кэши не чисти:
-   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed {{GATE_ALLOWED}} -RequireFile reports/qwen3/tasks/{{ID}}.require.txt`
+   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-gate.ps1 -Allowed {{GATE_ALLOWED}} -RequireFile scripts/local-model/tasks/{{ID}}.require.txt`
    В вызове `pwsh` обязательно укажи `timeoutMs: 600000`: полный гейт идёт до 4 минут, а без этого
    dsh обрывает команду через 2.
    Последняя строка вывода — `GATE: PASS` или `GATE: FAIL -> <что упало>`. Над ней — ошибки с `файл(строка)`.

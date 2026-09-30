@@ -2,7 +2,7 @@
  * DTO `CancelOrderUseCase` (EP-09, DTJ-232, SRS-DOM-090/092/093/154/179, SRS-ORD-029/031).
  *
  * `CancelOrderActor.tenantId`/`pharmacyId` — не читаются use case'ом из `AsyncLocalStorage`
- * (`reports/EP09-CTO-BRIEF.md` D-EP09-24): резолвит presentation-слой (DTJ-233, вне периметра
+ * (`docs/history/briefs/ep09-cto-brief.md` D-EP09-24): резолвит presentation-слой (DTJ-233, вне периметра
  * этого тикета) и передаёт явным полем команды (SRS-API-043, тот же приём, что `AddCartItemInput`).
  * `reason` — канонический `OrderCancelReason` (домен, DTJ-222): presentation обязана провалидировать
  * Zod-схемой (`@dorutj/contracts`, `CancelOrderRequestSchema`) ДО построения этой команды —

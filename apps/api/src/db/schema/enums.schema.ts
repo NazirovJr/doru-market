@@ -85,7 +85,7 @@ export const inventorySyncTypeEnum = pgEnum('inventory_sync_type', ['delta', 'fu
 /**
  * Статус заказа (EP-09, DTJ-220, SRS-DB-008/009, D-25). Создан миграцией
  * `0023_orders_cart.sql` (enum `order_status` не существовал в БД ни в одной
- * предыдущей миграции — проверено CTO, `reports/EP09-CTO-BRIEF.md` D-EP09-2).
+ * предыдущей миграции — проверено CTO, `docs/history/briefs/ep09-cto-brief.md` D-EP09-2).
  * Порядок значений — 1:1 с каноническим DDL (`11-database-schema.md`
  * строки 107-116). `confirmed` [D-25]: `cash_courier`-заказ переходит сюда
  * СИНХРОННО из `Order.create()`, НЕ в `paid_escrow` — `paid_escrow` достижим

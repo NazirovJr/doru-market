@@ -1,4 +1,4 @@
-# CLAUDE-CTO — роль, полномочия и правила взаимодействия
+# docs/process/coordinator — роль, полномочия и правила взаимодействия
 
 ## ⚠️ ПЕРВОЕ: определи, кто ты
 
@@ -22,13 +22,13 @@
 
 ### Исполнителю ЗАПРЕЩЕНО, даже если этот документ описывает это как полномочия CTO
 
-- ❌ Менять решения `D-01…D-27` в `docs/03-ARCHITECT-DECISIONS.md`
-- ❌ Менять версии в `docs/01-TECH-BASELINE.md`
+- ❌ Менять решения `D-01…D-27` в `docs/architecture/decisions/README.md`
+- ❌ Менять версии в `docs/architecture/tech-baseline.md`
 - ❌ Менять объём релиза, порядок волн, состав тикетов
 - ❌ Править конфигурацию гейтов: `eslint.config.mjs`, `.dependency-cruiser.cjs`, пороги покрытия
-- ❌ Править `AGENTS.md`, `CLAUDE-CTO.md`, `docs/05-DEVELOPER-HANDBOOK.md`, `docs/00`–`docs/04`
+- ❌ Править `AGENTS.md`, `docs/process/coordinator.md`, `docs/guides/developer-handbook.md`, `docs/00`–`docs/04`
 - ❌ **Принимать собственную работу** и объявлять волну завершённой (см. §3)
-- ❌ Писать в `docs/STATE-AND-RESUME-POINT.md` вердикт приёмки
+- ❌ Писать в `docs/history/state-log-to-2026-09-06.md` вердикт приёмки
 
 Исключение одно: если тикет **прямо** поручает изменить один из этих файлов —
 тогда меняй ровно то, что поручено, и отчитайся об этом отдельной строкой.
@@ -45,7 +45,7 @@
 > и **владелец продукта**, которому нужно понимать, кто за что отвечает.
 >
 > Этот документ отвечает на один вопрос: **кто здесь кто и кто что решает.**
-> Правила написания кода — в [`AGENTS.md`](AGENTS.md) и [`docs/05-DEVELOPER-HANDBOOK.md`](docs/05-DEVELOPER-HANDBOOK.md).
+> Правила написания кода — в [`AGENTS.md`](../../AGENTS.md) и [`docs/guides/developer-handbook.md`](../guides/developer-handbook.md).
 
 ---
 
@@ -73,11 +73,11 @@
 
 | Область | Где зафиксировано |
 |---|---|
-| Архитектура: слои, границы контекстов, Правило Зависимостей | `docs/02-CLEAN-ARCHITECTURE-AND-CODE.md` |
-| Технические решения D-01…D-27 | `docs/03-ARCHITECT-DECISIONS.md` |
-| Версии пакетов | `docs/01-TECH-BASELINE.md` |
-| Объём релиза R1 и порядок волн | `docs/04-SCOPE-DECISION-PIVOT.md`, `tickets/00-EPICS.md` |
-| Правила приёмки и пороги качества | `docs/05-DEVELOPER-HANDBOOK.md`, `AGENTS.md` |
+| Архитектура: слои, границы контекстов, Правило Зависимостей | `docs/architecture/clean-architecture.md` |
+| Технические решения D-01…D-27 | `docs/architecture/decisions/README.md` |
+| Версии пакетов | `docs/architecture/tech-baseline.md` |
+| Объём релиза R1 и порядок волн | `docs/product/scope-r1.md`, `tickets/00-EPICS.md` |
+| Правила приёмки и пороги качества | `docs/guides/developer-handbook.md`, `AGENTS.md` |
 | Конфигурация гейтов: ESLint, dependency-cruiser, CI | `eslint.config.mjs`, `.dependency-cruiser.cjs` |
 | Состав и порядок тикетов | `tickets/` |
 
@@ -206,7 +206,7 @@
 
 ## 7. Что CTO уже решил (закрытые вопросы — не переоткрывать)
 
-Полный список — в `docs/03-ARCHITECT-DECISIONS.md`. Наиболее часто задеваемые в коде:
+Полный список — в `docs/architecture/decisions/README.md`. Наиболее часто задеваемые в коде:
 
 | ID | Решение |
 |---|---|
@@ -259,7 +259,7 @@ CTO: приёмка прогоном команд
       └── возврат ──────────────►  исполнитель чинит, цикл повторяется
 ```
 
-**Между волнами CTO обновляет** `docs/STATE-AND-RESUME-POINT.md`: что сделано, что найдено,
+**Между волнами CTO обновляет** `docs/history/state-log-to-2026-09-06.md`: что сделано, что найдено,
 что делать дальше. Это точка входа при возобновлении работы — её читают первой.
 
 ---

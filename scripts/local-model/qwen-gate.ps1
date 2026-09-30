@@ -16,22 +16,22 @@
   те же строки из файла (по одной на строку, # — комментарий): так команда в задании остаётся
   короткой, а список критериев живёт рядом с заданием.
   Если аргументы не переданы, периметр, критерии и базу гейт берёт из активного задания
-  (node_modules/.cache/qwen-gate/active.json, пишет scripts/qwen-task.ps1) и там же проверяет, что
+  (node_modules/.cache/qwen-gate/active.json, пишет scripts/local-model/qwen-task.ps1) и там же проверяет, что
   работа идёт в нужной ветке. Удачный коммит активное задание снимает.
   -Commit <сообщение> включает -Full и, ТОЛЬКО при GATE: PASS, коммитит изменённые файлы в текущую
   ветку. Красный гейт — коммита нет; ветка development/main/master — коммита нет; без -Allowed
   коммит запрещён (иначе в коммит уедет что угодно из рабочей копии).
   Интеграционные спеки (нужны Postgres/Redis) не запускает — их гоняет координатор.
-  Внутри dsh (DSH_SHELL=1) при живом scripts/qwen-gate-daemon.ps1 гейт выполняет демон: в песочнице
+  Внутри dsh (DSH_SHELL=1) при живом scripts/local-model/qwen-gate-daemon.ps1 гейт выполняет демон: в песочнице
   dsh vitest и esbuild не запускаются (spawn EPERM).
   Последняя строка вывода: `GATE: PASS` или `GATE: FAIL -> <шаги>`.
 
 .EXAMPLE
-  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-gate.ps1
 .EXAMPLE
-  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Full -Allowed 'apps/api/src/modules/orders/*'
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-gate.ps1 -Full -Allowed 'apps/api/src/modules/orders/*'
 .EXAMPLE
-  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed 'apps/api/src/modules/orders/*' -Commit 'feat(orders): DTJ-307a — ...'
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-gate.ps1 -Allowed 'apps/api/src/modules/orders/*' -Commit 'feat(orders): DTJ-307a — ...'
 #>
 [CmdletBinding()]
 param(
@@ -56,7 +56,7 @@ Set-Location -LiteralPath $root
 # Внутри песочницы dsh гейт не может запустить vitest — отдаём запрос демону, если он запущен.
 $exchange = Join-Path $root 'node_modules\.cache\qwen-gate'
 $heartbeat = Join-Path $exchange 'daemon.heartbeat'
-# Активное задание (пишет координатор через scripts/qwen-task.ps1). Периметр и критерии берутся
+# Активное задание (пишет координатор через scripts/local-model/qwen-task.ps1). Периметр и критерии берутся
 # отсюда, если их не передали аргументами: команду набирает модель, а значит может и не набрать —
 # на DTJ-372 она запустила гейт без -Allowed и -RequireFile и тем отключила обе проверки.
 $activeFile = Join-Path $exchange 'active.json'
@@ -132,7 +132,7 @@ function Invoke-Step {
   "[FAIL] $Name (exit $code)"
   if ($env:DSH_SHELL -and ($output -match 'spawn EPERM')) {
     '       ЭТО НЕ ОШИБКА КОДА: песочница dsh не даёт vitest/esbuild запускать дочерние процессы.'
-    '       Нужен демон гейта (scripts/qwen-gate-daemon.ps1) — это СТОП, сдай отчёт со статусом BLOCKED.'
+    '       Нужен демон гейта (scripts/local-model/qwen-gate-daemon.ps1) — это СТОП, сдай отчёт со статусом BLOCKED.'
     return
   }
   if ($output -match 'heap out of memory|Allocation failed') {
@@ -167,7 +167,7 @@ if ($LASTEXITCODE -eq 0) { $changed += & git diff --name-only "$Base...HEAD" }
 $changed += & git diff --name-only HEAD
 $changed += & git ls-files --others --exclude-standard
 $changed = @($changed | Where-Object { $_ } | ForEach-Object { $_ -replace '\\', '/' } | Sort-Object -Unique |
-    Where-Object { $_ -ne 'scripts/qwen-gate.ps1' })
+    Where-Object { $_ -ne 'scripts/local-model/qwen-gate.ps1' })
 
 "Изменённые файлы ($($changed.Count)):"
 $changed | ForEach-Object { "  $_" }
@@ -380,7 +380,7 @@ if ((-not $Commit) -and $active) {
   $requireArg = if ($RequireFile) { " -RequireFile $RequireFile" } else { '' }
   $message = if ($active.commit) { [string]$active.commit } else { '<сообщение из раздела 8 задания>' }
   'ПРОВЕРКА ЗЕЛЁНАЯ, НО РАБОТА НЕ СДАНА. Сдай её этой командой, дословно (в pwsh — timeoutMs: 600000):'
-  "  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed $allowedArg$requireArg -Commit `"$message`""
+  "  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-gate.ps1 -Allowed $allowedArg$requireArg -Commit `"$message`""
 }
 
 'GATE: PASS'

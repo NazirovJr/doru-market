@@ -1,7 +1,7 @@
 /**
  * Порт `TenancyFacadePort` (EP-09, DTJ-220, SRS-ORD-018 шаг 4d, SRS-DOM-160, D-03).
  *
- * Межмодульный фасад `orders → tenancy` (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2). Вызывается
+ * Межмодульный фасад `orders → tenancy` (`docs/architecture/clean-architecture.md` §1.2). Вызывается
  * НА КАЖДУЮ позицию группы checkout (SRS-ORD-018 шаг 4d) — резолвит ставку комиссии платформы
  * по специфичности (тенант → сеть → категория → глобальный дефолт, D-03) и снэпшотится
  * НЕИЗМЕНЯЕМО в `order_items.commission_bps`/`platform_fee_diram` (SRS-DOM-008): последующее

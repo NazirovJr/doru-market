@@ -5,7 +5,7 @@
  * Хранятся в `domain/` потому, что они используются в сигнатурах `application/ports/*`
  * (домен-зависимые интерфейсы). Сами мапперы DTO↔domain живут в `infrastructure/mappers/`.
  *
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1: domain не импортирует infrastructure, но
+ * `docs/architecture/clean-architecture.md` §1.1: domain не импортирует infrastructure, но
  * может определять типы, которые инфраструктура будет мапить — это часть контракта.
  */
 import type { DosageUnit } from '@dorutj/domain-kernel'

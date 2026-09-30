@@ -1,6 +1,6 @@
 /**
  * Интеграционный тест `DrizzleCartIdentityRepository` (EP-09, DTJ-226) — РЕАЛЬНЫЙ Postgres,
- * не мок/фейк (урок волны 5 §6.4 `reports/EP09-CTO-BRIEF.md`). Фокус тест-плана:
+ * не мок/фейк (урок волны 5 §6.4 `docs/history/briefs/ep09-cto-brief.md`). Фокус тест-плана:
  *
  *   1. D-EP09-22 — идемпотентное `findOrCreate*` под РЕАЛЬНОЙ гонкой (`Promise.all` двух
  *      параллельных вызовов с ОДНИМ `customerId`/`sessionToken` против настоящего Postgres) —

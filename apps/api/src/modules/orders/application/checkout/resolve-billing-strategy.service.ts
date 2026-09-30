@@ -5,7 +5,7 @@
  * возврат (EP-11, вне периметра этого тикета) знал, по какой стратегии проводилась оплата,
  * даже если тенант позже поменяет флаг.
  *
- * **D-EP09-33 (решение CTO, ADR утверждён, `reports/EP09-CTO-BRIEF.md`) — в R1 живёт ТОЛЬКО
+ * **D-EP09-33 (решение CTO, ADR утверждён, `docs/history/briefs/ep09-cto-brief.md`) — в R1 живёт ТОЛЬКО
  * `single_invoice`.** Ветка `split_items_delivery` физически неработоспособна: ей нужны
  * `payment_operations.billing_component` и `tenant_settings.useSplitBilling` (оба — EP-10,
  * `TODO(DTJ-242/244)`), которых в схеме нет. Это НЕ временный хардкод «пока не забыли

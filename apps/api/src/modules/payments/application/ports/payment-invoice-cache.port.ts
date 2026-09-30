@@ -1,5 +1,5 @@
 /**
- * Порт `PaymentInvoiceCacheRepositoryPort` (EP-10, DTJ-241, `02-CLEAN-ARCHITECTURE-AND-CODE.md`
+ * Порт `PaymentInvoiceCacheRepositoryPort` (EP-10, DTJ-241, `docs/architecture/clean-architecture.md`
  * §1.3) — `CreatePaymentInvoiceUseCase`'s собственный «прочитать локально, затем вызвать
  * провайдера» слой (SRS-PAY-003) поверх `payment_operations.qr_payload`/`expires_at`
  * (миграция `0032_payment_operations_invoice_cache.sql`), реализация —

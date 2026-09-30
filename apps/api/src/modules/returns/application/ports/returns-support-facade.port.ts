@@ -1,6 +1,6 @@
 /**
  * Порт `ReturnsSupportFacadePort` (EP-11, DTJ-273, SRS-RET-003). Межмодульный фасад
- * `returns → support` (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2) — ЕДИНСТВЕННЫЙ способ, которым
+ * `returns → support` (`docs/architecture/clean-architecture.md` §1.2) — ЕДИНСТВЕННЫЙ способ, которым
  * `RequestReturnUseCase` переадресует `reason='undelivered'` в обращение, не создавая `OrderReturn`
  * (SRS-RET-003). Файл СВЕРХ буквального `files_owned` (та же причина, что соседние порты этого
  * каталога) — тонкая обёртка поверх публичного `SupportFacade` (`modules/support/index.ts`),

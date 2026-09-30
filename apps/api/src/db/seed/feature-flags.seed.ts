@@ -27,7 +27,7 @@ interface RequiredFeatureFlagSeed {
 export const REQUIRED_R1_FEATURE_FLAGS: readonly RequiredFeatureFlagSeed[] = [
   {
     flagKey: 'prescription_ocr_pipeline_enabled',
-    description: 'R2 — OCR-пайплайн распознавания рецептов (04-SCOPE-DECISION-PIVOT.md §4)',
+    description: 'R2 — OCR-пайплайн распознавания рецептов (docs/product/scope-r1.md §4)',
   },
   {
     flagKey: 'disputes_workflow_enabled',

@@ -22,7 +22,7 @@
  *
  * `upsertItem` — `INSERT ... SELECT ... ON CONFLICT DO UPDATE SET quantity =
  * cart_items.quantity + excluded.quantity` — СЛОЖЕНИЕ, не замена (урок волны 5 §6.6
- * `reports/EP09-CTO-BRIEF.md`: голый `UPDATE` на первой вставке матчит 0 строк и молча
+ * `docs/history/briefs/ep09-cto-brief.md`: голый `UPDATE` на первой вставке матчит 0 строк и молча
  * теряет данные при заявленном успехе). Чужой `tenantId` ⇒ подзапрос по `cart` даёт 0 строк ⇒
  * `INSERT ... SELECT` вставляет 0 строк ⇒ `RETURNING` пуст ⇒ `null` (SRS-API-046: `404`, не
  * `403`, чужой тенант не подтверждает существование корзины).
@@ -42,7 +42,7 @@
  *
  * `@Inject(DRIZZLE_DB)` явный — esbuild/vitest не эмитит `design:paramtypes` (DTJ-001).
  *
- * `cart.updated_at` (D-EP09-13, `reports/EP09-CTO-BRIEF.md`, БЛОКЕР, снятый CTO ДО старта работ
+ * `cart.updated_at` (D-EP09-13, `docs/history/briefs/ep09-cto-brief.md`, БЛОКЕР, снятый CTO ДО старта работ
  * DTJ-224): до этой правки НИ ОДИН метод не трогал родительскую `cart` — колонка была
  * фактически временем СОЗДАНИЯ корзины, никогда не обновлялась. Джоба очистки DTJ-224
  * (`CartAbandonedCleanupJob`, `DELETE FROM cart WHERE updated_at < NOW() - INTERVAL

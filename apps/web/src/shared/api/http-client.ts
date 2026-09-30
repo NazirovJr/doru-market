@@ -3,7 +3,7 @@ import { type AuthUser, useAuthStore } from '@/shared/api/auth-store'
 
 /**
  * Тонкая обёртка над fetch — единственный слой, которому разрешено делать сетевые запросы
- * (docs/02-CLEAN-ARCHITECTURE-AND-CODE.md §5: «fetch/axios внутри компонента запрещён — только
+ * (docs/architecture/clean-architecture.md §5: «fetch/axios внутри компонента запрещён — только
  * через слой api»). Компоненты и TanStack Query хуки вызывают `httpRequest`, `httpRequestJson`,
  * а не fetch напрямую.
  *

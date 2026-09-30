@@ -1,17 +1,17 @@
 # DoruTJ — Модуль 22: Шлюз синхронизации остатков (1С и альтернативные каналы)
 
 > Владелец: Analyst (SRS). Статус: **BASELINE для фазы Analysis**.
-> Приоритет источников при противоречии: `04-SCOPE-DECISION-PIVOT.md` > `03-ARCHITECT-DECISIONS.md` (D-*)
-> > `00-PROJECT-CHARTER.md` (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `tz.log` (§ТЗ).
+> Приоритет источников при противоречии: `docs/product/scope-r1.md` > `docs/architecture/decisions/README.md` (D-*)
+> > `docs/product/charter.md` (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `docs/product/client-brief-original.txt` (§ТЗ).
 > **`docs/spec/10-domain-model.md`, `docs/spec/11-database-schema.md`, `docs/spec/12-api-conventions-auth-tenancy.md`
 > — ЗАКОН.** Этот документ не переопределяет ни одной сущности/поля/статуса/кода ошибки из них —
 > только ссылается (`SRS-DOM-*`, `SRS-DB-*`, `SRS-API-*`) и специфицирует use case/каналы/очередь/
 > производительность на их основе. Новые поля, отсутствующие в §11, явно вынесены в раздел
 > «Дополнения к схеме БД» с обоснованием.
 >
-> Покрывает: **CUJ-6** (Charter §6) и **МОДУЛЬ 4** `tz.log`.
+> Покрывает: **CUJ-6** (Charter §6) и **МОДУЛЬ 4** `docs/product/client-brief-original.txt`.
 > Идентификаторы требований этого документа: **SRS-INV-nnn**. Тестовые сценарии: **TC-INV-nnn**.
-> Слои — по `02-CLEAN-ARCHITECTURE-AND-CODE.md`: **domain** (`modules/inventory/domain`),
+> Слои — по `docs/architecture/clean-architecture.md`: **domain** (`modules/inventory/domain`),
 > **application** (`modules/inventory/application`), **infrastructure** (`modules/inventory/infrastructure`),
 > **presentation** (`modules/inventory/presentation`).
 
@@ -19,13 +19,13 @@
 
 ## 0. Разбиение по релизам
 
-> Основание: `04-SCOPE-DECISION-PIVOT.md` §3 (R1-5), §4 (R2-3). Архитектурные основания этого модуля
+> Основание: `docs/product/scope-r1.md` §3 (R1-5), §4 (R2-3). Архитектурные основания этого модуля
 > (порты, state machine, очередь, composite-матчинг, схема БД) закладываются **целиком в R1** —
 > ретрофит мультиканальности и матчинга дороже, чем сделать сразу (`04` §2.2). Реальный адаптер 1С
 > (CommerceML, mTLS для крупных сетей) — единственная часть, для которой внешняя зависимость
 > (эндпоинты конкретной сети) реально блокирует R1.
 
-| Функция | Релиз | Обоснование (`04-SCOPE-DECISION-PIVOT.md`) |
+| Функция | Релиз | Обоснование (`docs/product/scope-r1.md`) |
 |---|---|---|
 | `IngestInventoryBatchUseCase` (ядро, все инварианты, состояния) | **[R1]** | Общий use case для ЛЮБОГО канала — фундамент; ретрофит дороже (§2.2) |
 | Канал REST push (JSON, `X-Pharmacy-API-Key`+HMAC) | **[R1]** | R1-5: «REST API с ключом» — явно в составе R1 |
@@ -118,7 +118,7 @@ X-Pharmacy-Signature: 9c8b7a6f5e4d3c2b1a0f...
 
 ### 2.2 Тело запроса (Zod-схема, `packages/contracts/src/inventory/batch-update.schema.ts`)
 
-**SRS-INV-002** [tz.log Модуль 4, REQ-SYNC-1/2/3, D-11] Схема:
+**SRS-INV-002** [docs/product/client-brief-original.txt Модуль 4, REQ-SYNC-1/2/3, D-11] Схема:
 
 ```ts
 const InventoryBatchItemSchema = z.object({
@@ -168,7 +168,7 @@ UNIQUE (SRS-DB, таблица §11 п.11), а не через общий мех
 страница) — Zod-refine: `sync_type==='delta' → full_sync_session_id === undefined`, иначе
 `400 VALIDATION_ERROR` (`details.field='full_sync_session_id'`).
 
-**SRS-INV-006** [tz.log Модуль 4] `batch_number` опционален в контракте (некоторые 1С-конфигурации
+**SRS-INV-006** [docs/product/client-brief-original.txt Модуль 4] `batch_number` опционален в контракте (некоторые 1С-конфигурации
 не разбивают остаток на партии) — при отсутствии `IngestInventoryBatchUseCase` генерирует
 синтетический `batch_number = "AUTO-{internal_sku}"`, что даёт ОДНУ партию на позицию (упрощённый
 случай FEFO — партия сама себе единственный кандидат). Это не нарушает `UNIQUE(pharmacy_inventory_id,
@@ -240,7 +240,7 @@ type InventoryRowCommand =
 
 ### 3.1 Канал REST push (1С и сторонние ERP)
 
-**SRS-INV-011** [tz.log Модуль 4, D-11] `InventoryBatchUpdateController` (presentation): guard
+**SRS-INV-011** [docs/product/client-brief-original.txt Модуль 4, D-11] `InventoryBatchUpdateController` (presentation): guard
 `PharmacyApiKeyGuard` → Zod-парсинг тела (§2.2) → маппер
 `RestInventoryRequestToCommandMapper.toCommand(dto, principal)` строит `IngestInventoryBatchCommand`
 с `channel='rest_api'`, `rows` все `resolved: false` (сырые строки 1С всегда требуют матчинга —
@@ -529,7 +529,7 @@ retry, разный сетевой джиттер 1С могут переста�
 но проходят ТУ ЖЕ очередь и обрабатываются с ТЕМ ЖЕ приоритетом относительно других delta-job (§5,
 SRS-INV-034), т.е. фактическая задержка обработки сопоставима.
 
-**SRS-INV-038** [D-04, tz.log Модуль 4] Ночная полная синхронизация — фан-аут джоба `apps/worker`
+**SRS-INV-038** [D-04, docs/product/client-brief-original.txt Модуль 4] Ночная полная синхронизация — фан-аут джоба `apps/worker`
 (`@nestjs/schedule` cron `0 3 * * *` в `Asia/Dushanbe` = `0 22 * * *` UTC без перехода на летнее
 время) запускает `RunNightlyFullSyncFanoutUseCase`, которая для каждой `pharmacies` со `status='active'`
 И `channel` в её `pharmacy_api_keys` (т.е. только для аптек, реально интегрированных по REST/CommerceML —
@@ -674,7 +674,7 @@ R1-4 буквально).
    агрегатная операция (`SUM`/`ORDER BY ... LIMIT 1` по индексу `ix_inventory_batches_fefo`, уже
    определённому, §11), не N+1 в смысле «N дополнительных SQL к внешним сервисам».
 
-**SRS-INV-053** [`pg` COPY, `01-TECH-BASELINE.md` — `pg ^8.23.0`] Загрузка нормализованных строк во
+**SRS-INV-053** [`pg` COPY, `docs/architecture/tech-baseline.md` — `pg ^8.23.0`] Загрузка нормализованных строк во
 временную таблицу — через `pg-copy-streams`/встроенный `COPY ... FROM STDIN (FORMAT binary)` драйвера
 `pg`, НЕ через `N` отдельных `INSERT` внутри цикла и НЕ через один гигантский
 `INSERT INTO ... VALUES (...), (...), ...` с 1000 групп значений (валиден, но `COPY` на порядок
@@ -919,4 +919,4 @@ SRS-INV-055) — рекомендация для документации инт
 1С переиспользуется буквально, не дублируется). Все каналы ingestion (REST/Excel/ручной ввод/CommerceML)
 и вся архитектурная основа (очередь, матчинг, версионность) — **[R1]**, единственная часть, отложенная
 до **[R2]** — реальный XML-парсер CommerceML 2.05 и обязательный mTLS для конкретных крупных сетей
-(`04-SCOPE-DECISION-PIVOT.md` §4).
+(`docs/product/scope-r1.md` §4).

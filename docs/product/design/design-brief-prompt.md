@@ -1,8 +1,8 @@
 # Промпт для Claude Design — дизайн DoruTJ (Release 1)
 
 > Скопируйте всё, что внутри блока ниже, и вставьте в Claude Design.
-> Источник: `docs/spec/30-ux-screens-and-flows.md`, `docs/04-SCOPE-DECISION-PIVOT.md`,
-> `docs/03-ARCHITECT-DECISIONS.md` (D-01).
+> Источник: `docs/spec/30-ux-screens-and-flows.md`, `docs/product/scope-r1.md`,
+> `docs/architecture/decisions/README.md` (D-01).
 > Если дизайн получится слишком большим за один заход — вставляйте по одному блоку «ЭКРАН N».
 
 ---

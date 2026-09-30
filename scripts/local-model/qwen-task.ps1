@@ -12,9 +12,9 @@
   гейт активное задание снимает сам.
 
 .EXAMPLE
-  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-task.ps1 -Task DTJ-372
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-task.ps1 -Task DTJ-372
 .EXAMPLE
-  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-task.ps1 -Clear
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-task.ps1 -Clear
 #>
 [CmdletBinding()]
 param(
@@ -43,7 +43,7 @@ if (-not $Task) {
   return
 }
 
-$taskFile = Join-Path $root "reports\qwen3\tasks\$Task.md"
+$taskFile = Join-Path $root "scripts\local-model\tasks\$Task.md"
 if (-not (Test-Path -LiteralPath $taskFile)) { throw "нет файла задания: $taskFile" }
 $text = Get-Content -LiteralPath $taskFile -Raw -Encoding UTF8
 
@@ -52,7 +52,7 @@ $text = Get-Content -LiteralPath $taskFile -Raw -Encoding UTF8
 # часть начала, поэтому запас — 3500 символов файла. На DTJ-372 команда гейта стояла глубже,
 # и модель, дойдя до сдачи, выдумала свою.
 $head = $text.Substring(0, [Math]::Min(3500, $text.Length))
-if ($head.IndexOf('-File scripts/qwen-gate.ps1') -lt 0 -or $head.IndexOf('-Commit "') -lt 0) {
+if ($head.IndexOf('-File scripts/local-model/qwen-gate.ps1') -lt 0 -or $head.IndexOf('-Commit "') -lt 0) {
   throw 'команды проверки и сдачи должны стоять в первых 3500 символах задания, иначе dsh вырежет их при сжатии'
 }
 

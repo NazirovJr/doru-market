@@ -116,7 +116,7 @@ Error: spawn EPERM
 
 **Варианты, которые я НЕ могу применить сам** (нужна воля CTO):
 1. **A. Перезапустить с `sandbox_permissions: danger-full-access`** — откроет spawn для esbuild.
-   Цена: безопасность (доступ к любым файлам и процессам). По AGENTS.md §10 и §5 CLAUDE-CTO.md
+   Цена: безопасность (доступ к любым файлам и процессам). По AGENTS.md §10 и §5 docs/process/coordinator.md
    эскалация обязательна.
 2. **B. Запустить `pnpm verify` локально (вне sandbox)** — если у пользователя есть локальный
    checkout, проверка пройдёт без EPERM.
@@ -135,7 +135,7 @@ Error: spawn EPERM
 
 ## НАЙДЕННЫЕ ЧУЖИЕ ПРОБЛЕМЫ
 
-1. **Дефект E из §11.2 `STATE-AND-RESUME-POINT.md`** — утверждалось, что `db:seed` указывал
+1. **Дефект E из §11.2 `docs/history/state-log-to-2026-09-06.md`** — утверждалось, что `db:seed` указывал
    на несуществующий путь. Сейчас проверил: `apps/api/package.json:21` указывает на
    `src/db/seed/seed-catalog.run.ts` и файл существует. **Дефект уже исправлен ранее** — закрыт.
 

@@ -1,5 +1,5 @@
 /**
- * DTJ-426 — тесты `scripts/env-check.ts` (тест-план тикета, все 5 пунктов дословно).
+ * DTJ-426 — тесты `scripts/ci/env-check.ts` (тест-план тикета, все 5 пунктов дословно).
  *
  * Юнит-часть проверяет чистые функции (`parseEnvExampleKeys`, `compareKeySets`, `loadSchemaKeys`)
  * напрямую. Секция «негативный прогон» запускает САМ CLI-скрипт как подпроцесс против временного
@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { compareKeySets, loadSchemaKeys, parseEnvExampleKeys, SchemaNotFoundError } from './env-check.js'
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url))
-const REPO_ROOT = path.resolve(SCRIPT_DIR, '..')
+const REPO_ROOT = path.resolve(SCRIPT_DIR, '..', '..')
 const ENV_CHECK_SCRIPT = path.join(SCRIPT_DIR, 'env-check.ts')
 const TSX_BIN = path.join(REPO_ROOT, 'node_modules', '.bin', 'tsx')
 
@@ -65,7 +65,7 @@ describe('compareKeySets', () => {
 describe('loadSchemaKeys', () => {
   it('читает envSchema.shape реальной фикстуры и возвращает множество имён ключей', async () => {
     const fixturePath = path.join(SCRIPT_DIR, '__fixtures__', 'valid-schema.fixture.ts')
-    const keys = await loadSchemaKeys(fixturePath, 'scripts/__fixtures__/valid-schema.fixture.ts')
+    const keys = await loadSchemaKeys(fixturePath, 'scripts/ci/__fixtures__/valid-schema.fixture.ts')
     expect(keys).toEqual(new Set(['FOO', 'BAR', 'BAZ_QUX']))
   })
 
@@ -82,7 +82,7 @@ describe('loadSchemaKeys', () => {
 
   it('модуль существует, но не экспортирует envSchema — явная ошибка контракта', async () => {
     const fixturePath = path.join(SCRIPT_DIR, '__fixtures__', 'no-export-schema.fixture.ts')
-    await expect(loadSchemaKeys(fixturePath, 'scripts/__fixtures__/no-export-schema.fixture.ts')).rejects.toThrow(
+    await expect(loadSchemaKeys(fixturePath, 'scripts/ci/__fixtures__/no-export-schema.fixture.ts')).rejects.toThrow(
       /не экспортирует `envSchema`/,
     )
   })
@@ -98,7 +98,7 @@ describe('env-check.ts — CLI (негативный e2e-прогон проти
   })
 
   /** Собирает минимальное фиктивное дерево apps/api + apps/worker envSchema-модулей + корневой
-   * .env.example и возвращает результат запуска настоящего `scripts/env-check.ts` против него. */
+   * .env.example и возвращает результат запуска настоящего `scripts/ci/env-check.ts` против него. */
   function runCliAgainstFixtureTree(envExampleContent: string): { status: number | null; stdout: string; stderr: string } {
     tmpRoot = mkdtempSync(path.join(tmpdir(), 'dtj-426-env-check-'))
     for (const app of ['apps/api', 'apps/worker']) {

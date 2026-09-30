@@ -72,7 +72,7 @@ export class AddCartItemUseCase {
   constructor(
     @Inject(CART_REPOSITORY) private readonly cartRepository: CartRepository,
     // Явный @Inject на КАЖДОМ параметре — esbuild/vitest не эмитит `design:paramtypes`
-    // (DTJ-001, урок волны 5 §6.1 `reports/EP09-CTO-BRIEF.md`): без него параметр не
+    // (DTJ-001, урок волны 5 §6.1 `docs/history/briefs/ep09-cto-brief.md`): без него параметр не
     // резолвится Nest'ом и `node dist/main.js` не стартует.
     @Inject(CATALOG_FACADE_PORT) private readonly catalogFacadePort: CatalogFacadePort,
     @Inject(CART_HOLD_STORE_PORT) private readonly cartHoldStore: CartHoldStorePort,

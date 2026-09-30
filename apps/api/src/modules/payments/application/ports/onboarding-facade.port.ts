@@ -1,6 +1,6 @@
 /**
  * Порт `OnboardingFacadePort` — СВОЯ копия `payments`-модуля (DTJ-252, REQ-MON-9), НЕ импорт
- * чужого `orders/application/ports/onboarding-facade.port.ts` (`02-CLEAN-ARCHITECTURE-AND-CODE.md`
+ * чужого `orders/application/ports/onboarding-facade.port.ts` (`docs/architecture/clean-architecture.md`
  * §1.2 — межмодульный импорт из `application`/`domain` чужого модуля запрещён, каждый
  * модуль-потребитель заводит СВОЙ узкий порт под свою реальную потребность, тот же приём, что
  * `orders`/`payments` уже делают для других межмодульных фасадов). Единственный метод, который

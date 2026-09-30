@@ -1,8 +1,8 @@
 # DoruTJ — Модуль TENANCY: мультитенантность и White-Label платформа
 
 > Владелец: Analyst (SRS). Статус: **BASELINE для фазы Analysis**.
-> Приоритет источников при противоречии: `04-SCOPE-DECISION-PIVOT.md` > `03-ARCHITECT-DECISIONS.md` (D-*)
-> > `00-PROJECT-CHARTER.md` (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `tz.log` (§ТЗ).
+> Приоритет источников при противоречии: `docs/product/scope-r1.md` > `docs/architecture/decisions/README.md` (D-*)
+> > `docs/product/charter.md` (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `docs/product/client-brief-original.txt` (§ТЗ).
 > **ЗАКОН для этого документа**: `10-domain-model.md` (контекст `tenancy`, агрегат `Tenant`,
 > `SRS-DOM-042..051`), `11-database-schema.md` (`tenants`, `tenant_settings`, `pharmacy_chains`,
 > `platform_fee`), `12-api-conventions-auth-tenancy.md` (§5 «Мультитенантность», §3.5 Telegram,
@@ -10,13 +10,13 @@
 > расхождение явно помечено разделом «Дополнения к схеме БД» (обоснование обязательно).
 >
 > Идентификаторы требований: **SRS-TEN-nnn**. Тестовые сценарии: **TC-TEN-nnn**.
-> Покрывает: **CUJ-7** (устав), **ЧАСТЬ III** `tz.log` («ФОРМАТ И СТРУКТУРА WHITE-LABEL ПЛАТФОРМЫ»).
+> Покрывает: **CUJ-7** (устав), **ЧАСТЬ III** `docs/product/client-brief-original.txt` («ФОРМАТ И СТРУКТУРА WHITE-LABEL ПЛАТФОРМЫ»).
 
 ---
 
 ## 0. Разбиение по релизам
 
-> Основание: `04-SCOPE-DECISION-PIVOT.md` §2.2 «Архитектура (слои, порты, tenant-скоуп, ledger)
+> Основание: `docs/product/scope-r1.md` §2.2 «Архитектура (слои, порты, tenant-скоуп, ledger)
 > закладывается сразу и целиком — ретрофит мультитенантности... стоит дороже, чем сделать её с первого
 > дня». Правило применяется буквально: механизм мультитенантности — R1 целиком; **включение
 > ВТОРОГО активного тенанта** (реальная сеть, реальный домен, реальный бот, реальные мерчант-креды) —
@@ -157,7 +157,7 @@ Playwright fixture `withTenant(slug)`), Host в этом случае — `local
 `tenant-isolation.contract-test.ts`, общий для ВСЕХ репозиториев модуля (запускается для каждого через
 `describe.each`): создаёт одинаковый `id` в двух тенантах (или проверяет, что попытка получить чужую
 строку по `id` без совпадения `tenantId` возвращает `null`), обязателен в `pnpm verify` для КАЖДОГО
-нового репозитория (чеклист ревью §7 `02-CLEAN-ARCHITECTURE-AND-CODE.md`).
+нового репозитория (чеклист ревью §7 `docs/architecture/clean-architecture.md`).
 
 **SRS-TEN-012** [R1] [Charter §3.4, CUJ-7] **Обязательный интеграционный тест на утечку** (модульный,
 дополняет транспортный `TC-API-030`): given заказ `O1` создан для тенанта A через прямой вызов
@@ -218,7 +218,7 @@ React: `fetch('/api/v1/tenant/branding')` (кэшируется браузеро
 внутренний инструмент персонала аптеки/курьера, не первичная витрина бренда для конечного
 покупателя) — обновление раз в сутки при следующем логине достаточно, не требует WS-инвалидации.
 
-**SRS-TEN-017** [R1] [D-01, C6 `02-CLEAN-ARCHITECTURE-AND-CODE.md`] Запрет хардкода — ДВА
+**SRS-TEN-017** [R1] [D-01, C6 `docs/architecture/clean-architecture.md`] Запрет хардкода — ДВА
 независимых механизма: (1) ESLint-правило `no-restricted-syntax` на строковые литералы, совпадающие
 с regex названий-кандидатов бренда (`/DoruTJ|Sifat|Oson/i`) вне `packages/i18n`/тестовых фикстур —
 блокирующая ошибка сборки; (2) обязательный e2e-тест (Charter §5, D-01, R1 критерий приёмки №6):
@@ -310,7 +310,7 @@ DNS (шаг 5), типичное окно 15 минут–48 часов в за�
 
 ## 9. Telegram-бот под брендом тенанта
 
-**SRS-TEN-026** [R1 механизм; R3 — второй реальный бот] [tz.log §III, REQ-TG] `tenant_settings.
+**SRS-TEN-026** [R1 механизм; R3 — второй реальный бот] [docs/product/client-brief-original.txt §III, REQ-TG] `tenant_settings.
 telegram_bot_token_ref` — ссылка в `SecretsVaultPort` (тот же механизм §8, другой префикс ключа:
 `vault://tenants/{tenantId}/telegram-bot-token`). Каждый тенант со своим ботом регистрирует webhook
 Telegram на путь `POST /api/v1/webhooks/telegram/:tenantSlug` (путь несёт `tenantSlug` явно — Telegram
@@ -371,7 +371,7 @@ SRS-модуля `billing`, здесь фиксируется ТОЛЬКО фа�
 
 ## 11. On-premise поставка
 
-**SRS-TEN-033** [R3, заблокировано подписанным контрактом; артефакты готовятся в R1] [tz.log §III
+**SRS-TEN-033** [R3, заблокировано подписанным контрактом; артефакты готовятся в R1] [docs/product/client-brief-original.txt §III
 «Полный комплект исходного кода... On-Premise в ЦОД Таджиктелеком»] Поставка в закрытый контур сети
 требует:
 
@@ -610,7 +610,7 @@ DoruTJ по умолчанию (чужой бренд не должен «про
 per-tenant тарифы и обнаруженный пробел схемы `whitelabel_contracts`, чек-лист on-premise поставки) и
 30 тестовых сценариев `TC-TEN-001..030`, обязательных для тикетов Tech Lead модуля `tenancy` и для
 guard'ов/репозиториев ВСЕХ остальных модулей, ссылающихся на тенант-скоуп. Каждое требование помечено
-меткой релиза (`[R1]`/`[R2]`/`[R3]`) согласно `04-SCOPE-DECISION-PIVOT.md` — по принципу «архитектура
+меткой релиза (`[R1]`/`[R2]`/`[R3]`) согласно `docs/product/scope-r1.md` — по принципу «архитектура
 целиком сейчас, активация конкретного White-Label клиента — при снятии внешнего блокера». Любое
 расхождение с `10-domain-model.md`/`11-database-schema.md`/`12-api-conventions-auth-tenancy.md`
 разрешается только через ADR.

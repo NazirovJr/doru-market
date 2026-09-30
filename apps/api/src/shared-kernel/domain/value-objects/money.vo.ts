@@ -14,7 +14,7 @@
  * В R1 — фактически моно-валюта (`TJS`), но API готов к мульти-валюте
  * (R3, EP-15).
  *
- * `fromDbDecimalTjs` — для legacy `NUMERIC(10,2)` колонок (`tz.log`),
+ * `fromDbDecimalTjs` — для legacy `NUMERIC(10,2)` колонок (`docs/product/client-brief-original.txt`),
  * удаляемых в R3 после миграции всех денег на `BIGINT` дирамы.
  */
 import { CurrencyMismatchError } from '@/shared-kernel/domain/errors/currency-mismatch.error.js'

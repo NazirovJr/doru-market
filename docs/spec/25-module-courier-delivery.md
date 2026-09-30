@@ -1,13 +1,13 @@
 # Модуль: Курьер и доставка
 
 > Владелец: Analyst (SRS). Статус: **BASELINE для фазы Analysis**.
-> Приоритет источников при противоречии: `04-SCOPE-DECISION-PIVOT.md` > `03-ARCHITECT-DECISIONS.md` (D-*)
-> > `00-PROJECT-CHARTER.md` (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `tz.log` (§ТЗ).
+> Приоритет источников при противоречии: `docs/product/scope-r1.md` > `docs/architecture/decisions/README.md` (D-*)
+> > `docs/product/charter.md` (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `docs/product/client-brief-original.txt` (§ТЗ).
 > Обязательные к соблюдению (не переопределяются, только расширяются с обоснованием):
 > `docs/spec/10-domain-model.md` (сущности `DeliveryAssignment`, `Courier`, `OtpCode`, `GeoPoint`, `Money`,
 > state machines, доменные ошибки), `docs/spec/11-database-schema.md` (DDL групп D/H), `docs/spec/12-api-conventions-auth-tenancy.md`
 > (envelope, пагинация, идемпотентность, RBAC, WS, мультитенантность).
-> Покрывает **CUJ-4** (Доставка). Слои — по `02-CLEAN-ARCHITECTURE-AND-CODE.md`.
+> Покрывает **CUJ-4** (Доставка). Слои — по `docs/architecture/clean-architecture.md`.
 > Модуль: `modules/delivery` (`apps/api/src/modules/delivery/{domain,application,infrastructure,presentation}`).
 > Публичный фасад: `DeliveryFacade` (`modules/delivery/index.ts`).
 > Идентификаторы требований этого документа: **SRS-DELIV-nnn**. Тестовые сценарии: **TC-DELIV-nnn**.
@@ -16,7 +16,7 @@
 
 ## Разбиение по релизам
 
-> Основание: `04-SCOPE-DECISION-PIVOT.md` §3–§5. Архитектурные основания (слои, порты, tenant-скоуп,
+> Основание: `docs/product/scope-r1.md` §3–§5. Архитектурные основания (слои, порты, tenant-скоуп,
 > ledger-совместимые записи `courier_earnings`, state machines) закладываются **в R1 целиком** — ретрофит
 > дороже. Реальные Flutter-клиенты — R2, реальный банк не затрагивает этот модуль (наличные — R1).
 
@@ -64,7 +64,7 @@ modules/delivery/
 **SRS-DELIV-002** [R1, `02` §2] `DeliveryAssignment` защищает свои инварианты сама (SRS-DOM-036..041,
 уже определены `10-domain-model.md` — не переопределяются здесь, только используются). Новые сущности
 этого документа (`DeliveryOffer`, `CourierShift`, `CourierRating`, `DeliveryZone`, `DeliveryPricingRule`)
-следуют тем же правилам §2 `02-CLEAN-ARCHITECTURE-AND-CODE.md`: приватный конструктор + фабрика,
+следуют тем же правилам §2 `docs/architecture/clean-architecture.md`: приватный конструктор + фабрика,
 методы-намерения, ноль примитивов там, где нужен VO.
 
 ---
@@ -200,7 +200,7 @@ CREATE TABLE courier_ratings (
 );
 ```
 
-**SRS-DELIV-007** [R1, ASSUMPTION — рейтинг курьера не описан ни в `tz.log`, ни в research; вводится
+**SRS-DELIV-007** [R1, ASSUMPTION — рейтинг курьера не описан ни в `docs/product/client-brief-original.txt`, ни в research; вводится
 как минимально необходимая опора для алгоритма назначения из §A.4 задачи PIVOT, подлежит подтверждению
 продуктом] Оценка доступна `customer` только для заказов в статусе `delivered`, один раз на заказ
 (`UNIQUE(order_id)`). Создание строки атомарно инкрементирует `couriers.rating_count` и пересчитывает
@@ -531,7 +531,7 @@ actor.chainId`) / `super_admin` (любой курьер, включая пул)
 `OrderProcessingStartedEvent` (`paid_escrow → processing`), чтобы подбор курьера шёл параллельно со
 сборкой и не терял время SLA (7 минут, D-19) на ожидание `OrderPickedUpEvent`. Это переопределение
 удалено: `10-domain-model.md` не даёт этому документу права переносить момент создания агрегата, и
-такой перенос нигде не был закреплён ADR в `03-ARCHITECT-DECISIONS.md`, из-за чего два backend-модуля
+такой перенос нигде не был закреплён ADR в `docs/architecture/decisions/README.md`, из-за чего два backend-модуля
 (`orders`/`pharmacy-terminal` через SRS-PHT-027 и `delivery` через SRS-DELIV-037) расходились в том,
 какой обработчик реально владеет `DeliveryAssignment.create()`. Если операционные данные впоследствии
 покажут, что подбор курьера ПОСЛЕ `OrderPickedUpEvent` не укладывается в SLA, устранение — отдельный
@@ -545,7 +545,7 @@ ADR, который явно (1) обновит `10-domain-model.md` (табли
 `OrderPickedUpEvent`.
 
 **SRS-DELIV-038 — Алгоритм подбора (`SuggestNearestCourierUseCase`)** [R1, REQ-DELIV-2, ASSUMPTION —
-точные веса не заданы ни `tz.log`, ни research, вводятся по требованию задачи PIVOT, подлежат
+точные веса не заданы ни `docs/product/client-brief-original.txt`, ни research, вводятся по требованию задачи PIVOT, подлежат
 калибровке продуктом после эксплуатационных данных]
 
 Application use case, порт `CourierCandidatePort` (infrastructure — Drizzle-запрос с PostGIS
@@ -621,7 +621,7 @@ apartment/comment/landmark_photo_url` (D.8). Курьерский экран д�
 `{ "phoneNumber": "+992901234567", "isMasked": false }` в ответе `GET
 /api/v1/delivery-assignments/:id` (поле `customerContact`), т.к. реальный маскирующий телефонный шлюз
 — внешняя интеграция вне `04-SCOPE-DECISION` R1 (не входит ни в один список R1-R3, требует отдельного
-коммерческого решения по аналогии с D-20/Часть D `03-ARCHITECT-DECISIONS.md`). Порт объявлен уже в R1,
+коммерческого решения по аналогии с D-20/Часть D `docs/architecture/decisions/README.md`). Порт объявлен уже в R1,
 чтобы включение маскировки в будущем было сменой ENV (`CALLING_DRIVER=direct|masked_gateway`), а не
 рефакторингом контракта — Flutter/веб просто вызывает `tel:` со значением `customerContact.phoneNumber`
 и не знает, маскирован он или нет.
@@ -1000,10 +1000,10 @@ WS/REST catch-up, даже если push-уведомление не доста�
 3. **Маскированный номер телефона** (SRS-DELIV-044) — реальная реализация `MaskedCallingProvider`
    требует внешнего телефонного шлюза, вне списка провайдеров Charter §3.3 и вне `04-SCOPE-DECISION`
    R1-R3. Порт заведён, `MockMaskedCallingProvider`=прямой номер — решение о реальном шлюзе выносится
-   продукту (аналогично Части D `03-ARCHITECT-DECISIONS.md`).
+   продукту (аналогично Части D `docs/architecture/decisions/README.md`).
 4. **Точные веса алгоритма подбора и константы таймаутов** (SRS-DELIV-038/039, `W_DISTANCE/
    W_WORKLOAD/W_RATING`, `OFFER_ACCEPT_TIMEOUT_SECONDS`, `COURIER_CANDIDATE_RADIUS_KM` и т.д.) —
    ASSUMPTION-значения, требуют калибровки по эксплуатационным данным R1 (согласуется с методологией
-   kill-критериев `04-SCOPE-DECISION-PIVOT.md` §7).
+   kill-критериев `docs/product/scope-r1.md` §7).
 5. **Ставки/зоны ценообразования доставки** (D.6, SRS-DELIV-008) — по аналогии с D-03 (комиссия
    платформы), требуют коммерческого утверждения, сейчас — калиброванная гипотеза.

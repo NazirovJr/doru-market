@@ -16,7 +16,7 @@
  * (в отличие от `InMemoryMedicineReadRepository`), чтобы тест бил именно по проверке
  * внутри самого use case, а не по защите на уровне репозитория.
  *
- * @see docs/STATE-AND-RESUME-POINT.md §11.4 задача 3.1/3.2
+ * @see docs/history/state-log-to-2026-09-06.md §11.4 задача 3.1/3.2
  */
 import { describe, expect, it } from 'vitest'
 import { DosageForm, DosageFormClass, DosageUnit } from '@dorutj/domain-kernel'

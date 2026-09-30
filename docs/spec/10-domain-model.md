@@ -1,13 +1,13 @@
 # DoruTJ — Доменная модель (SRS, фундамент)
 
 > Владелец: Analyst (SRS). Статус: **BASELINE для фазы Analysis**.
-> Приоритет источников при противоречии: `03-ARCHITECT-DECISIONS.md` (D-*) > `00-PROJECT-CHARTER.md` (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `tz.log` (§ТЗ).
-> Слои — по `02-CLEAN-ARCHITECTURE-AND-CODE.md`: **domain** (сущности/VO/state machine/доменные ошибки, ноль импортов фреймворка), **application** (use cases, порты), **infrastructure** (Drizzle-репозитории, адаптеры), **presentation** (контроллеры, мапперы, HTTP-коды). Каждый элемент ниже помечен слоем.
+> Приоритет источников при противоречии: `docs/architecture/decisions/README.md` (D-*) > `docs/product/charter.md` (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `docs/product/client-brief-original.txt` (§ТЗ).
+> Слои — по `docs/architecture/clean-architecture.md`: **domain** (сущности/VO/state machine/доменные ошибки, ноль импортов фреймворка), **application** (use cases, порты), **infrastructure** (Drizzle-репозитории, адаптеры), **presentation** (контроллеры, мапперы, HTTP-коды). Каждый элемент ниже помечен слоем.
 >
 > Идентификаторы требований этого документа: **SRS-DOM-nnn**. Каждый снабжён ссылкой на источник
 > (`REQ-*`, `D-*`, `CUJ-*`, `§ТЗ`) и сформулирован как проверяемое условие (Given/When/Then — там, где применимо).
 >
-> **Денежная конвенция документа**: в БД суммы хранятся как было зафиксировано в `tz.log` §II.2 —
+> **Денежная конвенция документа**: в БД суммы хранятся как было зафиксировано в `docs/product/client-brief-original.txt` §II.2 —
 > `NUMERIC(10,2)` в колонках с суффиксом `_tjs` (`price_tjs`, `items_total_tjs`, `delivery_fee_tjs`,
 > `total_amount_tjs`, `unit_price_tjs`, `total_price_tjs`) — имена и типы колонок сохранены 1:1
 > (Charter §5, `02` §1.1). Новые поля, введённые исследованием (комиссии, ledger, payout), называются
@@ -44,17 +44,17 @@
 | Payout / выплата | пардохт | payout | Физический перевод денег на мерчант-счёт аптеки/сети, происходит не раньше `hold_period_days` после `delivered`, блокируется активным спором (REQ-PAY-6). |
 | Комиссия платформы | комиссияи платформа | platform fee / commission | Ставка (`commission_bps`), снэпшотится на `order_items` в момент заказа, списывается как `platform_fee_captured` (D-03, REQ-MON-1/2). |
 | Тенант | тенант (заимств.) | tenant | Изолированный «арендатор» платформы — нейтральный DoruTJ или White-Label сеть. Резолвится по `Host`/`X-Tenant-Slug` (Charter §3.4). |
-| White-Label | White-Label (заимств.) | white-label | Режим тенанта с собственным брендом/доменом/ботом/мерчант-счётом (Charter §3.4, tz.log §III). |
+| White-Label | White-Label (заимств.) | white-label | Режим тенанта с собственным брендом/доменом/ботом/мерчант-счётом (Charter §3.4, docs/product/client-brief-original.txt §III). |
 | Партия (товара) | лот / партия (⚠) | batch (lot) | Группа единиц товара с одним `batch_number` и одним `expiry_date`, поступившая одной поставкой. Домен агрегирует несколько партий на один `(pharmacy_id, medicine_id)` (REQ-SYNC-8). |
-| Сейф-пакет | халтаи бехатар (⚠) | tamper-evident bag | Опечатываемая упаковка, в которую фармацевт укладывает собранный заказ перед передачей курьеру (tz.log Модуль 5, CUJ-3). Домен фиксирует факт опечатывания как предусловие перехода `processing → picked_up`. |
-| Ориентир | нишона / аломат (⚠) | landmark | Текстовое описание местоположения вместо/в дополнение к формальному адресу (`landmark_tj`, `saved_address.landmark_text`), например «дом с зелёной крышей у мечети» (tz.log §I.3, REQ-GEO-3, REQ-MARKET-10). |
+| Сейф-пакет | халтаи бехатар (⚠) | tamper-evident bag | Опечатываемая упаковка, в которую фармацевт укладывает собранный заказ перед передачей курьеру (docs/product/client-brief-original.txt Модуль 5, CUJ-3). Домен фиксирует факт опечатывания как предусловие перехода `processing → picked_up`. |
+| Ориентир | нишона / аломат (⚠) | landmark | Текстовое описание местоположения вместо/в дополнение к формальному адресу (`landmark_tj`, `saved_address.landmark_text`), например «дом с зелёной крышей у мечети» (docs/product/client-brief-original.txt §I.3, REQ-GEO-3, REQ-MARKET-10). |
 | Дирам | дирам | diram | 1/100 сомони. Официальная разменная монета Таджикистана. Единственная единица арифметики денег в домене (Charter §5). |
 | Сомони | сомонӣ | somoni (TJS) | Национальная валюта РТ. Единственная поддерживаемая валюта MVP. |
 | FEFO | FEFO (аббр.) | First-Expired-First-Out | Правило выбора партии для продажи/отображения цены — партия с ближайшим `expiry_date` среди партий с `quantity > 0` (REQ-SYNC-8). |
 | Composite confidence | эътимоди ҳисобшуда (⚠) | composite confidence | Детерминированная оценка достоверности OCR-распознавания, вычисленная на бэкенде из ≥4 сигналов, а не взятая напрямую из ответа модели (D-14, REQ-OCR-3). |
 | LASA | LASA (аббр.) | Look-Alike/Sound-Alike | Пара препаратов со схожим написанием/произношением, риск ошибки OCR/STT (REQ-OCR-6). |
 | Rx / рецептурный | доруи бо нусха (⚠) | Rx / prescription-only | Товар с `is_prescription_required = true`, требует `prescriptions.status = 'verified'` для оформления (REQ-REG-2). |
-| OTP | рамзи якдафъаина (⚠) | one-time password | Одноразовый код: 6-значный для логина клиента, 4-значный для вручения заказа курьером (CUJ-2, tz.log Модуль 5, REQ-DELIV-3). |
+| OTP | рамзи якдафъаина (⚠) | one-time password | Одноразовый код: 6-значный для логина клиента, 4-значный для вручения заказа курьером (CUJ-2, docs/product/client-brief-original.txt Модуль 5, REQ-DELIV-3). |
 | Аутбокс (transactional outbox) | outbox (заимств.) | transactional outbox | Таблица `outbox` в той же транзакции БД, что и доменное изменение; отдельный процесс публикует события в очередь ровно после коммита (Часть C п.14 решений архитектора). |
 | Спор | баҳс / шикоят (⚠) | dispute | `order_disputes` — эскалация, атомарно замораживающая `payout_schedule.status='disputed'` (D-24). |
 | Возврат | баргардонидан (⚠) | return | `order_returns` — отдельная подсистема, отличная от «обмена без причины» (D-09). |
@@ -69,7 +69,7 @@
 
 ## Ограниченные контексты (Bounded Contexts)
 
-Backend — модульный монолит (`apps/api/src/modules/<context>`), см. `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.
+Backend — модульный монолит (`apps/api/src/modules/<context>`), см. `docs/architecture/clean-architecture.md` §1.
 Межмодульное взаимодействие — **только** через публичный фасад `<context>/index.ts` (синхронный вызов)
 или через **доменное событие** поверх `outbox` (асинхронно). Прямой импорт `domain`/`application`/
 `infrastructure` другого модуля — блокирующее нарушение (`02` §1.1).
@@ -186,7 +186,7 @@ Backend — модульный монолит (`apps/api/src/modules/<context>`)
   `delivery_fee_diram` — формула комиссии не принимает `delivery_fee` как параметр.
 - **SRS-DOM-010** [Charter, `02` §2.1] Переходы `status` — только через методы-намерения, только по
   таблице §5 «order_status». Прямое присвоение `status` вне метода недоступно (`private` сеттер).
-- **SRS-DOM-011** [tz.log §II.2, Value Objects] `order_number` генерируется один раз при создании
+- **SRS-DOM-011** [docs/product/client-brief-original.txt §II.2, Value Objects] `order_number` генерируется один раз при создании
   через `OrderNumberGeneratorPort`, неизменяем далее.
 - **SRS-DOM-012** [REQ-ONBOARD-12] `Order.create()` требует предварительной проверки
   `OnboardingFacade.isPharmacyActive(pharmacyId) === true`; иначе — `PharmacySuspendedError`
@@ -237,14 +237,14 @@ Backend — модульный монолит (`apps/api/src/modules/<context>`)
 
 ### PharmacyInventory — domain (`modules/inventory/domain/pharmacy-inventory.entity.ts`)
 
-Корень: `PharmacyInventory` (ключ `(pharmacy_id, medicine_id)`, `UNIQUE` — как в tz.log §II.2),
+Корень: `PharmacyInventory` (ключ `(pharmacy_id, medicine_id)`, `UNIQUE` — как в docs/product/client-brief-original.txt §II.2),
 содержит коллекцию `InventoryBatch` (entity: `batchNumber`, `expiryDate`, `quantity`, `priceDiram`,
-`lastSyncedAt`) — **расширение схемы** сверх буквального `tz.log` (там одна строка = одна партия);
+`lastSyncedAt`) — **расширение схемы** сверх буквального `docs/product/client-brief-original.txt` (там одна строка = одна партия);
 расширение допустимо по Charter §5 («расширения допускаются») и обязательно по REQ-SYNC-8.
 
 **Инварианты:**
 
-- **SRS-DOM-018** [tz.log §II.2] `(pharmacy_id, medicine_id)` уникален на уровне агрегата — вторая
+- **SRS-DOM-018** [docs/product/client-brief-original.txt §II.2] `(pharmacy_id, medicine_id)` уникален на уровне агрегата — вторая
   попытка создать агрегат для той же пары обязана обновить существующий, не создать дубликат.
 - **SRS-DOM-019** [REQ-SYNC-8] `stock_quantity` (публичное вычисляемое свойство) =
   `Σ(batch.quantity) для batch.quantity > 0 AND batch.expiryDate > today`.
@@ -336,7 +336,7 @@ Backend — модульный монолит (`apps/api/src/modules/<context>`)
 
 **Инварианты:**
 
-- **SRS-DOM-036** [tz.log Модуль 5, CUJ-3/4] Только одно нетерминальное назначение на `order_id`
+- **SRS-DOM-036** [docs/product/client-brief-original.txt Модуль 5, CUJ-3/4] Только одно нетерминальное назначение на `order_id`
   одновременно — конструктор `DeliveryAssignment.create()` требует явного отсутствия активного
   назначения (проверка через порт, не хранится как поле — уникальность обеспечивается частичным
   уникальным индексом БД на `(order_id) WHERE status NOT IN ('delivered','failed','cancelled')`).
@@ -522,7 +522,7 @@ Backend — модульный монолит (`apps/api/src/modules/<context>`)
 
 ### PhoneNumber
 
-- **SRS-DOM-069** [tz.log формат «+992 XX XXX XX XX»] `PhoneNumber.parse(raw: string)`: нормализация
+- **SRS-DOM-069** [docs/product/client-brief-original.txt формат «+992 XX XXX XX XX»] `PhoneNumber.parse(raw: string)`: нормализация
   (удаление пробелов/дефисов/скобок) → строгая валидация регэкспом `^\+992\d{9}$` (код страны + 9
   цифр). Несоответствие — `InvalidPhoneNumberFormatError`.
 - **SRS-DOM-070** Определение оператора (Tcell/Babilon-Mobile/Megafon Tajikistan/Beeline TJ) по
@@ -534,7 +534,7 @@ Backend — модульный монолит (`apps/api/src/modules/<context>`)
 
 ### GeoPoint
 
-- **SRS-DOM-072** [tz.log `latitude NUMERIC(10,8)`, `longitude NUMERIC(11,8)`] `GeoPoint.create(lat,
+- **SRS-DOM-072** [docs/product/client-brief-original.txt `latitude NUMERIC(10,8)`, `longitude NUMERIC(11,8)`] `GeoPoint.create(lat,
   lon)`: жёсткая валидация диапазона `lat ∈ [-90, 90]`, `lon ∈ [-180, 180]` (`InvalidCoordinatesError`
   при нарушении). Проверка «внутри Таджикистана» (примерный bbox `lat 36.6–41.1`, `lon 67.3–75.2`) —
   МЯГКАЯ (`isLikelyWithinTajikistan(): boolean`), используется только для UX-предупреждения
@@ -578,7 +578,7 @@ Backend — модульный монолит (`apps/api/src/modules/<context>`)
 
 ### OtpCode
 
-- **SRS-DOM-080** [CUJ-2, tz.log Модуль 5, REQ-DELIV-3] `OtpCode` параметризован `purpose:
+- **SRS-DOM-080** [CUJ-2, docs/product/client-brief-original.txt Модуль 5, REQ-DELIV-3] `OtpCode` параметризован `purpose:
   'login' | 'delivery_handover'`. `login`: 6 цифр, `ttlSeconds` ASSUMPTION 300 (5 минут),
   без ограничения попыток кроме общего rate-limit на эндпоинт. `delivery_handover`: 4 цифры,
   `ttlSeconds` ASSUMPTION 900 (15 минут после `markPickedUpFromPharmacy`), `maxAttempts = 5`.
@@ -600,7 +600,7 @@ Backend — модульный монолит (`apps/api/src/modules/<context>`)
 
 ### OrderNumber
 
-- **SRS-DOM-085** [tz.log `order_number VARCHAR(20) UNIQUE`] Формат генерации:
+- **SRS-DOM-085** [docs/product/client-brief-original.txt `order_number VARCHAR(20) UNIQUE`] Формат генерации:
   `DTJ-{YYMMDD}-{seq5}`, например `DTJ-260827-00001` (3+1+6+1+5 = 16 символов, укладывается в 20).
   `seq5` — 5-значный, ведущие нули, атомарный счётчик за календарный день (`Asia/Dushanbe`),
   реализуется портом `OrderNumberGeneratorPort` (инфраструктура — Redis `INCR
@@ -631,7 +631,7 @@ Backend — модульный монолит (`apps/api/src/modules/<context>`)
 
 ### 1. `order_status`
 
-Базовые значения — 1:1 из `tz.log` §II.2 (`pending_payment, paid_escrow, processing, picked_up,
+Базовые значения — 1:1 из `docs/product/client-brief-original.txt` §II.2 (`pending_payment, paid_escrow, processing, picked_up,
 delivered, cancelled, refunded`); аддитивно расширено `return_in_progress` (REQ-RET-1, D-09) и
 `confirmed` (D-25) — статус наличных заказов (`payment_method='cash_courier'`), в который
 `Order.create()` переводит заказ синхронно, В ОБХОД `pending_payment`; статус НЕ утверждает
@@ -710,7 +710,7 @@ delivered, cancelled, refunded`); аддитивно расширено `return_
 |---|---|---|---|---|---|
 | `pending_payment` | `paid_escrow` | система (webhook) | HMAC-подпись валидна, идемпотентность по `payment_operation_id`, товар всё ещё зарезервирован. **Применимо только когда `payment_method ≠ 'cash_courier'`** — для `cash_courier` этот переход НЕ применяется вовсе: заказ никогда не создаётся в `pending_payment`, а сразу в `confirmed` (D-25, см. ветку `confirmed` выше) | `EscrowLedger.recordHold`, событие `OrderPaidEvent` | **SRS-DOM-089** [REQ-PAY-1/2/3, CUJ-2] |
 | `pending_payment` | `cancelled` | `customer`, система | явная отмена клиентом до оплаты, ИЛИ каскад `PharmacySuspendedEvent` (REQ-ONBOARD-13) | Освобождение резерва остатка, событие `OrderCancelledEvent` | **SRS-DOM-090** |
-| `paid_escrow` | `processing` | `pharmacist` | `actor.pharmacyId === order.pharmacyId`, остаток ещё доступен | Старт SLA-таймера 7 мин (Charter, tz.log Модуль 5), событие `OrderProcessingStartedEvent` | **SRS-DOM-091** [CUJ-3] |
+| `paid_escrow` | `processing` | `pharmacist` | `actor.pharmacyId === order.pharmacyId`, остаток ещё доступен | Старт SLA-таймера 7 мин (Charter, docs/product/client-brief-original.txt Модуль 5), событие `OrderProcessingStartedEvent` | **SRS-DOM-091** [CUJ-3] |
 | `paid_escrow` | `cancelled` | система, `super_admin` | `pickup_sla + buffer` истёк без принятия фармацевтом (REQ-PAY-5) | Полный `PaymentProvider.refund()`, `EscrowLedger.refund`, событие `OrderAutoCancelledEvent` | **SRS-DOM-092** [D-19] |
 | `confirmed` | `processing` | `pharmacist` | `actor.pharmacyId === order.pharmacyId`, остаток ещё доступен — условия идентичны SRS-DOM-091 (зеркальный переход для наличных заказов) | Старт SLA-таймера 7 мин, событие `OrderProcessingStartedEvent` | **SRS-DOM-178** [D-25] |
 | `confirmed` | `cancelled` | система, `super_admin` | `pickup_sla + buffer` истёк без принятия фармацевтом (зеркало SRS-DOM-092) | Освобождение резерва остатка, событие `OrderAutoCancelledEvent`; **БЕЗ рефанда** — возвращать нечего, `escrow_ledger` для этого заказа никогда не создавался | **SRS-DOM-179** [D-25] |
@@ -781,7 +781,7 @@ Ledger (`escrow_ledger`) — append-only последовательность з
 
 ### 3. `prescription_status`
 
-Базовые значения tz.log (`uploaded, verified, rejected`) расширены (D-14, REQ-OCR):
+Базовые значения docs/product/client-brief-original.txt (`uploaded, verified, rejected`) расширены (D-14, REQ-OCR):
 `ocr_processing, auto_matched, needs_clarification`.
 
 ```
@@ -1096,7 +1096,7 @@ D-07); (2) `A.dosageForm.isEquivalentTo(B.dosageForm)` (тот же укрупн
 (B...)` (точное совпадение дозировки после конвертации единиц, SRS-DOM-078). Сравнение `inn_name`
 как единственной строки — **запрещено** как достаточное условие (может ложно объединить/разделить
 комбинированные препараты). Список аналогов сортируется по `pi.price ASC` (сохраняя формулировку
-tz.log §II.3, но через `substances`, а не `inn_name =`).
+docs/product/client-brief-original.txt §II.3, но через `substances`, а не `inn_name =`).
 
 **SRS-DOM-159 — Расчёт экономии** [REQ-MARKET-3] `savingsDiram = referenceMedicine.displayPrice -
 cheapestAnalog.displayPrice`, где `referenceMedicine` — товар, изначально найденный пользователем (не
@@ -1258,7 +1258,7 @@ Then система показывает ПРЕДУПРЕЖДЕНИЕ (не бл
 | TC-DOM-006 | SRS-DOM-008 | Заказ создан с `commission_bps=500` (снэпшот) | `commission_rates` обновлена на `800` ПОСЛЕ создания заказа | Уже созданный `order_item.commission_bps` остаётся `500` |
 | TC-DOM-007 | SRS-DOM-064/065 | `Money.fromDbDecimalTjs("14.50")` | вызов | Внутреннее значение `1450n` (дирам), `toDbDecimalTjs()` возвращает `"14.50"` (round-trip без потерь) |
 | TC-DOM-008 | SRS-DOM-066 | `Money.fromDiram(100n).allocate([1,1,1])` (раздел на 3 равные доли, 100 не делится нацело на 3) | вызов | Результат `[34n,33n,33n]` (largest remainder), `Σ = 100n` точно |
-| TC-DOM-009 | SRS-DOM-074 | Штрихкод `4601964000125` (из примера tz.log) | `Barcode.parse(...)` | `isValidEan13()===true` (контрольная цифра верна) |
+| TC-DOM-009 | SRS-DOM-074 | Штрихкод `4601964000125` (из примера docs/product/client-brief-original.txt) | `Barcode.parse(...)` | `isValidEan13()===true` (контрольная цифра верна) |
 | TC-DOM-010 | SRS-DOM-074 | Штрихкод `4601964000126` (та же строка, последняя цифра испорчена) | `Barcode.parse(...)` | `isValidEan13()===false`, исключение НЕ бросается |
 | TC-DOM-011 | SRS-DOM-075 | Штрихкод `2001234567890` (префикс `2`) | `Barcode.parse(...).isInternalPrefix()` | `true` — не используется как единственный ключ матчинга |
 | TC-DOM-012 | SRS-DOM-078 | `Dosage("500 мг")` vs `Dosage("0.5 г")` | `isEquivalentTo()` | `true` (конвертация в базовую единицу mg: 500 == 500) |

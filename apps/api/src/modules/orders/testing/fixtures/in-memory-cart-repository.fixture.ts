@@ -2,7 +2,7 @@
  * `InMemoryCartRepository` (EP-09, DTJ-223) — фикстура `CartRepository` для unit-тестов
  * use case'ов `application/cart/**`. НЕ используется в боевой проводке (`orders.module.ts`
  * биндит `CART_REPOSITORY` на `DrizzleCartRepository`, урок волны 5 §6.3
- * `reports/EP09-CTO-BRIEF.md` — никаких in-memory адаптеров в проде).
+ * `docs/history/briefs/ep09-cto-brief.md` — никаких in-memory адаптеров в проде).
  *
  * Реализует ТУ ЖЕ семантику упсёрта, что `DrizzleCartRepository.upsertItem`
  * (`quantity += quantityDelta` на конфликте `cart_id/medicine_id/pharmacyId`), ТУ ЖЕ

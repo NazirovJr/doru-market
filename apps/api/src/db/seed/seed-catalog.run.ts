@@ -217,7 +217,7 @@ export async function runSeedCatalog(port: SeedCatalogPort): Promise<{ medicines
 export const _RESET_MARKER = 'EP-04/DTJ-098'
 
 /**
- * CLI entrypoint для `pnpm db:seed` (STATE-AND-RESUME-POINT.md §11.4 задача 3.3).
+ * CLI entrypoint для `pnpm db:seed` (docs/history/state-log-to-2026-09-06.md §11.4 задача 3.3).
  *
  * Раньше этот блок был честным fail-fast — реализация `DrizzleSeedCatalogPort`
  * отсутствовала, и `pnpm db:seed` явно падал с ненулевым кодом, не маскируя
@@ -239,7 +239,7 @@ export const _RESET_MARKER = 'EP-04/DTJ-098'
  * `i18n_overrides` — той же командой `pnpm db:seed` (правило 2 AGENTS.md, «написал
  * npm-скрипт → подключи и запусти», не отдельная незапускаемая команда). Вынесено в
  * отдельную функцию (не инлайн в `main()`), чтобы не раздувать `main()` за C1
- * (`02-CLEAN-ARCHITECTURE-AND-CODE.md`, ≤40 строк/метод).
+ * (`docs/architecture/clean-architecture.md`, ≤40 строк/метод).
  *
  * Отдельный pg.Pool/drizzle: `DrizzleSeedCatalogPort` не отдаёт наружу свой `db`
  * (закрытый конструктор порта, `seed-catalog-drizzle-port.ts`) — проще открыть

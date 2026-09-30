@@ -1,7 +1,7 @@
 /**
  * Публичный фасад модуля `orders` (EP-09, DTJ-220, наполнен DTJ-222).
  *
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2: единственный легальный путь межмодульного
+ * `docs/architecture/clean-architecture.md` §1.2: единственный легальный путь межмодульного
  * взаимодействия для чужих bounded contexts (EP-10..EP-14 читают заказы ТОЛЬКО отсюда).
  * Импорт `modules/orders/domain|application|infrastructure|presentation` напрямую —
  * блокирующее нарушение (`dependency-cruiser`, `no-cross-module-deep-import`).
@@ -21,7 +21,7 @@ export const ORDERS_FACADE = Symbol.for('@dorutj/orders/orders-facade')
  * adapters/payment-invoice.adapter.ts` был бы вынужден импортировать `orders/application/
  * ports/payment-invoice.port.ts` напрямую (`no-cross-module-deep-import`, depcruise).
  * Контракт зафиксирован потребителем (`CheckoutUseCase`) и не меняется этим ре-экспортом
- * (решение D-EP09-17, `reports/EP09-CTO-BRIEF.md`).
+ * (решение D-EP09-17, `docs/history/briefs/ep09-cto-brief.md`).
  */
 export {
   PAYMENT_INVOICE_PORT,

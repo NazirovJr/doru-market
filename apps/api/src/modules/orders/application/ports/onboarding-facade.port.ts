@@ -1,7 +1,7 @@
 /**
  * Порт `OnboardingFacadePort` (EP-09, DTJ-220, SRS-ORD-018 шаг 2).
  *
- * Межмодульный фасад `orders → onboarding` (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2). Вызывается
+ * Межмодульный фасад `orders → onboarding` (`docs/architecture/clean-architecture.md` §1.2). Вызывается
  * ДЛЯ КАЖДОЙ затронутой аптеки перед сплитом корзины (SRS-ORD-018 шаг 2) — неактивная аптека
  * (`status !== 'active'`, приостановлена/на модерации/удалена) исключает свою группу целиком из
  * ПОПЫТКИ checkout (`meta.excludedItems`, причина `PHARMACY_SUSPENDED`), аналогично

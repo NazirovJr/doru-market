@@ -5,7 +5,7 @@
  * (DTJ-102), резолвящий `catalog.analogs.disclaimer` по `Accept-Language`
  * (SRS-CAT-042: «presentation — маппинг DTO→JSON, дисклеймер подставляется
  * на этом уровне из `i18n_overrides`»). Presentation не ходит в БД напрямую
- * (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2, `dependency-cruiser`) — контроллер
+ * (`docs/architecture/clean-architecture.md` §1.2, `dependency-cruiser`) — контроллер
  * зависит ТОЛЬКО от этого порта (объявлен в `application/`), а не от
  * `infrastructure`/Drizzle. Реализация — `DrizzleI18nOverridesRepository`
  * (`infrastructure/adapters/drizzle-i18n-overrides.repository.ts`).

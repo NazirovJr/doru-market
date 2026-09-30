@@ -3,7 +3,7 @@
 # SRS: SRS-NFR-055 (миграция ДО api/worker), SRS-NFR-056 (zero-downtime политика миграций,
 # соблюдается на уровне самих миграций — см. apps/api/migrations, не в этом скрипте),
 # SRS-NFR-062 (rolling-последовательность, дословно реализована ниже), SRS-NFR-037 (healthcheck).
-# Владение: files_owned DTJ-428 (scripts/deploy/**).
+# Владение: files_owned DTJ-428 (infra/deploy/**).
 #
 # Последовательность (SRS-NFR-062):
 #   (1) docker compose pull новых образов по тегу IMAGE_TAG;
@@ -17,10 +17,10 @@
 #       поллинг `HEALTH_URL` во время шага (3), чтобы явно подтвердить критерий приёмки 2
 #       («минимум 1 инстанс api отвечает 200 в любой момент деплоя»), а не просто верить
 #       поведению Compose по умолчанию;
-#   (5) итоговый статус: SUCCESS или ROLLBACK REQUIRED (см. scripts/deploy/rollback.sh).
+#   (5) итоговый статус: SUCCESS или ROLLBACK REQUIRED (см. infra/deploy/rollback.sh).
 #
 # Использование:
-#   scripts/deploy/rolling-deploy.sh <IMAGE_TAG>
+#   infra/deploy/rolling-deploy.sh <IMAGE_TAG>
 #
 # ENV (все опциональны, есть дефолты для dev/staging-профиля):
 #   COMPOSE_FILES              — список -f флагов compose (default: dev + prod override)
@@ -116,7 +116,7 @@ trap - EXIT
 
 if [[ "$DEPLOY_OK" != "1" ]]; then
   err "HEALTHCHECK НЕ ПРОШЁЛ на новых контейнерах api/worker в течение ${HEALTH_WAIT_TIMEOUT_SEC}s"
-  err "ИТОГ: ROLLBACK REQUIRED — запустите scripts/deploy/rollback.sh <предыдущий_тег>"
+  err "ИТОГ: ROLLBACK REQUIRED — запустите infra/deploy/rollback.sh <предыдущий_тег>"
   rm -f "$HEALTH_LOG"
   exit 1
 fi

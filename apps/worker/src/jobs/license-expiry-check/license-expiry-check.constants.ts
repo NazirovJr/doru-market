@@ -1,6 +1,6 @@
 /**
  * Константы джобы `license-expiry-check` (DTJ-073).
- * Таймзона — Asia/Dushanbe (`01-TECH-BASELINE.md`); расписание — ежедневно 06:00.
+ * Таймзона — Asia/Dushanbe (`docs/architecture/tech-baseline.md`); расписание — ежедневно 06:00.
  */
 export const LICENSE_EXPIRY_CHECK_QUEUE = 'license-expiry-check'
 export const LICENSE_EXPIRY_CHECK_JOB_NAME = 'license-expiry-check-tick'

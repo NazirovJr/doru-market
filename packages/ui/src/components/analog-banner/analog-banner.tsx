@@ -1,5 +1,5 @@
 /**
- * `AnalogBanner` (DTJ-407, `SRS-CAT-039`/`041`, D1, REQ-UX-2, `docs/04-SCOPE-DECISION-PIVOT.md`
+ * `AnalogBanner` (DTJ-407, `SRS-CAT-039`/`041`, D1, REQ-UX-2, `docs/product/scope-r1.md`
  * §2.1) — плашка «тот же действующий компонент дешевле» под карточкой товара. INLINE-разметка
  * (обычный `<div>`), НЕ `Modal`/`role="dialog"` (REQ-UX-2 — плашка не перебивает поток экрана
  * назойливым оверлеем).

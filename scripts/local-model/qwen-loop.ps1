@@ -12,19 +12,19 @@
   подтверждений (профиль ~/.dsh/profiles/headless, песочница остаётся workspace-write).
   Успех — появившийся на ветке коммит, который сделал гейт, и только на полностью зелёном прогоне.
 
-  Перед первым раундом скрипт сам ставит активное задание (scripts/qwen-task.ps1) и создаёт ветку:
+  Перед первым раундом скрипт сам ставит активное задание (scripts/local-model/qwen-task.ps1) и создаёт ветку:
   оба шага модель уже теряла, а механика их не забывает.
 
 .EXAMPLE
-  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-loop.ps1 -Task DTJ-372
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-loop.ps1 -Task DTJ-372
 .EXAMPLE
-  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-loop.ps1 -Task DTJ-372 -MaxRounds 6
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-loop.ps1 -Task DTJ-372 -MaxRounds 6
 #>
 [CmdletBinding()]
 param(
   [Parameter(Mandatory = $true)] [string] $Task,
   [int] $MaxRounds = 10,
-  [string] $Harness = 'D:\job\deepseek-harness'
+  [string] $Harness = $env:DSH_HARNESS_DIR
 )
 
 $ErrorActionPreference = 'Stop'
@@ -34,6 +34,7 @@ $root = & git -C $PSScriptRoot rev-parse --show-toplevel
 if (-not $root) { throw 'не репозиторий' }
 Set-Location -LiteralPath $root
 
+if (-not $Harness) { throw 'задайте -Harness или $env:DSH_HARNESS_DIR — каталог сборки dsh' }
 $bin = Join-Path $Harness 'apps\cli\lib\bin.js'
 if (-not (Test-Path -LiteralPath $bin)) { throw "нет сборки dsh: $bin" }
 
@@ -50,9 +51,9 @@ if ($dirty.Count -gt 0) {
 $heartbeat = Join-Path $root 'node_modules\.cache\qwen-gate\daemon.heartbeat'
 $daemonAlive = (Test-Path -LiteralPath $heartbeat) -and
   (((Get-Date) - (Get-Item -LiteralPath $heartbeat).LastWriteTime).TotalSeconds -lt 15)
-if (-not $daemonAlive) { 'Не запущен scripts/qwen-gate-daemon.ps1 — без него гейт не пройдёт.'; exit 2 }
+if (-not $daemonAlive) { 'Не запущен scripts/local-model/qwen-gate-daemon.ps1 — без него гейт не пройдёт.'; exit 2 }
 
-& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'scripts\qwen-task.ps1') -Task $Task
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'scripts\local-model\qwen-task.ps1') -Task $Task
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $active = Get-Content -LiteralPath (Join-Path $root 'node_modules\.cache\qwen-gate\active.json') -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -65,7 +66,7 @@ $exists = @(& git branch --list $branch).Count -gt 0
 if ($exists) { & git checkout --quiet $branch } else { & git checkout --quiet -b $branch $base }
 if ($LASTEXITCODE -ne 0) { "не удалось перейти в ветку $branch"; exit 2 }
 
-$taskText = "Выполни задание из файла reports/qwen3/tasks/$Task.md: прочитай его инструментом read целиком. " +
+$taskText = "Выполни задание из файла scripts/local-model/tasks/$Task.md: прочитай его инструментом read целиком. " +
   "Часть работы могла быть сделана в предыдущем заходе: сначала посмотри git status и уже существующие файлы, " +
   "продолжай с того места, где остановлено. Не пиши текст перед вызовом инструмента: сразу вызывай инструмент."
 

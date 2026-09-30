@@ -1,7 +1,7 @@
 /**
  * Интеграционный тест `CancelOrderUseCase` (EP-09, DTJ-232) — РЕАЛЬНЫЙ Postgres через
  * `OrdersFacade` + `DrizzleOrderRepository` (DTJ-227), не мок/фейк (урок волны 5 §6.4,
- * `reports/EP09-CTO-BRIEF.md`).
+ * `docs/history/briefs/ep09-cto-brief.md`).
  *
  * D-EP09-27: `OrderRepositoryPort` до этой волны стоял на null-адаптере — этот файл становится
  * зелёным только после того, как DTJ-227 подключит настоящий Drizzle-репозиторий. Если он

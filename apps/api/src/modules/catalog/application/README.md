@@ -10,7 +10,7 @@
 - Публичный фасад: `CatalogFacade` (DTJ-096).
 - Порты: `CatalogRepository`, `AnalogOfferLookupPort`, `AnalogCandidatesRepository`.
 
-**Правило зависимостей (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1, §3):**
+**Правило зависимостей (`docs/architecture/clean-architecture.md` §1.1, §3):**
 - Зависит ТОЛЬКО от `domain/` и собственных портов (`application/ports/*`).
 - НЕ импортирует `infrastructure/` (т.е. никакого Drizzle/БД/pg в этом слое).
 - НЕ импортирует `presentation/` (контроллеры/DTO).
@@ -19,4 +19,4 @@
 
 Авторизация политик: гард в presentation проверяет роль и передаёт флаги (`bypassVisibilityCheck`)
 в use case. Сам use case НЕ проверяет роль — это политика на границе, не бизнес-правило
-(`02-CLEAN-ARCHITECTURE-AND-CODE.md` §3.4).
+(`docs/architecture/clean-architecture.md` §3.4).

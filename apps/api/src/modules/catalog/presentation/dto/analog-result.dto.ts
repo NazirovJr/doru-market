@@ -3,7 +3,7 @@
  * `GET /api/v1/medicines/:id/analogs` (SRS-API-014/015).
  *
  * Маппинг `FindAnalogsResult` (DTJ-101, use case) → JSON делается ЗДЕСЬ, в
- * presentation (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §3.2: DTO↔domain маппинг —
+ * presentation (`docs/architecture/clean-architecture.md` §3.2: DTO↔domain маппинг —
  * в presentation, не в use case).
  *
  * **`manufacturerName`/`isPrescriptionRequired` — обогащение, не из use case.**

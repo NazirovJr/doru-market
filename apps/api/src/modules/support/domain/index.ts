@@ -2,7 +2,7 @@
  * Внутренний баррель `domain/` модуля `support` (EP-14, DTJ-278).
  *
  * НЕ путать с публичным фасадом `modules/support/index.ts` (DTJ-270) — тот НЕ реэкспортирует
- * `domain` наружу модуля (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2). Используется ТОЛЬКО
+ * `domain` наружу модуля (`docs/architecture/clean-architecture.md` §1.2). Используется ТОЛЬКО
  * внутри `support`.
  */
 export { SupportTicket, type SupportTicketOpenCommand, type SupportTicketSnapshot } from './support-ticket.entity.js'

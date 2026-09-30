@@ -3,7 +3,7 @@
  *
  * Чистый value object: фабрика `from(raw)` валидирует UUID-формат и бросает
  * `ValidationError` (`packages/contracts`) при невалидном входе. Никаких
- * `@nestjs/*`/`drizzle-orm`/I/O — это `domain`-слой (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1).
+ * `@nestjs/*`/`drizzle-orm`/I/O — это `domain`-слой (`docs/architecture/clean-architecture.md` §1.1).
  */
 import { validate as isUuid } from 'uuid'
 import { ValidationError } from '@dorutj/contracts'

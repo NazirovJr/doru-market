@@ -10,7 +10,7 @@
  * Presentation зависит ТОЛЬКО от application-слоя (`FindAnalogsUseCase`,
  * `CatalogRepository`, `I18nOverridesRepository` — все три объявлены в
  * `application/ports`/`application/use-cases`, ни один импорт из `domain/`/
- * `infrastructure/` напрямую, `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1/§3.2).
+ * `infrastructure/` напрямую, `docs/architecture/clean-architecture.md` §1.1/§3.2).
  *
  * **`@Public()`.** Тот же уровень доступа, что карточка товара (`MedicinesController`) —
  * блок аналогов виден анонимному гостю (DTJ-102 «Что сделать» п.1).

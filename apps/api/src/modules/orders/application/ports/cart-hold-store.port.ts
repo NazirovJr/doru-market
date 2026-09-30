@@ -4,7 +4,7 @@
  * Мягкий (UX) резерв количества на Redis TTL — СОЗНАТЕЛЬНО не авторитетная резервация
  * (та — `InventoryFacadePort.reserveStock()` внутри `Order.create()`, DTJ-227). Деградация
  * Redis не имеет права заблокировать покупку — см. `AvailabilityCalculator` (fail-open,
- * SRS-ORD-008) и D-EP09-12 §2 `reports/EP09-CTO-BRIEF.md`: результат этого порта используется
+ * SRS-ORD-008) и D-EP09-12 §2 `docs/history/briefs/ep09-cto-brief.md`: результат этого порта используется
  * ТОЛЬКО для показа пользователю, никогда как условие, запрещающее добавление в корзину или
  * checkout.
  *
@@ -23,7 +23,7 @@
 export const CART_HOLD_STORE_PORT = Symbol.for('@dorutj/orders/cart-hold-store')
 
 /**
- * Объект-параметр `hold` (C5, `02-CLEAN-ARCHITECTURE-AND-CODE.md`, `max-params` ≤3) — 5
+ * Объект-параметр `hold` (C5, `docs/architecture/clean-architecture.md`, `max-params` ≤3) — 5
  * логических полей превышают лимит позиционных параметров, тот же приём, что
  * `UpdateCartItemQuantityRepoInput` (`cart.repository.port.ts`, DTJ-223).
  */

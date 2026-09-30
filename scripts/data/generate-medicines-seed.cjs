@@ -1,4 +1,4 @@
-// scripts/generate-medicines-seed.cjs — генератор seed для EP-04 (DTJ-098)
+// scripts/data/generate-medicines-seed.cjs — генератор seed для EP-04 (DTJ-098)
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-magic-numbers -- CommonJS-скрипт: `require` — единственный способ подключения `node:fs`/`node:path` в .cjs. Магические числа 28/4/3 — параметры генератора (цикл по брендам и индексы форм), не доменная логика. */
 const fs = require('node:fs')
 const path = require('node:path')

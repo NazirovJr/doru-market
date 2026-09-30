@@ -4,7 +4,7 @@
 > `(End of file - total N lines)` — эта пометка и значит, что файл прочитан весь;
 > последняя строка файла — `=== КОНЕЦ ЗАДАНИЯ DTJ-307d ===`. Пометки нет — дочитай
 > остаток через `read` с `offset` и только потом работай.
-> Если история сжата или ты не помнишь следующий шаг — перечитай этот файл: `reports/qwen3/tasks/DTJ-307d.md`.
+> Если история сжата или ты не помнишь следующий шаг — перечитай этот файл: `scripts/local-model/tasks/DTJ-307d.md`.
 
 > Координатору перед отправкой: DTJ-307a..c влиты в `development`, ветка этого задания создана от него.
 > Для гейта `-Full` должны быть подняты Postgres и Redis из docker compose — в полном наборе `apps/worker`
@@ -66,7 +66,7 @@
    `write` с шапкой и первым тестом, дальше `edit` — по одному тесту.
 7. Проверка — только эта команда (в `workdir` = рабочая папка). Свои способы проверки не
    придумывай, кэши не чисти:
-   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed 'apps/worker/src/jobs/escrow-timeouts/picking-sla-watchdog.*','apps/worker/src/queues/queue.constants.ts','apps/worker/src/jobs/escrow-timeouts/system-order-cancel.client.ts','apps/worker/src/app.module.ts' -RequireFile reports/qwen3/tasks/DTJ-307d.require.txt`
+   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-gate.ps1 -Allowed 'apps/worker/src/jobs/escrow-timeouts/picking-sla-watchdog.*','apps/worker/src/queues/queue.constants.ts','apps/worker/src/jobs/escrow-timeouts/system-order-cancel.client.ts','apps/worker/src/app.module.ts' -RequireFile scripts/local-model/tasks/DTJ-307d.require.txt`
    В вызове `pwsh` обязательно укажи `timeoutMs: 600000`: полный гейт идёт до 4 минут, а без этого
    dsh обрывает команду через 2.
    Последняя строка вывода — `GATE: PASS` или `GATE: FAIL -> <что упало>`. Над ней — ошибки с `файл(строка)`.
@@ -378,7 +378,7 @@ describe('PickingSlaWatchdogModule — DI-резолвинг целиком (р�
 
 ## 5. Тесты — что именно должно быть проверено
 
-Каждый критерий ниже проверяется механически: гейт читает `reports/qwen3/tasks/DTJ-307d.require.txt`
+Каждый критерий ниже проверяется механически: гейт читает `scripts/local-model/tasks/DTJ-307d.require.txt`
 и ищет в файлах спеков соответствующий текст. Пропущенный критерий — красный гейт и нет коммита.
 
 `picking-sla-watchdog.job.spec.ts`:
@@ -432,7 +432,7 @@ BLOCKED с точной причиной — нормальный результ
 1. Сдача — одна команда: тот же гейт, что в разделе 1, но с `-Commit`:
 
 ```
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed 'apps/worker/src/jobs/escrow-timeouts/picking-sla-watchdog.*','apps/worker/src/queues/queue.constants.ts','apps/worker/src/jobs/escrow-timeouts/system-order-cancel.client.ts','apps/worker/src/app.module.ts' -RequireFile reports/qwen3/tasks/DTJ-307d.require.txt -Commit "feat(worker): DTJ-307d — джоб сторожа SLA сборки"
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-gate.ps1 -Allowed 'apps/worker/src/jobs/escrow-timeouts/picking-sla-watchdog.*','apps/worker/src/queues/queue.constants.ts','apps/worker/src/jobs/escrow-timeouts/system-order-cancel.client.ts','apps/worker/src/app.module.ts' -RequireFile scripts/local-model/tasks/DTJ-307d.require.txt -Commit "feat(worker): DTJ-307d — джоб сторожа SLA сборки"
 ```
 
    В вызове `pwsh` обязательно `timeoutMs: 600000`. Гейт сам включает полный режим и коммитит

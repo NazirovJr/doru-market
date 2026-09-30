@@ -1,5 +1,5 @@
 /**
- * Порт очистки брошенных корзин (DTJ-224, SRS-ORD-005..009, `02-CLEAN-ARCHITECTURE-AND-CODE.md`
+ * Порт очистки брошенных корзин (DTJ-224, SRS-ORD-005..009, `docs/architecture/clean-architecture.md`
  * §1.3: interface + DI-токен рядом). Таблица `cart` определена в схеме `apps/api`
  * (`db/schema/cart.ts`) — `apps/worker` не подключает чужой Drizzle-граф ради двух `DELETE`,
  * реализация порта (`PgCartCleanupRetentionAdapter`) использует параметризованный raw SQL

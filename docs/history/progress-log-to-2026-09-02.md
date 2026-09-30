@@ -1,19 +1,19 @@
 # DoruTJ — Текущий прогресс (снэпшот работ)
 
 > Владелец: **исполнитель** (ведёт документ). Утверждает состояние — **CTO**. Статус: **живой документ**, обновляется после каждой
-> закрывающей сессии. Не заменяет `STATE-AND-RESUME-POINT.md` (план), а дополняет его
+> закрывающей сессии. Не заменяет `docs/history/state-log-to-2026-09-06.md` (план), а дополняет его
 > фактическим состоянием репозитория.
 >
 > **ПРИОРИТЕТ — ИСПРАВЛЕНО CTO.** Этот документ описывает ФАКТ (что сейчас в репозитории),
 > а не НОРМУ (как должно быть). Он не может отменять стандарты. Действующая иерархия:
 >
-> `04-SCOPE` → `03-ARCHITECT-DECISIONS` → `CLAUDE-CTO` → `AGENTS.md` →
+> `04-SCOPE` → `03-ARCHITECT-DECISIONS` → `docs/process/coordinator` → `AGENTS.md` →
 > `02-CLEAN-ARCHITECTURE` → `01-TECH-BASELINE` → `00-CHARTER` → `STATE-AND-RESUME-POINT` →
 > `05-DEVELOPER-HANDBOOK` → **06-CURRENT-PROGRESS (самый низкий)** → `spec/` → `tickets/`
 >
 > Исходная версия ставила этот документ ВЫШЕ обязательных стандартов архитектуры — при
 > буквальном следовании заметка о прогрессе могла бы отменить правило `02-CLEAN-ARCHITECTURE`.
-> Состав документа полезен и сохранён; изменена только его позиция в иерархии (см. `CLAUDE-CTO.md` §2:
+> Состав документа полезен и сохранён; изменена только его позиция в иерархии (см. `docs/process/coordinator.md` §2:
 > изменение иерархии документов — полномочие CTO, не исполнителя).
 >
 > **Конвенции:**
@@ -51,7 +51,7 @@
 > **Сессия 3/256 goal-round: EP-05 критический путь DTJ-142 → DTJ-148 (7 тикетов).**
 > Реализовано без `pnpm verify` (sandbox-блокировка pnpm-store сохраняется — см. сессия 2);
 > только ручной code review + JSDoc/self-validation. Все новые файлы в скоупе
-> `02-CLEAN-ARCHITECTURE-AND-CODE.md` (4 слоя, C1-C18):
+> `docs/architecture/clean-architecture.md` (4 слоя, C1-C18):
 >
 > - **DTJ-142** — расширения схемы БД для синхронизации. 4 enum'а в
 >   `enums.schema.ts` (`inventorySyncChannelEnum`, `inventorySyncTypeEnum`,
@@ -142,7 +142,7 @@
 >
 > **Сессия 4/256 goal-round: EP-05 follow-up — DTJ-151/152/153/154 (4 тикета).**
 > Реализовано без `pnpm verify` (sandbox-блокировка сохраняется). Все новые
-> файлы в скоупе `02-CLEAN-ARCHITECTURE-AND-CODE.md` (4 слоя, C1-C18).
+> файлы в скоупе `docs/architecture/clean-architecture.md` (4 слоя, C1-C18).
 >
 > - **DTJ-151** — `DrizzleFullSyncCompletionAdapter` (обнуление
 >   отсутствующих позиций при full-sync last page, SRS-INV-041/042).
@@ -763,7 +763,7 @@
 - `apps/web/src/app/router.tsx` — `/login` теперь lazy-импортирует
   `pages/login/login-page` (раньше — placeholder).
 - `apps/web/src/app/routes/login-placeholder-page.tsx` — **УДАЛЁН**
-  (мёртвый код, тикет `02-CLEAN-ARCHITECTURE-AND-CODE.md` D-27).
+  (мёртвый код, тикет `docs/architecture/clean-architecture.md` D-27).
 - `apps/web/src/shared/api/auth-store.ts` — **полностью переписан**:
   добавлены `refreshToken` (persisted в `localStorage` через `zustand/persist`
   с `partialize`), `user`, `setSession()`, `clear()`. `accessToken` —
@@ -1128,7 +1128,7 @@
   revoke'ит 0 строк для пользователя без сессий, `RevokeSessionUseCase`
   возвращает `403` для уже-revoked чужой сессии (а не 404). Это
   сознательное проектное решение (C13 — «идемпотентность как свойство»,
-  см. `02-CLEAN-ARCHITECTURE-AND-CODE.md` §3.4).
+  см. `docs/architecture/clean-architecture.md` §3.4).
 
 **Долг (честно):**
 - `arch:check` и `tsc` (apps/api + packages/contracts + packages/domain-kernel) —
@@ -1537,7 +1537,7 @@
 
 - `apps/admin/vitest.config.ts` — `passWithNoTests: true` (фикс красного `pnpm test` в admin)
 - `tests/arch/vitest.config.ts` — `pool: 'vmThreads'` (forward-looking для обхода EPERM на локальной машине)
-- `scripts/generate-jwt-keys.cjs` — генератор RS256 ключей (для пользователей без `openssl` в PATH)
+- `scripts/data/generate-jwt-keys.cjs` — генератор RS256 ключей (для пользователей без `openssl` в PATH)
 - `eslint.config.mjs` — добавлен `'scripts/**'` в `ignores` (фикс lint на .cjs хелперах)
 
 ---
@@ -1624,7 +1624,7 @@
 **Сейчас реально аутентифицироваться через API нельзя** — нет `POST /auth/otp/request` и `/auth/otp/verify`. Защищённые эндпоинты отдают 401 на всё (что правильно).
 
 ### 4.3. EP-06..19 (волны 5..12)
-См. `docs/STATE-AND-RESUME-POINT.md` §9.3 и `tickets/00-INDEX.md` — план по EP.
+См. `docs/history/state-log-to-2026-09-06.md` §9.3 и `tickets/00-INDEX.md` — план по EP.
 
 ---
 
@@ -1650,7 +1650,7 @@
 |---|---|---|
 | `child_process.spawn` с `stdio: 'pipe'` (EPERM -4048) | vitest worker dies | Запускать тесты локально (есть forward-looking `tests/arch/vitest.config.ts` + `apps/api/vitest.config.ts` с `pool: 'vmThreads'`) |
 | `corepack prepare` (signature keyid) | docker compose build fails | В Dockerfile сменить на `npm i -g pnpm@11.23.0` (env-fix), либо даунгрейд corepack 0.31 |
-| `openssl` нет в PATH (только Windows) | генерация RS256 ключей | Использовать `node scripts/generate-jwt-keys.cjs` |
+| `openssl` нет в PATH (только Windows) | генерация RS256 ключей | Использовать `node scripts/data/generate-jwt-keys.cjs` |
 | `curl` в PowerShell = `Invoke-WebRequest` | bash-style curl | Использовать `Invoke-WebRequest -Uri ...` |
 
 ### 7.3. Definition of Done (R1)
@@ -1684,7 +1684,7 @@
 |---|---|
 | `packages/i18n/src/dictionaries/{ru,tj,en}.json` | + 4 ключа: `auth.login.telegram_{button,hint,unavailable,auth_failed}` (DTJ-028.5) |
 | `apps/web/src/pages/login/login-page.tsx` | + `TelegramStep` под `PhoneStep` на `step === 'phone'` (DTJ-028.5) |
-| `docs/06-CURRENT-PROGRESS.md` | + секция 2 «DTJ-028.5 — TWA-flow», + строка EP-01 18/30 |
+| `docs/history/progress-log-to-2026-09-02.md` | + секция 2 «DTJ-028.5 — TWA-flow», + строка EP-01 18/30 |
 
 ---
 
@@ -1694,7 +1694,7 @@
 
 ```powershell
 # 1. Сгенерировать RS256 ключи (чистый Node, без openssl)
-node scripts/generate-jwt-keys.cjs | Tee-Object -FilePath .env.jwt
+node scripts/data/generate-jwt-keys.cjs | Tee-Object -FilePath .env.jwt
 # Скопировать JWT_PRIVATE_KEY=... и JWT_PUBLIC_KEY=... в свой .env (или apps/api/.env)
 
 # 2. Поднять БД (если docker починен, см. workaround)
@@ -1719,11 +1719,11 @@ RUN corepack enable && corepack prepare pnpm@11.23.0 --activate
 RUN npm i -g pnpm@11.23.0
 ```
 
-### 9.3. Следующий по плану (см. STATE-AND-RESUME-POINT.md §11.6)
+### 9.3. Следующий по плану (см. docs/history/state-log-to-2026-09-06.md §11.6)
 
 EP-01 (R1-12 Auth) — **18/30 тикетов закрыто** (включая `GET /auth/me` и
 TWA-flow на фронте). 12 тикетов не реализованы (большинство — не в R1,
-или запланированы на R2/R3, см. STATE-AND-RESUME-POINT.md §11.6).
+или запланированы на R2/R3, см. docs/history/state-log-to-2026-09-06.md §11.6).
 
 **Оставшиеся критические follow-up (R1, желательно до EP-02):**
 
@@ -1734,7 +1734,7 @@ TWA-flow на фронте). 12 тикетов не реализованы (бо
 
 **После критических follow-up:**
 - Переход к **EP-02 (Tenants, white-label, мультитенантность)** —
-  тикеты DTJ-031..DTJ-060 (по `docs/STATE-AND-RESUME-POINT.md`).
+  тикеты DTJ-031..DTJ-060 (по `docs/history/state-log-to-2026-09-06.md`).
   Ключевые тикеты: реальный `TenantResolutionMiddleware` (DTJ-052),
   `tenants` schema (DTJ-051), мультитенантный `users` поиск (DTJ-053).
 - К моменту EP-02 нужны docker-compose (Postgres+Redis) для локального
@@ -1758,10 +1758,10 @@ TWA-flow на фронте). 12 тикетов не реализованы (бо
 
 ## 10. Связанные документы
 
-- `docs/00-PROJECT-CHARTER.md` — устав проекта
-- `docs/02-CLEAN-ARCHITECTURE-AND-CODE.md` — правила C1–C18, слои
-- `docs/03-ARCHITECT-DECISIONS.md` — ADR
-- `docs/05-DEVELOPER-HANDBOOK.md` — handbook для агента
-- `docs/STATE-AND-RESUME-POINT.md` — план + критерии гейтов
+- `docs/product/charter.md` — устав проекта
+- `docs/architecture/clean-architecture.md` — правила C1–C18, слои
+- `docs/architecture/decisions/README.md` — ADR
+- `docs/guides/developer-handbook.md` — handbook для агента
+- `docs/history/state-log-to-2026-09-06.md` — план + критерии гейтов
 - `tickets/00-EPICS.md` — таблица эпиков R1
 - `tickets/00-INDEX.md` — индекс всех 271 тикетов

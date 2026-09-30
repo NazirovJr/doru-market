@@ -1,7 +1,7 @@
 /**
  * Порт `PaymentProvider` (EP-10, DTJ-237, `21-module-orders-payments-escrow.md` §3.1,
  * SRS-PAY-001..003) — Provider Pattern из устава (Charter §3.3), частный случай портов и
- * адаптеров (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.3). ЕДИНСТВЕННАЯ точка, через которую
+ * адаптеров (`docs/architecture/clean-architecture.md` §1.3). ЕДИНСТВЕННАЯ точка, через которую
  * ЛЮБОЙ код платформы разговаривает с банком (реальным или моком) — use case'ы (`Create
  * PaymentInvoiceUseCase`/`HandlePaymentWebhookUseCase`/`RefundOrderUseCase`, DTJ-243+) зависят
  * ТОЛЬКО от этого интерфейса, никогда от конкретного адаптера.

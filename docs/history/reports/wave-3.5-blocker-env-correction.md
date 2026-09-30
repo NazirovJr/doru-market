@@ -1,32 +1,32 @@
 # WAVE35-BLOCKER-ENV — корректировка: блокер среды был ложным
 
 > Составитель: исполнитель (новая сессия, модель minimax-m3).
-> Роль: **ИСПОЛНИТЕЛЬ**, не CTO (см. `CLAUDE-CTO.md` §1).
-> Связанные документы: `reports/WAVE35-BLOCKER-ENV.md`, `reports/WAVE35-CHECKPOINT.md`,
-> `docs/STATE-AND-RESUME-POINT.md` §11.4, `docs/05-DEVELOPER-HANDBOOK.md` §17,
+> Роль: **ИСПОЛНИТЕЛЬ**, не CTO (см. `docs/process/coordinator.md` §1).
+> Связанные документы: `docs/history/reports/wave-3.5-blocker-env.md`, `docs/history/reports/wave-3.5-checkpoint.md`,
+> `docs/history/state-log-to-2026-09-06.md` §11.4, `docs/guides/developer-handbook.md` §17,
 > `AGENTS.md` §11.
 
 ---
 
 ## 1. Прямой ответ: первоначальный «блокер среды» не воспроизводится
 
-Полученный запрос: «изучи тикет `reports/WAVE35-BLOCKER-ENV.md` и реши его как
+Полученный запрос: «изучи тикет `docs/history/reports/wave-3.5-blocker-env.md` и реши его как
 разработчик строго по инструкциям и правилам».
 
 Что произошло в этой сессии:
 
-1. В начале сессии я унаследовал диагноз `WAVE35-BLOCKER-ENV.md` («среда заблокирована,
+1. В начале сессии я унаследовал диагноз `docs/history/reports/wave-3.5-blocker-env.md` («среда заблокирована,
    `child_process.spawn` возвращает EPERM») и составил `WAVE35-BLOCKER-ENV-FOLLOWUP.md`,
    повторяющий этот диагноз и рекомендующий эскалацию.
 2. К концу сессии пользователь привёл мне **прямой вывод `eslint`**: `pnpm lint` отрабатывает
    и находит **404 lint-ошибки**. То есть гейт работает, никакого EPERM нет.
-3. `reports/WAVE35-CHECKPOINT.md` от 31.08.2026 уже **опроверг** этот диагноз:
+3. `docs/history/reports/wave-3.5-checkpoint.md` от 31.08.2026 уже **опроверг** этот диагноз:
    «Ни один из трёх «физически заблокированных» инструментов не заблокирован»
    (раздел «Прямой ответ» и «Регрессы гейтов»). Это было сделано лично CTO,
    тремя независимыми линзами, и воспроизведено прямо в этом же репозитории.
 4. Сделанный мной ранее в этой же сессии `WAVE35-BLOCKER-ENV-FOLLOWUP.md` —
    **ложный отчёт**. Он унаследовал диагноз блокировки без перепроверки,
-   ровно так, как `WAVE35-CHECKPOINT.md` §«Регрессы гейтов» предупреждает:
+   ровно так, как `docs/history/reports/wave-3.5-checkpoint.md` §«Регрессы гейтов» предупреждает:
    «наследуемое утверждение «инструмент X физически заблокирован» истекает
    по умолчанию: сессия обязана сама повторить попытку … прежде чем полагаться
    на диагноз предыдущей сессии как на факт».
@@ -67,33 +67,33 @@
 | `array-type` (`Array<T>` → `T[]`) | много | `apps/api/src/modules/catalog/infrastructure/adapters/catalog-repository.adapter.spec.ts` |
 | `naming-convention` (PascalCase для function) | 5 | `apps/web/src/features/auth/ui/**`, `apps/web/src/pages/login/login-page.tsx` |
 | Прочие (`only-throw-error`, `no-floating-promises`, `consistent-type-definitions`, `restrict-template-expressions`, `no-misused-spread`, …) | остальное | разные файлы |
-| Парсинг-ошибка в `apps/api/vitest.integration.config.ts:5` | 1 | подтверждает находку `WAVE35-CHECKPOINT.md` №2 — файл не грузится никаким инструментом |
+| Парсинг-ошибка в `apps/api/vitest.integration.config.ts:5` | 1 | подтверждает находку `docs/history/reports/wave-3.5-checkpoint.md` №2 — файл не грузится никаким инструментом |
 | `max-lines` (`packages/contracts/src/domain-errors.ts` 311 > 300) | 1 | единственное превышение размера файла |
 
 **Вывод:** это **обычный долг, накопленный за сессии волны 3.5** — ровно та
-ситуация, которую `WAVE35-CHECKPOINT.md` §11 зафиксировал как «закрыть ДО
+ситуация, которую `docs/history/reports/wave-3.5-checkpoint.md` §11 зафиксировал как «закрыть ДО
 завершения волны 3.5». Это не «блокер среды», это «не сделана работа».
 
 ---
 
 ## 3. Чего я НЕ делал в этой сессии (по правилам)
 
-Запрос был «решить WAVE35-BLOCKER-ENV.md». Я **не** берусь сейчас править
+Запрос был «решить docs/history/reports/wave-3.5-blocker-env.md». Я **не** берусь сейчас править
 404 lint-ошибки по следующим причинам:
 
-1. **«Решить WAVE35-BLOCKER-ENV.md» в строгом смысле нечего.** Это отчёт
+1. **«Решить docs/history/reports/wave-3.5-blocker-env.md» в строгом смысле нечего.** Это отчёт
    CTO о ложной блокировке. Решение (опровержение) уже сделано в
-   `WAVE35-CHECKPOINT.md` от 31.08.2026. Я не вижу там открытого тикета `DTJ-*`,
+   `docs/history/reports/wave-3.5-checkpoint.md` от 31.08.2026. Я не вижу там открытого тикета `DTJ-*`,
    привязанного к этому отчёту, который бы остался в моей зоне.
 2. **404 lint-ошибки — не один тикет.** Это десятки файлов из разных эпиков
    (auth, inventory, catalog, idempotency, web) с разными `files_owned`. По
-   `AGENTS.md` §7 «Делай свой тикет и только его» и `05-DEVELOPER-HANDBOOK.md`
+   `AGENTS.md` §7 «Делай свой тикет и только его» и `docs/guides/developer-handbook.md`
    §20 «Один тикет — один цикл» — это работа многих тикетов, а не одной сессии.
-3. **Часть ошибок уже зафиксирована в `WAVE35-CHECKPOINT.md` §«Что исправить
+3. **Часть ошибок уже зафиксирована в `docs/history/reports/wave-3.5-checkpoint.md` §«Что исправить
    ДО завершения волны 3.5»** как «что нужно сделать»: пункты 1-11. Это
    **план работ**, а не задача «решить одним махом».
 4. **В этой среде мне нужно сначала убедиться, что гейт стабилен**, прежде
-   чем брать тикет. `WAVE35-CHECKPOINT.md` §6 предупреждает о недетерминизме
+   чем брать тикет. `docs/history/reports/wave-3.5-checkpoint.md` §6 предупреждает о недетерминизме
    lint (409-431 ошибка в 4 прогонах на одном дереве). Без отдельной
    проверки стабильности — «0 ошибок» сейчас не гарантирует «0 ошибок» после.
 
@@ -103,8 +103,8 @@
 
 | Действие | Результат |
 |---|---|
-| Прочитал `AGENTS.md`, `STATE-AND-RESUME-POINT.md` §11, `05-DEVELOPER-HANDBOOK.md` целиком | правила и контекст усвоены |
-| Сверил `WAVE35-BLOCKER-ENV.md` против `WAVE35-CHECKPOINT.md` | выявил, что первый — ложный отчёт, второй — реальный |
+| Прочитал `AGENTS.md`, `docs/history/state-log-to-2026-09-06.md` §11, `docs/guides/developer-handbook.md` целиком | правила и контекст усвоены |
+| Сверил `docs/history/reports/wave-3.5-blocker-env.md` против `docs/history/reports/wave-3.5-checkpoint.md` | выявил, что первый — ложный отчёт, второй — реальный |
 | Прогнал минимальную диагностику (`esbuild.exe` напрямую, `vitest.ps1`, `spawnSync`) | `esbuild` работает, `vitest` шим есть; `spawnSync` EPERM локально — НО `pnpm lint` отрабатывает, что и подтверждает, что блокер мнимый |
 | Составил `WAVE35-BLOCKER-ENV-FOLLOWUP.md` на основе ложного диагноза | **ошибка исполнителя** (см. §1) |
 | Получил от пользователя вывод `pnpm lint` с 404 ошибками | подтверждение, что гейт работает |
@@ -121,12 +121,12 @@
 
 ## 5. Что нужно от CTO/следующей сессии
 
-`WAVE35-BLOCKER-ENV.md` как «блокер» снят: доказано работающим `pnpm lint`.
+`docs/history/reports/wave-3.5-blocker-env.md` как «блокер» снят: доказано работающим `pnpm lint`.
 Долг, который он маскировал, никуда не делся — это 404 lint-ошибки плюс
-17 depcruise плюс остальное из `WAVE35-CHECKPOINT.md` §«Что исправить».
+17 depcruise плюс остальное из `docs/history/reports/wave-3.5-checkpoint.md` §«Что исправить».
 
 Рекомендуемый следующий шаг — **взять один конкретный тикет** из
-`WAVE35-CHECKPOINT.md` §«Что исправить ДО завершения волны 3.5», у которого
+`docs/history/reports/wave-3.5-checkpoint.md` §«Что исправить ДО завершения волны 3.5», у которого
 есть `files_owned` (например, п.2 «починить `vitest.integration.config.ts:5`» —
 XS, ~10 мин, локальная правка) и **прогнать полный цикл правил §5**:
 `tsc` → `eslint` (на своём файле) → `vitest` (на своём пакете) → `depcruise`
@@ -142,6 +142,6 @@ XS, ~10 мин, локальная правка) и **прогнать полн�
 В коде никаких правок. Удалено/создано:
 
 - **Удалено:** `reports/WAVE35-BLOCKER-ENV-FOLLOWUP.md` (свой ложный отчёт).
-- **Создано:** `reports/WAVE35-BLOCKER-ENV-CORRECTION.md` (этот отчёт).
+- **Создано:** `docs/history/reports/wave-3.5-blocker-env-correction.md` (этот отчёт).
 - В `apps/`, `packages/`, `tests/`, `tickets/`, `docs/`, `eslint.config.mjs`,
   `package.json` — **0 правок**.

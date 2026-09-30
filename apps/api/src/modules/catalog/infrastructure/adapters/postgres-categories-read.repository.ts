@@ -1,7 +1,7 @@
 /**
  * Drizzle-реализация `CategoriesReadRepository` (DTJ-094 follow-up, Волна 5 блок B).
  *
- * DEFECT-FIX (см. `reports/CTO-DECISION-WAVE5.md` §3, блок B): порт был подключён к
+ * DEFECT-FIX (см. `docs/history/briefs/cto-decision-wave5.md` §3, блок B): порт был подключён к
  * `InMemoryCategoriesReadRepository` (`initial: readonly CategoryRecord[] = []`) — прод
  * не имел способа её заполнить, `GET /api/v1/categories` отдавал `data: []` независимо
  * от содержимого Postgres.

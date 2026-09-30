@@ -1,6 +1,6 @@
 /**
  * Порт `SupportOrdersFacadePort` (EP-14, DTJ-279, `27-module-admin-moderation-onboarding.md`
- * §6.1, SRS-ADM-053). Межмодульный фасад `support → orders` (`02-CLEAN-ARCHITECTURE-AND-CODE.md`
+ * §6.1, SRS-ADM-053). Межмодульный фасад `support → orders` (`docs/architecture/clean-architecture.md`
  * §1.2) — тонкая обёртка поверх публичного `OrdersFacade`, правило владения
  * `apps/api/src/modules/support/**` допускает обращение к другим модулям только через их фасад.
  *

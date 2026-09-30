@@ -4,7 +4,7 @@
 > `(End of file - total N lines)` — эта пометка и значит, что файл прочитан весь;
 > последняя строка файла — `=== КОНЕЦ ЗАДАНИЯ DTJ-307c ===`. Пометки нет — дочитай
 > остаток через `read` с `offset` и только потом работай.
-> Если история сжата или ты не помнишь следующий шаг — перечитай этот файл: `reports/qwen3/tasks/DTJ-307c.md`.
+> Если история сжата или ты не помнишь следующий шаг — перечитай этот файл: `scripts/local-model/tasks/DTJ-307c.md`.
 
 > Координатору перед отправкой: DTJ-307a и DTJ-307b влиты в `development`, ветка этого задания создана от него.
 
@@ -63,7 +63,7 @@
    `write` с шапкой и первым тестом, дальше `edit` — по одному тесту.
 7. Проверка — только эта команда (в `workdir` = рабочая папка). Свои способы проверки не
    придумывай, кэши не чисти:
-   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed 'apps/api/src/modules/orders/application/ports/sla-watchdog-queue.port.ts','apps/api/src/modules/orders/infrastructure/jobs/sla-watchdog.processor*','apps/api/src/modules/orders/application/pharmacy-terminal/schedule-sla-watchdog.use-case*','apps/api/src/modules/orders/application/pharmacy-terminal/accept-order.use-case*','apps/api/src/modules/orders/orders.module.ts' -RequireFile reports/qwen3/tasks/DTJ-307c.require.txt`
+   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-gate.ps1 -Allowed 'apps/api/src/modules/orders/application/ports/sla-watchdog-queue.port.ts','apps/api/src/modules/orders/infrastructure/jobs/sla-watchdog.processor*','apps/api/src/modules/orders/application/pharmacy-terminal/schedule-sla-watchdog.use-case*','apps/api/src/modules/orders/application/pharmacy-terminal/accept-order.use-case*','apps/api/src/modules/orders/orders.module.ts' -RequireFile scripts/local-model/tasks/DTJ-307c.require.txt`
    В вызове `pwsh` обязательно укажи `timeoutMs: 600000`: полный гейт идёт до 4 минут, а без этого
    dsh обрывает команду через 2.
    Последняя строка вывода — `GATE: PASS` или `GATE: FAIL -> <что упало>`. Над ней — ошибки с `файл(строка)`.
@@ -427,7 +427,7 @@ function makeHarness(slaMinutes: number, bufferMinutes: number) {
 
 ## 5. Тесты — что именно должно быть проверено
 
-Каждый критерий ниже проверяется механически: гейт читает `reports/qwen3/tasks/DTJ-307c.require.txt`
+Каждый критерий ниже проверяется механически: гейт читает `scripts/local-model/tasks/DTJ-307c.require.txt`
 и ищет в файлах спеков соответствующий текст. Пропущенный критерий — красный гейт и нет коммита.
 
 `sla-watchdog.processor.spec.ts` (`describe('SlaWatchdogProcessor.schedule (DTJ-307)', …)`):
@@ -488,7 +488,7 @@ BLOCKED с точной причиной — нормальный результ
 1. Сдача — одна команда: тот же гейт, что в разделе 1, но с `-Commit`:
 
 ```
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed 'apps/api/src/modules/orders/application/ports/sla-watchdog-queue.port.ts','apps/api/src/modules/orders/infrastructure/jobs/sla-watchdog.processor*','apps/api/src/modules/orders/application/pharmacy-terminal/schedule-sla-watchdog.use-case*','apps/api/src/modules/orders/application/pharmacy-terminal/accept-order.use-case*','apps/api/src/modules/orders/orders.module.ts' -RequireFile reports/qwen3/tasks/DTJ-307c.require.txt -Commit "feat(orders): DTJ-307c — планирование сторожей SLA сборки при приёме заказа"
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-gate.ps1 -Allowed 'apps/api/src/modules/orders/application/ports/sla-watchdog-queue.port.ts','apps/api/src/modules/orders/infrastructure/jobs/sla-watchdog.processor*','apps/api/src/modules/orders/application/pharmacy-terminal/schedule-sla-watchdog.use-case*','apps/api/src/modules/orders/application/pharmacy-terminal/accept-order.use-case*','apps/api/src/modules/orders/orders.module.ts' -RequireFile scripts/local-model/tasks/DTJ-307c.require.txt -Commit "feat(orders): DTJ-307c — планирование сторожей SLA сборки при приёме заказа"
 ```
 
    В вызове `pwsh` обязательно `timeoutMs: 600000`. Гейт сам включает полный режим и коммитит

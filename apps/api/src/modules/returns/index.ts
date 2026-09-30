@@ -1,7 +1,7 @@
 /**
  * Публичный фасад модуля `returns` (EP-11, DTJ-270, скаффолдинг).
  *
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2: единственный легальный путь межмодульного
+ * `docs/architecture/clean-architecture.md` §1.2: единственный легальный путь межмодульного
  * взаимодействия для чужих bounded contexts. Импорт `modules/returns/domain|application|
  * infrastructure|presentation` напрямую — блокирующее нарушение (`dependency-cruiser`,
  * `no-cross-module-deep-import`). Тот же приём, что `modules/payments/index.ts`

@@ -3,9 +3,9 @@
 > Диапазон ID: **DTJ-140 .. DTJ-170** (использовано 31 из 40 зарезервированных, DTJ-171..179 —
 > резерв на укрупнение/дробление внутри диапазона, не выходить за границы).
 > Каталог тикетов: `tickets/ep04-inventory-ingestion/`.
-> Источники (по убыванию приоритета): `docs/04-SCOPE-DECISION-PIVOT.md` (R1-5/R1-4/R1-9) →
-> `docs/03-ARCHITECT-DECISIONS.md` (D-04, D-05, D-06, D-08, D-11, D-12) →
-> `docs/02-CLEAN-ARCHITECTURE-AND-CODE.md` → `docs/01-TECH-BASELINE.md` →
+> Источники (по убыванию приоритета): `docs/product/scope-r1.md` (R1-5/R1-4/R1-9) →
+> `docs/architecture/decisions/README.md` (D-04, D-05, D-06, D-08, D-11, D-12) →
+> `docs/architecture/clean-architecture.md` → `docs/architecture/tech-baseline.md` →
 > `docs/spec/22-module-inventory-sync-1c.md` (SRS-INV-001..062) + `docs/spec/10-domain-model.md`
 > (SRS-DOM-018..024, 145..152, 168..170) + `docs/spec/11-database-schema.md` (SRS-DB-*) +
 > `docs/spec/12-api-conventions-auth-tenancy.md` (SRS-API-033/034, permission-матрица §4).
@@ -125,7 +125,7 @@ CommerceML 2.05 XML-парсер (R2), обязательный mTLS для ко
    импортирует провайдеры/процессоры из `apps/api/src/modules/inventory`. Блокирует DTJ-154.
 2. **Именование маршрутов `apps/pharmacy`** (DTJ-166) — `docs/spec/30-ux-screens-and-flows.md`
    описывает экраны под префиксом `/admin/...`, хотя `apps/pharmacy` — отдельное приложение по
-   `01-TECH-BASELINE.md`. Решение зафиксировано в DTJ-166 (свой неймспейс без `/admin`), но требует
+   `docs/architecture/tech-baseline.md`. Решение зафиксировано в DTJ-166 (свой неймспейс без `/admin`), но требует
    подтверждения перед стартом DTJ-167/168/169.
 3. **RBAC ручного ввода**: `pharmacist` vs только `pharmacy_admin`/`super_admin` для
    `inventory:ingest` — module 22 (SRS-INV-015) и permission-матрица `12` (§4) расходятся; решение

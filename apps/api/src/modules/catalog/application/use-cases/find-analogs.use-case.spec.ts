@@ -19,7 +19,7 @@
  * через подделку порта (in-memory fake, имитирующий реальные офферы).
  *
  * @see docs/tickets/ep03-catalog-analogs/DTJ-101.md (критерии приёмки и тест-план)
- * @see docs/STATE-AND-RESUME-POINT.md §11.4 задача 3.2
+ * @see docs/history/state-log-to-2026-09-06.md §11.4 задача 3.2
  */
 import { describe, expect, it } from 'vitest'
 import { DosageUnit } from '@dorutj/domain-kernel'

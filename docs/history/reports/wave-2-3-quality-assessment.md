@@ -2,7 +2,7 @@
 
 > Составил: Технический директор (по итогам 6 независимых ревью + верификации 8 блокеров +
 > самостоятельной проверки кода и тестов).
-> Дата: 28.08.2026. Объём проверки: волны 2-3 (Этап 6 конвейера, см. `docs/STATE-AND-RESUME-POINT.md`).
+> Дата: 28.08.2026. Объём проверки: волны 2-3 (Этап 6 конвейера, см. `docs/history/state-log-to-2026-09-06.md`).
 > Метод верификации: код прочитан напрямую (`app.module.ts`, `catalog.module.ts`, `dosage.vo.ts`,
 > `pharmacy-account.entity.ts`, `.dependency-cruiser.cjs`, тикеты), тесты прогнаны лично
 > (`vitest run` в `apps/api`, `apps/worker`, `packages/domain-kernel`, `packages/contracts`) —
@@ -63,7 +63,7 @@ EP-09/EP-10 (деньги, escrow) не тикет, а системный рис
   (`proposeControlCategory` возвращает событие вместо синхронной мутации для категорий,
   требующих модерации).
 - **`OnboardingFacade`** (`apps/api/src/modules/onboarding/onboarding.facade.ts`) корректно
-  реализует Facade-паттерн межмодульного взаимодействия по §1.2 `02-CLEAN-ARCHITECTURE-AND-CODE.md`,
+  реализует Facade-паттерн межмодульного взаимодействия по §1.2 `docs/architecture/clean-architecture.md`,
   включая нетривиальную бизнес-логику «аптека активна только если сеть тоже approved|active».
 - **`NullOrdersCancellationAdapter`** — честная документированная заглушка на ещё не
   начатый EP-10, с явным TODO на конкретный эпик. Это ровно то, как нужно готовить интерфейс
@@ -238,7 +238,7 @@ AssertionError: expected false to be true
    тикетами», без пометки severity).
 
 Отдельно, не дефект кода, но часть той же картины: **волна 1, зафиксированная как
-«принята» в `docs/STATE-AND-RESUME-POINT.md`**, сама была неполной относительно
+«принята» в `docs/history/state-log-to-2026-09-06.md`**, сама была неполной относительно
 собственного тикетного плана — в исходном разбиении волны 1 (`tickets/00-INDEX.md`,
 под-волны 6-10) auth-тикеты `DTJ-022`…`DTJ-030` числятся частью волны 1, но в волну 1
 попали только `health/config/logger`. Это значит: разрыв EP-01 **не создан** волной 2-3 —

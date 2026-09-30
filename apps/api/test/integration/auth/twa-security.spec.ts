@@ -2,7 +2,7 @@
  * `twa-security.spec.ts` (EP-01, DTJ-029.5, SRS-API-031/032) — сквозной
  * интеграционный security-сьют TWA-flow (`POST /api/v1/auth/telegram`).
  *
- * Сценарии (из `docs/06-CURRENT-PROGRESS.md` §9.3 + `DTJ-029.md` §«Что сделать»
+ * Сценарии (из `docs/history/progress-log-to-2026-09-02.md` §9.3 + `DTJ-029.md` §«Что сделать»
  * критерий «TWA-flow не покрыт security-тестами»):
  *   1. **Happy path**: валидно подписанный `initData` → 200 + пара токенов
  *      + создана `user_telegram_identities`-запись (через повторный login тем же

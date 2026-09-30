@@ -1,7 +1,7 @@
 /**
  * Интеграционный тест миграции `0039_returns_disputes_support.sql` (EP-11/14, DTJ-270,
  * тест-план тикета) — РЕАЛЬНЫЙ Postgres. Testcontainers НЕ используется (решение архитектора,
- * D-EP09-14/D-EP09-31, `reports/EP09-CTO-BRIEF.md` — повтор обоснования из
+ * D-EP09-14/D-EP09-31, `docs/history/briefs/ep09-cto-brief.md` — повтор обоснования из
  * `payments-migration.integration.spec.ts`, ближайший прецедент для Группы E/F): тикет
  * упоминает Testcontainers по инерции текста, тест бьёт по настроенной БД.
  *

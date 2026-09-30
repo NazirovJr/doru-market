@@ -17,12 +17,12 @@
  * DTJ-158) на той же глубине пути — устоявшаяся, документированная гарантия роутера, не
  * специфичное для Nest поведение. `:batchId/errors` (2 сегмента) структурно не пересекается с
  * `:batchId` DTJ-158 (1 сегмент). **Не проверено живым HTTP-вызовом в этой сессии** (юнит-тесты
- * вызывают методы контроллеров напрямую, минуя роутер, см. `docs/07-WAVE4-HANDOFF.md` §3.2 про
+ * вызывают методы контроллеров напрямую, минуя роутер, см. `docs/history/wave-4-handoff.md` §3.2 про
  * этот класс дефектов) — зафиксировать как остаточный интеграционный риск для координатора.
  *
  * Скоуп по роли и локализация `errorCode → message` — целиком в
  * `InventorySyncReportQueryService` (application), контроллер только парсит HTTP и
- * форматирует ответ (`02-CLEAN-ARCHITECTURE-AND-CODE.md`, presentation не содержит бизнес-правил).
+ * форматирует ответ (`docs/architecture/clean-architecture.md`, presentation не содержит бизнес-правил).
  */
 import { Controller, Get, HttpException, HttpStatus, Inject, Param, Query, Headers, UseGuards } from '@nestjs/common'
 import {

@@ -6,7 +6,7 @@
  * Контроллер передаёт СЫРЫЕ данные (`IngestInventoryBatchRowInput`). Use case
  * маппит их в `InventoryBatchUpsertRow` (валидация — здесь). Это соблюдает
  * чистую архитектуру: presentation НЕ импортирует domain (правило
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1).
+ * `docs/architecture/clean-architecture.md` §1.1).
  *
  * Контракт:
  *   - `pharmacyId` — UUID активной аптеки. Проверка активности (suspended/revoked)

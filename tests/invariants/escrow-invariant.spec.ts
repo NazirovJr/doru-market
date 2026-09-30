@@ -1,6 +1,6 @@
 /**
  * `EscrowInvariantSpec` (EP-10, DTJ-255, D-25, SRS-DOM-180/SRS-ORD-027/SRS-ORD-027a,
- * `docs/03-ARCHITECT-DECISIONS.md` D-25 п.4, `docs/spec/21-module-orders-payments-escrow.md`
+ * `docs/architecture/decisions/README.md` D-25 п.4, `docs/spec/21-module-orders-payments-escrow.md`
  * TC-ORD-001c/d) — сквозной гейт-тест инварианта:
  *
  *   order.status === 'paid_escrow' ⟹ существуют записи escrow_ledger для этого заказа.
@@ -47,7 +47,7 @@
  *   - Фикстура-нарушитель — ЕДИНСТВЕННОЕ место во всём сьюте, где `orders` заполняется прямым SQL
  *     `INSERT` в обход домена: `status='paid_escrow'` БЕЗ единой строки `escrow_ledger`. Доказывает,
  *     что `EscrowInvariantSpec` РЕАЛЬНО ловит нарушение, а не просто существует
- *     (`docs/02-CLEAN-ARCHITECTURE-AND-CODE.md` §6.1 «ловушка, которая перестала ловить, молчит
+ *     (`docs/architecture/clean-architecture.md` §6.1 «ловушка, которая перестала ловить, молчит
  *     об этом»). Платёжный метод — `alif_mobi` (не `cash_courier`), НАРОЧНО: `Order.restore()`
  *     сам отверг бы `cash_courier`+`paid_escrow` СВОИМ guard'ом (структурная порча), а этот тест
  *     обязан проверять ИМЕННО ledger-сторону инварианта, не смешивать её с чужой защитой.
@@ -497,7 +497,7 @@ describe.skipIf(!postgresAvailable)('EscrowInvariantSpec — D-25 сквозно
 
   /**
    * НАЙДЕННЫЙ ДЕФЕКТ (см. отчёт сдачи DTJ-255, `foundIssues`/`blockers` — НЕ в files_owned этого
-   * тикета, не чинится здесь, CLAUDE-CTO.md §«Найден дефект в чужом коде»): этот тест детерминированно
+   * тикета, не чинится здесь, docs/process/coordinator.md §«Найден дефект в чужом коде»): этот тест детерминированно
    * ВИСНЕТ (не падает быстро) и валит `afterAll` таймаутом хука. Живой прогон + `pg_stat_activity`
    * подтвердили корневую причину — самозаклинивание (deadlock) на уровне приложения, НЕ баг этого
    * файла:
@@ -526,7 +526,7 @@ describe.skipIf(!postgresAvailable)('EscrowInvariantSpec — D-25 сквозно
    * что вызывает deadlock выше). ПРИМЕНЕНИЕ ОТЛОЖЕНО: обе попытки записать этот однострочный фикс
    * в `orders-facade.adapter.ts` (моя и координатора) отклонены permission-классификатором
    * Claude Code — блокер ПРАВ ЗАПИСИ в этой сессии, НЕ блокер решения или диагностики. Полный
-   * дифф зафиксирован координатором в `docs/STATE-AND-RESUME-POINT.md` как рекомендация нового
+   * дифф зафиксирован координатором в `docs/history/state-log-to-2026-09-06.md` как рекомендация нового
    * тикета. `it.skip` ниже — явное решение пользователя (не решение исполнителя AGENTS.md §3/§10
    * запрещает исполнителю; здесь это санкционированное владельцем исключение для ИМЕННО этого
    * задокументированного, верифицированного и временно неприменимого случая) — заглушить БЕЗ

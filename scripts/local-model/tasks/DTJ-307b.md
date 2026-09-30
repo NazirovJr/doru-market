@@ -4,7 +4,7 @@
 > `(End of file - total N lines)` — эта пометка и значит, что файл прочитан весь;
 > последняя строка файла — `=== КОНЕЦ ЗАДАНИЯ DTJ-307b ===`. Пометки нет — дочитай
 > остаток через `read` с `offset` и только потом работай.
-> Если история сжата или ты не помнишь следующий шаг — перечитай этот файл: `reports/qwen3/tasks/DTJ-307b.md`.
+> Если история сжата или ты не помнишь следующий шаг — перечитай этот файл: `scripts/local-model/tasks/DTJ-307b.md`.
 
 > Координатору перед отправкой: DTJ-307a влит в `development`, ветка этого задания создана от него.
 
@@ -64,7 +64,7 @@
    `write` с шапкой и первым тестом, дальше `edit` — по одному тесту.
 7. Проверка — только эта команда (в `workdir` = рабочая папка). Свои способы проверки не
    придумывай, кэши не чисти:
-   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed 'apps/api/src/modules/orders/application/ports/tenancy-facade.port.ts','apps/api/src/modules/orders/infrastructure/adapters/tenancy-facade.adapter*','apps/api/src/modules/orders/application/*.spec.ts','apps/api/test/integration/orders/__tests__/test-app.ts' -RequireFile reports/qwen3/tasks/DTJ-307b.require.txt`
+   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-gate.ps1 -Allowed 'apps/api/src/modules/orders/application/ports/tenancy-facade.port.ts','apps/api/src/modules/orders/infrastructure/adapters/tenancy-facade.adapter*','apps/api/src/modules/orders/application/*.spec.ts','apps/api/test/integration/orders/__tests__/test-app.ts' -RequireFile scripts/local-model/tasks/DTJ-307b.require.txt`
    В вызове `pwsh` обязательно укажи `timeoutMs: 600000`: полный гейт идёт до 4 минут, а без этого
    dsh обрывает команду через 2.
    Последняя строка вывода — `GATE: PASS` или `GATE: FAIL -> <что упало>`. Над ней — ошибки с `файл(строка)`.
@@ -325,7 +325,7 @@ describe('TenancyFacadeAdapter.getPickupSlaBufferMinutes (DTJ-307, SRS-PHT-033)'
 
 ## 5. Тесты — что именно должно быть проверено
 
-Каждый критерий ниже проверяется механически: гейт читает `reports/qwen3/tasks/DTJ-307b.require.txt`
+Каждый критерий ниже проверяется механически: гейт читает `scripts/local-model/tasks/DTJ-307b.require.txt`
 и ищет в файлах спеков соответствующий текст. Пропущенный критерий — красный гейт и нет коммита.
 
 `tenancy-facade.adapter.spec.ts` — два новых `it` из раздела 3.3: дефолт 5 при отсутствии настроек;
@@ -367,7 +367,7 @@ BLOCKED с точной причиной — нормальный результ
 1. Сдача — одна команда: тот же гейт, что в разделе 1, но с `-Commit`:
 
 ```
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qwen-gate.ps1 -Allowed 'apps/api/src/modules/orders/application/ports/tenancy-facade.port.ts','apps/api/src/modules/orders/infrastructure/adapters/tenancy-facade.adapter*','apps/api/src/modules/orders/application/*.spec.ts','apps/api/test/integration/orders/__tests__/test-app.ts' -RequireFile reports/qwen3/tasks/DTJ-307b.require.txt -Commit "feat(orders): DTJ-307b — TenancyFacadePort.getPickupSlaBufferMinutes"
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-model/qwen-gate.ps1 -Allowed 'apps/api/src/modules/orders/application/ports/tenancy-facade.port.ts','apps/api/src/modules/orders/infrastructure/adapters/tenancy-facade.adapter*','apps/api/src/modules/orders/application/*.spec.ts','apps/api/test/integration/orders/__tests__/test-app.ts' -RequireFile scripts/local-model/tasks/DTJ-307b.require.txt -Commit "feat(orders): DTJ-307b — TenancyFacadePort.getPickupSlaBufferMinutes"
 ```
 
    В вызове `pwsh` обязательно `timeoutMs: 600000`. Гейт сам включает полный режим и коммитит

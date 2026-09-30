@@ -8,7 +8,7 @@ import { DomainError } from './dosage.errors.js'
  * (`20-module-catalog-search.md` §6.2, SRS-CAT-032/033).
  *
  * ВАЖНО: смягчение диагональной матрицы (например, `tablet ↔ capsule`) — НЕ допускается
- * правкой этого файла без отдельного ADR на имя архитектора (`03-ARCHITECT-DECISIONS.md`,
+ * правкой этого файла без отдельного ADR на имя архитектора (`docs/architecture/decisions/README.md`,
  * преамбула). Дизайн-решение зафиксировано в SRS-CAT-033.
  */
 /* eslint-disable @typescript-eslint/naming-convention -- Enum-значения совпадают с `dosage_form_class` в БД (11-database-schema.md, SRS-DOM-079). Менять формат — сломает строковые сравнения `seed-данных`, миграций и API-контракта. */

@@ -31,7 +31,7 @@
  * `it.todo` — это НЕ `it.skip` (правило §3); тест просто зафиксирован
  * как запланированный, не отключённый.
  *
- * @see docs/STATE-AND-RESUME-POINT.md §11.4 Блок 1.1
+ * @see docs/history/state-log-to-2026-09-06.md §11.4 Блок 1.1
  */
 import { readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'

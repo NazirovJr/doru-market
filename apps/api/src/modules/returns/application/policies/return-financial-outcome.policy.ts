@@ -4,7 +4,7 @@
  * курьер или никто — решается ЗДЕСЬ, объектом-константой, а не разбросанными `if/else` по
  * use case'ам (DTJ-274) — прямой канал финансовой ошибки иначе.
  *
- * `application/policies/` (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §3 — политика расчёта, зависящая
+ * `application/policies/` (`docs/architecture/clean-architecture.md` §3 — политика расчёта, зависящая
  * от внешнего контекста «кто виноват», не инвариант самой сущности `OrderReturn`, поэтому не в
  * `domain/`). Принимает готовые VO `returns`-домена (`ReturnReason`/`ReturnDisposition`), не
  * примитивные строки — `02` §2.3 (Value Objects обязательны, primitive obsession — запах).

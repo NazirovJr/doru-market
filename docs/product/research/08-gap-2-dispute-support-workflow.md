@@ -8,7 +8,7 @@
 > REQ-PAY-1, REQ-PAY-6, REQ-PAY-9, REQ-PAY-11 (там впервые упомянуты `dispute_window_days`,
 > блокировка payout активным спором и `admin_payment_override`, но без модели данных),
 > `research/02-regulatory-and-compliance.md` §7 (ст.18/ст.22-23/ст.25 Закона РТ «О защите прав
-> потребителей», REQ-REG-15), tz.log Модуль 5 (SLA сборки 7 минут, OTP), Charter §3.4
+> потребителей», REQ-REG-15), docs/product/client-brief-original.txt Модуль 5 (SLA сборки 7 минут, OTP), Charter §3.4
 > (White-Label: деньги сети идут напрямую на её мерчант-счёт).
 >
 > Методология: как и в предыдущих research-документах, всё не подтверждённое первоисточником
@@ -117,7 +117,7 @@ other                                 false                классифици�
 | Категория | Обязательная evidence | Автоматически прикладывается системой |
 |---|---|---|
 | `order_not_received` | нет обязательного фото от клиента | `order_items` snapshot, таймстемп курьерского OTP-подтверждения (`delivered_at`), геометка курьера на момент `delivered` (если есть) |
-| `order_item_missing_or_wrong` | ≥1 фото полученных товаров/упаковки | `order_items` snapshot (что должно было быть), фото штрихкода, отсканированного фармацевтом при сборке (терминал фармацевта, tz.log Модуль 5) — для сверки, что отгружен правильный товар |
+| `order_item_missing_or_wrong` | ≥1 фото полученных товаров/упаковки | `order_items` snapshot (что должно было быть), фото штрихкода, отсканированного фармацевтом при сборке (терминал фармацевта, docs/product/client-brief-original.txt Модуль 5) — для сверки, что отгружен правильный товар |
 | `order_item_damaged_or_expired` | ≥1 фото товара **и** ≥1 фото упаковки/этикетки с датой срока годности | `batch_number`/`expiry_date` из `pharmacy_inventory` на момент продажи (для сверки — не подменили ли партию) |
 | `order_quality_defect` | описание симптома/реакции (текст обязателен), фото упаковки желательно | `medicine_id`, `inn_name`, `manufacturer_name` — для последующей маршрутизации в фармаконадзор (см. Открытые вопросы) |
 | `payment_issue` | скриншот банковского SMS/списания — **необязателен**, только вспомогателен | `escrow_ledger` записи по `order_id`, результат `getBillStatus` (сверка с REQ-PAY-9) |
@@ -421,13 +421,13 @@ ALTER TABLE payout_schedule ADD COLUMN held_by_dispute_id UUID REFERENCES order_
 ALTER TYPE user_role ADD VALUE 'support_agent';
 ```
 
-`support_agent` — новая роль, отсутствовавшая в исходном `user_role` из tz.log/Charter §3 (там
+`support_agent` — новая роль, отсутствовавшая в исходном `user_role` из docs/product/client-brief-original.txt/Charter §3 (там
 только `customer, pharmacist, courier, pharmacy_admin, super_admin`). Обоснование расширения:
 без выделенной роли обработка тикетов легла бы либо на `pharmacy_admin` (конфликт интересов —
 §3, §6), либо потребовала бы, чтобы каждый агент поддержки имел полный `super_admin` (нарушение
 принципа наименьших привилегий — агент не должен иметь доступ к `admin_payment_override` и
 White-Label конфигуратору). Charter §5 прямо разрешает расширения схемы при условии сохранения
-исходных имён — новая роль не удаляет и не переименовывает ничего из tz.log.
+исходных имён — новая роль не удаляет и не переименовывает ничего из docs/product/client-brief-original.txt.
 
 ---
 
@@ -619,10 +619,10 @@ White-Label конфигуратору). Charter §5 прямо разрешае
     полный текст платный).
     https://base.spinform.ru/show_doc.fwx?rgn=8294
 
-[8] DoruTJ — `docs/research/03-payments-and-escrow.md` (внутренний документ, §6.2/6.3, REQ-PAY-1,
+[8] DoruTJ — `docs/product/research/03-payments-and-escrow.md` (внутренний документ, §6.2/6.3, REQ-PAY-1,
     REQ-PAY-6, REQ-PAY-8, REQ-PAY-9, REQ-PAY-11).
 
-[9] DoruTJ — `docs/research/02-regulatory-and-compliance.md` (внутренний документ, §7, REQ-REG-15).
+[9] DoruTJ — `docs/product/research/02-regulatory-and-compliance.md` (внутренний документ, §7, REQ-REG-15).
 
-[10] DoruTJ — `docs/research/07-telegram-pwa-and-delivery-ops.md` (внутренний документ, REQ-NOTIF-2
+[10] DoruTJ — `docs/product/research/07-telegram-pwa-and-delivery-ops.md` (внутренний документ, REQ-NOTIF-2
      — Telegram-бот как основной канал уведомлений).

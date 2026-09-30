@@ -1,7 +1,7 @@
 /**
  * Порт `CatalogFacadePort` (EP-09, DTJ-220, SRS-ORD-018 шаг 4b).
  *
- * Межмодульный фасад `orders → catalog` (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2: чужой
+ * Межмодульный фасад `orders → catalog` (`docs/architecture/clean-architecture.md` §1.2: чужой
  * bounded context — только через порт, прямой импорт `modules/catalog/**` из `orders`
  * запрещён `dependency-cruiser` (`no-cross-module-deep-import`)). Реализация — адаптер,
  * делегирующий на публичный фасад `modules/catalog/index.ts` (`CatalogFacade`), заводится

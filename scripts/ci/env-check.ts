@@ -16,7 +16,7 @@
  * `JWT_PRIVATE_KEY` в `apps/api/src/modules/auth/infrastructure/adapters/rs256-jwt-signer.
  * adapter.ts`, DTJ-022/EP-01), а часть описывает ещё не реализованные в R1 подсистемы (S3,
  * WebSocket-таймауты, on-premise-лицензирование). Ни расширять `env.schema.ts` (файл этим
- * тикетом не владеется, `files_owned: [.env.example, scripts/env-check.ts]`), ни переписывать
+ * тикетом не владеется, `files_owned: [.env.example, scripts/ci/env-check.ts]`), ни переписывать
  * доступ к ENV в чужих модулях — не входит в объём DTJ-426 (AGENTS.md §7). Список найденных
  * несоответствий SRS-NFR-053 vs реально читаемый код зафиксирован в отчёте о сдаче тикета
  * («НАЙДЕННЫЕ ЧУЖИЕ ПРОБЛЕМЫ»), не в этом файле.
@@ -27,10 +27,10 @@ import { fileURLToPath } from 'node:url'
 import type { z } from 'zod'
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url))
-// `ENV_CHECK_REPO_ROOT_OVERRIDE` — ТОЛЬКО для `scripts/env-check.spec.ts` (негативные e2e-кейсы
+// `ENV_CHECK_REPO_ROOT_OVERRIDE` — ТОЛЬКО для `scripts/ci/env-check.spec.ts` (негативные e2e-кейсы
 // прогоняют этот CLI против временного фиктивного дерева, не против настоящего репозитория).
 // В реальном запуске (`pnpm env:check`) переменная не задана — используется путь скрипта.
-export const REPO_ROOT = process.env['ENV_CHECK_REPO_ROOT_OVERRIDE'] ?? path.resolve(SCRIPT_DIR, '..')
+export const REPO_ROOT = process.env['ENV_CHECK_REPO_ROOT_OVERRIDE'] ?? path.resolve(SCRIPT_DIR, '..', '..')
 export const ENV_EXAMPLE_PATH = path.join(REPO_ROOT, '.env.example')
 
 /** Каждый Node-процесс монорепозитория, валидирующий свой ENV через Zod на старте. */

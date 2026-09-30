@@ -49,7 +49,7 @@ const STARTUP_FAILURE_EXIT_CODE = 1
 /**
  * Глобальный префикс `api` + URI-версионирование (`enableVersioning`) — контроллеры
  * бизнес-модулей объявлены как `@Controller({ path: '...', version: '1' })`
- * (docstring каждого фиксирует маршрут как `/api/v1/...`, см. `docs/00-PROJECT-CHARTER.md`
+ * (docstring каждого фиксирует маршрут как `/api/v1/...`, см. `docs/product/charter.md`
  * и §19 хендбука: `curl http://localhost:3000/api/v1/medicines`), но без этих двух вызовов
  * NestJS ТИХО игнорирует опцию `version` и регистрирует маршрут без версии и без префикса
  * (`/auth/telegram` вместо `/api/v1/auth/telegram`) — обнаружено при прогоне

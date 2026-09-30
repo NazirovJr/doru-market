@@ -11,7 +11,7 @@
  * физически не может существовать раньше своей зависимости).
  *
  * Чистая функция домена: без I/O, без `Date.now()`/`Math.random()`/`process.env`
- * (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §2.6).
+ * (`docs/architecture/clean-architecture.md` §2.6).
  *
  * Пайплайн (`SRS-CAT-024` п.1-4):
  *   а) `trim()` + схлопывание повторных пробелов;

@@ -1,7 +1,7 @@
 /**
  * Публичный фасад модуля `onboarding` (EP-03, DTJ-063, наполняется в DTJ-070).
  *
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2: единственный легальный путь
+ * `docs/architecture/clean-architecture.md` §1.2: единственный легальный путь
  * межмодульного взаимодействия. Импорт
  * `modules/onboarding/domain|application|infrastructure|presentation` напрямую
  * — блокирующее нарушение.

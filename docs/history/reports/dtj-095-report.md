@@ -111,8 +111,8 @@ pnpm verify (typecheck, lint, arch:check, test:arch) подтверждены ч
 | `apps/api/src/modules/catalog/infrastructure/adapters/catalog-repository.adapter.ts:168` | `save()` — 70 строк при лимите 40 (`max-lines-per-function`). Не правил — не моя зона. | Линт/порог C1 |
 | `apps/api/src/modules/catalog/infrastructure/mappers/medicine.mapper.ts:36` | `type` где правило требует `interface` (`consistent-type-definitions`). Не правил. | Линт |
 | `apps/api/src/modules/catalog/infrastructure/adapters/catalog-repository.adapter.spec.ts` | 14 нарушений линтера (импорты `../../...`, `Array<T>`, `no-unnecessary-condition`, template-literal types). Не правил — не моя зона. | Линт |
-| 17 нарушений `arch:check` в чужих модулях (`auth`, `inventory`, `web`, `tests/integration`) | Все вне scope DTJ-095. См. `STATE-AND-RESUME-POINT.md §11.4 задача 5.1` — отдельная задача волны 3.5. | Архитектурный долг |
-| 409 нарушений `pnpm eslint . --max-warnings=0` в чужих файлах | Все вне scope DTJ-095. Вине 2–3 (см. `STATE-AND-RESUME-POINT.md §11.2` — 54 из 56 подавлений без `--` обоснования, исключённые папки, и т.д.). | Техдолг |
+| 17 нарушений `arch:check` в чужих модулях (`auth`, `inventory`, `web`, `tests/integration`) | Все вне scope DTJ-095. См. `docs/history/state-log-to-2026-09-06.md §11.4 задача 5.1` — отдельная задача волны 3.5. | Архитектурный долг |
+| 409 нарушений `pnpm eslint . --max-warnings=0` в чужих файлах | Все вне scope DTJ-095. Вине 2–3 (см. `docs/history/state-log-to-2026-09-06.md §11.2` — 54 из 56 подавлений без `--` обоснования, исключённые папки, и т.д.). | Техдолг |
 
 ---
 

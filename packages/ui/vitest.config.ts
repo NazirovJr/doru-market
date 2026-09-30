@@ -10,7 +10,7 @@ import { defineConfig } from 'vitest/config'
  * `use-focus-trap.ts` и `test-utils.ts` (тикет DTJ-403, тест-план): вся инфраструктура
  * автопроверки доступности, на которую будут полагаться ВСЕ последующие компоненты `packages/ui`
  * (начиная с DTJ-404), приравнена по строгости к `domain`/testing-инфраструктуре
- * (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §6). `coverage.enabled` заставляет обычный `vitest run`
+ * (`docs/architecture/clean-architecture.md` §6). `coverage.enabled` заставляет обычный `vitest run`
  * (а значит и `pnpm test` → `turbo run test`) считать покрытие и падать при просадке ниже
  * порога — без отдельного флага `--coverage` в скрипте `test`.
  *
