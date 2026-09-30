@@ -3,7 +3,7 @@
  *
  * Отдельный файл от `postgres-search.adapter.ts` — тот же приём, что `postgres-search.sql.ts`
  * (DTJ-185, `search()`) будет использовать для собственного SQL: строитель запроса отделён от
- * DI-класса адаптера, чтобы каждый файл укладывался в C2 (`02-CLEAN-ARCHITECTURE-AND-CODE.md`).
+ * DI-класса адаптера, чтобы каждый файл укладывался в C2 (`docs/architecture/clean-architecture.md`).
  *
  * **Два пути (`SRS-CAT-029`, `SRS-DB-019`):**
  *   - `length(prefix) < SUGGEST_SHORT_PREFIX_THRESHOLD` (3) — ТОЛЬКО префиксный B-tree путь по

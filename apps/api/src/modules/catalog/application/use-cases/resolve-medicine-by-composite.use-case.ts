@@ -39,7 +39,7 @@
  * **Разделение ответственности:**
  *   - Принимает решение о результате на основе переданных данных;
  *   - НЕ ходит в БД напрямую (только через порт `FuzzyMedicineMatcher`);
- *   - НЕ импортирует Drizzle/инфраструктуру (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1).
+ *   - НЕ импортирует Drizzle/инфраструктуру (`docs/architecture/clean-architecture.md` §1.1).
  */
 import { Inject, Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'

@@ -3,7 +3,7 @@
  * доступ к `window.Telegram.WebApp`, разделяемый файлами `src/twa/**`.
  *
  * Риск тикета зафиксирован явно: `@telegram-apps/sdk-react` (упомянут `SRS-UX-043` как технический
- * выбор) отсутствует в `pnpm-lock.yaml`/`docs/01-TECH-BASELINE.md` и НЕ входит в зафиксированный
+ * выбор) отсутствует в `pnpm-lock.yaml`/`docs/architecture/tech-baseline.md` и НЕ входит в зафиксированный
  * список пакетов — правило AGENTS.md §10 запрещает исполнителю самостоятельно ставить новую
  * зависимость («needsDependency» в отчёте). `apps/web/src/features/auth/lib/telegram-webapp.ts`
  * (EP-01, DTJ-028.5) уже приняла то же решение для `initData`-авторизации по той же причине —
@@ -18,7 +18,7 @@
  *
  * Миграция (вне периметра этого тикета): `apps/web/src/features/auth/lib/telegram-webapp.ts`
  * читает `initData`/`ready`/`close` отдельным узким интерфейсом — при появлении зависимости
- * `@telegram-apps/sdk-react` в `01-TECH-BASELINE.md` оба места стоит объединить вокруг общего
+ * `@telegram-apps/sdk-react` в `docs/architecture/tech-baseline.md` оба места стоит объединить вокруг общего
  * источника типов (кандидат размещения — `packages/domain-kernel`/новый общий пакет, т.к. нужен
  * ≥2 пакетам, правило AGENTS.md §12).
  */

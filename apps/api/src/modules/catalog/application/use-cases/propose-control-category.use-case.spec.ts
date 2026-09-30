@@ -13,7 +13,7 @@
  * вызовом), убрана целиком (см. JSDoc use case'а). Тест «5. UnitOfWork.run вызывается» удалён —
  * он проверял поведение, которое теперь намеренно отсутствует.
  *
- * @see docs/tickets/ep03-catalog-analogs/DTJ-096.md
+ * @see tickets/ep03-catalog-analogs/DTJ-096.md
  */
 import { describe, expect, it, vi } from 'vitest'
 import { NotFoundError } from '@dorutj/contracts'

@@ -10,7 +10,7 @@
  * - `attachBarcode(...)` корректно выставляет `isGloballyIdentifiableByBarcode` (SRS-DOM-016, D-06).
  * - `psychotropic`/`narcotic` запрещены к дистанционной продаже (`canOrderRemotely() === false`).
  *
- * Чистый домен (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §2): ноль I/O, ноль `Date.now()`.
+ * Чистый домен (`docs/architecture/clean-architecture.md` §2): ноль I/O, ноль `Date.now()`.
  * Время — через `Clock` порт (потребляющие use cases), ID — через `IdGenerator`.
  */
 import { Barcode, Dosage, err, ok } from '@dorutj/domain-kernel'

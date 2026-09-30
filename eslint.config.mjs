@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * ESLint flat config — принуждение правил Clean Code C1–C18.
- * Источник правил: docs/02-CLEAN-ARCHITECTURE-AND-CODE.md §4 и §6.2.
+ * Источник правил: docs/architecture/clean-architecture.md §4 и §6.2.
  *
  * ПОЧЕМУ error, а не warn: правило, которое можно проигнорировать, не является правилом.
  * `pnpm lint` запускается с --max-warnings=0, поэтому warn всё равно уронил бы сборку,
@@ -20,7 +20,7 @@ export default tseslint.config(
   // Ж4 (AGENTS.md §4) — запрет подавлений без обоснования. Встроенная опция ESLint
   // ловит подавления, которые ничего не подавляют (протухшие после рефакторинга),
   // а машинная проверка обоснований — в tests/arch/suppression-justification.spec.ts
-  // (STATE-AND-RESUME-POINT.md §11.4 задача 5.4).
+  // (docs/history/state-log-to-2026-09-06.md §11.4 задача 5.4).
   {
     linterOptions: {
       reportUnusedDisableDirectives: 'error',
@@ -49,7 +49,7 @@ export default tseslint.config(
       'apps/*_mobile/**',
       // Канвас Claude Design и его рантайм — сторонний артефакт, не наш продуктовый код.
       // Является обязательной визуальной ссылкой (docs/spec/32-design-reference.md), но не собирается.
-      'Mobile app design planning/**',
+      'docs/product/design/claude-design-canvas/**',
       // DTJ-415: фикстуры-нарушители tests/arch/fixtures/** ДОЛЖНЫ падать при линте — это их
       // единственное назначение. Исключены из обычного `pnpm lint`/`pnpm verify`, чтобы не ронять
       // сборку остального репозитория; run-fixture-check.spec.ts таргетирует их явно через
@@ -206,7 +206,7 @@ export default tseslint.config(
             {
               group: ['../../*'],
               message:
-                'Запрещены импорты через два и более уровня вверх (C16). Используй алиас @/... — см. docs/02-CLEAN-ARCHITECTURE-AND-CODE.md §4.',
+                'Запрещены импорты через два и более уровня вверх (C16). Используй алиас @/... — см. docs/architecture/clean-architecture.md §4.',
             },
           ],
         },
@@ -257,7 +257,7 @@ export default tseslint.config(
                 '**/application/**',
               ],
               message:
-                'Слой domain обязан быть чистым: без фреймворков, БД, сети и внешних слоёв (docs/02-CLEAN-ARCHITECTURE-AND-CODE.md §1.1).',
+                'Слой domain обязан быть чистым: без фреймворков, БД, сети и внешних слоёв (docs/architecture/clean-architecture.md §1.1).',
             },
           ],
         },

@@ -9,7 +9,7 @@
  * repository.ts` — Drizzle-репозиторий inventory, `composite-inventory-matcher.
  * service.ts` — composite-матчинг) уже зафиксированы архитектурно. Этот порт
  * — **допустимое расширение** исключения SRS-CAT-014 (см. ADR в задаче 3.5
- * `STATE-AND-RESUME-POINT.md` §11.4): только read, без записи и без
+ * `docs/history/state-log-to-2026-09-06.md` §11.4): только read, без записи и без
  * воспроизведения бизнес-инвариантов чужих агрегатов.
  *
  * **Архитектурное решение этого тикета.** В EP-07 на момент реализации ещё НЕ
@@ -36,13 +36,13 @@
  *
  * @see docs/spec/20-module-catalog-search.md (SRS-CAT-011, SRS-CAT-036, SRS-CAT-061)
  * @see docs/spec/10-domain-model.md (SRS-DOM-158/159)
- * @see docs/STATE-AND-RESUME-POINT.md §11.4 задача 3.2 (долг 3.5)
+ * @see docs/history/state-log-to-2026-09-06.md §11.4 задача 3.2 (долг 3.5)
  */
 import type { PharmacyOfferPublic } from '@dorutj/contracts'
 
 /**
  * Гео-точка пользователя (SRS-CAT-011). Широта/долгота в градусах, WGS-84.
- * Дубликат типа из `apps/api/src/shared-kernel/geo/geo-point.vo.ts` —
+ * Дубликат типа из `apps/api/src/shared-kernel/domain/value-objects/geo-point.vo.ts` —
  * намеренно НЕ импортируем `shared-kernel` из `application`-порта
  * (нарушит направление зависимостей, см. AGENTS.md §5), и намеренно НЕ
  * дублируем VO в `packages/domain-kernel` — тип публичного контракта,

@@ -19,7 +19,7 @@ const HTTP_ACCESS_LOG_MESSAGE = 'request completed'
  * обращается к приватным символам (`stringifySym`) ИМЕННО этого вложенного `pino`. Передача
  * туда инстанса из НАШЕГО `pino@^10.3.1` ломается в рантайме (`logger[stringifySym] is not
  * a function`) — расхождение версий возможно только через ADR/обновление
- * `01-TECH-BASELINE.md`, вне `files_owned` этого тикета (см. `assumptions` DTJ-001).
+ * `docs/architecture/tech-baseline.md`, вне `files_owned` этого тикета (см. `assumptions` DTJ-001).
  * Поэтому здесь `pino-http` строит СВОЙ внутренний логгер сам (без `logger:`) из ТЕХ ЖЕ
  * опций (`buildPinoOptions` — level/timestamp/redact/mixin, общих с корневым логгером), что
  * даёт идентичный формат вывода без межверсионной поломки.

@@ -5,9 +5,8 @@
 > дробления слишком крупных тикетов в процессе реализации (например, если `DTJ-370` окажется
 > избыточно объёмным для одного захода — дробить, не расширять чужой диапазон).
 >
-> Источники: `docs/04-SCOPE-DECISION-PIVOT.md` → `docs/03-ARCHITECT-DECISIONS.md` (D-01..D-25) →
-> `docs/02-CLEAN-ARCHITECTURE-AND-CODE.md` → `docs/01-TECH-BASELINE.md` → `docs/00-PROJECT-
-> CHARTER.md` → `docs/spec/00-SRS-MASTER.md` → `docs/spec/27-module-admin-moderation-onboarding.md`
+> Источники: `docs/product/scope-r1.md` → `docs/architecture/decisions/README.md` (D-01..D-25) →
+> `docs/architecture/clean-architecture.md` → `docs/architecture/tech-baseline.md` → `docs/product/charter.md` → `docs/spec/00-SRS-MASTER.md` → `docs/spec/27-module-admin-moderation-onboarding.md`
 > (основной модульный документ этой зоны, требования `SRS-ADM-001..089`) → `docs/spec/10-domain-
 > model.md`/`11-database-schema.md`/`12-api-conventions-auth-tenancy.md` (ЗАКОН для сущностей/схемы/
 > API-конвенций, не переопределяются) → `docs/spec/32-design-reference.md` (визуальная ссылка,

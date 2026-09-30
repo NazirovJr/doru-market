@@ -3,7 +3,7 @@
  * чтобы `domain/` не зависел от `packages/contracts`/`packages/domain-kernel` (миграция
  * на единый источник — TODO, если EP-01 заведёт `DomainError` в `packages/contracts`).
  *
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md` §2.5: доменные ошибки — свои классы, не
+ * `docs/architecture/clean-architecture.md` §2.5: доменные ошибки — свои классы, не
  * `HttpException`. Маппинг на HTTP-коды — в presentation слое.
  */
 export abstract class DomainError extends Error {

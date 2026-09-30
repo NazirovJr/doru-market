@@ -6,7 +6,7 @@
  * `AuditLogPort` (`../audit-log.port.ts`), поэтому у него нет своих `application`/
  * `presentation` — только `domain` + порт + `infrastructure`-репозиторий.
  *
- * Приватный конструктор + фабрика `create()` (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §2.2):
+ * Приватный конструктор + фабрика `create()` (`docs/architecture/clean-architecture.md` §2.2):
  * `metadata` ПРОВЕРЯЕТСЯ конструктором как ИНВАРИАНТ — секрет (`apiKey`/`hmacSecret`/
  * `codeHash`/`password`/`refreshToken`/`accessToken`) никогда не попадает в доменный объект,
  * даже если вызывающий код ошибся (например, передал ПОЛНЫЙ снепшот сущности вместо только

@@ -1,7 +1,7 @@
 /**
  * Константы и DI-токены джобы `escrow-reconciliation` (DTJ-247, SRS-PAY-013/014,
  * `21-module-orders-payments-escrow.md` §4.3). Таймзона — Asia/Dushanbe
- * (`01-TECH-BASELINE.md`); расписание — ежедневно 03:00, ПОСЛЕ ночной 1С-синхронизации, не
+ * (`docs/architecture/tech-baseline.md`); расписание — ежедневно 03:00, ПОСЛЕ ночной 1С-синхронизации, не
  * одновременно с ней (ticket «Технический контекст»).
  */
 export const ESCROW_RECONCILIATION_QUEUE = 'escrow-reconciliation'

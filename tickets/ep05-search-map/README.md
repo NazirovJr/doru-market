@@ -6,8 +6,8 @@
 > «Пересекающееся владение» п.6 при сдаче `DTJ-198`, `SRS-UX-034`), `DTJ-201..DTJ-219`
 > зарезервированы, но не выданы.
 >
-> Источники (по убыванию приоритета): `docs/04-SCOPE-DECISION-PIVOT.md` (R1-3/R1-4/R1-6) →
-> `docs/03-ARCHITECT-DECISIONS.md` → `docs/02-CLEAN-ARCHITECTURE-AND-CODE.md` →
+> Источники (по убыванию приоритета): `docs/product/scope-r1.md` (R1-3/R1-4/R1-6) →
+> `docs/architecture/decisions/README.md` → `docs/architecture/clean-architecture.md` →
 > `docs/spec/20-module-catalog-search.md` (`SRS-CAT-001..078`) → `docs/spec/32-design-reference.md`.
 > `EP-07` (Analog Engine, §6 того же модульного документа) — **чужая зона** (другой Tech Lead),
 > тикеты на него здесь намеренно НЕ созданы, хотя SRS-CAT-031..043 физически лежат в том же файле.

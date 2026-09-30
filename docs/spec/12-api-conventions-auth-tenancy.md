@@ -1,14 +1,14 @@
 # DoruTJ — Конвенции API, аутентификация, RBAC, мультитенантность
 
 > Владелец: Analyst (SRS). Статус: **BASELINE для фазы Analysis**.
-> Приоритет источников при противоречии: `03-ARCHITECT-DECISIONS.md` (D-*) > `00-PROJECT-CHARTER.md`
-> (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `tz.log` (§ТЗ). Этот документ обязателен
+> Приоритет источников при противоречии: `docs/architecture/decisions/README.md` (D-*) > `docs/product/charter.md`
+> (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `docs/product/client-brief-original.txt` (§ТЗ). Этот документ обязателен
 > для `10-domain-model.md` в части ошибок (расширяет `DomainExceptionFilter`), политик (`02` §3.4:
 > «авторизация — политика в application, в guard'ах — только аутентификация и грубая проверка роли»)
 > и доменных событий (§6 ниже переиспользует таблицу событий `10-domain-model.md` «Доменные события»
 > как источник правды для payload).
 >
-> Слои — по `02-CLEAN-ARCHITECTURE-AND-CODE.md`.Guard'ы (`AuthGuard`, `TenantResolutionGuard`,
+> Слои — по `docs/architecture/clean-architecture.md`.Guard'ы (`AuthGuard`, `TenantResolutionGuard`,
 > `RolesGuard`) — **presentation**. Политики владения/условной авторизации (`OrderPolicy`,
 > `PrescriptionAccessPolicy`, `DisputeAuthorizationPolicy`) — **application**. `AuthSession`, `User`,
 > `OtpCode` (уже определён в `10-domain-model.md` §4 «Value Objects») — **domain** контекста `identity`.
@@ -404,7 +404,7 @@ POST /api/v1/auth/telegram
    контакт для доставки (не блокирует браузинг каталога).
 10. Выпустить JWT/refresh как в SRS-API-024/025, `AuthSession.deviceLabel = 'telegram_twa'`.
 
-**SRS-API-032** `TELEGRAM_BOT_TOKEN` — per-tenant (у White-Label сети свой `@SifatPharmaBot`, tz.log
+**SRS-API-032** `TELEGRAM_BOT_TOKEN` — per-tenant (у White-Label сети свой `@SifatPharmaBot`, docs/product/client-brief-original.txt
 §III), резолвится ПОСЛЕ определения тенанта (§5) из `tenant_settings.telegram_bot_token_ref`
 (ссылка на секрет, не сам токен в открытом виде в этой таблице). Given тенант не имеет
 настроенного бота, When запрос на `/auth/telegram` для этого тенанта, Then `404
@@ -416,10 +416,10 @@ SERVICE_UNAVAILABLE` с `details.reason='telegram_bot_not_configured'` (врем
 
 Единственный небраузерный, не-пользовательский принципал: `pharmacy_system`. НЕ выпускает JWT — каждый
 запрос самодостаточен (stateless HMAC), что соответствует профилю интеграции 1С (батчевые вызовы без
-сессии). Основной эндпоинт: `POST /api/v1/inventory/batch-update` (tz.log Модуль 4, D-11, REQ-SYNC-14).
+сессии). Основной эндпоинт: `POST /api/v1/inventory/batch-update` (docs/product/client-brief-original.txt Модуль 4, D-11, REQ-SYNC-14).
 
 **Формат ключа**: при выдаче/ротации (`pharmacyAccount.rotateApiKey()`, SRS-DOM-051) генерируется
-строка `sec_live_{keyId:12 hex}.{secret:32 hex}` (пример из tz.log: `sec_live_9f83a2c8e17b...`
+строка `sec_live_{keyId:12 hex}.{secret:32 hex}` (пример из docs/product/client-brief-original.txt: `sec_live_9f83a2c8e17b...`
 трактуется как эта форма). `keyId` — хранится в `pharmacy_api_keys.key_prefix` ОТКРЫТО и
 проиндексирован (нужен для быстрого поиска строки без перебора); `secret` — хранится ТОЛЬКО как
 `argon2_hash(secret)` в `pharmacy_api_keys.secret_hash` (SRS-DOM-051). Полная строка ключа никогда не
@@ -513,7 +513,7 @@ X-Pharmacy-Signature: 9c8b7a6f5e4d3c2b1a0f...
 непроверяемой без HTTP, `02` §3.4). Guard, пропустивший запрос дальше своей роли, но не проверивший
 владение, — не дефект: это ожидаемое разделение ответственности.
 
-**SRS-API-037** Роли (`user_role` ENUM, tz.log §II.2 + расширение REQ-DISPUTE-18): `customer`,
+**SRS-API-037** Роли (`user_role` ENUM, docs/product/client-brief-original.txt §II.2 + расширение REQ-DISPUTE-18): `customer`,
 `pharmacist`, `courier`, `pharmacy_admin`, `super_admin`, `support_agent`. Системные принципалы
 (`pharmacy_system` §3.6, `bank_webhook` — HMAC-проверка вебхука провайдера, REQ-PAY-2, не JWT и не
 человек) — вне этой матрицы, у них ЖЁСТКО ФИКСИРОВАННЫЙ, нерасширяемый набор из одного эндпоинта
@@ -838,7 +838,7 @@ DTO). Каждый Zod-объект в `packages/contracts`, участвующ�
 
 **SRS-API-063** Dart-клиент: `pnpm generate:dart-client` запускает
 `openapi-generator-cli generate -i docs/api/openapi.json -g dart-dio -o packages_dart/dorutj_api`
-(генератор `dart-dio` — совместим с `dio`-интерцепторами Flutter-приложений, `01-TECH-BASELINE.md`).
+(генератор `dart-dio` — совместим с `dio`-интерцепторами Flutter-приложений, `docs/architecture/tech-baseline.md`).
 Сгенерированный код КОММИТИТСЯ в репозиторий (не генерируется в CI Flutter-сборки «на лету» — детерминизм
 сборки, офлайн-разработка без сети). Запуск — вручную разработчиком после мержа изменений контракта
 ИЛИ отдельным CI-джобом на релизный тег, открывающим PR с обновлённым `packages_dart/dorutj_api` для

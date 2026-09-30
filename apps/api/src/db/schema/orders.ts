@@ -10,7 +10,7 @@
  * `couriers`/`prescriptions` физически не существуют — см. миграцию, раздел «ОТЛОЖЕНО».
  * `handover_otp_id` — ИСКЛЮЧЕНИЕ: получает нормальный `.references()` сразу, `otp_codes`
  * существует с миграции 0014 (D-EP09-7, поправка CTO к первоначальной группировке,
- * reports/EP09-CTO-BRIEF.md).
+ * docs/history/briefs/ep09-cto-brief.md).
  *
  * `order_items.inventory_batch_id` ссылается на `pharmacy_inventory(id)`, НЕ на
  * `inventory_batches` (последней не существует ни в одной миграции EP-05 — обнаруженное
@@ -71,7 +71,7 @@ export const orders = pgTable(
       .notNull()
       .references(() => tenants.id, { onDelete: 'restrict' }),
     // TODO(R2-4): FK → prescriptions(id) добавляется ALTER TABLE, когда модуль рецептов будет
-    // заведён. Модуль вне R1 — docs/04-SCOPE-DECISION-PIVOT.md строка 101 (D-EP09-8).
+    // заведён. Модуль вне R1 — docs/product/scope-r1.md строка 101 (D-EP09-8).
     prescriptionId: uuid('prescription_id'),
     cancelReason: varchar('cancel_reason', { length: 100 }),
     cancelledBy: uuid('cancelled_by').references(() => users.id, { onDelete: 'set null' }),

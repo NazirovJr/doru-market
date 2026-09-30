@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config'
 
 /**
  * Vitest для `packages/domain-kernel` (чистый VO-пакет, приравнивается к `domain/`
- * по порогу покрытия ≥90%, `02-CLEAN-ARCHITECTURE-AND-CODE.md` §6).
+ * по порогу покрытия ≥90%, `docs/architecture/clean-architecture.md` §6).
  */
 const COVERAGE_THRESHOLD_PERCENT = 90
 

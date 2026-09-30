@@ -1,9 +1,8 @@
 # EP-04 / EP-07 — Модель каталога и Analog Engine
 
 > Владелец: Tech Lead зоны «Каталог + Аналоги». Диапазон ID: **DTJ-090..DTJ-139** (использовано
-> `DTJ-090..DTJ-104`, 15 тикетов). Источники (по убыванию приоритета) — см. `docs/04-SCOPE-DECISION-
-> PIVOT.md` → `docs/03-ARCHITECT-DECISIONS.md` → `docs/02-CLEAN-ARCHITECTURE-AND-CODE.md` →
-> `docs/01-TECH-BASELINE.md` → `docs/00-PROJECT-CHARTER.md` → `docs/spec/*.md` → `tz.log`.
+> `DTJ-090..DTJ-104`, 15 тикетов). Источники (по убыванию приоритета) — см. `docs/product/scope-r1.md` → `docs/architecture/decisions/README.md` → `docs/architecture/clean-architecture.md` →
+> `docs/architecture/tech-baseline.md` → `docs/product/charter.md` → `docs/spec/*.md` → `docs/product/client-brief-original.txt`.
 >
 > Покрывает `docs/spec/20-module-catalog-search.md` §1 (модель каталога), §6 (Analog Engine), §13
 > (`CatalogFacade`), §14.4 (i18n-статус дисклеймера) и `docs/spec/22-module-inventory-sync-1c.md` §4
@@ -64,7 +63,7 @@ DTJ-092 + DTJ-093 + DTJ-101 ──▶ DTJ-095 (GetMedicineDetailUseCase + GET /m
 
 1. **`packages/domain-kernel`** (DTJ-090) — новый shared-пакет для VO `Dosage`/`DosageForm`/`Barcode`,
    переиспользуемых модулем `inventory` (EP-05) для composite-матчинга, БЕЗ прямого импорта
-   `catalog/domain/*` (запрещено `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1). Ни один эпик явно не
+   `catalog/domain/*` (запрещено `docs/architecture/clean-architecture.md` §1.1). Ни один эпик явно не
    владеет таким пакетом в `docs/tickets/00-EPICS.md` — заведён здесь как первый реальный потребитель,
    с явным риском дублирования, если EP-01 параллельно создаст аналогичный пакет под другим именем
    (см. «Риски» DTJ-090).

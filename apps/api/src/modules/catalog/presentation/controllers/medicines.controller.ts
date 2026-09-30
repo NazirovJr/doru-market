@@ -26,7 +26,7 @@
  * реализован (EP-15, не входит в волну 3.5). Когда появится — admin-контроллер
  * сможет передавать `true` после проверки роли `super_admin`/каталог-оператор.
  *
- * @see docs/STATE-AND-RESUME-POINT.md §11.4 задача 3.1/3.2 + §11.6 (Волна 4, EP-04)
+ * @see docs/history/state-log-to-2026-09-06.md §11.4 задача 3.1/3.2 + §11.6 (Волна 4, EP-04)
  */
 import { Controller, Get, Inject, Param, ParseUUIDPipe, Query } from '@nestjs/common'
 import { ok } from '@dorutj/contracts'

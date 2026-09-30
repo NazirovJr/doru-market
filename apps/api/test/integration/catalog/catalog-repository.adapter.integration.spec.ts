@@ -21,7 +21,7 @@
  * даёт чистую фикстуру без зависимости от порядка.
  *
  * @see docs/spec/11-database-schema.md (DDL categories/substances/medicines/medicine_substances)
- * @see docs/STATE-AND-RESUME-POINT.md §11.4 задача 3 (оживить каталог)
+ * @see docs/history/state-log-to-2026-09-06.md §11.4 задача 3 (оживить каталог)
  */
 import { readFileSync } from 'node:fs'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'

@@ -4,7 +4,7 @@
  * сюда НЕ попадают (другое расширение, `playwright.config.ts` их не пересекает — см. её JSDoc).
  *
  * `pool: 'vmThreads'` — тот же обход Windows sandbox EPERM, что `tests/arch/vitest.config.ts`/
- * `tests/invariants/vitest.config.ts` (см. их JSDoc, `STATE-AND-RESUME-POINT.md` §11.7).
+ * `tests/invariants/vitest.config.ts` (см. их JSDoc, `docs/history/state-log-to-2026-09-06.md` §11.7).
  */
 import { defineConfig } from 'vitest/config'
 

@@ -38,7 +38,7 @@
  * неизвестно» (`pharmacyName: null`), НЕ подставляет `pharmacyId` — именно это и было
  * замечанием CTO по исходной версии тикета.
  *
- * D-EP09-16 (`reports/EP09-CTO-BRIEF.md`, решение CTO, отменяет прежние дефолты
+ * D-EP09-16 (`docs/history/briefs/ep09-cto-brief.md`, решение CTO, отменяет прежние дефолты
  * `isPharmacyActive`/`hasExpiredReservedBatch` этого файла): уточнение D-EP09-11 — «чтение
  * данных» (пустое значение честно значит «данных нет») и «чтение-разрешение» (вопрос «можно
  * ли») — РАЗНЫЕ категории. У чтения-разрешения нет безопасного дефолта: `true` пропускает
@@ -48,7 +48,7 @@
  * (REQ-REG-6, обход запрета продажи просроченного) — теперь БРОСАЮТ, как запись.
  *
  * `REFUND_FACADE_PORT` (DTJ-232) — контракт к EP-11, заморожен до волны 8
- * (`reports/EP09-CTO-BRIEF.md` D-EP09-28). `UnimplementedRefundFacadeAdapter.refundFull` —
+ * (`docs/history/briefs/ep09-cto-brief.md` D-EP09-28). `UnimplementedRefundFacadeAdapter.refundFull` —
  * ЗАПИСЬ (возврат денег) — БРОСАЕТ, не «успешно» возвращает ноль сомони (D-EP09-16/28).
  * Владелец маркера — `TODO(EP-11)` (эпик документирован, не нарезан на тикеты — тот же приём,
  * утверждённый CTO для `TODO(R2-4)`, D-EP09-8).

@@ -26,7 +26,7 @@
  * См. JSDoc `drizzle-inventory-sync-errors.repository.ts`.
  */
 /**
- * ОБНОВЛЕНО — волна 5, блок C (`reports/CTO-DECISION-WAVE5.md` §3): DTJ-154
+ * ОБНОВЛЕНО — волна 5, блок C (`docs/history/briefs/cto-decision-wave5.md` §3): DTJ-154
  * закрыт, блокер FK из абзаца выше СНЯТ. Все шесть портов ниже переведены
  * с `InMemory*` на Drizzle-реализации (персистентность переживает рестарт
  * процесса — приёмочный критерий волны 5). Абзацы выше про

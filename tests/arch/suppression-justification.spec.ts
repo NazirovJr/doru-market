@@ -1,5 +1,5 @@
 /**
- * `suppression-justification.spec.ts` (Блок 5.4 задача STATE-AND-RESUME-POINT.md §11.4) —
+ * `suppression-justification.spec.ts` (Блок 5.4 задача docs/history/state-log-to-2026-09-06.md §11.4) —
  * машинно-проверяемое правило подавлений ESLint и v8-coverage.
  *
  * Правило: каждый `eslint-disable*` И каждый `v8 ignore ...` ДОЛЖНЫ иметь обоснование после
@@ -19,7 +19,7 @@
  * Тест ОБЯЗАН выводить список файлов-нарушителей (а не просто молча падать), чтобы
  * ревьюер мог сразу увидеть, что именно нужно исправить.
  *
- * @see docs/STATE-AND-RESUME-POINT.md §11.4 задача 5.4
+ * @see docs/history/state-log-to-2026-09-06.md §11.4 задача 5.4
  */
 import { describe, expect, it } from 'vitest'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
@@ -128,7 +128,7 @@ describe('eslint-disable / v8 ignore — подавления должны им�
   it('каждое eslint-disable* / v8 ignore имеет обоснование после `--`', () => {
     const offenders = allSuppressions.filter((s) => !s.hasJustification)
     if (offenders.length > 0) {
-      // Выводим offenders, чтобы ревьюер видел, что чинить (см. STATE-AND-RESUME-POINT.md §11.4 задача 5.4).
+      // Выводим offenders, чтобы ревьюер видел, что чинить (см. docs/history/state-log-to-2026-09-06.md §11.4 задача 5.4).
       const summary = offenders
         .slice(0, 50)
         .map((o) => `  ${o.file}:${String(o.line)}  →  ${o.text}`)

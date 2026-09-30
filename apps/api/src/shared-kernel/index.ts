@@ -1,6 +1,6 @@
 /**
  * Public barrel `shared-kernel` (D-27). Другие модули импортируют порты
- * `Clock`/`IdGenerator` ТОЛЬКО через эту точку (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2).
+ * `Clock`/`IdGenerator` ТОЛЬКО через эту точку (`docs/architecture/clean-architecture.md` §1.2).
  *
  * `GeoPoint` (DTJ-190, добавлено ADD-only, тот же барrel-приём, что `TenantId` через
  * `modules/tenancy/index.ts`): `CatalogSearchController` (`presentation/`) обязан передать

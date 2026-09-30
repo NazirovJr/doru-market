@@ -3,7 +3,7 @@
  * дозировкой конкретного вещества. Иммутабельная (`readonly`-поля) — после добавления в
  * `Medicine` нельзя изменить, только удалить целиком (через `Medicine`).
  *
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md` §2.3: примитивы запрещены в сигнатурах домена —
+ * `docs/architecture/clean-architecture.md` §2.3: примитивы запрещены в сигнатурах домена —
  * `strengthValue` это `number` (в БД `NUMERIC(10,4)`), `strengthUnit` это типизированный
  * enum `DosageUnit` из `packages/domain-kernel`.
  */

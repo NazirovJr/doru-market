@@ -1,6 +1,6 @@
 /**
  * `PaymentProviderError` — базовый класс доменных ошибок `PaymentProvider` (EP-10, DTJ-237,
- * `21-module-orders-payments-escrow.md` §3.1). `02-CLEAN-ARCHITECTURE-AND-CODE.md` §2.5:
+ * `21-module-orders-payments-escrow.md` §3.1). `docs/architecture/clean-architecture.md` §2.5:
  * доменные ошибки — свои классы, НЕ `HttpException` — маппинг на HTTP-код происходит в
  * `presentation` (будущий тикет, обработчик вебхука/контроллер диагностики платежа).
  *

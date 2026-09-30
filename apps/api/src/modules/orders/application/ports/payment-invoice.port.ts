@@ -1,7 +1,7 @@
 /**
  * Порт `PaymentInvoicePort` (EP-09, DTJ-220, SRS-ORD-018 шаг 4h, SRS-PAY-001).
  *
- * Межмодульный фасад `orders → payments` (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2) —
+ * Межмодульный фасад `orders → payments` (`docs/architecture/clean-architecture.md` §1.2) —
  * контракт с модулем, которого ЕЩЁ НЕТ физически: EP-10 (`payments`) стартует волной 7, на
  * волну позже EP-09 (`tickets/00-EPICS.md` «Волны выполнения»). Порт объявляется здесь
  * умышленно (не как импорт `modules/payments/*`), чтобы `CheckoutUseCase` (DTJ-227)

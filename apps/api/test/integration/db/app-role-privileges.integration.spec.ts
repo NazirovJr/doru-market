@@ -1,7 +1,7 @@
 /**
  * Интеграционный тест ролевой модели БД `app_role` (внеплановая задача, поручение CTO по
  * итогам приёмки EP-10 — SRS-DB-024/030, миграция `0031_app_role_privileges.sql`). РЕАЛЬНЫЙ
- * Postgres, без Testcontainers (решение архитектора, `reports/EP09-CTO-BRIEF.md`,
+ * Postgres, без Testcontainers (решение архитектора, `docs/history/briefs/ep09-cto-brief.md`,
  * прецедент — `payments-migration.integration.spec.ts`).
  *
  * Подключение ИМЕННО как `app_role` — отдельная строка подключения (`APP_ROLE_DATABASE_URL`),

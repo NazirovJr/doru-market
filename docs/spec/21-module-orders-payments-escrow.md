@@ -1,14 +1,14 @@
 # DoruTJ — Модуль Orders + Payments: заказы, платежи, Escrow-ledger, выплаты, возвраты и споры
 
 > Владелец: Analyst (SRS). Статус: **BASELINE для фазы Analysis**.
-> Приоритет источников при противоречии: `04-SCOPE-DECISION-PIVOT.md` > `03-ARCHITECT-DECISIONS.md` (D-*)
-> > `00-PROJECT-CHARTER.md` (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `tz.log` (§ТЗ).
+> Приоритет источников при противоречии: `docs/product/scope-r1.md` > `docs/architecture/decisions/README.md` (D-*)
+> > `docs/product/charter.md` (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `docs/product/client-brief-original.txt` (§ТЗ).
 > **`docs/spec/10-domain-model.md` (SRS-DOM-*), `11-database-schema.md` (SRS-DB-*),
 > `12-api-conventions-auth-tenancy.md` (SRS-API-*) — ЗАКОН.** Этот документ их НЕ переопределяет —
 > только ссылается и добавляет use-case/API/операционный уровень поверх уже зафиксированных
 > инвариантов, таблиц и конвенций. Любое расхождение — через ADR, не молчаливую правку.
 >
-> Покрывает: **CUJ-2** (заказ + Escrow), **CUJ-4** (доставка + capture), **МОДУЛЬ 3 tz.log**
+> Покрывает: **CUJ-2** (заказ + Escrow), **CUJ-4** (доставка + capture), **МОДУЛЬ 3 docs/product/client-brief-original.txt**
 > (Alif Mobi/DC Next + Escrow-защита). Бounded contexts (`10-domain-model.md` §«Ограниченные
 > контексты»): **orders**, **payments**, частично **returns**, **disputes** (в части их взаимодействия
 > с деньгами/резервом остатка — полная спецификация ролей/тикетов вне денежного аспекта закреплена за
@@ -26,7 +26,7 @@
 
 ## Разбиение по релизам
 
-> Основание: `04-SCOPE-DECISION-PIVOT.md` §3–§5. Принцип: архитектура (порты, ledger, state machines,
+> Основание: `docs/product/scope-r1.md` §3–§5. Принцип: архитектура (порты, ledger, state machines,
 > tenant-скоуп) закладывается **целиком в R1** — ретрофит дороже; реальные внешние интеграции (банк)
 > откладываются, т.к. заблокированы контрагентом, а не инженерной сложностью.
 
@@ -78,7 +78,7 @@
 - Роли/тикеты поддержки вне денежного аспекта (`support_tickets` UI, SLA-нотификации, каналы) —
   упомянуты только там, где они атомарно порождают `order_disputes` (REQ-DISPUTE-2).
 
-### 0.3 Слои (напоминание `02-CLEAN-ARCHITECTURE-AND-CODE.md`)
+### 0.3 Слои (напоминание `docs/architecture/clean-architecture.md`)
 
 Все use case классы этого документа живут в `apps/api/src/modules/orders/application/use-cases/*`
 и `apps/api/src/modules/payments/application/use-cases/*` (returns/disputes — в своих модулях, но
@@ -367,7 +367,7 @@ DTJ-235 отказался отправлять поле, чтобы не пор
 > финансовом состоянии заказа. Любой отчёт/дашборд/выборка `WHERE status='paid_escrow'` молча включил
 > бы наличные заказы с нулевым эскроу; любой разработчик, читающий `paid_escrow`, обоснованно
 > предположил бы существование ledger-записей — и написал бы код, падающий или считающий неверную
-> сумму. Нарушение §2 `02-CLEAN-ARCHITECTURE-AND-CODE.md`: сущность обязана защищать инварианты, а не
+> сумму. Нарушение §2 `docs/architecture/clean-architecture.md`: сущность обязана защищать инварианты, а не
 > имитировать их.
 
 **SRS-ORD-027** [R1] [D-25, уточняет SRS-DOM-089/091 для `payment_method='cash_courier'` — требует
@@ -1431,7 +1431,7 @@ checkout, `meta.excludedItems` с причиной `PHARMACY_SUSPENDED`), НЕЗ
 ролевыми порогами, отмены, три вида таймаутов, полная таблица местонахождения денег по статусам)
 поверх `10-domain-model.md` (SRS-DOM-*), `11-database-schema.md` (SRS-DB-*) и
 `12-api-conventions-auth-tenancy.md` (SRS-API-*), с явным разбиением по релизам согласно
-`04-SCOPE-DECISION-PIVOT.md`: архитектура (порты, ledger, state machines) — целиком **R1**; реальные
+`docs/product/scope-r1.md`: архитектура (порты, ledger, state machines) — целиком **R1**; реальные
 банковские интеграции (Alif Mobi/DC Next) и связанные с ними физические переводы — **R3**.
 
 **D-25 (`cash_courier` → статус `confirmed`, не `paid_escrow`)** — архитектурно РЕШЕНО и отражено в

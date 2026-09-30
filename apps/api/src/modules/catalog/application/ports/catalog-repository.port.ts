@@ -5,7 +5,7 @@
  * `FindAnalogsUseCase`, `CatalogFacade`, админские write-пути DTJ-097/099/100/101)
  * читают и пишут `medicines` / `substances` / `categories` / `medicine_substances`
  * через ОДИН порт, а не напрямую через Drizzle — иначе `application` знает
- * про инфраструктуру (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1, запрет
+ * про инфраструктуру (`docs/architecture/clean-architecture.md` §1.1, запрет
  * `application → infrastructure`).
  *
  * Единственная продакшен-реализация — `CatalogRepositoryAdapter` (Drizzle,

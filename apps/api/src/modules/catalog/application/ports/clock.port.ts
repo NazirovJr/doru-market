@@ -12,7 +12,7 @@
  *
  * Это НЕ выполнено буквально: `files_owned` тикета DTJ-184 (`AGENTS.md` Ж7 — «не трогай
  * файлы вне своего files_owned») НЕ включает `shared-kernel/application/ports/clock.port.ts`,
- * а исключение «правка одной строкой» (`05-DEVELOPER-HANDBOOK.md` §21) действует только
+ * а исключение «правка одной строкой» (`docs/guides/developer-handbook.md` §21) действует только
  * для файла, который тикет И ТАК меняет — этот файл в его набор не входит. Редактировать
  * чужой `files_owned` без согласования — риск конфликта с параллельной работой.
  *
@@ -88,7 +88,7 @@ export const TENANT_CLOCK = Symbol('TENANT_CLOCK')
 /**
  * Контракт порта (DTJ-184, дословно по `SRS-CAT-046`). Единственный метод — текущее
  * время суток тенанта в его локальном часовом поясе (`Asia/Dushanbe` для R1 — единственный
- * часовой пояс баланса, без перехода на летнее время, `01-TECH-BASELINE.md`).
+ * часовой пояс баланса, без перехода на летнее время, `docs/architecture/tech-baseline.md`).
  */
 export interface Clock {
   nowInTenantTz(tenantId: TenantId): TimeOfDay

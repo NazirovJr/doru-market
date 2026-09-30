@@ -9,7 +9,7 @@
  * Тенантный скоуп НЕ применяется: каталог мульти-тенантный (аптеки разных тенантов
  * видят общий каталог), изоляция — на уровне остатков (EP-05), не каталога.
  *
- * @see docs/STATE-AND-RESUME-POINT.md §11.6
+ * @see docs/history/state-log-to-2026-09-06.md §11.6
  */
 import { Inject, Injectable } from '@nestjs/common'
 import { type Medicine } from '../../domain/medicine.entity.js'

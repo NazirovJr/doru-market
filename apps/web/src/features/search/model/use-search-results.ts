@@ -6,7 +6,7 @@
  * (TanStack Query сам держит `hasNextPage=false`, дальше грузить нечего).
  *
  * **Деградация поиска (`SRS-CAT-075`, `TC-CAT-025`) — ОТДЕЛЬНОЕ состояние, не общая ошибка.**
- * `DomainExceptionFilter` (`apps/api/src/common/http/filters/domain-exception.filter.ts`,
+ * `DomainExceptionFilter` (`apps/api/src/common/filters/all-exceptions.filter.ts`,
  * прочитан целиком для этого тикета) для ЛЮБОГО HTTP-статуса `>=500` подменяет `error.code` на
  * `INTERNAL_ERROR` и `details` на `{requestId}` ДО того, как тело покидает сервер —
  * `details.reason='search_temporarily_degraded'` (`SearchServiceUnavailableError`, DTJ-190)

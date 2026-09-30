@@ -1,7 +1,7 @@
 /**
  * `PharmacyTerminalItemsController` — Supertest integration (DTJ-302/303, EP-12 §A.3/A.4) —
  * РЕАЛЬНЫЙ Postgres, реальные `CatalogFacadeAdapter`/`InventoryFacadeAdapter` (не моки, урок
- * волны 5 §6.4, `reports/EP09-CTO-BRIEF.md`) — единственный файл, реально исполняющий
+ * волны 5 §6.4, `docs/history/briefs/ep09-cto-brief.md`) — единственный файл, реально исполняющий
  * `Barcode.parse()`/контрольную цифру EAN-13 и SQL-запросы обоих адаптеров сквозным HTTP-путём
  * (юнит-тесты обоих use case мокают `CatalogFacadePort`/`InventoryFacadePort` целиком).
  *

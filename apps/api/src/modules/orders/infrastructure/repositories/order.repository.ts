@@ -2,7 +2,7 @@
  * `DrizzleOrderRepository` (EP-09, DTJ-227) — реализация `OrderRepositoryPort` поверх
  * `orders`/`order_items` (DTJ-220, `apps/api/src/db/schema/orders.ts`).
  *
- * `save()` — upsert (правило 6 волны 5 — не голый `UPDATE`, `reports/EP09-CTO-BRIEF.md` §6.6):
+ * `save()` — upsert (правило 6 волны 5 — не голый `UPDATE`, `docs/history/briefs/ep09-cto-brief.md` §6.6):
  * `orders` через `ON CONFLICT (id) DO UPDATE` над ПОЛНЫМ набором колонок (проще и safer, чем
  * частичный SET только «мутирующих после создания» полей — заказ создаётся один раз за
  * checkout, повторный `save()` того же объекта либо создаёт (первый вызов), либо переносит

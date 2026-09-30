@@ -7,7 +7,7 @@ import { httpGetJson, type HttpError } from '@/shared/api/http-client'
  *
  * TanStack Query поверх `GET /api/v1/pharmacies/map?bbox=...&medicineId=...` (DTJ-197, тот же
  * `httpGetJson` слой `shared/api/http-client`, что и у остальных фич — `apps/pages` не имеют
- * права ходить в сеть напрямую, docs/02-CLEAN-ARCHITECTURE-AND-CODE.md §5).
+ * права ходить в сеть напрямую, docs/architecture/clean-architecture.md §5).
  *
  * `queryKey` меняется при каждом новом `bbox` (панорамирование/зум карты, `use-map-viewport.ts`
  * внутри `MapView` уже схлопывает серию событий одного жеста в один вызов `onViewportChange`

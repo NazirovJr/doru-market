@@ -3,7 +3,7 @@
  * TS-функцию; SQL-зеркало проверяется отдельным parity-тестом
  * `dosage-form-normalizer.parity.spec.ts` (тест-план DTJ-097).
  *
- * Покрытие (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §6, `application/` ≥85%):
+ * Покрытие (`docs/architecture/clean-architecture.md` §6, `application/` ≥85%):
  *   - все 9 значений `DosageFormClass` (включая `other` как default);
  *   - нераспознанный ввод → `other`;
  *   - `null` / пустая строка / пробелы → `other`;

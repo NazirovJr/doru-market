@@ -19,7 +19,7 @@
  * периметре этого тикета.
  *
  * §«Библиотека Telegram Bot API» — выбор Tech Lead на старте реализации (см. риски тикета,
- * `01-TECH-BASELINE.md` версию не фиксирует): сырой `fetch()` POST на
+ * `docs/architecture/tech-baseline.md` версию не фиксирует): сырой `fetch()` POST на
  * `https://api.telegram.org/bot<token>/sendMessage`, БЕЗ SDK-зависимости
  * (`node-telegram-bot-api`/аналоги ориентированы на ПРИЁМ сообщений/long-polling — лишний вес для
  * send-only использования). Тот же приём уже применяется в `apps/worker/.../mock-bank-auto-pay.job.ts`

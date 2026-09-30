@@ -2,7 +2,7 @@
  * In-memory `CategoriesReadRepository` (DTJ-094, EP-04 / Волна 4) — mock для
  * рантайма до Drizzle-адаптера. Заменяется в последующих тикетах DTJ-092/094.
  *
- * @see docs/STATE-AND-RESUME-POINT.md §11.6
+ * @see docs/history/state-log-to-2026-09-06.md §11.6
  */
 import { Injectable, Optional } from '@nestjs/common'
 import {

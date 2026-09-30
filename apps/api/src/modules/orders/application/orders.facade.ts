@@ -23,7 +23,7 @@
  * (`application/cart/merge-guest-cart.use-case.ts`). Ticket «Риски»: точка ВЫЗОВА — hook в
  * `auth`-flow (EP-01) ПОСЛЕ успешного OTP-логина, вне периметра DTJ-226; здесь только
  * экспорт, чтобы `auth` мог дёрнуть его через `OrdersFacade` (единственный легальный
- * межмодульный путь, `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2), не импортируя
+ * межмодульный путь, `docs/architecture/clean-architecture.md` §1.2), не импортируя
  * `orders/application/cart/**` напрямую (`no-cross-module-deep-import`, depcruise).
  * `@Optional()` — НЕ ломает существующие однопараметровые `new OrdersFacade(repo)` в
  * `orders.facade.spec.ts` (DTJ-222); в боевой проводке (`orders.module.ts`)

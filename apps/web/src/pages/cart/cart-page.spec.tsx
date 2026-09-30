@@ -8,7 +8,7 @@ import CartPage from './cart-page'
 
 /**
  * `cart-page.spec.tsx` (DTJ-234) — смоук: `CartPage` — тонкая композиция `CartScreen`
- * (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §5), реально рендерит его без падений.
+ * (`docs/architecture/clean-architecture.md` §5), реально рендерит его без падений.
  */
 
 type FetchImpl = (input: string, init?: RequestInit) => Promise<Response>

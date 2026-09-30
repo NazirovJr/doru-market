@@ -3,7 +3,7 @@
  *
  * DTJ-300 (`db/schema/order-partial-fulfillment-requests.ts`) завела ТОЛЬКО Drizzle-схему
  * (scaffolding-тикет, `layer: domain`, files_owned не включал ни порт, ни репозиторий — см.
- * её JSDoc/тикет) — этот файл, по обязательному правилу `02-CLEAN-ARCHITECTURE-AND-CODE.md`
+ * её JSDoc/тикет) — этот файл, по обязательному правилу `docs/architecture/clean-architecture.md`
  * §1.3 (application не знает `infrastructure`/Drizzle напрямую), заводит недостающий порт.
  * Тот же класс решения, что `EscrowLedgerRepository`/DTJ-240 (см. её JSDoc «не в буквальном
  * files_owned... по обязательному правилу»).

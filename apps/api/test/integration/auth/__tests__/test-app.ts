@@ -3,7 +3,7 @@
  * integration/security-тестов.
  *
  * Поднимает `NestApplication` с `AuthModule` — Drizzle/Redis-адаптеры
- * (волна 5, `reports/CTO-DECISION-WAVE5.md` §3) против настоящих
+ * (волна 5, `docs/history/briefs/cto-decision-wave5.md` §3) против настоящих
  * `dorutj_test` Postgres и Redis + `AllExceptionsFilter`.
  *
  * Идемпотентность между тестами: раньше (InMemory-адаптеры) её давал сам
@@ -242,7 +242,7 @@ export async function createTestApp(options?: CreateTestAppOptions): Promise<Tes
  * ЦЕЛИКОМ очищена, а не просто отвязана, задев данные каталога/поиска вне
  * границ этой задачи. `DELETE` уважает FK-политику КАЖДОЙ ссылающейся
  * таблицы (`ON DELETE CASCADE`/`SET NULL`) штатно, без этого риска — тот же
- * урок, что и §3.7 `docs/07-WAVE4-HANDOFF.md` («TRUNCATE... CASCADE
+ * урок, что и §3.7 `docs/history/wave-4-handoff.md` («TRUNCATE... CASCADE
  * зацепил больше, чем предполагалось»), только на уровень раньше: здесь мы
  * вообще не трогаем `tenants`/`tenant_settings`.
  *

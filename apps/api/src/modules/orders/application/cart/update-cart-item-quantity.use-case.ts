@@ -11,14 +11,14 @@
  * `tenantId` — ПЕРВОЕ поле входного объекта (SRS-API-043, не опционально): источник —
  * presentation-слой (DTJ-226), use case НЕ читает `TenantContext` сам; пробрасывается и в
  * `RemoveCartItemUseCase.execute` на ветке `quantity<=0`. Объект-параметр, не 4 позиционных
- * (C5 `02-CLEAN-ARCHITECTURE-AND-CODE.md`: `tenantId`+`cartId`+`cartItemId`+`quantity` — уже
+ * (C5 `docs/architecture/clean-architecture.md`: `tenantId`+`cartId`+`cartItemId`+`quantity` — уже
  * 4, `max-params` ≤3).
  *
  * Результат — размеченное объединение (`kind`), а не `Result`: отсутствие строки/чужая
  * корзина/чужой тенант здесь не доменная ошибка (нечего обновлять — SRS-API-046: не
  * подтверждаем существование чужого ресурса), а просто третий исход операции — присвоение
  * `Err`-типа для этого раздуло бы сигнатуру без выигрыша (в кодовой базе `Result`
- * зарезервирован под ОЖИДАЕМЫЕ бизнес-ошибки, `02-CLEAN-ARCHITECTURE-AND-CODE.md` §2.5).
+ * зарезервирован под ОЖИДАЕМЫЕ бизнес-ошибки, `docs/architecture/clean-architecture.md` §2.5).
  *
  * `CartHoldStorePort.hold(...)` (DTJ-224, «Что сделать» §4) — ставится ТОЛЬКО на ветке
  * `kind: 'updated'`, количеством ИЗ `item.quantity` репозитория (уже НОВОЕ значение). На ветке

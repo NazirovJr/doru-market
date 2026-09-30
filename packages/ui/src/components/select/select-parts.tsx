@@ -1,6 +1,6 @@
 /**
  * `select-parts.tsx` (DTJ-405) — презентационные подкомпоненты `Select`, вынесены в отдельный
- * файл ради лимита `max-lines` (`02-CLEAN-ARCHITECTURE-AND-CODE.md`, C1). Деталь реализации
+ * файл ради лимита `max-lines` (`docs/architecture/clean-architecture.md`, C1). Деталь реализации
  * `select.tsx` — не экспортируются из барабанного файла `components/index.ts`.
  */
 import { type KeyboardEvent, type ReactElement } from 'react'

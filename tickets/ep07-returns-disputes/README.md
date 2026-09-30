@@ -2,8 +2,8 @@
 
 > Владелец каталога: Tech Lead зоны «возвраты/поддержка». Диапазон ID: **DTJ-270..DTJ-284**
 > (зарезервировано DTJ-270..299, использовано 15 из 30 — запас на дробление при ревью).
-> Источники: `docs/04-SCOPE-DECISION-PIVOT.md`, `docs/03-ARCHITECT-DECISIONS.md` (D-09, D-24),
-> `docs/02-CLEAN-ARCHITECTURE-AND-CODE.md`, `docs/spec/21-module-orders-payments-escrow.md` §7–8,
+> Источники: `docs/product/scope-r1.md`, `docs/architecture/decisions/README.md` (D-09, D-24),
+> `docs/architecture/clean-architecture.md`, `docs/spec/21-module-orders-payments-escrow.md` §7–8,
 > `docs/spec/27-module-admin-moderation-onboarding.md` §9, `tickets/00-EPICS.md`.
 
 ## Разрешение конфликта объёма R1 (важно прочитать перед работой над тикетами)

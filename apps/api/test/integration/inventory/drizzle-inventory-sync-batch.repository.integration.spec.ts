@@ -1,7 +1,7 @@
 /**
  * Интеграционный тест `DrizzleInventorySyncBatchRepository` (EP-05, DTJ-154,
  * волна 5 блок C) — РЕАЛЬНЫЙ Postgres, не InMemory-фейк (прямое указание
- * CTO, `docs/07-WAVE4-HANDOFF.md` §3.2).
+ * CTO, `docs/history/wave-4-handoff.md` §3.2).
  *
  * До волны 5 `INVENTORY_SYNC_BATCH_REPOSITORY` был на
  * `InMemoryInventorySyncBatchRepository` — принятый батч не переживал

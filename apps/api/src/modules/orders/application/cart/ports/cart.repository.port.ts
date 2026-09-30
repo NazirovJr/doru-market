@@ -96,7 +96,7 @@ export interface CartRepository {
    * `INSERT ... SELECT ... FROM cart WHERE cart.id=:cartId AND cart.tenant_id=:tenantId
    * ON CONFLICT (cart_id, medicine_id, pharmacy_id) DO UPDATE SET quantity =
    * cart_items.quantity + excluded.quantity` — упсёрт, НЕ голый `UPDATE` (урок волны 5,
-   * `reports/EP09-CTO-BRIEF.md` §6.6: голый `UPDATE` матчит 0 строк на первой вставке и молча
+   * `docs/history/briefs/ep09-cto-brief.md` §6.6: голый `UPDATE` матчит 0 строк на первой вставке и молча
    * теряет данные при заявленном успехе). `INSERT ... SELECT` (не `INSERT ... VALUES`) —
    * тенант-фильтр внутри ОДНОГО атомарного оператора: чужой `tenantId` ⇒ подзапрос даёт 0
    * строк ⇒ вставляется 0 строк ⇒ `null`, без отдельного round-trip'а на проверку владения.

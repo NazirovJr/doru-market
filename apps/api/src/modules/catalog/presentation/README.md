@@ -9,7 +9,7 @@
 - Validation pipes (Zod → DTO).
 - Guards для авторизации (`bypassVisibilityCheck` для `super_admin`, DTJ-095).
 
-**Правило зависимостей (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1):**
+**Правило зависимостей (`docs/architecture/clean-architecture.md` §1.1):**
 - Зависит ТОЛЬКО от `application/` (use case + фасад).
 - НЕ импортирует `domain/` напрямую (контроллер не знает про доменные инварианты).
 - DTO↔domain маппинг — здесь, не в use case (`02` §3.2).

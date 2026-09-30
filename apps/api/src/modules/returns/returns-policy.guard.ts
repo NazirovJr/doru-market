@@ -1,5 +1,5 @@
 /**
- * `ReturnsPolicy` (EP-11, `02-CLEAN-ARCHITECTURE-AND-CODE.md` §3.4) — точная проверка владения
+ * `ReturnsPolicy` (EP-11, `docs/architecture/clean-architecture.md` §3.4) — точная проверка владения
  * («своя сеть»/«свой заказ»/«назначен на доставку»), ОТДЕЛЬНО от грубой проверки роли
  * (`@Roles()`-декоратор на контроллере, DTJ-275). Имя файла (`*.guard.ts`) фиксировано текстом
  * DTJ-275 `files_owned`, хотя класс — application-политика (чистая функция), не NestJS `CanActivate`.

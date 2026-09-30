@@ -1,7 +1,7 @@
 /**
  * Порт `ReturnsDeliveryPort` (EP-11, DTJ-270, SRS-DOM-055, SRS-RET-005).
  *
- * Межмодульный фасад `returns → delivery` (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2) —
+ * Межмодульный фасад `returns → delivery` (`docs/architecture/clean-architecture.md` §1.2) —
  * ЕДИНСТВЕННЫЙ разрешённый способ, которым `returns` назначает обратный рейс курьера и
  * рассчитывает его стоимость. Прямой импорт `modules/delivery/domain/*`/`modules/delivery/
  * application/*` из `returns` — блокирующее нарушение (`dependency-cruiser`,

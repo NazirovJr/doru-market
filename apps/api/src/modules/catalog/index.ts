@@ -1,7 +1,7 @@
 /**
  * Публичный фасад модуля `catalog` (EP-04, DTJ-090, наполняется в DTJ-096).
  *
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2: единственный легальный путь
+ * `docs/architecture/clean-architecture.md` §1.2: единственный легальный путь
  * межмодульного взаимодействия для чужих bounded contexts. Импорт
  * `modules/catalog/domain|application|infrastructure|presentation` напрямую —
  * блокирующее нарушение (проверяется `dependency-cruiser` правилом

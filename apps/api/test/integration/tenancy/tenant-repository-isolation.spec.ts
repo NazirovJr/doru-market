@@ -9,7 +9,7 @@
  * повторяющая контракт `TenantRepositoryPort`. Сам Drizzle-код проверяется
  * integration-тестами в `apps/api/test/integration/db/` (TODO EP-19).
  *
- * @see docs/STATE-AND-RESUME-POINT.md §11.4 задача 4
+ * @see docs/history/state-log-to-2026-09-06.md §11.4 задача 4
  */
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Tenant } from '@/modules/tenancy/domain/tenant.entity.js'

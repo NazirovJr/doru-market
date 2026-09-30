@@ -1,6 +1,6 @@
 /**
  * `PaymentsFacade` (EP-10, DTJ-249, SRS-DOM-103/058/105, SRS-PAY-030/032) — публичный контракт
- * модуля `payments` для ВНЕШНИХ модулей (D-27, `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2).
+ * модуля `payments` для ВНЕШНИХ модулей (D-27, `docs/architecture/clean-architecture.md` §1.2).
  *
  * Токен `PAYMENTS_FACADE` объявлен `modules/payments/index.ts` (DTJ-236, заранее — интерфейс
  * появился ТОЛЬКО сейчас, первым реальным методом). Этот файл — ЕДИНСТВЕННОЕ место, где живёт

@@ -22,7 +22,7 @@
  * Drizzle-схему (`@/db/schema/orders.js`, `@/db/schema/pharmacies.js`) — ТОТ ЖЕ приём, что
  * `DrizzleEscrowLedgerRepository.orderBelongsToTenant` (DTJ-240, принято CTO): чтение
  * ЧУЖОЙ Drizzle-схемы (не `domain`/`application`) из своего `infrastructure` — не межмодульный
- * deep-import (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1 запрещает импорт `domain`/`application`
+ * deep-import (`docs/architecture/clean-architecture.md` §1.1 запрещает импорт `domain`/`application`
  * чужого модуля, НЕ импорт таблицы). Ни одного Nest-модуля `orders` не импортируется — цикл
  * физически невозможен.
  *

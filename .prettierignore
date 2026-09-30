@@ -4,10 +4,9 @@ build
 coverage
 .turbo
 pnpm-lock.yaml
-docs/research
-docs/competition
+docs/product/research
+docs/product/competition
 docs/spec
-tz.log
 *.md
 .serena
-Mobile app design planning
+docs/product/design/claude-design-canvas

@@ -1,7 +1,7 @@
 /**
  * Порт `DeliveryFacadePort` (EP-09, DTJ-220, SRS-ORD-018 §2.2 «Расчёт стоимости»).
  *
- * Межмодульный фасад `orders → delivery` (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2). Вызывается
+ * Межмодульный фасад `orders → delivery` (`docs/architecture/clean-architecture.md` §1.2). Вызывается
  * на этапе расчёта стоимости группы checkout (SRS-ORD-018 шаг 4e) — `delivery_fee_tjs`
  * заказа берётся из этого порта, не вычисляется внутри `orders`.
  *

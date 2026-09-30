@@ -2,7 +2,7 @@
 -- 0023_orders_cart.sql — EP-09 (DTJ-220), DDL «Группа D» 1:1 из 11-database-schema.md
 -- строки 694-816: orders, order_items, cart, cart_items, favorites.
 -- =====================================================================================
--- Номер файла: следующий свободный на момент DTJ-220 — 0023 (D-EP09-1, reports/EP09-CTO-BRIEF.md
+-- Номер файла: следующий свободный на момент DTJ-220 — 0023 (D-EP09-1, docs/history/briefs/ep09-cto-brief.md
 -- §4). Тикет исходно называл файл `0008_orders_cart.sql` — 0008 занят дважды
 -- (0008_onboarding_foundation.sql, 0008_user_telegram_identities.sql), решение CTO закрыто.
 --
@@ -37,7 +37,7 @@ END $$;
 -- FK на них добавится отдельным ALTER TABLE ниже, в разделе «ОТЛОЖЕНО», когда соответствующий
 -- модуль создаст свою таблицу. `orders.handover_otp_id` — ИСКЛЮЧЕНИЕ из этой группы: получает
 -- нормальный REFERENCES сразу, `otp_codes` существует с миграции 0014 (D-EP09-7, поправка CTO
--- к первоначальной группировке, reports/EP09-CTO-BRIEF.md).
+-- к первоначальной группировке, docs/history/briefs/ep09-cto-brief.md).
 CREATE TABLE IF NOT EXISTS orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_number VARCHAR(20) UNIQUE NOT NULL, -- OrderNumber VO: DTJ-{YYMMDD}-{seq5}, SRS-DOM-085
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS orders (
     delivery_longitude NUMERIC(11, 8),
     courier_id UUID, -- FK добавлен ALTER TABLE после CREATE TABLE couriers (группа H, EP-13, TODO(DTJ-313))
     courier_eta_minutes INT,
-    prescription_image_url TEXT, -- СОХРАНЕНО из tz.log для совместимости; каноничный источник — prescriptions.image_url
+    prescription_image_url TEXT, -- СОХРАНЕНО из docs/product/client-brief-original.txt для совместимости; каноничный источник — prescriptions.image_url
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     -- [РАСШИРЕНИЕ Charter §3.4/D-03/D-09/D-22] --
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS cart_items (
     CONSTRAINT chk_cart_items_quantity_positive CHECK (quantity > 0)
 );
 COMMENT ON TABLE cart_items IS
-    'Позиция корзины привязана к КОНКРЕТНОЙ аптеке (цена/остаток различаются между аптеками, tz.log '
+    'Позиция корзины привязана к КОНКРЕТНОЙ аптеке (цена/остаток различаются между аптеками, docs/product/client-brief-original.txt '
     'Модуль 1) — REQ-UX-4: сплит по аптекам виден пользователю ДО оплаты как N отдельных заказов.';
 
 -- =====================================================================================
@@ -177,9 +177,9 @@ COMMENT ON TABLE favorites IS
 --   FOREIGN KEY (courier_id) REFERENCES couriers(id) ON DELETE SET NULL;
 
 -- TODO(R2-4): FK orders.prescription_id → prescriptions(id), когда модуль рецептов будет
--- заведён. Модуль вне R1 — docs/04-SCOPE-DECISION-PIVOT.md строка 101 относит его к R2-4
+-- заведён. Модуль вне R1 — docs/product/scope-r1.md строка 101 относит его к R2-4
 -- («AI-конвейер рецептов: OCR + composite_confidence (D-14) + верификация фармацевтом»); в R1
 -- существует только Rx-блокировка на checkout (DTJ-230), сам рецепт не загружается. Решение
--- CTO D-EP09-8, reports/EP09-CTO-BRIEF.md — заводить фиктивный DTJ-* под неначатый эпик запрещено.
+-- CTO D-EP09-8, docs/history/briefs/ep09-cto-brief.md — заводить фиктивный DTJ-* под неначатый эпик запрещено.
 -- ALTER TABLE orders ADD CONSTRAINT orders_prescription_id_fkey
 --   FOREIGN KEY (prescription_id) REFERENCES prescriptions(id);

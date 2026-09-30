@@ -7,7 +7,7 @@
  * DTJ-180) применяется к реальному запросу, и где `SearchTemporarilyDegradedError` (DTJ-185)
  * мапится в HTTP (`SRS-CAT-075`). Presentation зависит ТОЛЬКО от `application`
  * (`SearchMedicinesUseCase`/`SuggestMedicinesUseCase`, DTJ-188/189) — не импортирует
- * `infrastructure` напрямую (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1).
+ * `infrastructure` напрямую (`docs/architecture/clean-architecture.md` §1).
  *
  * **Почему `SearchQuerySchema` парсится ВРУЧНУЮ (`safeParse`), а не через общий
  * `ZodValidationPipe` (как `PharmaciesMapController`, DTJ-197).** Два требования DTJ-190

@@ -3,7 +3,7 @@
  *
  * `getAvailableQuantity` = `stockQuantity` (через `InventoryFacadePort`) минус сумма чужих
  * активных мягких холдов (через `CartHoldStorePort`). РЕЗУЛЬТАТ — ТОЛЬКО для показа
- * пользователю (D-EP09-12 §2 `reports/EP09-CTO-BRIEF.md`): он НИКОГДА не условие, запрещающее
+ * пользователю (D-EP09-12 §2 `docs/history/briefs/ep09-cto-brief.md`): он НИКОГДА не условие, запрещающее
  * добавление в корзину или checkout — единственный источник истины по остатку —
  * `InventoryFacade.reserveStock()` внутри `Order.create()` (DTJ-227). Здесь НЕТ ни одного
  * `if (available < quantity) return Err(...)` и не должно появиться.

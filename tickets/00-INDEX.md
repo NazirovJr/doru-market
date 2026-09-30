@@ -1,9 +1,8 @@
 # DTJ Tickets — Индекс и план запуска разработки
 
 > Владелец: Tech Lead. Источник данных: все файлы `tickets/ep*/DTJ-*.md` (271 тикет) +
-> `tickets/00-EPICS.md` (19 эпиков R1). Иерархия приоритета документов — см.
-> `04-SCOPE-DECISION-PIVOT.md` → `03-ARCHITECT-DECISIONS.md` → `02-CLEAN-ARCHITECTURE-AND-CODE.md` →
-> `01-TECH-BASELINE.md` → `00-PROJECT-CHARTER.md` → `docs/spec/*.md` → `tz.log`.
+> `tickets/00-EPICS.md` (19 эпиков R1). Иерархия приоритета документов — единая
+> таблица в [`AGENTS.md`](../AGENTS.md#иерархия-документов).
 >
 > Методологическое замечание, важное для чтения всего документа: поле `depends_on` в каждом
 > тикете кодирует зависимости **только внутри своего эпика** (проверено эмпирически — из 271
@@ -72,8 +71,8 @@ domain/application/infrastructure/presentation конкретного модул
 | L | 48 | 240 |
 | **Итого** | **271** | **824** |
 
-**Допущение:** ни один документ иерархии (`00-EPICS.md`, `03-ARCHITECT-DECISIONS.md`,
-`02-CLEAN-ARCHITECTURE-AND-CODE.md`) не определяет числовой эквивалент T-shirt-оценок
+**Допущение:** ни один документ иерархии (`00-EPICS.md`, `docs/architecture/decisions/README.md`,
+`docs/architecture/clean-architecture.md`) не определяет числовой эквивалент T-shirt-оценок
 тикетов (`XS/S/M/L`; на уровне эпиков дополнительно встречается `XL`, но ни один
 отдельный тикет не имеет `estimate: XL` — эпики раздроблены до L и мельче). Для
 арифметики «Критического пути» и суммарной оценки в этом документе введена собственная
@@ -366,9 +365,9 @@ domain/application/infrastructure/presentation конкретного модул
 | DTJ-423 | Реализовать E2E: CUJ-13 (воронка аналитики экономии) и инвариант смены бренда (D-01) | EP-19 | tests | M | DTJ-417, DTJ-419, DTJ-422 | tests/e2e/cuj-13-analytics-funnel.e2e-spec.ts; tests/e2e/brand-invariant.e2e-spec.ts |
 | DTJ-424 | Построить нагрузочные тесты k6 (поиск, 1С-ingestion, checkout) и еженедельный CI-job | EP-19 | tests | M | DTJ-412 | tests/load/catalog-search.k6.js; tests/load/inventory-sync.k6.js; tests/load/checkout.k6.js; +1 файлов |
 | DTJ-425 | Построить security test suite (SQLi/XSS/SSRF/CSRF/DoS/rate-limit/file-upload) и pnpm audit гейт | EP-19 | tests | L | DTJ-414 | tests/security/sql-injection.spec.ts; tests/security/xss.spec.ts; tests/security/ssrf.spec.ts; +7 файлов |
-| DTJ-426 | Реализовать CI-гейт env:check (.env.example vs Zod-схема конфигурации) | EP-19 | infra | S | DTJ-414 | .env.example; scripts/env-check.ts; .github/workflows/ci.yml |
-| DTJ-427 | Реализовать CI-гейт бюджета JS первого экрана (pnpm size-check, ≤250KB gzip) | EP-19 | infra | S | DTJ-414 | scripts/size-check.ts; .github/workflows/ci.yml |
-| DTJ-428 | Подготовить автоматизацию релиза (rolling-деплой, откат) и чек-лист готовности к продакшену | EP-19 | infra | M | DTJ-412 | scripts/deploy/rolling-deploy.sh; scripts/deploy/rollback.sh; scripts/deploy/backup-restore-drill.sh; +1 файлов |
+| DTJ-426 | Реализовать CI-гейт env:check (.env.example vs Zod-схема конфигурации) | EP-19 | infra | S | DTJ-414 | .env.example; scripts/ci/env-check.ts; .github/workflows/ci.yml |
+| DTJ-427 | Реализовать CI-гейт бюджета JS первого экрана (pnpm size-check, ≤250KB gzip) | EP-19 | infra | S | DTJ-414 | scripts/ci/size-check.ts; .github/workflows/ci.yml |
+| DTJ-428 | Подготовить автоматизацию релиза (rolling-деплой, откат) и чек-лист готовности к продакшену | EP-19 | infra | M | DTJ-412 | infra/deploy/rolling-deploy.sh; infra/deploy/rollback.sh; infra/deploy/backup-restore-drill.sh; +1 файлов |
 | DTJ-432 | Глобальный rate-limit (@fastify/rate-limit + Redis, SRS-API-012) | EP-19 | infrastructure | M | — | apps/api/src/main.ts; apps/api/src/common/http/rate-limit/rate-limit.config.ts; apps/api/src/common/http/rate-limit/rate-limit.decorator.ts; +2 файлов |
 | DTJ-433 | apps/pharmacy: переход на packages/ui, оболочка кабинета и переключение языка | EP-18 | frontend | M | DTJ-404, DTJ-405, DTJ-406, DTJ-408, DTJ-410 | apps/pharmacy/src/app/**; apps/pharmacy/src/shared/**; apps/pharmacy/src/pages/**; +2 файлов |
 | DTJ-434 | apps/admin: вход по OTP, Bearer-токен в запросах, оболочка с меню по роли | EP-15 | frontend | M | DTJ-350, DTJ-433 | apps/admin/src/app/**; apps/admin/src/shared/api/http-client.ts; apps/admin/src/shared/auth/**; +3 файлов |
@@ -774,7 +773,7 @@ EP-06 → EP-09 → EP-10 → EP-12 → EP-13 → EP-19`, EP-04 исключён
 
 ## Конфликты владения файлами
 
-**Статус: РАЗРЕШЕНО (D-27, `03-ARCHITECT-DECISIONS.md`).** Все находки этого раздела
+**Статус: РАЗРЕШЕНО (D-27, `docs/architecture/decisions/d-27-file-ownership-protocol.md`).** Все находки этого раздела
 закрыты протоколом владения файлами D-27: (1) barrel-файлы (`index.ts`, `*.module.ts`,
 `package.json`, `tsconfig.json`, `.github/workflows/*.yml`,
 `infra/docker/docker-compose*.yml`) удалены из `files_owned` затронутых тикетов и
@@ -916,7 +915,7 @@ EP-10 между волнами 6 и 8), а не ориентироваться 
 Один: **`DTJ-415`** ("Построить `tests/arch/` — фикстуры-нарушители...", EP-19).
 `srs_refs: []` — но это осознанное решение, задокументированное прямо в тикете
 (раздел «Риски и подводные камни»): требование происходит из
-`02-CLEAN-ARCHITECTURE-AND-CODE.md` §6.1 (документ уровня 3 в иерархии), а не из
+`docs/architecture/clean-architecture.md` §6.1 (документ уровня 3 в иерархии), а не из
 нумерованного корпуса `docs/spec/*.md`, поэтому у него физически нет SRS-ID.
 **Не дефект**, но стоит на будущее ввести в конвенцию тикетов отдельное поле
 (например `arch_refs`) для источников не-SRS уровня, чтобы автоматическая проверка
@@ -935,7 +934,7 @@ EP-10 между волнами 6 и 8), а не ориентироваться 
 ("Диапазон ID: DTJ-001..DTJ-030 (в резерве DTJ-031..049, не использовать без
 согласования Tech Lead)") и аналогично для остальных эпиков. Не дефект.
 
-### Покрытие R1-1..R1-16 (`04-SCOPE-DECISION-PIVOT.md` §3.1) тикетами
+### Покрытие R1-1..R1-16 (`docs/product/scope-r1.md` §3.1) тикетами
 
 Все 16 возможностей R1 сверены с эпиками (по таблице `00-EPICS.md`) и точечно — с
 реальными тикетами (заголовки/файлы/срс-рефы). **Непокрытых возможностей R1-1..R1-16

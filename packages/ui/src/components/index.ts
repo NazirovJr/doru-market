@@ -1,7 +1,7 @@
 /**
  * Барабанный экспорт `packages/ui/src/components` (D-27) — публичный фасад компонентов пакета.
  * Первое наполнение — DTJ-404 (8 базовых примитивов). Последующие тикеты EP-18 (DTJ-405..411)
- * ДОБАВЛЯЮТ сюда новые строки, не переписывая существующие (D-27, `docs/03-ARCHITECT-DECISIONS.md`).
+ * ДОБАВЛЯЮТ сюда новые строки, не переписывая существующие (D-27, `docs/architecture/decisions/d-27-file-ownership-protocol.md`).
  */
 export type { ButtonProps, ButtonSize, ButtonVariant } from './button/button'
 export { Button } from './button/button'

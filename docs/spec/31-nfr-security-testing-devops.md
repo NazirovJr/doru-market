@@ -1,9 +1,9 @@
 # DoruTJ — NFR, безопасность, тестирование, DevOps
 
 > Владелец: Analyst (SRS). Статус: **BASELINE для фазы Analysis**.
-> Приоритет источников при противоречии: `04-SCOPE-DECISION-PIVOT.md` > `03-ARCHITECT-DECISIONS.md` (D-*)
-> > `00-PROJECT-CHARTER.md` (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `tz.log` (§ТЗ).
-> **ЗАКОН для этого документа**: `02-CLEAN-ARCHITECTURE-AND-CODE.md` (слои, C1–C18), `10-domain-model.md`
+> Приоритет источников при противоречии: `docs/product/scope-r1.md` > `docs/architecture/decisions/README.md` (D-*)
+> > `docs/product/charter.md` (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `docs/product/client-brief-original.txt` (§ТЗ).
+> **ЗАКОН для этого документа**: `docs/architecture/clean-architecture.md` (слои, C1–C18), `10-domain-model.md`
 > (сущности, state machines, доменные ошибки), `11-database-schema.md` (таблицы, индексы, изоляция
 > тенантов), `12-api-conventions-auth-tenancy.md` (auth, RBAC, коды ошибок, транспорт), `20`–`27`
 > (модульные SRS). Этот документ НЕ переопределяет ни одной сущности/поля/статуса/кода ошибки оттуда —
@@ -11,13 +11,13 @@
 > пирамида, наблюдаемость).
 >
 > Идентификаторы требований: **SRS-NFR-nnn**. Тестовые сценарии: **TC-NFR-nnn**. Каждое требование
-> помечено релизом **[R1]**/**[R2]**/**[R3]** (см. `04-SCOPE-DECISION-PIVOT.md`).
+> помечено релизом **[R1]**/**[R2]**/**[R3]** (см. `docs/product/scope-r1.md`).
 
 ---
 
 ## Разбиение по релизам
 
-> Основание: `04-SCOPE-DECISION-PIVOT.md` §2.2, §3–§5. Принцип для ЭТОГО документа: **весь
+> Основание: `docs/product/scope-r1.md` §2.2, §3–§5. Принцип для ЭТОГО документа: **весь
 > архитектурный каркас безопасности, тестирования, наблюдаемости и DevOps закладывается в R1
 > целиком** — он не специфичен к отложенным фичам (реальный банк, Flutter, White-Label UI), а
 > обслуживает их ЗАРАНЕЕ через Provider Pattern и Mock-адаптеры. Откладывается только то, что
@@ -380,7 +380,7 @@ arch:check && test:unit && test:integration && test:contracts && build`. `test:e
    агрегатору (Charter «полностью работоспособен без внешних ключей» распространяется и на CI, не
    только на прод-дев-режим).
 5. **Сеть между тест-контейнерами** — `docker-compose.test.yml` (§«DevOps») — фиксированные версии
-   образов (те же, что prod, `01-TECH-BASELINE.md`), без `:latest`.
+   образов (те же, что prod, `docs/architecture/tech-baseline.md`), без `:latest`.
 
 ---
 
@@ -540,7 +540,7 @@ production-сборке через `@Public()` + `if (process.env.NODE_ENV !== '
 
 **SRS-NFR-077** [R1] **E2E CUJ-13 — Продуктовая аналитика: воронка экономии** (закрывает R1-15).
 **Критический сценарий**: без него нельзя автоматически подтвердить входные данные для
-kill-критериев `04-SCOPE-DECISION-PIVOT.md` §7 — то есть без него невозможно принять решение о
+kill-критериев `docs/product/scope-r1.md` §7 — то есть без него невозможно принять решение о
 судьбе продукта после 6–8 недель эксплуатации R1 (см. Charter §6, CUJ-13).
 
 - Файл: `tests/e2e/cuj-13-analytics-funnel.e2e-spec.ts`.
@@ -603,7 +603,7 @@ kill-критериев `04-SCOPE-DECISION-PIVOT.md` §7 — то есть бе�
 
 **SRS-NFR-036** [R1] Таблица: требование → метрика → как измеряется → целевое значение. Источники
 целевых цифр — Charter §7, D-04, D-05, модульные SRS (`SRS-CAT-061`, `SRS-INV-051`); где цифра —
-ASSUMPTION, помечено явно (та же практика проекта, `03-ARCHITECT-DECISIONS.md`).
+ASSUMPTION, помечено явно (та же практика проекта, `docs/architecture/decisions/README.md`).
 
 | # | Требование | Метрика | Как измеряется | Целевое значение |
 |---|---|---|---|---|
@@ -813,7 +813,7 @@ services:
       retries: 10
 
   minio:
-    image: minio/minio:latest   # ASSUMPTION: пиновать конкретный тег в prod (не :latest, `01-TECH-BASELINE.md` правило)
+    image: minio/minio:latest   # ASSUMPTION: пиновать конкретный тег в prod (не :latest, `docs/architecture/tech-baseline.md` правило)
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
@@ -1328,7 +1328,7 @@ check (`SRS-NFR-037`) должен пройти на новом контейне
 **SRS-NFR-064** [R1] Feature flags (для фич, готовых кодом, но не готовых бизнес-процессом/данными —
 не путать с Provider Pattern ENV-драйверами, которые про инфраструктуру, не про фичи): ENV-булевы
 флаги вида `FEATURE_PRESCRIPTION_OCR_ENABLED`, `FEATURE_VOICE_INPUT_ENABLED` (уже упомянуты
-`04-SCOPE-DECISION-PIVOT.md` предусловие R2-4: «включается фиче-флагом») — читаются на старте
+`docs/product/scope-r1.md` предусловие R2-4: «включается фиче-флагом») — читаются на старте
 процесса, НЕ горячая перезагрузка на лету (перезапуск процесса при смене флага — приемлемо, флаги не
 меняются часто, в отличие от `tenant_settings`, которые правятся из админки без деплоя).
 
@@ -1383,7 +1383,7 @@ check (`SRS-NFR-037`) должен пройти на новом контейне
 - [ ] Тест на утечку между тенантами (`TC-API-030`, `SRS-TEN-012`) — зелёный, запущен явно перед
   релизом, не только «где-то в CI когда-то прошёл».
 
-**Юридическое/организационное (вне кода, но блокирует запуск по `03-ARCHITECT-DECISIONS.md` Часть D)**
+**Юридическое/организационное (вне кода, но блокирует запуск по `docs/architecture/decisions/README.md` Часть D)**
 - [ ] Юридическая проверка конфликта бренда `DoruTJ` vs `doru.tj` — решение получено или явно принят
   риск владельцем продукта (D-01, Часть D п.1).
 - [ ] Ставки комиссии платформы (D-03, ASSUMPTION 5/8/12%) утверждены продуктом/финансами перед
@@ -1439,7 +1439,7 @@ status, response_status, response_body, created_at }`) и `UNIQUE(user_id, endpo
 индекса поиска по этим трём полям — самый частый паттерн доступа: «дай мне сохранённый ответ для этого
 пользователя+эндпоинта+ключа»).
 
-**2. Дополнение `pnpm audit`-подобной проверки в `02-CLEAN-ARCHITECTURE-AND-CODE.md` §6 конфиг**: не
+**2. Дополнение `pnpm audit`-подобной проверки в `docs/architecture/clean-architecture.md` §6 конфиг**: не
 требует изменений схемы БД — фиксируется здесь ссылкой, что `pnpm verify` (§«Стратегия
 тестирования») расширяется шагами `test:contracts`/`test:security`/`env:check` СВЕРХ уже
 перечисленных в `02` §6.4 (`typecheck && lint && arch:check && test && build`) — уточнение состава

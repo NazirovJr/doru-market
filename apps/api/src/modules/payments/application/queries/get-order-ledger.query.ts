@@ -2,7 +2,7 @@
  * `GetOrderLedgerQuery` (EP-10, DTJ-248, SRS-PAY-016, SRS-API-014/015,
  * `21-module-orders-payments-escrow.md` §4.5) — единственный человекочитаемый доступ к
  * эскроу-леджеру заказа. Query-объект (read-only), не use case мутации — тот же паттерн «один
- * класс, один публичный метод `execute()`» (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §3.1).
+ * класс, один публичный метод `execute()`» (`docs/architecture/clean-architecture.md` §3.1).
  *
  * ВИДИМОСТЬ ПО РОЛЯМ — ПОЛИТИКА ЗДЕСЬ, НЕ В GUARD/CONTROLLER (`02` §3.4, «Риски» тикета):
  *   - `super_admin` — все записи, все поля (включая `paymentTransactionRef`).

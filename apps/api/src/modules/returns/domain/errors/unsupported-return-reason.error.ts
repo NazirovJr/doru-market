@@ -8,6 +8,6 @@
  * `ReturnFinancialOutcomeResolver.resolve()` (DTJ-272, следующий тикет) переиспользует ЕГО ЖЕ
  * («тот же класс, что в DTJ-271, реэкспортирован» — буквальный текст DTJ-272 п.4) — без этого
  * файла оба тикета не имели бы единой точки импорта класса, добавленного решением CTO D-EP11-5
- * (`reports/EP11-EP14-CTO-BRIEF.md`) в `@dorutj/contracts` этим же тикетом.
+ * (`docs/history/briefs/ep11-ep14-cto-brief.md`) в `@dorutj/contracts` этим же тикетом.
  */
 export { UnsupportedReturnReasonError } from '@dorutj/contracts'

@@ -2,7 +2,7 @@
  * Порт `ReturnsPaymentsPort` (EP-11, DTJ-270, `21-module-orders-payments-escrow.md` §7.2,
  * SRS-RET-004..009).
  *
- * Межмодульный фасад `returns → payments` (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2) —
+ * Межмодульный фасад `returns → payments` (`docs/architecture/clean-architecture.md` §1.2) —
  * ЕДИНСТВЕННЫЙ разрешённый способ, которым `returns` инициирует денежный исход возврата.
  * Прямой импорт `modules/payments/domain/*`/`modules/payments/application/*` из `returns` —
  * блокирующее нарушение (`dependency-cruiser`, `no-cross-module-deep-import`). 1:1 паттерн

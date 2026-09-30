@@ -12,8 +12,8 @@
  *
  * Репозиторий замокирован in-memory — unit-тест без БД.
  *
- * @see docs/tickets/ep03-catalog-analogs/DTJ-095.md
- * @see docs/STATE-AND-RESUME-POINT.md §11.4 задача 3.2
+ * @see tickets/ep03-catalog-analogs/DTJ-095.md
+ * @see docs/history/state-log-to-2026-09-06.md §11.4 задача 3.2
  */
 import { describe, expect, it } from 'vitest'
 import { NotFoundError } from '@dorutj/contracts'

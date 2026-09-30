@@ -2,7 +2,7 @@
  * Внутренний баррель `domain/` модуля `returns` (EP-11, DTJ-271).
  *
  * НЕ путать с публичным фасадом `modules/returns/index.ts` (DTJ-270) — тот НЕ реэкспортирует
- * `domain` наружу модуля (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2, «межмодульно — только через
+ * `domain` наружу модуля (`docs/architecture/clean-architecture.md` §1.2, «межмодульно — только через
  * фасад»). Этот файл используется ТОЛЬКО внутри `returns` — `application`/`infrastructure`
  * своего же модуля импортируют отсюда (`./domain/index.js`), а не по глубоким путям к
  * отдельным файлам.

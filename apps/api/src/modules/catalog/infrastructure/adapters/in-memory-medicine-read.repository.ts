@@ -15,8 +15,8 @@
  *   - Это singleton (NestJS провайдер), но `Map` копируется в конструкторе,
  *     чтобы тесты могли иметь изолированные экземпляры.
  *
- * @see docs/STATE-AND-RESUME-POINT.md §11.6 (Волна 4)
- * @see docs/tickets/00-INDEX.md DTJ-092
+ * @see docs/history/state-log-to-2026-09-06.md §11.6 (Волна 4)
+ * @see tickets/00-INDEX.md DTJ-092
  */
 import { Injectable, Optional } from '@nestjs/common'
 import { CONTROL_CATEGORIES_FORBIDDEN_FROM_REMOTE } from '@/modules/catalog/domain/medicine.enums.js'

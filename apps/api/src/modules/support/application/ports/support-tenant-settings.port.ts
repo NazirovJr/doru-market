@@ -8,7 +8,7 @@
  * Значение читается из `tenant_settings.support_first_response_sla_minutes`
  * (`0038_support_ticket_sla_fields.sql`, DTJ-278) напрямую через Drizzle-адаптер этого модуля
  * (`infrastructure/adapters/drizzle-support-tenant-settings.adapter.ts`) — НЕ стаб. Решение
- * D-EP11-8 брифа `reports/EP11-EP14-CTO-BRIEF.md` (волна 5) предписывало стаб для порта
+ * D-EP11-8 брифа `docs/history/briefs/ep11-ep14-cto-brief.md` (волна 5) предписывало стаб для порта
  * `OrdersFacade`, обосновывая это тем, что `orders`/`payout_schedule` физически не существовали
  * на тот момент — тот же факт-контекст для «читать tenant_settings» устарел ИНАЧЕ: колонка
  * `tenant_settings.support_first_response_sla_minutes` создана этой же волной (DTJ-278), а сама

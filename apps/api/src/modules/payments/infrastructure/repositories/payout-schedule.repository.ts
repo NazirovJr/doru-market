@@ -4,7 +4,7 @@
  * `DrizzleEscrowLedgerRepository.orderBelongsToTenant` (DTJ-240, принято CTO): `payout_schedule`
  * не несёт своей колонки `tenant_id` — скоуп через `EXISTS`-подзапрос против `orders`. Чтение
  * ЧУЖОЙ Drizzle-схемы (`orders`) из своего `infrastructure` — не межмодульный deep-import
- * (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1 запрещает импорт `domain`/`application` чужого
+ * (`docs/architecture/clean-architecture.md` §1.1 запрещает импорт `domain`/`application` чужого
  * модуля, не импорт таблицы).
  *
  * `reverseIfExists` — один `UPDATE ... WHERE status <> 'reversed' RETURNING id`: идемпотентно

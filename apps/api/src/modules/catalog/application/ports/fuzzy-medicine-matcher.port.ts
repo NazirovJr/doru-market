@@ -8,7 +8,7 @@
  *
  * Адаптер инфраструктуры (`FuzzyMedicineMatcherAdapter`) реализует шаги 1-2
  * через `DrizzleDb`; use case НЕ знает про Drizzle и SQL — только про этот
- * порт (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1).
+ * порт (`docs/architecture/clean-architecture.md` §1.1).
  *
  * Почему отдельный порт, а не метод `CatalogRepository`?
  *   - Репозиторий оперирует `MedicineRecord` (DTO инфраструктуры), а fuzzy-

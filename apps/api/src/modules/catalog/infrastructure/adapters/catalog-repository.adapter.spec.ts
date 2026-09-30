@@ -11,7 +11,7 @@
  *   6. `save` — INSERT с правильными колонками; вызывает DELETE перед INSERT
  *      для `medicine_substances` (полная перезапись).
  *
- * @see docs/STATE-AND-RESUME-POINT.md §11.6 (Волна 4, EP-04)
+ * @see docs/history/state-log-to-2026-09-06.md §11.6 (Волна 4, EP-04)
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DosageForm, DosageUnit } from '@dorutj/domain-kernel'

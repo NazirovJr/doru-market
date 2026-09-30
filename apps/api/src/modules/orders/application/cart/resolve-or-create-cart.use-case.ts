@@ -3,7 +3,7 @@
  * текущего клиента (аутентифицированного `customer` по `customerId`, либо гостя по
  * `sessionToken`) или создаёт её при первом обращении. Presentation (`CartController`)
  * вызывает это ПЕРЕД любым из четырёх use case'ов DTJ-223..225 — ни один из них корзину не
- * создаёт (D-EP09-22, `reports/EP09-CTO-BRIEF.md`), только принимает готовый `cartId`.
+ * создаёт (D-EP09-22, `docs/history/briefs/ep09-cto-brief.md`), только принимает готовый `cartId`.
  *
  * Три исхода `identity`:
  *   1. `customerId !== null` (валидный Bearer JWT) — `findOrCreateByCustomerId`. Идемпотентно

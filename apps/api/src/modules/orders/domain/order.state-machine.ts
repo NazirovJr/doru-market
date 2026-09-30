@@ -4,7 +4,7 @@
  * Единственный источник истины для допустимости перехода (`02` §2.4/C15) — используется
  * КАЖДЫМ методом-намерением `Order` (`domain/order.entity.ts`), не дублируется `if/else` в
  * каждом методе. Образец стиля — `modules/inventory/domain/inventory-sync-batch.entity.ts`
- * (`ALLOWED_TRANSITIONS`), см. `reports/EP09-CTO-BRIEF.md` §5.
+ * (`ALLOWED_TRANSITIONS`), см. `docs/history/briefs/ep09-cto-brief.md` §5.
  *
  * Источник — `docs/spec/10-domain-model.md` §«State machines»/1 (обе диаграммы: основная ветка
  * `pending_payment ⇄ paid_escrow` и параллельная ветка D-25 через `confirmed`) +
@@ -20,7 +20,7 @@
  * истины между эпиками), хотя бизнес-логика самих методов принадлежит EP-11
  * (`tickets/00-EPICS.md` строка 30 — эпик документирован, но ещё не нарезан на тикеты; явный
  * маркер владельца вместо выдуманного `DTJ-*`, тот же приём, что CTO утвердил для `TODO(R2-4)`
- * в `reports/EP09-CTO-BRIEF.md` §4 D-EP09-8).
+ * в `docs/history/briefs/ep09-cto-brief.md` §4 D-EP09-8).
  *
  * Запрещённые переходы (SRS-DOM-102, дополнено D-25) — НЕ отдельная структура, а то, что
  * ОТСУТСТВУЕТ в `ORDER_ALLOWED_TRANSITIONS` (allowlist, не blocklist). Явный список ниже —

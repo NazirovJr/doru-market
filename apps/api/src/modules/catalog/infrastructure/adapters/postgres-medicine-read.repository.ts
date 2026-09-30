@@ -1,7 +1,7 @@
 /**
  * Drizzle-реализация `MedicineReadRepository` (DTJ-092/094 follow-up, Волна 5 блок B).
  *
- * DEFECT-FIX (см. `reports/CTO-DECISION-WAVE5.md` §3, блок B): порт был подключён к
+ * DEFECT-FIX (см. `docs/history/briefs/cto-decision-wave5.md` §3, блок B): порт был подключён к
  * `InMemoryMedicineReadRepository` (`initial: readonly Medicine[] = []`) без единого способа
  * заполнить её в проде — `GET /api/v1/medicines` (список) читал ПУСТОЙ `Map` независимо от
  * содержимого Postgres. Этот адаптер — единственная продакшен-реализация порта, читает

@@ -1,7 +1,7 @@
 /**
  * Порт `PaymentsOrdersPort` (EP-10, DTJ-236, `21-module-orders-payments-escrow.md` §5.1/§9).
  *
- * Межмодульный фасад `payments → orders` (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2) —
+ * Межмодульный фасад `payments → orders` (`docs/architecture/clean-architecture.md` §1.2) —
  * ЕДИНСТВЕННЫЙ разрешённый способ, которым `payments` читает/меняет заказ. Прямой импорт
  * `modules/orders/domain/*`/`modules/orders/application/*` из `payments` — блокирующее
  * нарушение (`dependency-cruiser`, `no-cross-module-deep-import`). Реализация — тонкая

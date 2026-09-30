@@ -8,7 +8,7 @@
  *   - `PATCH  /api/v1/cart/items/:id { quantity }`
  *   - `DELETE /api/v1/cart/items/:id`
  *
- * Presentation НЕ ходит в репозиторий (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2) — каждый
+ * Presentation НЕ ходит в репозиторий (`docs/architecture/clean-architecture.md` §1.2) — каждый
  * хендлер сначала резолвит/создаёт корзину через `ResolveOrCreateCartUseCase` (D-EP09-22, эта
  * связка отсутствовала во ВСЕХ четырёх use case'ах DTJ-223..225 — они принимают готовый
  * `cartId` и никогда не создают строку `cart`), затем передаёт `cart.id` в соответствующий

@@ -177,7 +177,7 @@ export enum ErrorCode {
 
   // UNSUPPORTED_RETURN_REASON — DTJ-271 (EP-11), SRS-RET-003: `reason='undelivered'` не создаёт
   // `OrderReturn` — обрабатывается через `SupportFacade`/будущий `OrderDispute`, не через
-  // возврат. Решение CTO D-EP11-5 (`reports/EP11-EP14-CTO-BRIEF.md`): обобщённый
+  // возврат. Решение CTO D-EP11-5 (`docs/history/briefs/ep11-ep14-cto-brief.md`): обобщённый
   // `BUSINESS_RULE_VIOLATION` не годится — клиенту нужно отличить «эта причина обслуживается
   // другим процессом» от прочих отказов. Новый код в конец каталога (D-27), тот же класс
   // добавления, что WEBHOOK_PROVIDER_UNKNOWN.

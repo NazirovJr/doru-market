@@ -24,7 +24,7 @@
  *
  * Guard НЕ импортирует ничего из `domain/tenancy` — только `TenantContext` и
  * `ErrorCode` из `packages/contracts`. Это соответствует §1.1
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md`: presentation зависит только от
+ * `docs/architecture/clean-architecture.md`: presentation зависит только от
  * application (порт `TenantContext` — это application-инфраструктура, не
  * domain).
  */

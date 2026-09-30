@@ -10,7 +10,7 @@
  * добавлением строки, если/когда какому-то модулю понадобится читать что-то из `admin`.
  *
  * Прямой импорт `modules/admin/domain|application|infrastructure|presentation` из другого
- * модуля — блокирующее нарушение `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2 (ловится
+ * модуля — блокирующее нарушение `docs/architecture/clean-architecture.md` §1.2 (ловится
  * `pnpm arch:check`). Импортируйте только из этого файла.
  */
 export { AdminModule } from './admin.module.js'

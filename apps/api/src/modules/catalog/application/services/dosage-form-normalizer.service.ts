@@ -18,7 +18,7 @@
  * **Нет I/O, нет ENV, нет `Date.now()`/`Math.random()`** — функция лежит в
  * `application/services/` (а не `domain/services/`), потому что она
  * обслуживает use case'ы композитного матчинга и формально не является
- * частью `Medicine`-агрегата. `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1 —
+ * частью `Medicine`-агрегата. `docs/architecture/clean-architecture.md` §1.1 —
  * application может вызывать инфраструктуру, но сам сервис чистый.
  */
 import { DosageFormClass } from '../../domain/medicine.enums.js'

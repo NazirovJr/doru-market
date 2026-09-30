@@ -1,6 +1,6 @@
 /**
  * Интеграционный тест `DrizzleOrderRepository` (EP-09, DTJ-227) — РЕАЛЬНЫЙ Postgres, не
- * мок/фейк (урок волны 5 §6.4, `reports/EP09-CTO-BRIEF.md`).
+ * мок/фейк (урок волны 5 §6.4, `docs/history/briefs/ep09-cto-brief.md`).
  *
  * Фокус: `save()`/`findById()`/`findByCheckoutAttemptId()` — полный круг через
  * `Order.create()` (домен) → Drizzle-репозиторий → `Order.restore()`, включая денежные поля

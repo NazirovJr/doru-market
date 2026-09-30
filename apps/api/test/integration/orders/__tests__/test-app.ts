@@ -1,6 +1,6 @@
 /**
  * `test-app.ts` (EP-09, DTJ-226) — utility для Supertest-интеграции `CartController` против
- * НАСТОЯЩИХ Postgres/Redis (урок волны 5 §6.4 `reports/EP09-CTO-BRIEF.md` — интеграционный
+ * НАСТОЯЩИХ Postgres/Redis (урок волны 5 §6.4 `docs/history/briefs/ep09-cto-brief.md` — интеграционный
  * тест обязан бить в реальную БД, подмена репозитория фейком запрещена). Тот же приём, что
  * `test/integration/auth/__tests__/test-app.ts` (DTJ-029): `Test.createTestingModule` строит
  * дерево ТОЛЬКО из `OrdersModule` (+ его собственные `imports`: `CatalogModule`,

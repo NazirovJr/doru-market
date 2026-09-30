@@ -2,12 +2,12 @@
  * Интеграционный тест `MEDICINE_READ_REPOSITORY`/`CATEGORIES_READ_REPOSITORY` — РЕАЛЬНЫЙ
  * Postgres, РЕАЛЬНЫЕ адаптеры (DTJ-092/094 follow-up, Волна 5 блок B).
  *
- * **Почему этот файл существует (прямое указание CTO, см. `reports/CTO-DECISION-WAVE5.md`
+ * **Почему этот файл существует (прямое указание CTO, см. `docs/history/briefs/cto-decision-wave5.md`
  * §3 блок B).** `categories-controller.integration.spec.ts` (DTJ-094) подменяет
  * `CATEGORIES_READ_REPOSITORY` in-memory фейком (`SeededCategoriesReadRepository`, см. её
  * собственный JSDoc: «никакой БД») — ни один существующий тест не бил `GET /api/v1/categories`
  * через `NestApplication` в НАСТОЯЩИЙ Postgres. Это тот же класс дефекта, что скрыл сломанную
- * карту аптек в волне 4 (`docs/07-WAVE4-HANDOFF.md` §3.2): «интеграционный» тест подменял
+ * карту аптек в волне 4 (`docs/history/wave-4-handoff.md` §3.2): «интеграционный» тест подменял
  * репозиторий и не увидел, что маршрут в проде читает пустой `InMemory*`.
  *
  * **Часть 1 — `GET /api/v1/categories` (HTTP, реальный `NestApplication`, БЕЗ единого
@@ -39,7 +39,7 @@
  * (конкретные типы классов, не `Array`), Nest резолвит оба параметра по классу без
  * `@Inject` штатно — маршрут РАБОТАЕТ в проде (проверено вручную: `pnpm build` + `node
  * dist/main.js` против `dorutj_test` + `curl`, см. отчёт сдачи, «фактический вывод команд»).
- * Это ЕЩЁ ОДНО расхождение esbuild/tsc (см. `docs/07-WAVE4-HANDOFF.md` §3.1), но НЕ
+ * Это ЕЩЁ ОДНО расхождение esbuild/tsc (см. `docs/history/wave-4-handoff.md` §3.1), но НЕ
  * блокирует приёмку блока B: `MEDICINE_READ_REPOSITORY`/`ListMedicinesUseCase` (часть 2
  * ниже) читают Postgres корректно независимо от presentation-слоя.
  *
@@ -50,8 +50,8 @@
  * `catalog-repository.adapter.integration.spec.ts` (DTJ-092); безопасно, т.к. файлы не
  * выполняются параллельно.
  *
- * @see reports/CTO-DECISION-WAVE5.md §3 блок B
- * @see docs/07-WAVE4-HANDOFF.md §3.1 (esbuild/tsc paramtypes) и §3.2 (постмортем «фейковый репозиторий скрыл дефект»)
+ * @see docs/history/briefs/cto-decision-wave5.md §3 блок B
+ * @see docs/history/wave-4-handoff.md §3.1 (esbuild/tsc paramtypes) и §3.2 (постмортем «фейковый репозиторий скрыл дефект»)
  */
 import type { Server } from 'node:http'
 import { readFileSync } from 'node:fs'

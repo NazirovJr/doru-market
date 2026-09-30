@@ -54,7 +54,7 @@
  *
  * @see docs/spec/20-module-catalog-search.md (SRS-CAT-031..043, SRS-CAT-061)
  * @see docs/spec/10-domain-model.md (SRS-DOM-078/079/158/159)
- * @see docs/STATE-AND-RESUME-POINT.md §11.4 задача 3.2 (долг 3.5)
+ * @see docs/history/state-log-to-2026-09-06.md §11.4 задача 3.2 (долг 3.5)
  */
 import { Inject, Injectable } from '@nestjs/common'
 import { Barcode, DosageForm } from '@dorutj/domain-kernel'
@@ -309,7 +309,7 @@ function isPubliclyVisible(record: MedicineRecord): boolean {
  *
  * **Дубль `toDomain` из `infrastructure/mappers/medicine.mapper.ts`** —
  * этот маппер живёт в `infrastructure/`, и `application/` НЕ должен
- * импортировать инфраструктуру (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1).
+ * импортировать инфраструктуру (`docs/architecture/clean-architecture.md` §1.1).
  * Используем публичный `Medicine.restore(...)` + парсеры VO из
  * `@dorutj/domain-kernel`. Дубликат придётся поддерживать в двух местах;
  * зафиксировано как `foundIssues` — после стабилизации маппер должен

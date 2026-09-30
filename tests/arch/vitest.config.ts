@@ -3,7 +3,7 @@
  *
  * Пул `vmThreads` выбран СОЗНАТЕЛЬНО: дефолт `forks` в Vitest 4 на Windows
  * использует `child_process.spawn` с `stdio: 'pipe'`, который в DSH sandbox
- * (Windows) падает с EPERM (-4048) — см. STATE-AND-RESUME-POINT.md §11.7
+ * (Windows) падает с EPERM (-4048) — см. docs/history/state-log-to-2026-09-06.md §11.7
  * (фикстуры известной блокировки). `vmThreads` использует worker threads
  * вместо child_process, что обходит это ограничение.
  *

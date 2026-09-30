@@ -10,7 +10,7 @@
  * `application/use-cases/*` ломает правило `application-does-not-know-infrastructure`
  * (`.dependency-cruiser.cjs`, `severity: 'error'`, `from: '/application/'` →
  * `to: '/(infrastructure|presentation)/'`) — намерение DTJ-187 и машинно проверяемая граница
- * архитектуры (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.1/§1.3) прямо противоречат друг другу.
+ * архитектуры (`docs/architecture/clean-architecture.md` §1.1/§1.3) прямо противоречат друг другу.
  * Это НЕ мой файл на правку (`infrastructure/cache/*` вне `files_owned` DTJ-188, Ж7), и
  * `.dependency-cruiser.cjs` трогать нельзя (Ж3 — «не отключай проверку ради зелёного гейта»),
  * поэтому решение — тонкий порт здесь (application), связанный с `RedisLockGuard` через

@@ -11,7 +11,7 @@
  *   2. `num` (Drizzle NUMERIC) принимается как `number | string`.
  *   3. Невалидный `dosageFormClass`/`controlCategory`/`dosageUnit` бросает.
  *
- * @see docs/STATE-AND-RESUME-POINT.md §11.6 (Волна 4, EP-04)
+ * @see docs/history/state-log-to-2026-09-06.md §11.6 (Волна 4, EP-04)
  */
 import { describe, expect, it } from 'vitest'
 import { DosageForm, DosageUnit } from '@dorutj/domain-kernel'

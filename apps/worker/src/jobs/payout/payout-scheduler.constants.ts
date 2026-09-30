@@ -1,7 +1,7 @@
 /**
  * Константы и DI-токены джобы `payout-scheduler` (DTJ-249, SRS-DOM-103/D-19, SRS-PAY-030/032).
  * Зеркало `unpaid-order-timeout.constants.ts`/`escrow-reconciliation.constants.ts` по структуре
- * имён. Таймзона — Asia/Dushanbe (`01-TECH-BASELINE.md`), тот же приём, что сёстры-джобы;
+ * имён. Таймзона — Asia/Dushanbe (`docs/architecture/tech-baseline.md`), тот же приём, что сёстры-джобы;
  * расписание — ежечасно (ASSUMPTION, буквальный текст тикета «Технический контекст»).
  */
 export const PAYOUT_SCHEDULER_QUEUE = 'payout-scheduler'

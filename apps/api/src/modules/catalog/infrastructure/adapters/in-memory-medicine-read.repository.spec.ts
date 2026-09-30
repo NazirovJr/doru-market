@@ -3,7 +3,7 @@
  * контракт фильтрации и пагинации, чтобы Drizzle-адаптер в последующих тикетах
  * реализовал ТОЧНО ту же семантику.
  *
- * @see docs/STATE-AND-RESUME-POINT.md §11.6
+ * @see docs/history/state-log-to-2026-09-06.md §11.6
  */
 import { describe, expect, it } from 'vitest'
 import { DosageForm, DosageFormClass, DosageUnit } from '@dorutj/domain-kernel'

@@ -25,7 +25,7 @@
  *
  * Домен — чистый: ноль I/O, ноль `Date.now()`. `now` передаётся параметром
  * каждого метода, который нуждается во времени (правило
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md` §2.6).
+ * `docs/architecture/clean-architecture.md` §2.6).
  */
 import { err, ok, type Result } from '@dorutj/domain-kernel'
 import { Money } from '@/shared-kernel/domain/value-objects/money.vo.js'

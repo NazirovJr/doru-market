@@ -6,8 +6,8 @@
 > `DTJ-076` (27 тикетов) — резерв `DTJ-077`..`DTJ-089` не занят, доступен на случай дробления
 > будущих правок.
 >
-> Источники (по убыванию приоритета): `04-SCOPE-DECISION-PIVOT.md` (R1-16) →
-> `03-ARCHITECT-DECISIONS.md` (D-01, D-22) → `02-CLEAN-ARCHITECTURE-AND-CODE.md` →
+> Источники (по убыванию приоритета): `docs/product/scope-r1.md` (R1-16) →
+> `docs/architecture/decisions/README.md` (D-01, D-22) → `docs/architecture/clean-architecture.md` →
 > `docs/spec/26-module-tenancy-whitelabel.md`, `docs/spec/27-module-admin-moderation-onboarding.md`
 > §2, `docs/spec/12-api-conventions-auth-tenancy.md` §5, `docs/spec/10-domain-model.md`,
 > `docs/spec/11-database-schema.md`.

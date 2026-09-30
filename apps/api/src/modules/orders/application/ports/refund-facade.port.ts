@@ -1,14 +1,14 @@
 /**
  * Порт `RefundFacadePort` (EP-09, DTJ-232, SRS-DOM-092/093, SRS-ORD-029).
  *
- * Межмодульный фасад `orders → payments` (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2) —
+ * Межмодульный фасад `orders → payments` (`docs/architecture/clean-architecture.md` §1.2) —
  * контракт к EP-11 (`tickets/ep07-returns-disputes`), который заморожен решением CTO до
- * волны 8 (`reports/CTO-DECISION-WAVE5.md` §1). Тот же приём отложенного DI-биндинга, что
+ * волны 8 (`docs/history/briefs/cto-decision-wave5.md` §1). Тот же приём отложенного DI-биндинга, что
  * `PaymentInvoicePort` (`payment-invoice.port.ts`, DTJ-220/227/242) — порт объявляется здесь,
  * чтобы `CancelOrderUseCase` компилировался и тестировался (мок-реализацией) независимо от
  * того, когда EP-11 будет нарезан на тикеты. Владелец маркера — `TODO(EP-11)`, не выдуманный
  * `DTJ-*` (эпик документирован, но не нарезан — тот же приём, утверждённый CTO для
- * `TODO(R2-4)`, `reports/EP09-CTO-BRIEF.md` D-EP09-8/28).
+ * `TODO(R2-4)`, `docs/history/briefs/ep09-cto-brief.md` D-EP09-8/28).
  *
  * Вызывается ТОЛЬКО когда заказ реально был в `paid_escrow`/`processing` (non-cash) на момент
  * отмены (D-25) — `CancelOrderUseCase` — единственная точка этого решения (не дублируется).

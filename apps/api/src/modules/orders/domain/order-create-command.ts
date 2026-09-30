@@ -1,6 +1,6 @@
 /**
  * Команда `Order.create()` (EP-09, DTJ-221). Вынесена из `order.entity.ts` отдельным файлом
- * ради `C2` (≤300 строк/файл, `02-CLEAN-ARCHITECTURE-AND-CODE.md` §6) — тот же приём, что и
+ * ради `C2` (≤300 строк/файл, `docs/architecture/clean-architecture.md` §6) — тот же приём, что и
  * вынос `OrderItem` в свой файл (см. JSDoc тикета DTJ-221 «Задача»).
  *
  * Домен принимает уже РЕЗОЛВЛЕННЫЕ значения (не порты) — `isPharmacyActiveAtCreation`,

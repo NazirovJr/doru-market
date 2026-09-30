@@ -2,9 +2,9 @@
 
 > Владелец: Tech Lead (этот набор тикетов). Диапазон ID: **DTJ-220..DTJ-269** (использовано
 > DTJ-220..DTJ-255, 36 тикетов — выходить за верхнюю границу 269 запрещено).
-> Источники (по убыванию приоритета): `docs/04-SCOPE-DECISION-PIVOT.md` (R1-7/R1-8) →
-> `docs/03-ARCHITECT-DECISIONS.md` (D-01..D-25, ключевое — **D-25**) →
-> `docs/02-CLEAN-ARCHITECTURE-AND-CODE.md` → `docs/01-TECH-BASELINE.md` →
+> Источники (по убыванию приоритета): `docs/product/scope-r1.md` (R1-7/R1-8) →
+> `docs/architecture/decisions/README.md` (D-01..D-25, ключевое — **D-25**) →
+> `docs/architecture/clean-architecture.md` → `docs/architecture/tech-baseline.md` →
 > `docs/spec/21-module-orders-payments-escrow.md` (SRS-ORD-*/SRS-PAY-*) →
 > `docs/spec/10-domain-model.md` (SRS-DOM-*, ЗАКОН) → `docs/spec/11-database-schema.md`
 > (SRS-DB-*, ЗАКОН) → `docs/spec/12-api-conventions-auth-tenancy.md` (SRS-API-*).
@@ -31,7 +31,7 @@
 
 ## Центральное архитектурное решение эпика: D-25
 
-`03-ARCHITECT-DECISIONS.md` §D-25 — наличный заказ (`payment_method='cash_courier'`) переходит
+`docs/architecture/decisions/d-25-cash-not-paid-escrow.md` §D-25 — наличный заказ (`payment_method='cash_courier'`) переходит
 СИНХРОННО в статус **`confirmed`**, НЕ `paid_escrow`. `paid_escrow` достижим ИСКЛЮЧИТЕЛЬНО из
 `pending_payment` по подписанному вебхуку (плюс одно явное административное исключение,
 DTJ-246). Инвариант `status==='paid_escrow' ⟺ escrow_ledger непуст` (SRS-DOM-180/SRS-ORD-027a)

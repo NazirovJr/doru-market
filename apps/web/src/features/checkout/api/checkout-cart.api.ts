@@ -8,7 +8,7 @@ import { httpGetJsonWithMeta } from '@/shared/api/http-client'
  *
  * **Почему не переиспользован `features/cart/api/cart.api.ts#fetchCart`.** Горизонтальный импорт
  * между фичами запрещён (`.dependency-cruiser.cjs` `fe-features-are-isolated`,
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md` §5: «общее выносится в entities или shared», а не
+ * `docs/architecture/clean-architecture.md` §5: «общее выносится в entities или shared», а не
  * шарится напрямую между `features/*`) — `cart.api.ts` физически лежит в `features/cart/`, и
  * его импорт из `features/checkout/` роняет `pnpm arch:check`. Дублируется МИНИМАЛЬНЫЙ срез
  * (только `items`+`pharmacyGroups`, БЕЗ `warnings`/токена гостевой сессии корзины — см. ниже) —

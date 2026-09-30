@@ -1,6 +1,6 @@
 /**
  * `IdentityFacadePort` (DTJ-368, EP-16) — узкий порт `notifications` над модулем идентичности
- * (Interface Segregation, `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.3, тот же приём, что 4 порта
+ * (Interface Segregation, `docs/architecture/clean-architecture.md` §1.3, тот же приём, что 4 порта
  * `modules/admin` из DTJ-350).
  *
  * **Отличие от текста тикета DTJ-368** (задокументировано умышленно, не молча): тикет описывает

@@ -5,7 +5,7 @@
  * `NestApplication` поверх `CatalogModule` + InMemory-репозиторий с заранее
  * подготовленным сидом. Никакой БД (миграция категорий DTJ-091 ещё не имеет
  * seed-runner'а в `apps/api/test/`), замена репозитория — стандартный приём
- * для integration-тестов R1 (см. `apps/api/test/integration/auth/test-app.ts`).
+ * для integration-тестов R1 (см. `apps/api/test/integration/auth/__tests__/test-app.ts`).
  *
  * Сценарии (по критериям приёмки DTJ-094):
  *   1. `GET /api/v1/categories` → 200, вложенная структура (не плоский список),
@@ -15,8 +15,8 @@
  *   3. Дерево глубже `CATEGORY_MAX_DEPTH` (искусственно 5 уровней) → 200,
  *      полное дерево возвращается (НЕ 500, критерий 3 приёмки).
  *
- * @see docs/tickets/ep03-catalog-analogs/DTJ-094.md
- * @see docs/STATE-AND-RESUME-POINT.md §11.6 (Волна 4)
+ * @see tickets/ep03-catalog-analogs/DTJ-094.md
+ * @see docs/history/state-log-to-2026-09-06.md §11.6 (Волна 4)
  */
 import type { Server } from 'node:http'
 import { VersioningType, type INestApplication } from '@nestjs/common'
@@ -65,7 +65,7 @@ interface TestContext {
 /**
  * Минимальный ENV для bootstrap'а `AppConfigService`. Значения выбраны
  * детерминированными (фиксированные порты/ключи), чтобы прогон был повторяемым.
- * Идентичен набору из `apps/api/test/integration/auth/test-app.ts` — не импортируем
+ * Идентичен набору из `apps/api/test/integration/auth/__tests__/test-app.ts` — не импортируем
  * его, чтобы не зависеть от чужого файла вне `files_owned` этого тикета.
  */
 // Тестовая пара RS256 (Ж13, DTJ-022 `Rs256JwtSignerAdapter`) — идентична паре в

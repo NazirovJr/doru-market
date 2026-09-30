@@ -2,7 +2,7 @@
  * Порт `PaymentsTenancyPort` (EP-10, DTJ-236, `21-module-orders-payments-escrow.md` §6.1,
  * §«Дополнения к схеме БД»).
  *
- * Межмодульный фасад `payments → tenancy` (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2) —
+ * Межмодульный фасад `payments → tenancy` (`docs/architecture/clean-architecture.md` §1.2) —
  * тонкая обёртка над публичным фасадом `modules/tenancy/index.ts` (реализация — адаптер
  * `infrastructure/adapters/tenancy-facade.adapter.ts`, заводится потребляющим тикетом,
  * начиная с DTJ-249/253: `PayoutSchedulerJob`/B2B-биллинг наличной комиссии читают

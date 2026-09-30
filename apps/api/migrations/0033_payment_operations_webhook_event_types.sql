@@ -2,7 +2,7 @@
 -- 0033_payment_operations_webhook_event_types.sql — EP-10 (DTJ-242).
 -- =====================================================================================
 -- Сверено `ls apps/api/migrations/` + журнал непосредственно перед созданием файла (правило
--- из reports/EP09-CTO-BRIEF.md — последняя занятая 0032, DTJ-241).
+-- из docs/history/briefs/ep09-cto-brief.md — последняя занятая 0032, DTJ-241).
 --
 -- `HandlePaymentWebhookUseCase` (DTJ-242, SRS-DOM-164/SRS-PAY-022) вставляет ОТДЕЛЬНУЮ строку
 -- `payment_operations` НА КАЖДЫЙ входящий банковский вебхук, `idempotency_key = bankEventId`
@@ -18,7 +18,7 @@
 -- DTJ-237): `payment_confirmed`/`payment_failed`/`refund_confirmed`/`refund_failed`.
 --
 -- ИДЕМПОТЕНТНОСТЬ: `ALTER TYPE ... ADD VALUE IF NOT EXISTS` — нативно поддержано PostgreSQL 12+
--- (проект — PostgreSQL 16, `01-TECH-BASELINE.md`), обёртка `DO $$ ... EXCEPTION` (как в
+-- (проект — PostgreSQL 16, `docs/architecture/tech-baseline.md`), обёртка `DO $$ ... EXCEPTION` (как в
 -- `0027`/`0028`) здесь НЕ нужна — `IF NOT EXISTS` уже даёт идемпотентность на уровне SQL.
 --
 -- ТРАНЗАКЦИОННОСТЬ (SRS-DB-009/11-database-schema.md): PostgreSQL 12+ разрешает `ALTER TYPE

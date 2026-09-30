@@ -10,7 +10,7 @@
  * тот же пакет apps/worker) — тест-план тикета проверяет детерминированный расчёт `cutoff`,
  * передавая фиксированную дату вместо реального времени.
  *
- * D-EP09-15 (`reports/EP09-CTO-BRIEF.md`, БЛОКЕР защиты боевых данных, закрыт CTO ДО старта
+ * D-EP09-15 (`docs/history/briefs/ep09-cto-brief.md`, БЛОКЕР защиты боевых данных, закрыт CTO ДО старта
  * работ): guard `retentionDays < MIN_CART_ABANDONED_TTL_DAYS` — defense-in-depth ПОВЕРХ
  * валидации `env.schema.ts` (`z.coerce.number().int().min(1)`, отказывает процессу СТАРТОВАТЬ).
  * Здесь — на случай прямого создания класса в обход `ConfigModule` (тесты, будущий рефакторинг

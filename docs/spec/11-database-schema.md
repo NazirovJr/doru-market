@@ -1,8 +1,8 @@
 # DoruTJ — Схема базы данных (PostgreSQL 16 / Drizzle ORM)
 
 > Владелец: Analyst (SRS). Статус: **BASELINE для фазы Analysis**.
-> Приоритет источников при противоречии: `03-ARCHITECT-DECISIONS.md` (D-*) > `00-PROJECT-CHARTER.md`
-> (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `tz.log` (§ТЗ).
+> Приоритет источников при противоречии: `docs/architecture/decisions/README.md` (D-*) > `docs/product/charter.md`
+> (CUJ-*, §) > `research/00-RESEARCH-DIGEST.md` (REQ-*) > `docs/product/client-brief-original.txt` (§ТЗ).
 > **`docs/spec/10-domain-model.md` — ЗАКОН.** Каждая таблица ниже реализует конкретный агрегат/VO/
 > state machine, описанный там; ссылки `SRS-DOM-*` указывают на конкретный инвариант, который эта
 > таблица/constraint/индекс обеспечивает физически.
@@ -11,7 +11,7 @@
 > (`REQ-*`, `D-*`, `CUJ-*`, `SRS-DOM-*`, `§ТЗ`) и сформулирован как проверяемое условие (Given/When/
 > Then — там, где применимо).
 >
-> Таблицы `tz.log §II.2` (`pharmacy_chains`, `pharmacies`, `medicines`, `pharmacy_inventory`, `orders`,
+> Таблицы `docs/product/client-brief-original.txt §II.2` (`pharmacy_chains`, `pharmacies`, `medicines`, `pharmacy_inventory`, `orders`,
 > `order_items`) реализованы **1:1 по именам и базовым полям** (Charter §5: «таблицы, ENUM'ы и поля из
 > §II.2 ТЗ реализуются 1:1; расширения допускаются»). Расширяющие поля/таблицы помечены явно
 > `[РАСШИРЕНИЕ]` со ссылкой на решение архитектора.
@@ -21,7 +21,7 @@
 ## Принципы
 
 **SRS-DB-001** [Charter §3.1, D-24 контекст] **Первичные ключи** — `UUID`. Генерация: колонки,
-пришедшие из `tz.log` дословно, сохраняют `DEFAULT gen_random_uuid()` (требует расширения
+пришедшие из `docs/product/client-brief-original.txt` дословно, сохраняют `DEFAULT gen_random_uuid()` (требует расширения
 `pgcrypto`, включённого в §5). Все НОВЫЕ таблицы (расширения архитектора) используют **UUID v7**
 (монотонно возрастающий, time-ordered) через прикладную генерацию портом `IdGenerator`
 (`packages/contracts` → `infrastructure/adapters/uuid-v7-id-generator.adapter.ts`), а не
@@ -31,13 +31,13 @@
 прямые `INSERT` в консоли), но прикладной код обязан передавать UUID v7 явно через `IdGeneratorPort`.
 
 **SRS-DB-002** [Charter §5] Все временные колонки — `TIMESTAMPTZ` (`TIMESTAMP WITH TIME ZONE`), без
-исключений, включая таблицы `tz.log` (там указан `TIMESTAMP WITH TIME ZONE` — уже соответствует).
+исключений, включая таблицы `docs/product/client-brief-original.txt` (там указан `TIMESTAMP WITH TIME ZONE` — уже соответствует).
 Хранение — всегда UTC; конвертация в `Asia/Dushanbe` (UTC+5, без перехода на летнее время) —
 исключительно на `presentation`-уровне (`Intl.DateTimeFormat` с `timeZone: 'Asia/Dushanbe'`) или в
 SQL-запросах отчётности (`AT TIME ZONE 'Asia/Dushanbe'`), никогда не в domain/application.
 
 **SRS-DB-003** [Charter §5, `10-domain-model.md` денежная конвенция] **Деньги, зафиксированные в
-`tz.log` §II.2** (`price_tjs`, `items_total_tjs`, `delivery_fee_tjs`, `total_amount_tjs`,
+`docs/product/client-brief-original.txt` §II.2** (`price_tjs`, `items_total_tjs`, `delivery_fee_tjs`, `total_amount_tjs`,
 `unit_price_tjs`, `total_price_tjs`) хранятся как `NUMERIC(10,2)` — тип и имя колонки сохранены 1:1.
 **Все НОВЫЕ денежные поля** (комиссии, ledger, payout, courier-выплаты) называются с суффиксом
 `_dirams` и хранятся как `BIGINT` (целые дирамы, `1 TJS = 100 diram`) — никогда `NUMERIC`, никогда
@@ -65,11 +65,11 @@ SQL-запросах отчётности (`AT TIME ZONE 'Asia/Dushanbe'`), ни
 
 **SRS-DB-006** [Charter §3.4, изоляция тенантов] **Правило ON DELETE**:
 - `ON DELETE CASCADE` — только для строгой композиции (child не существует без parent):
-  `pharmacies.chain_id → pharmacy_chains.id` (как в `tz.log`), `order_items.order_id → orders.id`,
+  `pharmacies.chain_id → pharmacy_chains.id` (как в `docs/product/client-brief-original.txt`), `order_items.order_id → orders.id`,
   `medicine_substances.medicine_id`, `inventory_batches.pharmacy_inventory_id`,
   `escrow_ledger.order_id`… — везде, где child — часть агрегата.
 - `ON DELETE RESTRICT` — для справочников, на которые есть активные бизнес-ссылки:
-  `pharmacy_inventory.medicine_id → medicines.id` (как в `tz.log` — нельзя удалить медикамент, пока
+  `pharmacy_inventory.medicine_id → medicines.id` (как в `docs/product/client-brief-original.txt` — нельзя удалить медикамент, пока
   на него есть остатки), `order_items.medicine_id → medicines.id` (нельзя удалить медикамент, если
   он упомянут хоть в одном историческом заказе — юридический аудит).
 - `ON DELETE SET NULL` — для необязательных ссылок, потеря которых не рвёт целостность:
@@ -90,14 +90,14 @@ SQL-запросах отчётности (`AT TIME ZONE 'Asia/Dushanbe'`), ни
 
 ## ENUM-типы
 
-> Базовые enum'ы `tz.log` §II.2 сохранены дословно (значения не переименовываются — только
+> Базовые enum'ы `docs/product/client-brief-original.txt` §II.2 сохранены дословно (значения не переименовываются — только
 > аддитивное расширение списка значений, где это предписано решением архитектора). Каждый enum —
 > отдельный `CREATE TYPE ... AS ENUM`, не `VARCHAR + CHECK` (кроме случаев, отмеченных явно, где
 > нужна расширяемость без миграции типа — `ALTER TYPE ... ADD VALUE` необратим внутри транзакции
 > в PG16, это учтено в §8 «Миграции»).
 
 ```sql
--- === Базовые enum'ы tz.log §II.2 (значения сохранены 1:1) ===
+-- === Базовые enum'ы docs/product/client-brief-original.txt §II.2 (значения сохранены 1:1) ===
 
 CREATE TYPE user_role AS ENUM (
     'customer', 'pharmacist', 'courier', 'pharmacy_admin', 'super_admin',
@@ -245,7 +245,7 @@ domain (`10-domain-model.md` §«State machines»), БД лишь исключа
 > Порядок таблиц ниже — топологический (без forward-reference там, где это возможно; там, где
 > реальный домен требует цикла — например, `orders.courier_id` до определения `couriers` —
 > FK добавляется отдельным `ALTER TABLE` в конце соответствующей группы, что и делает Drizzle-kit
-> автоматически при генерации миграций из схемы). Таблицы `tz.log §II.2` помечены **[ТЗ 1:1]**.
+> автоматически при генерации миграций из схемы). Таблицы `docs/product/client-brief-original.txt §II.2` помечены **[ТЗ 1:1]**.
 
 ### Группа A: Организации и каталог
 
@@ -326,7 +326,7 @@ COMMENT ON COLUMN pharmacies.geo_point IS
     'см. точное определение и обоснование GiST-индекса в §4.';
 
 -- =====================================================================================
--- 3. categories [РАСШИРЕНИЕ — tz.log ссылается на medicines.category_id INT без определения таблицы]
+-- 3. categories [РАСШИРЕНИЕ — docs/product/client-brief-original.txt ссылается на medicines.category_id INT без определения таблицы]
 -- =====================================================================================
 CREATE TABLE categories (
     id SERIAL PRIMARY KEY,
@@ -365,8 +365,8 @@ CREATE TABLE medicines (
     inn_name VARCHAR(255) NOT NULL, -- Международное непатентованное название (денормализовано для отображения/поиска)
     barcode VARCHAR(64) UNIQUE,
     category_id INT NOT NULL REFERENCES categories(id) ON DELETE RESTRICT,
-    dosage_form VARCHAR(100) NOT NULL, -- таблетки, сироп, ампулы (исходная строка tz.log, отображение)
-    dosage_strength VARCHAR(100) NOT NULL, -- 500 мг, 10 мг/мл (исходная строка tz.log, отображение)
+    dosage_form VARCHAR(100) NOT NULL, -- таблетки, сироп, ампулы (исходная строка docs/product/client-brief-original.txt, отображение)
+    dosage_strength VARCHAR(100) NOT NULL, -- 500 мг, 10 мг/мл (исходная строка docs/product/client-brief-original.txt, отображение)
     manufacturer_country VARCHAR(100) NOT NULL,
     manufacturer_name VARCHAR(255) NOT NULL,
     is_prescription_required BOOLEAN DEFAULT false,
@@ -428,7 +428,7 @@ CREATE TABLE pharmacy_inventory (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     pharmacy_id UUID REFERENCES pharmacies(id) ON DELETE CASCADE,
     medicine_id UUID REFERENCES medicines(id) ON DELETE RESTRICT,
-    -- price_tjs/stock_quantity/batch_number/expiry_date/last_synced_at из tz.log СОХРАНЕНЫ как
+    -- price_tjs/stock_quantity/batch_number/expiry_date/last_synced_at из docs/product/client-brief-original.txt СОХРАНЕНЫ как
     -- вычисляемые/денормализованные проекции текущего FEFO-состояния (SRS-DOM-019/020), физический
     -- источник истины — inventory_batches (РАСШИРЕНИЕ REQ-SYNC-8: несколько партий на одну пару).
     price_tjs NUMERIC(10, 2) NOT NULL, -- денормализация: цена партии, выбранной по FEFO (триггер, см. §6)
@@ -439,7 +439,7 @@ CREATE TABLE pharmacy_inventory (
     CONSTRAINT unique_pharmacy_medicine UNIQUE (pharmacy_id, medicine_id)
 );
 COMMENT ON TABLE pharmacy_inventory IS
-    'Агрегат PharmacyInventory (ключ pharmacy_id+medicine_id, UNIQUE как в tz.log). Денормализованные '
+    'Агрегат PharmacyInventory (ключ pharmacy_id+medicine_id, UNIQUE как в docs/product/client-brief-original.txt). Денормализованные '
     'price_tjs/stock_quantity/batch_number/expiry_date поддерживаются триггером trg_recompute_fefo '
     'на INSERT/UPDATE/DELETE inventory_batches (§6) — прикладной код НИКОГДА не пишет их напрямую.';
 
@@ -585,7 +585,7 @@ CREATE TABLE tenant_settings (
     merchant_credentials_ref TEXT, -- непрозрачная ссылка в секрет-хранилище, НЕ сам секрет
     cod_limit_diram BIGINT NOT NULL DEFAULT 50000, -- D-16, дефолт 500 TJS
     hold_period_days INT NOT NULL DEFAULT 1, -- D-19, T+1 наличные / переопределяется per payment_method
-    pickup_sla_minutes INT NOT NULL DEFAULT 7, -- tz.log Модуль 5, D-19
+    pickup_sla_minutes INT NOT NULL DEFAULT 7, -- docs/product/client-brief-original.txt Модуль 5, D-19
     pickup_sla_buffer_minutes INT NOT NULL DEFAULT 5, -- D-19
     delivery_sla_city_minutes INT NOT NULL DEFAULT 240, -- D-19, 4 часа
     delivery_sla_remote_minutes INT NOT NULL DEFAULT 1440, -- D-19, 24 часа
@@ -606,7 +606,7 @@ COMMENT ON TABLE tenant_settings IS
     'tenant_courier_payout_rules, здесь только courier_sourcing_mode (на tenants) как ссылка.';
 
 -- =====================================================================================
--- 15. users [РАСШИРЕНИЕ — базовая аутентификация, tz.log подразумевает customer_id/pharmacist/courier без DDL]
+-- 15. users [РАСШИРЕНИЕ — базовая аутентификация, docs/product/client-brief-original.txt подразумевает customer_id/pharmacist/courier без DDL]
 -- =====================================================================================
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -714,7 +714,7 @@ CREATE TABLE orders (
     delivery_longitude NUMERIC(11, 8),
     courier_id UUID, -- FK добавлен ALTER TABLE после CREATE TABLE couriers (группа H)
     courier_eta_minutes INT,
-    prescription_image_url TEXT, -- СОХРАНЕНО из tz.log для совместимости; каноничный источник — prescriptions.image_url
+    prescription_image_url TEXT, -- СОХРАНЕНО из docs/product/client-brief-original.txt для совместимости; каноничный источник — prescriptions.image_url
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     -- [РАСШИРЕНИЕ Charter §3.4/D-03/D-09/D-22] --
@@ -801,7 +801,7 @@ CREATE TABLE cart_items (
     CONSTRAINT chk_cart_items_quantity_positive CHECK (quantity > 0)
 );
 COMMENT ON TABLE cart_items IS
-    'Позиция корзины привязана к КОНКРЕТНОЙ аптеке (цена/остаток различаются между аптеками, tz.log '
+    'Позиция корзины привязана к КОНКРЕТНОЙ аптеке (цена/остаток различаются между аптеками, docs/product/client-brief-original.txt '
     'Модуль 1) — REQ-UX-4: сплит по аптекам виден пользователю ДО оплаты как N отдельных заказов.';
 
 -- =====================================================================================
@@ -1051,7 +1051,7 @@ CREATE TABLE prescriptions (
     vlm_confidence NUMERIC(4, 3), -- сырое значение от провайдера, "сырой кандидат", НЕ решение
     image_quality_score NUMERIC(4, 3), -- сигнал 2 из composite_confidence
     lasa_candidate_count SMALLINT NOT NULL DEFAULT 0, -- сигнал 3, REQ-OCR-6
-    stamp_present BOOLEAN, -- сигнал 4, is_official_stamp_present из tz.log JSON-контракта
+    stamp_present BOOLEAN, -- сигнал 4, is_official_stamp_present из docs/product/client-brief-original.txt JSON-контракта
     composite_confidence NUMERIC(4, 3), -- ЕДИНСТВЕННОЕ вычисляемое доменным сервисом поле решения (D-14)
     doctor_name VARCHAR(255),
     verified_by UUID REFERENCES users(id) ON DELETE SET NULL, -- pharmacist, обязателен для 'verified'
@@ -1107,7 +1107,7 @@ COMMENT ON TABLE couriers IS
     'быть назначен ни на один заказ (SRS-DOM-137, REQ-COUR-10).';
 
 -- =====================================================================================
--- 33. delivery_assignments [РАСШИРЕНИЕ tz.log Модуль 5, CUJ-3/4]
+-- 33. delivery_assignments [РАСШИРЕНИЕ docs/product/client-brief-original.txt Модуль 5, CUJ-3/4]
 -- =====================================================================================
 CREATE TABLE delivery_assignments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1235,7 +1235,7 @@ CREATE TABLE pharmacy_api_keys (
 COMMENT ON TABLE pharmacy_api_keys IS
     'D-11: X-Pharmacy-API-Key (argon2-хеш) + обязательная HMAC-SHA256 подпись тела с timestamp+nonce '
     '(анти-replay, окно 5 минут, проверяется application, не БД). mTLS — опциональный флаг per-'
-    'pharmacy, дефолт false (смягчение буквы tz.log — REQ-SYNC-14).';
+    'pharmacy, дефолт false (смягчение буквы docs/product/client-brief-original.txt — REQ-SYNC-14).';
 
 -- =====================================================================================
 -- 38. pharmacy_verification [РАСШИРЕНИЕ D-22 — состояние верификации лицензии, отдельно от статуса]
@@ -1454,7 +1454,7 @@ CREATE INDEX ix_delivery_assignments_geo_point ON delivery_assignments USING GIS
 ### Каталог / инвентарь
 
 ```sql
--- Модуль 1 tz.log: блок аналогов по МНН (переработан на substances, D-07) — JOIN medicine_substances
+-- Модуль 1 docs/product/client-brief-original.txt: блок аналогов по МНН (переработан на substances, D-07) — JOIN medicine_substances
 -- по substance_id для всех medicines, затем фильтр pharmacy_inventory.stock_quantity>0.
 CREATE INDEX ix_medicine_substances_substance ON medicine_substances (substance_id);
 
@@ -1635,7 +1635,7 @@ PostgreSQL `23505` в `infrastructure`-репозитории, не пробра
 
 ## Полнотекстовый поиск
 
-> Реализация Charter ADR №1 (`00-PROJECT-CHARTER.md` §3.5, №1): PostgreSQL FTS вместо Elasticsearch.
+> Реализация Charter ADR №1 (`docs/product/charter.md` §3.5, №1): PostgreSQL FTS вместо Elasticsearch.
 > `SEARCH_DRIVER=postgres` (дефолт) — `PostgresSearchProvider` за интерфейсом `SearchProvider`;
 > `SEARCH_DRIVER=elasticsearch` — опциональный адаптер, схема данных не меняется.
 
@@ -1762,7 +1762,7 @@ JOIN pharmacies ph ON ph.id = pi.pharmacy_id
     AND ph.status = 'active'
 WHERE m.id = :medicine_id
   AND ST_DWithin(ph.geo_point, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography, :radius_meters)
-ORDER BY pi.price_tjs ASC; -- сортировка по цене — REQ-MARKET-3, tz.log Модуль 1
+ORDER BY pi.price_tjs ASC; -- сортировка по цене — REQ-MARKET-3, docs/product/client-brief-original.txt Модуль 1
 
 -- 3) Блок аналогов по МНН (SRS-DOM-158, D-07) — через substances, НЕ через inn_name-строку:
 WITH target_substances AS (
@@ -1793,7 +1793,7 @@ WHERE m.id != :current_medicine_id
           AND ms3.strength_unit = ts2.strength_unit
           AND ms3.strength_value != ts2.strength_value
       )
-ORDER BY pi.price_tjs ASC; -- сохраняет формулировку tz.log §II.3 (сортировка по цене возрастанию)
+ORDER BY pi.price_tjs ASC; -- сохраняет формулировку docs/product/client-brief-original.txt §II.3 (сортировка по цене возрастанию)
 
 -- 4) D-06 composite-матчинг шаг 3 (fuzzy trigram при 1С-импорте, REQ-SYNC-6), порог 0.35:
 SELECT m.id, similarity(m.trade_name, :raw_trade_name) AS score
@@ -1891,7 +1891,7 @@ EXISTS (SELECT 1 FROM escrow_ledger WHERE order_id = NEW.id))`) — она ре�
 ### Триггеры
 
 **SRS-DB-021** [REQ-SYNC-8, SRS-DOM-019/020] Денормализованные `pharmacy_inventory.price_tjs`/
-`stock_quantity`/`batch_number`/`expiry_date` (сохранены 1:1 из `tz.log` для читаемости и обратной
+`stock_quantity`/`batch_number`/`expiry_date` (сохранены 1:1 из `docs/product/client-brief-original.txt` для читаемости и обратной
 совместимости витрины) пересчитываются триггером при любом изменении `inventory_batches`:
 
 ```sql
@@ -2124,7 +2124,7 @@ DDL с данными нельзя протестировать автомати
 ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'confirmed' BEFORE 'paid_escrow';
 ```
 
-Особенности PostgreSQL, обязательные к соблюдению (проект — PostgreSQL 16, `01-TECH-BASELINE.md`):
+Особенности PostgreSQL, обязательные к соблюдению (проект — PostgreSQL 16, `docs/architecture/tech-baseline.md`):
 
 - До PostgreSQL 12 `ALTER TYPE ... ADD VALUE` вообще запрещалась внутри блока транзакции
   (`25001 active_sql_transaction`). Начиная с PG12 команду разрешили запускать в транзакции, но
@@ -2191,7 +2191,7 @@ ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'confirmed' BEFORE 'paid_escrow'
 | `platform_fee` | ≥1 global default на категорию | `rx`=500bps, `otc`=800bps, `parapharma`=1200bps (D-03 дефолты) |
 | `tenant_settings` | Для всех тенантов, включая `neutral` | Разные `brand_palette`/`brand_name` для демонстрации White-Label переключения |
 
-**SRS-DB-038** [D-13] Число 300 — критерий приёмки ИЗМЕНЁН архитектором относительно `tz.log`
+**SRS-DB-038** [D-13] Число 300 — критерий приёмки ИЗМЕНЁН архитектором относительно `docs/product/client-brief-original.txt`
 («8000+ позиций к неделе 3-4» признано нереалистичным, D-13/REQ-CAT-1) — сид-скрипт не пытается
 достичь 8000, а курирует качественное ядро с корректными связями МНН, что важнее объёма для
 демонстрации CUJ-1.
@@ -2483,7 +2483,7 @@ Given `to_tsvector('tajik_ru', :query)` не находит совпадений
 индексы с обоснованием под конкретный запрос, реализация полнотекстового поиска с учётом таджикской
 кириллицы, CHECK-constraints и триггеры, модель изоляции тенантов, стратегия миграций и состав
 seed-данных, маппинг на Drizzle) поверх 177 требований `SRS-DOM-*` из `10-domain-model.md`. Каждая
-таблица реализует конкретный агрегат/VO/state machine домена; каждое расширение сверх `tz.log`
+таблица реализует конкретный агрегат/VO/state machine домена; каждое расширение сверх `docs/product/client-brief-original.txt`
 §II.2 явно помечено `[РАСШИРЕНИЕ]` со ссылкой на решение архитектора (D-*) или требование
 исследования (REQ-*). Любое расхождение нижестоящих SRS-документов (Catalog/Search, Orders/
 Checkout, Payments/Escrow, Prescriptions/AI, Delivery/Courier, Onboarding/Moderation) с этой схемой

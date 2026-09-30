@@ -23,7 +23,7 @@
  *
  * `pool: 'vmThreads'` — тот же обход Windows sandbox EPERM (`child_process.spawn`/`stdio:pipe`
  * под дефолтным `forks`), что и `tests/arch/vitest.config.ts`; см. его JSDoc и
- * `docs/STATE-AND-RESUME-POINT.md` §11.7. Актуально именно здесь: этот сьют, как и `tests/arch`,
+ * `docs/history/state-log-to-2026-09-06.md` §11.7. Актуально именно здесь: этот сьют, как и `tests/arch`,
  * запускается КОРНЕВЫМ скриптом (`pnpm --filter @dorutj/invariants test`), а не через
  * `apps/api`-собственный `vitest.integration.config.ts` (у него `pool: 'forks'` и работает —
  * но внутри `turbo run test`, другого процесса запуска).

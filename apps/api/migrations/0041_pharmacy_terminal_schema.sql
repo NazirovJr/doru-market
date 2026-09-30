@@ -26,7 +26,7 @@
 -- §«Дополнения к схеме БД»): спецификация предписывает `order_items.scanned_batch_id UUID
 -- REFERENCES inventory_batches(id)`. Таблицы `inventory_batches` в этой кодовой базе НЕ
 -- существует ни в одной миграции (проверено — foundIssue, задокументированный ЕЩЁ в
--- DTJ-220/EP09-CTO-BRIEF.md и покрытый тестом `orders-migration.integration.spec.ts`:
+-- DTJ-220/docs/history/briefs/ep09-cto-brief.md и покрытый тестом `orders-migration.integration.spec.ts`:
 -- «order_items — CHECK-констрейнты и FK на pharmacy_inventory (foundIssues: не
 -- inventory_batches)») — партии физически хранятся как строки `pharmacy_inventory`
 -- (см. JSDoc `apps/api/src/db/schema/pharmacy-inventory.ts`: «Одна строка = один остаток...

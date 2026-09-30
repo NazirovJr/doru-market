@@ -13,7 +13,7 @@ import { toIntlLocale, type Locale } from '@dorutj/i18n'
  * самой функции `formatSomoni`/`formatSavings` НЕ создаётся здесь: `features/analogs` — чужая
  * фича, горизонтальный импорт `checkout → analogs` запрещён `.dependency-cruiser.cjs`
  * (`fe-features-are-isolated`), поэтому эта копия — не третье повторение единой абстракции, а
- * необходимое следствие изоляции фич по `02-CLEAN-ARCHITECTURE-AND-CODE.md` §5).
+ * необходимое следствие изоляции фич по `docs/architecture/clean-architecture.md` §5).
  */
 
 const DIRAM_PER_SOMONI = 100

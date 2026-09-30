@@ -1,6 +1,6 @@
 /**
  * dependency-cruiser — машинная проверка Правила Зависимостей.
- * Источник правил: docs/02-CLEAN-ARCHITECTURE-AND-CODE.md §1 (backend) и §5 (frontend).
+ * Источник правил: docs/architecture/clean-architecture.md §1 (backend) и §5 (frontend).
  *
  * Запуск: pnpm arch:check
  * Любое нарушение severity=error роняет CI. Это не рекомендация — это граница архитектуры.
@@ -45,7 +45,7 @@ function findWorkspaceSrcDirs(rootDir) {
       const hasTsconfig = fs.existsSync(path.join(packageDir, 'tsconfig.json'))
       const hasSrc = fs.existsSync(path.join(packageDir, 'src'))
       // apps/admin — scaffolding DTJ-075. ВОЗВРАЩЁН в анализ в волне 3.5
-      // (STATE-AND-RESUME-POINT.md §11.4 задача 5.1): запрет Ж3 «не отключай
+      // (docs/history/state-log-to-2026-09-06.md §11.4 задача 5.1): запрет Ж3 «не отключай
       // проверку ради зелёного гейта» требует, чтобы `apps/admin` был под
       // архитектурным контролем наравне с apps/web. Если у admin есть
       // собственные нарушения, они должны быть исправлены в admin, а не
@@ -253,7 +253,7 @@ module.exports = {
         '(apps/web идёт первым), но при ошибке depcruise фоллбэкается в ' +
         'apps/admin/src/... — отсюда false-positive. Это правило ловит ' +
         'только РЕАЛЬНЫЕ относительные импорты, по которым невозможно ' +
-        'ошибиться. См. STATE-AND-RESUME-POINT.md §11.4 задача 5.1.',
+        'ошибиться. См. docs/history/state-log-to-2026-09-06.md §11.4 задача 5.1.',
       from: { path: '^apps/([^/]+)/' },
       to: {
         // Ловим только relative-импорты с `../`, ведущие в чужой app.
@@ -270,7 +270,7 @@ module.exports = {
         // `.d.ts` — type-only файлы, которые легитимно ссылаются на типы из
         // dev-deps (например, `/// <reference types="vite/client" />`). Сами
         // `.d.ts` не компилируются в runtime-код, поэтому правило к ним
-        // неприменимо (STATE-AND-RESUME-POINT.md §11.4 задача 5.1).
+        // неприменимо (docs/history/state-log-to-2026-09-06.md §11.4 задача 5.1).
         // Тестовая обвязка (test-utils, contract-test, фикстуры, Storybook) — не продуктовый
         // код, как и *.spec; она стала видна правилу после сужения options.exclude ниже.
         // `.stories.tsx` (DTJ-404) — Storybook-демонстрация компонента, собирается отдельным
@@ -336,7 +336,7 @@ module.exports = {
         '/drizzle/',
         '\\.gen\\.ts$',
         // apps/admin (DTJ-075 scaffolding) — ВОЗВРАЩЁН в анализ в волне 3.5
-        // (STATE-AND-RESUME-POINT.md §11.4 задача 5.1, запрет Ж3).
+        // (docs/history/state-log-to-2026-09-06.md §11.4 задача 5.1, запрет Ж3).
       ],
     },
     tsPreCompilationDeps: true,

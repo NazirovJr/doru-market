@@ -8,7 +8,7 @@ import CheckoutPage from './checkout-page'
 
 /**
  * `checkout-page.spec.tsx` (DTJ-235) — смоук: `CheckoutPage` — тонкая композиция `CheckoutScreen`
- * (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §5), реально рендерит его без падений. Тот же приём, что
+ * (`docs/architecture/clean-architecture.md` §5), реально рендерит его без падений. Тот же приём, что
  * `pages/cart/cart-page.spec.tsx` (DTJ-234).
  */
 

@@ -8,7 +8,7 @@
  * передаётся в `OrderCreateCommand`, сам расчёт домену не принадлежит (`02` §3.2: use case
  * оркестрирует, домен только валидирует уже посчитанное).
  *
- * **Разделение ответственности (D-EP09-34, решение CTO, `reports/EP09-CTO-BRIEF.md`):** этот
+ * **Разделение ответственности (D-EP09-34, решение CTO, `docs/history/briefs/ep09-cto-brief.md`):** этот
  * сервис берёт `commissionBps` НА КАЖДУЮ позицию из уже резолвленной карты (DTJ-358 —
  * резолвинг вынесен вызывающим ДО транзакции, см. `CalculateOrderCostInput`); САМО округление
  * (`platformFeeDiram`) выполняет `OrderItem.create()` (`domain/order-item.entity.ts`,

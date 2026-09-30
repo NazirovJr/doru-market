@@ -29,7 +29,7 @@ export const ORDER_STATUS_VALUES = [
 ] as const
 export type OrderStatus = (typeof ORDER_STATUS_VALUES)[number]
 
-/** `orders.payment_method` (VARCHAR в БД — 1:1 tz.log, но значения ограничены этим набором). */
+/** `orders.payment_method` (VARCHAR в БД — 1:1 docs/product/client-brief-original.txt, но значения ограничены этим набором). */
 export const ORDER_PAYMENT_METHOD_VALUES = ['alif_mobi', 'dc_next', 'cash_courier'] as const
 export type OrderPaymentMethod = (typeof ORDER_PAYMENT_METHOD_VALUES)[number]
 

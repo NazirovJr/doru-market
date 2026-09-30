@@ -4,7 +4,7 @@
  *
  * `admin` не имеет собственного домена (`SRS-ADM-002`) — presentation+application-слой поверх
  * ЧЕТЫРЁХ узких портов, каждый связан с РЕАЛЬНЫМ фасадом чужого модуля через `useExisting`
- * (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.3):
+ * (`docs/architecture/clean-architecture.md` §1.3):
  *   - `ONBOARDING_FACADE_PORT` → `OnboardingFacade` (`@/modules/onboarding`, реален, DTJ-070)
  *   - `ORDERS_FACADE_PORT` → `ORDERS_FACADE` (`@/modules/orders`, реален, DTJ-222)
  *   - `PAYMENTS_FACADE_PORT` → `PAYMENTS_FACADE` (`@/modules/payments`, реален, DTJ-249;

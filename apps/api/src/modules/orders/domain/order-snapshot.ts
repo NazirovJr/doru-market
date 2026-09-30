@@ -1,7 +1,7 @@
 /**
  * `OrderSnapshot` (EP-09, DTJ-221, доработка DTJ-228 — `billingStrategy`). Вынесена из
  * `order.entity.ts` отдельным файлом ради `C2` (≤300 строк/файл,
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md` §6) — тот же приём, что вынос `OrderCreateCommand`
+ * `docs/architecture/clean-architecture.md` §6) — тот же приём, что вынос `OrderCreateCommand`
  * (`order-create-command.ts`) / валидаторов (`order-create.validators.ts`) из того же файла.
  *
  * Полный plain-снимок состояния `Order` — вход `Order.restore()`/`OrderItem` мапперов, выход

@@ -1,7 +1,7 @@
 /**
  * `NullSearchProvider` (DTJ-180, EP-06, R1) — временная реализация `SearchProvider`.
  *
- * Это **явная, типизированная заглушка** (`05-DEVELOPER-HANDBOOK.md` §14
+ * Это **явная, типизированная заглушка** (`docs/guides/developer-handbook.md` §14
  * «Null*Adapter + явный TODO с номером тикета»), а не пропуск работы: `PostgresSearchProvider`
  * (SRS-CAT-013) — предмет отдельного тикета DTJ-185, который на момент DTJ-180 ещё не
  * существует. Без резолвящегося `SEARCH_PROVIDER` ЛЮБОЙ параллельный тикет, поднимающий

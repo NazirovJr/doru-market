@@ -51,11 +51,11 @@ export class PharmacyNotInChainScopeError extends SecurityError {
 /**
  * [EP-05, DTJ-156, SRS-API-033] Базовый класс ошибок `PharmacyApiKeyGuard`
  * (D-11, REST push-канал 1С/ERP). Перенесено из
- * `apps/api/src/modules/inventory/presentation/errors/pharmacy-api-key.errors.ts` —
+ * `presentation/errors/pharmacy-api-key.errors.ts` модуля inventory —
  * `application`-порт `PharmacyApiKeyVerificationPort` бросает эти ошибки, а
  * presentation-слой их ловит; жить в `presentation/` они не могут (правило
  * `application-does-not-know-infrastructure`, вынесено на разблокировку
- * волны 4, docs/05-DEVELOPER-HANDBOOK.md §18).
+ * волны 4, docs/guides/developer-handbook.md §18).
  */
 export abstract class PharmacyApiKeyVerificationError extends SecurityError {}
 

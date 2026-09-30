@@ -7,7 +7,7 @@
  *
  * Контролируемый компонент: `value`/`onChange` — источник истины у потребителя (тот же
  * контракт, что у `Input`). Разметка триггера/списка — в `select-parts.tsx` (лимит `max-lines`,
- * `02-CLEAN-ARCHITECTURE-AND-CODE.md` C1), здесь — только состояние и обработчики.
+ * `docs/architecture/clean-architecture.md` C1), здесь — только состояние и обработчики.
  */
 import { type FocusEvent, type KeyboardEvent, type ReactElement, useId, useRef, useState } from 'react'
 import { FieldChrome } from '../internal/field-chrome'

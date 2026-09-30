@@ -12,8 +12,8 @@
  * Это integration-тест: реальный HTTP → AuthGuard (с cross-tenant check)
  * → use case → Drizzle-репозитории (реальный Postgres, волна 5 блок A). Никаких моков бизнес-логики.
  *
- * @see docs/STATE-AND-RESUME-POINT.md §11.4 задача 2.4
- * @see docs/CLAUDE-CTO.md устав §3.4 «Тест на утечку между тенантами — обязателен»
+ * @see docs/history/state-log-to-2026-09-06.md §11.4 задача 2.4
+ * @see docs/process/coordinator.md устав §3.4 «Тест на утечку между тенантами — обязателен»
  */
 import type { Server } from 'node:http'
 import { randomUUID } from 'node:crypto'

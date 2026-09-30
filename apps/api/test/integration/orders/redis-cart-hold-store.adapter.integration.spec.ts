@@ -1,7 +1,7 @@
 /**
  * Интеграционный тест `RedisCartHoldStoreAdapter` (EP-09, DTJ-224) — РЕАЛЬНЫЙ Redis, не мок
  * (тест-план тикета: `hold`/`extend`/TTL-истечение/`getActiveHolds` с несколькими холдами и
- * исключением; D-EP09-14 `reports/EP09-CTO-BRIEF.md`: Testcontainers не используются — живой
+ * исключением; D-EP09-14 `docs/history/briefs/ep09-cto-brief.md`: Testcontainers не используются — живой
  * локальный Redis + `describe.skipIf`, тот же приём, что `redis-lock-guard.integration.spec.ts`).
  *
  * TTL в тестах — искусственно короткий (секунды, не 900), чтобы дождаться реального истечения

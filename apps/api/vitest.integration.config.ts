@@ -57,7 +57,7 @@ export default defineConfig({
       // промигрирована). Без этого `test.env` затирал внешний `DATABASE_URL`, и параллельная
       // работа давала невоспроизводимые падения в чужих файлах — урок §3в решения по волне 5
       // («сериализовать либо разводить по отдельным базам»). Правка CTO: гейт — инструмент
-      // контроля (`CLAUDE-CTO.md` §1). То же для `REDIS_URL` — разные номера БД Redis (`/0`, `/1`).
+      // контроля (`docs/process/coordinator.md` §1). То же для `REDIS_URL` — разные номера БД Redis (`/0`, `/1`).
       DATABASE_URL: process.env.DATABASE_URL ?? 'postgres://test:test@localhost:5432/dorutj_test',
       // Redis локально поднят с --requirepass (infra/docker/docker-compose.yml, дефолт
       // REDIS_PASSWORD=dorutj_dev_redis_password — дев-дефолт, заведомо непроизводственный,

@@ -1,6 +1,6 @@
 /**
  * `SupportFacade` (EP-14, DTJ-281, SRS-ADM-074) — публичный контракт модуля `support` для
- * ВНЕШНИХ модулей (D-27, `02-CLEAN-ARCHITECTURE-AND-CODE.md` §1.2). Токен `SUPPORT_FACADE`
+ * ВНЕШНИХ модулей (D-27, `docs/architecture/clean-architecture.md` §1.2). Токен `SUPPORT_FACADE`
  * объявлен `modules/support/index.ts` (DTJ-270, заранее) — форма интерфейса живёт здесь, тот
  * же приём, что `payments/application/ports/payments-facade.port.ts` (DTJ-249): `index.ts`
  * лишь ре-экспортирует тип для внешних потребителей.

@@ -1,6 +1,6 @@
 /**
  * `support-page.spec.tsx` (DTJ-284) — смоук: `SupportPage` — тонкая композиция
- * `ContactSupportButton`+`MyTicketsList` (`02-CLEAN-ARCHITECTURE-AND-CODE.md` §5), реально
+ * `ContactSupportButton`+`MyTicketsList` (`docs/architecture/clean-architecture.md` §5), реально
  * рендерит их без падений.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
