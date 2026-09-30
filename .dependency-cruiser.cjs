@@ -84,6 +84,10 @@ function writeDepcruiseTsconfig(rootDir) {
 
 const depcruiseTsconfigFileName = writeDepcruiseTsconfig(__dirname)
 
+// Тестовая обвязка: рантайм-код её не импортирует. Спеки и *.test.* отсекает options.exclude.
+const TEST_SUPPORT_PATH =
+  '\\.contract-test\\.ts$|/test-utils\\.tsx?$|/__fixtures__/|/testing/|^apps/[^/]+/test/'
+
 /** @type {import('dependency-cruiser').IConfiguration} */
 module.exports = {
   forbidden: [
@@ -280,6 +284,31 @@ module.exports = {
       // стандартная схема. Такая зависимость в рантайме гарантирована, поэтому npm-peer
       // исключается; чистые devDependencies по-прежнему запрещены.
       to: { dependencyTypes: ['npm-dev'], dependencyTypesNot: ['npm-peer'] },
+    },
+    {
+      name: 'no-vitest-in-product-code',
+      severity: 'error',
+      comment:
+        'vitest не входит в продовый образ (devDependency): импорт из продуктового файла роняет ' +
+        'процесс на старте (ERR_MODULE_NOT_FOUND). Разрешён только в тестовых файлах и конфигах.',
+      from: {
+        path: '^(apps|packages)/',
+        pathNot: `${TEST_SUPPORT_PATH}|\\.config\\.|\\.d\\.ts$|\\.stories\\.tsx$|/\\.storybook/`,
+      },
+      to: { path: 'node_modules/(vitest|@vitest)(/|$)' },
+    },
+    {
+      name: 'no-test-support-in-product-code',
+      severity: 'error',
+      comment:
+        'Продуктовый код не импортирует тестовую обвязку (contract-test, test-utils, fixtures, testing/): ' +
+        'она тянет vitest транзитивно, а прямой импорт vitest тут не виден. Так в образ попал реэкспорт ' +
+        'contract-test из фасада tenancy.',
+      from: {
+        path: '^(apps|packages)/',
+        pathNot: `${TEST_SUPPORT_PATH}|\\.config\\.|\\.d\\.ts$|\\.stories\\.tsx$|/\\.storybook/`,
+      },
+      to: { path: TEST_SUPPORT_PATH },
     },
     {
       name: 'no-non-package-json',
