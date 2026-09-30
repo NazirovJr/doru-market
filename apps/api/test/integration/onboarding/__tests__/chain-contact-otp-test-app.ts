@@ -12,6 +12,7 @@ import { ResponseInterceptor } from '@/common/http/interceptors/response.interce
 import { AuditLogModule } from '@/common/audit/audit-log.module.js'
 import { AuthModule } from '@/modules/auth/auth.module.js'
 import { OnboardingModule } from '@/modules/onboarding/onboarding.module.js'
+import { OrdersCancellationStubModule } from '../../admin/__tests__/orders-cancellation-stub.module.js'
 import { SharedKernelModule } from '@/shared-kernel/shared-kernel.module.js'
 import { LoggerModule } from '@/common/logging/logger.module.js'
 import { TenantContext } from '@/common/context/tenant-context.js'
@@ -63,7 +64,7 @@ export async function createTestApp(): Promise<TestApp> {
     process.env[key] ??= value
   }
   const moduleRef = await Test.createTestingModule({
-    imports: [SharedKernelModule, LoggerModule, AuditLogModule, AuthModule, OnboardingModule],
+    imports: [SharedKernelModule, LoggerModule, AuditLogModule, AuthModule, OrdersCancellationStubModule, OnboardingModule],
   }).compile()
   const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter())
   const config = app.get(AppConfigService)

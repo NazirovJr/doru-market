@@ -12,6 +12,7 @@ import { ResponseInterceptor } from '@/common/http/interceptors/response.interce
 import { AuthModule } from '@/modules/auth/auth.module.js'
 import { JWT_SIGNER, type JwtSignerPort } from '@/modules/auth/index.js'
 import { OnboardingModule } from '@/modules/onboarding/onboarding.module.js'
+import { OrdersCancellationStubModule } from '../../admin/__tests__/orders-cancellation-stub.module.js'
 import { SharedKernelModule } from '@/shared-kernel/shared-kernel.module.js'
 import { LoggerModule } from '@/common/logging/logger.module.js'
 import { TenantContext } from '@/common/context/tenant-context.js'
@@ -49,6 +50,7 @@ const TEST_ENV: Readonly<Record<string, string>> = {
 
 const BEARER_PREFIX = 'Bearer '
 const GUEST_SLUG = 'test-onboarding-guest'
+const NEUTRAL_TENANT_ID = '00000000-0000-4000-8000-000000000001'
 
 export interface TestApp {
   readonly app: INestApplication
@@ -65,7 +67,7 @@ function applyTestEnv(): void {
 export async function createTestApp(): Promise<TestApp> {
   applyTestEnv()
   const moduleRef = await Test.createTestingModule({
-    imports: [SharedKernelModule, LoggerModule, AuthModule, OnboardingModule],
+    imports: [SharedKernelModule, LoggerModule, AuthModule, OrdersCancellationStubModule, OnboardingModule],
   }).compile()
   const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter())
   const config = app.get(AppConfigService)
@@ -116,7 +118,8 @@ function resolveFromBearerClaims(
   app: NestFastifyApplication,
   authHeader: string | undefined,
 ): { tenantId: string | null; slug: string; chainId: string | null; isNeutral: boolean } {
-  const guest = { tenantId: null, slug: GUEST_SLUG, chainId: null, isNeutral: true }
+  // Как TenantResolutionMiddleware на нейтральном хосте: публичные маршруты работают в нейтральном тенанте.
+  const guest = { tenantId: NEUTRAL_TENANT_ID, slug: GUEST_SLUG, chainId: null, isNeutral: true }
   if (typeof authHeader !== 'string' || !authHeader.startsWith(BEARER_PREFIX)) {
     return guest
   }

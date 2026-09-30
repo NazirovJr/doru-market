@@ -64,7 +64,7 @@ describe('onboarding.pharmacy-chains contact OTP (DTJ-064)', () => {
 
   async function requestOtp(chainId: string): Promise<string> {
     const response = await request(httpServer).post(`/api/v1/pharmacy-chains/${chainId}/request-contact-phone-otp`).send({})
-    expect(response.status).toBe(201)
+    expect(response.status).toBe(200)
     expect((response.body as DataBody<{ sent: boolean }>).data.sent).toBe(true)
     const code = sms.peekLast()?.code
     if (code === undefined) throw new Error('mock SMS did not capture code')

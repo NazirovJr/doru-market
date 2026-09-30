@@ -88,7 +88,7 @@ describe.skipIf(!postgresAvailable)('PharmacySuspensionController — HTTP integ
       .set('Authorization', `Bearer ${adminToken()}`)
       .send({ reason: 'voluntary_pause' })
 
-    expect(response.status).toBe(201)
+    expect(response.status).toBe(200)
     const log = await pool.query<{ actor_user_id: string }>('SELECT actor_user_id FROM onboarding_review_log WHERE pharmacy_id = $1', [pharmacyId])
     expect(log.rows.map((r) => r.actor_user_id)).toEqual([adminId])
     expect(ORDERS_CANCELLATION_STUB_CALLS).toEqual([{ pharmacyId, scope: 'unpaid' }])
@@ -110,8 +110,8 @@ describe.skipIf(!postgresAvailable)('PharmacySuspensionController — HTTP integ
     const first = await send()
     const second = await send()
 
-    expect(first.status).toBe(201)
-    expect(second.status).toBe(201)
+    expect(first.status).toBe(200)
+    expect(second.status).toBe(200)
     expect(second.body).toEqual(first.body)
     expect(ORDERS_CANCELLATION_STUB_CALLS).toEqual([{ pharmacyId, scope: 'all' }])
     const log = await pool.query<{ actor_user_id: string }>(
