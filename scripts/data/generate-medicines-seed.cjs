@@ -4,7 +4,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 
 const substs = JSON.parse(
-  fs.readFileSync(path.join(__dirname, '..', 'apps/api/src/db/seed/data/substances.seed.json'), 'utf8')
+  fs.readFileSync(path.join(__dirname, '..', '..', 'apps/api/src/db/seed/data/substances.seed.json'), 'utf8')
 )
 const substByName = new Map(substs.map((s) => [s.innName, s.id]))
 
@@ -262,7 +262,7 @@ for (const ex of extras) {
 }
 
 fs.writeFileSync(
-  path.join(__dirname, '..', 'apps/api/src/db/seed/data/medicines.seed.json'),
+  path.join(__dirname, '..', '..', 'apps/api/src/db/seed/data/medicines.seed.json'),
   JSON.stringify(medicines, null, 2)
 )
 console.log('Total medicines:', medicines.length)
