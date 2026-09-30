@@ -3,7 +3,8 @@
  * docs:check — статическая проверка ссылок на документы и пути в коде (без сети и зависимостей).
  * (a) относительные markdown-ссылки указывают на существующие файлы;
  * (b) пути `docs|scripts|infra|tests|apps|packages/...` в не-markdown файлах существуют;
- * (c) AGENTS.md не длиннее MAX_AGENTS_LINES строк (пока предупреждение).
+ * (c) AGENTS.md не длиннее MAX_AGENTS_LINES строк;
+ * (d) каждый .md/.txt в docs/ (кроме docs/history/) достижим из docs/README.md: прямой ссылкой или через README.md своей папки.
  * Ссылки внутри docs/history и tickets — история: битые дают предупреждение, а не ошибку.
  */
 import { execFileSync } from 'node:child_process'
@@ -101,12 +102,34 @@ export function checkPathLiterals(root, files) {
 export function checkAgentsLength(root, files) {
   if (!files.includes('AGENTS.md')) return { errors: [], warnings: [] }
   const lines = readFileSync(path.join(root, 'AGENTS.md'), 'utf8').split('\n').length
-  const warnings = lines > MAX_AGENTS_LINES ? [`AGENTS.md: ${lines} строк, лимит ${MAX_AGENTS_LINES}`] : []
-  return { errors: [], warnings }
+  const errors = lines > MAX_AGENTS_LINES ? [`AGENTS.md: ${lines} строк, лимит ${MAX_AGENTS_LINES}`] : []
+  return { errors, warnings: [] }
+}
+
+const DOCS_INDEX = 'docs/README.md'
+const DOCS_INDEX_EXEMPT_PREFIXES = ['docs/history/', ...IGNORED_PREFIXES]
+
+export function checkDocsIndex(root, files) {
+  if (!files.includes(DOCS_INDEX)) return { errors: [`${DOCS_INDEX}: индекс документации отсутствует`], warnings: [] }
+  const linked = new Set(
+    extractMarkdownLinks(readFileSync(path.join(root, DOCS_INDEX), 'utf8'))
+      .map(({ target }) => resolveLinkTarget(root, DOCS_INDEX, target))
+      .filter((t) => t !== null),
+  )
+  // README.md папки, на который есть ссылка из индекса, покрывает всю свою папку (индекс решений, ADR)
+  const coveredDirs = [...linked].filter((l) => l.endsWith('/README.md') && l !== DOCS_INDEX).map((l) => l.slice(0, -'README.md'.length))
+  const errors = []
+  for (const file of files) {
+    if (!file.startsWith('docs/') || file === DOCS_INDEX || !/\.(md|txt)$/.test(file)) continue
+    if (DOCS_INDEX_EXEMPT_PREFIXES.some((p) => file.startsWith(p))) continue
+    if (linked.has(file) || coveredDirs.some((d) => file.startsWith(d))) continue
+    errors.push(`${file}: нет ссылки из ${DOCS_INDEX}`)
+  }
+  return { errors, warnings: [] }
 }
 
 export function runDocsCheck(root, files = listTrackedFiles(root)) {
-  const parts = [checkMarkdownLinks(root, files), checkPathLiterals(root, files), checkAgentsLength(root, files)]
+  const parts = [checkMarkdownLinks(root, files), checkPathLiterals(root, files), checkAgentsLength(root, files), checkDocsIndex(root, files)]
   return { errors: parts.flatMap((p) => p.errors), warnings: parts.flatMap((p) => p.warnings) }
 }
 

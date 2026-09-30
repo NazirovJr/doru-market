@@ -7,6 +7,7 @@ import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   checkAgentsLength,
+  checkDocsIndex,
   checkMarkdownLinks,
   checkPathLiterals,
   extractMarkdownLinks,
@@ -97,10 +98,45 @@ describe('checkPathLiterals', () => {
 })
 
 describe('checkAgentsLength', () => {
-  it('длиннее лимита — предупреждение, в пределах — тишина', () => {
+  it('длиннее лимита — ошибка (негативный кейс), в пределах — тишина', () => {
     const long = makeTree({ 'AGENTS.md': 'x\n'.repeat(MAX_AGENTS_LINES + 5) })
-    expect(checkAgentsLength(long.root, long.list).warnings).toHaveLength(1)
+    const { errors, warnings } = checkAgentsLength(long.root, long.list)
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toContain('AGENTS.md')
+    expect(warnings).toEqual([])
     const short = makeTree({ 'AGENTS.md': 'x\n'.repeat(10) })
     expect(checkAgentsLength(short.root, short.list)).toEqual({ errors: [], warnings: [] })
+  })
+})
+
+describe('checkDocsIndex', () => {
+  it('файл, на который есть ссылка из docs/README.md, проходит; docs/history и не-документы исключены', () => {
+    const { root, list } = makeTree({
+      'docs/README.md': '[a](a/x.md)',
+      'docs/a/x.md': '#',
+      'docs/history/old.md': '#',
+      'docs/design/canvas.html': '<p>',
+    })
+    expect(checkDocsIndex(root, list)).toEqual({ errors: [], warnings: [] })
+  })
+
+  it('файл без ссылки из индекса — ошибка (негативный кейс)', () => {
+    const { root, list } = makeTree({ 'docs/README.md': '[a](a.md)', 'docs/a.md': '#', 'docs/orphan.md': '#' })
+    expect(checkDocsIndex(root, list).errors).toEqual(['docs/orphan.md: нет ссылки из docs/README.md'])
+  })
+
+  it('README.md папки, на который ссылается индекс, покрывает файлы папки', () => {
+    const { root, list } = makeTree({
+      'docs/README.md': '[d](adr/README.md)',
+      'docs/adr/README.md': '#',
+      'docs/adr/d-01.md': '#',
+      'docs/other/d-02.md': '#',
+    })
+    expect(checkDocsIndex(root, list).errors).toEqual(['docs/other/d-02.md: нет ссылки из docs/README.md'])
+  })
+
+  it('нет docs/README.md — ошибка', () => {
+    const { root, list } = makeTree({ 'docs/a.md': '#' })
+    expect(checkDocsIndex(root, list).errors).toHaveLength(1)
   })
 })
