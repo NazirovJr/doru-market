@@ -5,7 +5,7 @@
   "description": "DoruTJ — фармацевтический маркетплейс и White-Label платформа (Республика Таджикистан)",
   "packageManager": "pnpm@11.23.0",
   "engines": {
-    "node": ">=22.12.0",
+    "node": ">=22.13.0",
     "pnpm": ">=10.0.0"
   },
   "scripts": {
