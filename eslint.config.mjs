@@ -371,7 +371,7 @@ export default tseslint.config(
       'apps/api/src/db/schema/substances.ts',
       // Токен User-Agent мобильного приложения — протокольная константа.
       'apps/api/src/modules/auth/presentation/controllers/otp-verify.controller.ts',
-      // TODO(DTJ-436): описание счёта в банк должно строиться из брендинга тенанта, а не литерала.
+      // TODO(DTJ-449): описание счёта в банк должно строиться из брендинга тенанта, а не литерала.
       'apps/api/src/modules/orders/application/checkout/checkout.use-case.ts',
       'apps/api/src/modules/orders/application/order-lifecycle/retry-payment.use-case.ts',
     ],
