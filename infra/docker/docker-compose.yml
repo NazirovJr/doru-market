@@ -127,8 +127,7 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.api
-      target: migrator
-    entrypoint: ['node', 'apps/api/dist/scripts/seed-entrypoint.js']
+      target: seeder
     depends_on:
       migrate: { condition: service_completed_successfully }
     environment: *api-env

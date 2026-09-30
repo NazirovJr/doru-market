@@ -6,10 +6,14 @@
 # apps/web (см. риски тикета) — apps/admin/pharmacy/courier появятся в последующих волнах,
 # используют этот же Dockerfile без изменений (только другое значение --build-arg APP).
 
-FROM node:22.12-slim AS build
+# pnpm 11.23 требует Node >=22.13; ставится через npm — corepack не проходит проверку подписи реестра.
+FROM node:22.13.0-slim AS build
 ARG APP
+# Обязателен для сборки apps/web (vite.config.ts падает без него); для выката передавать --build-arg.
+ARG VITE_API_BASE_URL=http://localhost:3000
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@11.23.0 --activate
+RUN npm install --global pnpm@11.23.0
 COPY . .
 RUN pnpm install --frozen-lockfile --filter=@dorutj/${APP}...
 RUN pnpm turbo run build --filter=@dorutj/${APP}

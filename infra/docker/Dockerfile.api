@@ -54,6 +54,12 @@ FROM build AS deploy
 RUN pnpm --filter @dorutj/api deploy --prod --legacy /out/api \
   && pnpm --filter @dorutj/worker deploy --prod --legacy /out/worker
 
+# Сид запускается из исходников через tsx (нужны devDependencies, JSON данных и testing-kit),
+# поэтому отдельный dev/e2e-таргет на базе build, а не рантайм.
+FROM build AS seeder
+WORKDIR /repo/apps/api
+CMD ["pnpm", "run", "db:seed"]
+
 FROM ${NODE_IMAGE} AS runtime
 ENV NODE_ENV=production
 RUN groupadd --system --gid 1001 dorutj \
