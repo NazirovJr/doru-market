@@ -59,6 +59,8 @@ interface SeedOtpInput {
   readonly issuedAt: Date
   readonly expiresAt: Date
   readonly consumedAt: Date | null
+  readonly purpose?: 'login' | 'onboarding_contact'
+  readonly subjectRef?: string
 }
 
 class StubOtpCodesRepository implements OtpCodesRepository {
@@ -117,13 +119,21 @@ class StubOtpCodesRepository implements OtpCodesRepository {
   }
 
    
-  findActiveBySubject(_input: {
+  findActiveBySubject(input: {
     readonly tenantId: string
     readonly subjectRef: string
     readonly purpose: 'login' | 'onboarding_contact'
     readonly now: Date
   }): Promise<OtpCodeRecord | null> {
-    return Promise.resolve(null)
+    const active = [...this.rows.values()].find(
+      (row) =>
+        row.tenantId === input.tenantId &&
+        row.subjectRef === input.subjectRef &&
+        row.purpose === input.purpose &&
+        row.consumedAt === null &&
+        row.expiresAt > input.now,
+    )
+    return Promise.resolve(active ?? null)
   }
 
 
@@ -143,8 +153,8 @@ class StubOtpCodesRepository implements OtpCodesRepository {
     this.rows.set(input.id, {
       id: input.id,
       tenantId: TENANT,
-      subjectRef: input.phone,
-      purpose: 'login',
+      subjectRef: input.subjectRef ?? input.phone,
+      purpose: input.purpose ?? 'login',
       codeHash,
       plainCode: null,
       attempts: 0,
@@ -574,5 +584,78 @@ describe('VerifyOtpUseCase (DTJ-024, SRS-API-021..025)', () => {
     expect(r2.ok).toBe(false)
     if (r2.ok) return
     expect(r2.error).toBeInstanceOf(OtpMismatchError)
+  })
+
+  it('7. код onboarding_contact не открывает логин: verify по otpRequestId → OtpMismatchError, сессии нет (DTJ-064)', async () => {
+    bundle.otpCodes.seed({
+      id: 'otp-1', codeRaw: '123456', phone: PHONE, issuedAt: NOW, expiresAt: LATER, consumedAt: null,
+      purpose: 'onboarding_contact', subjectRef: `chain-1:${PHONE}`,
+    })
+    const result = await bundle.useCase.execute({
+      otpRequestId: 'otp-1', code: '123456', tenantId: TENANT,
+      deviceLabel: DEVICE_LABEL, userAgent: UA, ipAddress: IP,
+    })
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error).toBeInstanceOf(OtpMismatchError)
+    expect(bundle.authSessions.createCount).toBe(0)
+    expect(bundle.users.createCount).toBe(0)
+  })
+})
+
+describe('VerifyOtpUseCase.verifyContactCode (DTJ-064)', () => {
+  const SUBJECT = `chain-1:${PHONE}`
+  let bundle: Bundle
+  beforeEach(() => {
+    bundle = buildUseCase()
+    bundle.otpCodes.seed({
+      id: 'otp-1', codeRaw: '123456', phone: PHONE, issuedAt: NOW, expiresAt: LATER, consumedAt: null,
+      purpose: 'onboarding_contact', subjectRef: SUBJECT,
+    })
+  })
+
+  const verify = (code: string, subjectRef = SUBJECT): ReturnType<VerifyOtpUseCase['verifyContactCode']> =>
+    bundle.useCase.verifyContactCode({ tenantId: 'neutral', subjectRef, purpose: 'onboarding_contact', code })
+
+  it('верный код → ok, код потреблён, пользователь и сессия не создаются', async () => {
+    const result = await verify('123456')
+    expect(result.ok).toBe(true)
+    expect(bundle.otpCodes.markConsumedCalls.map((c) => c.id)).toEqual(['otp-1'])
+    expect(bundle.users.createCount).toBe(0)
+    expect(bundle.authSessions.createCount).toBe(0)
+  })
+
+  it('заглушечный код «0000» не проходит', async () => {
+    const result = await verify('0000')
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error).toBeInstanceOf(OtpMismatchError)
+    expect(bundle.otpCodes.markConsumedCalls).toEqual([])
+    expect(bundle.otpCodes.incrementAttemptsCalls).toEqual(['otp-1'])
+  })
+
+  it('код другой заявки (другой subjectRef) → OtpMismatchError', async () => {
+    const result = await verify('123456', `chain-2:${PHONE}`)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error).toBeInstanceOf(OtpMismatchError)
+  })
+
+  it('повторное использование потреблённого кода → OtpMismatchError', async () => {
+    expect((await verify('123456')).ok).toBe(true)
+    const again = await verify('123456')
+    expect(again.ok).toBe(false)
+    if (again.ok) return
+    expect(again.error).toBeInstanceOf(OtpMismatchError)
+  })
+
+  it('6-я попытка блокируется даже с верным кодом', async () => {
+    for (let i = 0; i < 5; i += 1) {
+      expect((await verify('000000')).ok).toBe(false)
+    }
+    const sixth = await verify('123456')
+    expect(sixth.ok).toBe(false)
+    if (sixth.ok) return
+    expect(sixth.error).toBeInstanceOf(OtpAttemptsExceededError)
   })
 })

@@ -4,8 +4,8 @@
  *
  * Шаги:
  * 1. Загрузить `PharmacyChain` по `chainId` (404 если не найден).
- * 2. `otpPort.verifyCode({ phone: chain.contactPhone, code, purpose: 'onboarding_contact' })`
- *    — throws OtpMismatchError/OtpExpiredError.
+ * 2. `otpPort.verifyCode(...)` — OTP-механизм `auth` (purpose `onboarding_contact`);
+ *    throws OtpMismatchError/OtpExpiredError/OtpAttemptsExceededError.
  * 3. `chain.markContactPhoneVerified()` → сохранить.
  */
 import { Inject, Injectable } from '@nestjs/common'
@@ -17,6 +17,7 @@ import { OTP_PORT, type OtpPort } from '../ports/otp.port.js'
 export interface VerifyChainContactPhoneInput {
   readonly chainId: string
   readonly code: string
+  readonly tenantId: string
 }
 
 @Injectable()
@@ -34,9 +35,10 @@ export class VerifyChainContactPhoneUseCase {
       throw new NotFoundError({ chainId: input.chainId })
     }
     await this.otpPort.verifyCode({
+      chainId: chain.id,
       phone: chain.contactPhone,
+      tenantId: input.tenantId,
       code: input.code,
-      purpose: 'onboarding_contact',
     })
     const verified = chain.markContactPhoneVerified()
     await this.pharmacyChainRepository.save(verified)
